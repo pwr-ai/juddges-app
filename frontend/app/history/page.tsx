@@ -201,9 +201,9 @@ export default function SearchHistoryPage(): React.JSX.Element {
           ))}
         </div>
       ) : filteredHistory.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-border rounded-xl bg-card/50">
+        <div className="text-center py-16 border border-dashed border-rule rounded-none bg-parchment-deep/30">
           <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 className="text-lg font-semibold text-foreground font-display">
             {searchFilter ? "No matching queries" : "No search history yet"}
           </h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1 mb-6">
@@ -214,7 +214,7 @@ export default function SearchHistoryPage(): React.JSX.Element {
           {!searchFilter && (
             <Link
               href="/search"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium text-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-oxblood text-white hover:bg-oxblood-deep rounded-none font-medium text-sm transition-colors"
             >
               <Search className="h-4 w-4" />
               Start Searching
@@ -226,13 +226,13 @@ export default function SearchHistoryPage(): React.JSX.Element {
           {filteredHistory.map((item, idx) => (
             <div
               key={`${item.created_at}-${idx}`}
-              className="group p-4 bg-card border border-border hover:border-primary/40 rounded-lg transition-all shadow-sm hover:shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="group p-4 bg-card border border-rule hover:border-oxblood/40 rounded-none transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Link
                     href={`/search?q=${encodeURIComponent(item.query)}`}
-                    className="font-medium text-base text-foreground group-hover:text-primary transition-colors hover:underline truncate max-w-xl"
+                    className="font-medium text-base text-foreground group-hover:text-oxblood transition-colors hover:underline truncate max-w-xl"
                   >
                     {item.query}
                   </Link>

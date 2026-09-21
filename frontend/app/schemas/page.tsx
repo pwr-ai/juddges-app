@@ -365,12 +365,8 @@ export default function SchemasPage() {
  initial={{ opacity: 0, scale: 0.95, y: -10 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: -10 }}
- transition={{ duration: 0.25, ease: "easeOut"}}
- className="absolute top-full right-0 mt-2 z-50 w-80 xl:w-96"
- style={{
- backdropFilter: 'blur(20px) saturate(180%)',
- WebkitBackdropFilter: 'blur(20px) saturate(180%)',
- }}
+ transition={{ duration: 0.25, ease: "easeOut" }}
+ className="absolute top-full right-0 mt-2 z-50 w-80 xl:w-96 bg-parchment border border-rule"
  >
  <SchemaFilters
  filters={filters}
@@ -442,7 +438,7 @@ export default function SchemasPage() {
  {filters.creator !== '__all__' && filters.creator !== '' && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('creator')}
  >
  <span>Author: {filters.creator}</span>
@@ -452,7 +448,7 @@ export default function SchemasPage() {
  {filters.isVerified !== null && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('isVerified')}
  >
  <span>{filters.isVerified ? 'Verified' : 'Unverified'}</span>
@@ -462,7 +458,7 @@ export default function SchemasPage() {
  {(filters.minFields !== '' || filters.maxFields !== '') && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('fields')}
  >
  <span>
@@ -474,7 +470,7 @@ export default function SchemasPage() {
  {(filters.minExtractions !== '' || filters.maxExtractions !== '') && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('extractions')}
  >
  <span>
@@ -537,7 +533,7 @@ export default function SchemasPage() {
  {filters.creator !== '__all__' && filters.creator !== '' && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('creator')}
  >
  <span>Author: {filters.creator}</span>
@@ -547,7 +543,7 @@ export default function SchemasPage() {
  {filters.isVerified !== null && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('isVerified')}
  >
  <span>{filters.isVerified ? 'Verified' : 'Unverified'}</span>
@@ -557,7 +553,7 @@ export default function SchemasPage() {
  {(filters.minFields !== '' || filters.maxFields !== '') && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('fields')}
  >
  <span>
@@ -569,7 +565,7 @@ export default function SchemasPage() {
  {(filters.minExtractions !== '' || filters.maxExtractions !== '') && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('extractions')}
  >
  <span>
@@ -632,7 +628,7 @@ export default function SchemasPage() {
  {filters.creator !== '__all__' && filters.creator !== '' && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('creator')}
  >
  <span>Author: {filters.creator}</span>
@@ -642,7 +638,7 @@ export default function SchemasPage() {
  {filters.isVerified !== null && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('isVerified')}
  >
  <span>{filters.isVerified ? 'Verified' : 'Unverified'}</span>
@@ -652,7 +648,7 @@ export default function SchemasPage() {
  {(filters.minFields !== '' || filters.maxFields !== '') && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('fields')}
  >
  <span>
@@ -664,7 +660,7 @@ export default function SchemasPage() {
  {(filters.minExtractions !== '' || filters.maxExtractions !== '') && (
  <Badge
  variant="secondary"
- className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-slate-300/80 transition-colors"
+ className="flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:bg-parchment-deep text-ink bg-parchment-deep/40 border border-rule rounded-none transition-colors"
  onClick={() => removeFilter('extractions')}
  >
  <span>

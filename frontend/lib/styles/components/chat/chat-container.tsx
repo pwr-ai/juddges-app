@@ -32,29 +32,15 @@ export function ChatContainer({
  return (
  <div
  className={cn(
- // Base container styling - Inset Glass Console
  'relative',
- // Minimum height: 3.5rem (56px) - Large and inviting
  'min-h-[3.5rem]',
- // Corner radius: 1.5rem (24px) - Smooth Pills
- 'rounded-[1.5rem]',
+ 'rounded-none',
  'overflow-hidden',
- // Background: Inset Glass (Sunken)
- // Light Mode: rgba(255, 255, 255, 0.60)
- // Dark Mode: rgba(15, 23, 42, 0.60)
- 'bg-white/60',
- // Border: Top highlight
- // Light Mode: 1px solid rgba(255, 255, 255, 1.0)
- // Dark Mode: 1px solid rgba(255, 255, 255, 0.1)
- 'border border-white',
- // Shadow: Inner (sunken feel) + Outer (ambient glow)
- 'shadow-[inset_0_2px_4px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.05)]',
- '',
- // Focus ring
- 'focus-within:ring-2 focus-within:ring-blue-500/30',
+ 'bg-parchment',
+ 'border border-rule',
+ 'focus-within:border-rule-strong focus-within:ring-1 focus-within:ring-ink',
  'focus-within:ring-offset-0',
- // Interactive states
- 'transition-all duration-300',
+ 'transition-colors',
  className
  )}
  >

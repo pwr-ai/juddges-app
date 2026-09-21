@@ -61,6 +61,7 @@ Each editorial token is exposed through Tailwind via `@theme inline`:
 ### Avoid
 
 - ✗ Generic `purple`, `indigo`, `violet`, `blue` from Tailwind defaults.
+- ✗ Tailwind `red` and `yellow` for status tints — errors are `--oxblood`, warnings `--gold`.
 - ✗ `bg-purple-100`, `bg-indigo-100` icon-pill backgrounds.
 - ✗ `bg-gradient-to-br from-primary to-purple-500` style gradients.
 - ✗ `backdrop-blur-xl` "glass" effects on plain content cards.

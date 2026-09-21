@@ -55,7 +55,7 @@ function SavedSearchCard({
   const filterCount = countFilters(config);
 
   return (
-    <div className="group relative rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all">
+    <div className="group relative rounded-none border border-rule bg-parchment p-4 hover:border-rule-strong hover:bg-parchment-deep/40 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">

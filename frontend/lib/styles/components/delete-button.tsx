@@ -62,56 +62,40 @@ export function DeleteButton({
  onClick,
  className,
  disabled = false,
- type ="button",
- icon: Icon = Trash2,
- size ="md",
- isLoading = false,
+  type = "button",
+  icon: Icon = Trash2,
+  size = "md",
+  isLoading = false,
 }: DeleteButtonProps): React.JSX.Element {
- const sizeClasses = {
- sm: "text-xs h-9 px-4 rounded-xl",
- md: "text-sm h-10 px-5 rounded-xl",
- lg: "text-base h-11 px-6 rounded-xl",
- };
+  const sizeClasses = {
+    sm: "text-xs h-8 px-3 rounded-none font-mono uppercase tracking-wider",
+    md: "text-xs h-9 px-4 rounded-none font-mono uppercase tracking-wider",
+    lg: "text-sm h-10 px-5 rounded-none font-mono uppercase tracking-wider",
+  };
 
- const iconSizes = {
- sm: "h-4 w-4",
- md: "h-4 w-4",
- lg: "h-5 w-5",
- };
+  const iconSizes = {
+    sm: "h-3.5 w-3.5 mr-1.5",
+    md: "h-4 w-4 mr-1.5",
+    lg: "h-4 w-4 mr-2",
+  };
 
- return (
- <Button
- type={type}
- onClick={onClick}
- disabled={disabled || isLoading}
- variant="destructive"
- className={cn(
- sizeClasses[size],
-"transition-all duration-300",
- // Red gradient background following design system gradient pattern
- // Similar to VariantButton but with red semantic colors for destructive actions
-"!bg-gradient-to-br !from-red-600 !via-red-700 !to-red-800",
-"",
-"hover:!from-red-700 hover:!via-red-800 hover:!to-red-900",
-"",
-"!text-white",
- // Border following design system pattern - using /50 opacity from standardized scale
-"!border !border-red-600/50",
-"hover:!border-red-700/50",
- // Shadow following design system pattern (shadow-2xl shadow-primary/10) - using /30 opacity
-"hover:scale-105 hover:shadow-md hover:shadow-red-600/30",
- // Active state for tactile feedback
-"active:scale-[0.98] active:opacity-90",
-"font-semibold",
- // Focus state for accessibility - following design system pattern
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2",
- // Loading state
- isLoading &&"opacity-50 cursor-wait",
- className
- )}
- >
- {Icon && <Icon className={cn(iconSizes[size], isLoading &&"animate-pulse")} />}
- {children}
- </Button>
+  return (
+    <Button
+      type={type}
+      onClick={onClick}
+      disabled={disabled || isLoading}
+      variant="destructive"
+      className={cn(
+        sizeClasses[size],
+        "transition-colors duration-150",
+        "bg-oxblood hover:bg-oxblood-deep text-parchment border-0 shadow-none font-medium",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-oxblood",
+        isLoading && "opacity-50 cursor-wait",
+        className
+      )}
+    >
+      {Icon && <Icon className={cn(iconSizes[size], isLoading && "animate-pulse")} />}
+      {children}
+    </Button>
  );
 }

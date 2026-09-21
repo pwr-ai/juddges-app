@@ -77,46 +77,44 @@ const DateRangeInput = ({ label, date, onSelect, minDate, maxDate }: {
  }
  };
 
- return (
- <div>
- <div className="text-xs font-semibold text-slate-900 mb-2">{label}</div>
- <Popover>
- <PopoverTrigger asChild>
- <Button
- variant="outline"
- size="sm"
- className={cn(
-"w-full justify-start text-left font-medium rounded-xl transition-all duration-300",
-"bg-white/60 backdrop-blur-sm",
-"border-slate-200/50",
-"hover:bg-white/80",
-"hover:scale-[1.02] hover:shadow-md",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- !date ? "text-muted-foreground": "text-foreground"
- )}
- aria-label={`${label} date picker${date ? `: ${format(date,"MMM yyyy")}` : ""}`}
- >
- <CalendarIcon className="mr-2 h-4 w-4 text-primary"aria-hidden="true"/>
- {date ? format(date,"MMM yyyy") : "Select date"}
- </Button>
- </PopoverTrigger>
- <PopoverContent
- className="w-auto p-0 rounded-xl border-slate-200/50 bg-transparent backdrop-blur-md shadow-xl"
- align="start"
- >
- <Calendar
- mode="single"
- precision="month"
- selected={date}
- onSelect={handleSelect}
- minDate={minDate}
- maxDate={maxDate}
- initialFocus
- />
- </PopoverContent>
- </Popover>
- </div>
- );
+  return (
+    <div>
+      <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1.5">{label}</div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              "w-full justify-start text-left font-mono text-xs rounded-none transition-colors",
+              "bg-parchment text-ink border-rule",
+              "hover:bg-parchment-deep hover:border-ink",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+              !date ? "text-muted-foreground" : "text-ink font-medium"
+            )}
+            aria-label={`${label} date picker${date ? `: ${format(date, "MMM yyyy")}` : ""}`}
+          >
+            <CalendarIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            {date ? format(date, "MMM yyyy") : "Select date"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-auto p-0 rounded-none border-rule bg-parchment shadow-sm"
+          align="start"
+        >
+          <Calendar
+            mode="single"
+            precision="month"
+            selected={date}
+            onSelect={handleSelect}
+            minDate={minDate}
+            maxDate={maxDate}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 };
 
 export function SearchFilters({
@@ -158,274 +156,181 @@ export function SearchFilters({
  .sort((a, b) => b.count - a.count) // Sort by count descending
  .map(({ lang }) => lang)
  : availableFilters.languages;
- return (
- <div className="sticky top-4">
- {/* Modern header with gradient */}
- <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200/50">
- <div className="flex items-center gap-2.5">
- <div className="relative">
- <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-blue-500/20 to-cyan-500/20 rounded-lg blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
- <div className="relative bg-gradient-to-br from-primary/10 via-blue-500/10 to-cyan-500/10 rounded-lg p-2 border border-primary/20">
- <Filter className="h-4 w-4 text-primary"/>
- </div>
- </div>
- <h2 className="text-base font-bold text-slate-900">
- Filters
- </h2>
- {activeFilterCount > 0 && (
- <Badge className="bg-primary/10 text-primary border-primary/20 font-bold">
- {activeFilterCount}
- </Badge>
- )}
- </div>
+  return (
+    <div className="sticky top-4 space-y-4">
+      {/* Editorial header */}
+      <div className="flex items-center justify-between pb-3 border-b border-rule">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-ink" />
+          <h2 className="text-xs font-mono uppercase tracking-wider text-ink font-semibold">
+            Filters
+          </h2>
+          {activeFilterCount > 0 && (
+            <Badge className="bg-parchment-deep text-ink border-rule font-mono text-xs">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </div>
 
- {activeFilterCount > 0 && (
- <VariantButton intent="accent"
- onClick={onResetFilters}
- icon={X}
- size="sm"
- >
- Clear all
- </VariantButton>
- )}
- </div>
+        {activeFilterCount > 0 && (
+          <VariantButton
+            intent="accent"
+            onClick={onResetFilters}
+            icon={X}
+            size="sm"
+          >
+            Clear all
+          </VariantButton>
+        )}
+      </div>
 
- <div className="space-y-5">
- {/* Date Range Filter */}
- <div className="border rounded-2xl p-4 bg-gradient-to-br from-white/60 via-blue-50/30 to-indigo-50/20 backdrop-blur-sm border-slate-200/50 shadow-sm">
- <h3 className="text-sm font-bold mb-3 text-slate-900">
- Date
- </h3>
- <div className="space-y-3">
- <DateRangeInput
- label="From"
- date={filters.dateFrom}
- onSelect={(date) => onDateChange('dateFrom', date)}
- maxDate={filters.dateTo} // FROM cannot be after TO
- />
- <DateRangeInput
- label="To"
- date={filters.dateTo}
- onSelect={(date) => onDateChange('dateTo', date)}
- minDate={filters.dateFrom} // TO cannot be before FROM
- />
- </div>
- </div>
+      <div className="space-y-4">
+        {/* Date Range Filter */}
+        <div className="border border-rule rounded-none p-3 bg-parchment space-y-2">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+            Date Range
+          </h3>
+          <div className="space-y-2">
+            <DateRangeInput
+              label="From"
+              date={filters.dateFrom}
+              onSelect={(date) => onDateChange('dateFrom', date)}
+              maxDate={filters.dateTo} // FROM cannot be after TO
+            />
+            <DateRangeInput
+              label="To"
+              date={filters.dateTo}
+              onSelect={(date) => onDateChange('dateTo', date)}
+              minDate={filters.dateFrom} // TO cannot be before FROM
+            />
+          </div>
+        </div>
 
- {/* Language filter - Only show if there are languages with results */}
- {languageCounts.length > 0 && (
- <div className="space-y-3">
- <h3 className="text-sm font-bold text-slate-900">
- Language
- </h3>
- <div className="flex flex-wrap gap-3">
- {languageCounts.map((lang) => (
- <button
- key={lang}
- type="button"
- className={cn(
- // Technical Chip Architecture - Sorting Mechanism
-"inline-flex items-center",
-"px-4 py-2", // 0.5rem 1rem padding
-"rounded-lg", // 0.5rem (8px) - Squarer, not pills
-"gap-2", // 0.5rem gap
- // Material
-"bg-white/40", // rgba(255, 255, 255, 0.4)
-"border border-white/80", // 0.0625rem solid rgba(255, 255, 255, 0.8)
- // Text
-"text-slate-500", // Slate 500
-"text-sm", // 0.875rem
-"font-medium", // 500
-"cursor-pointer",
-"transition-all duration-200 ease-in-out",
- // Idle State
- filters.languages?.has(lang)
- ? cn(
- // Active (Legal Authority): Navy Text + Blue Tint
-"bg-blue-500/8", // Faint Blue
-"border-blue-500", // Royal Blue Edge
-"text-blue-700", // Navy Text (#1E40AF)
-"shadow-sm"
- )
- : cn(
- // Hover: Lift and Solidify
-"hover:bg-white",
-"hover:text-slate-900", // #0F172A
-"hover:-translate-y-0.5", // -0.125rem lift
-"hover:shadow-sm"
- )
- )}
- onClick={(e) => {
- e.stopPropagation();
- e.preventDefault();
- onFilterToggle('languages', lang);
- }}
- >
- {lang === 'pl' ? '🇵🇱' : lang === 'uk' || lang === 'en' ? '🇬🇧' : ''} {lang.toUpperCase()}
- </button>
- ))}
- </div>
- </div>
- )}
+        {/* Language filter - Only show if there are languages with results */}
+        {languageCounts.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              Language
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {languageCounts.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-1 rounded-none text-xs font-mono transition-colors border",
+                    filters.languages?.has(lang)
+                      ? "bg-ink text-parchment border-ink font-medium"
+                      : "bg-parchment text-ink border-rule hover:bg-parchment-deep hover:border-rule-strong"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onFilterToggle('languages', lang);
+                  }}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
- {/* Keywords filter - Only show if there are keywords */}
- {keywordCounts.length > 0 && (
- <div className="space-y-3">
- <h3 className="text-sm font-bold text-slate-900">
- Keywords
- </h3>
- <div className="flex flex-wrap gap-3">
- {keywordCounts.map((keyword) => (
- <button
- key={keyword}
- type="button"
- className={cn(
- // Technical Chip Architecture
-"inline-flex items-center",
-"px-4 py-2",
-"rounded-lg",
-"gap-2",
-"bg-white/40",
-"border border-white/80",
-"text-slate-500",
-"text-sm",
-"font-medium",
-"cursor-pointer",
-"transition-all duration-200 ease-in-out",
- filters.keywords.has(keyword)
- ? cn(
-"bg-blue-500/8",
-"border-blue-500",
-"text-blue-700",
-"shadow-sm"
- )
- : cn(
-"hover:bg-white",
-"hover:text-slate-900",
-"hover:-translate-y-0.5",
-"hover:shadow-sm"
- )
- )}
- onClick={(e) => {
- e.stopPropagation();
- onFilterToggle('keywords', keyword);
- }}
- >
- {formatSnakeCaseToHumanReadable(keyword)}
- </button>
- ))}
- </div>
- </div>
- )}
+        {/* Keywords filter - Only show if there are keywords */}
+        {keywordCounts.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              Keywords
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {keywordCounts.map((keyword) => (
+                <button
+                  key={keyword}
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-1 rounded-none text-xs font-mono transition-colors border",
+                    filters.keywords.has(keyword)
+                      ? "bg-ink text-parchment border-ink font-medium"
+                      : "bg-parchment text-ink border-rule hover:bg-parchment-deep hover:border-rule-strong"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFilterToggle('keywords', keyword);
+                  }}
+                >
+                  {formatSnakeCaseToHumanReadable(keyword)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
- {/* Issuing bodies filter - Only show if there are issuing bodies */}
- {availableFilters.issuingBodies.length > 0 && (
- <div className="space-y-3">
- <h3 className="text-sm font-bold text-slate-900">
- Issuing Bodies
- </h3>
- <div className="flex flex-wrap gap-3">
- {availableFilters.issuingBodies.map((body) => (
- <button
- key={body}
- type="button"
- className={cn(
- // Technical Chip Architecture
-"inline-flex items-center",
-"px-4 py-2",
-"rounded-lg",
-"gap-2",
-"bg-white/40",
-"border border-white/80",
-"text-slate-500",
-"text-sm",
-"font-medium",
-"cursor-pointer",
-"transition-all duration-200 ease-in-out",
- filters.issuingBodies.has(body)
- ? cn(
-"bg-blue-500/8",
-"border-blue-500",
-"text-blue-700",
-"shadow-sm"
- )
- : cn(
-"hover:bg-white",
-"hover:text-slate-900",
-"hover:-translate-y-0.5",
-"hover:shadow-sm"
- )
- )}
- onClick={(e) => {
- e.stopPropagation();
- onFilterToggle('issuingBodies', body);
- }}
- >
- {formatSnakeCaseToHumanReadable(body)}
- </button>
- ))}
- </div>
- </div>
- )}
+        {/* Issuing bodies filter - Only show if there are issuing bodies */}
+        {availableFilters.issuingBodies.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              Issuing Bodies
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {availableFilters.issuingBodies.map((body) => (
+                <button
+                  key={body}
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-1 rounded-none text-xs font-mono transition-colors border",
+                    filters.issuingBodies.has(body)
+                      ? "bg-ink text-parchment border-ink font-medium"
+                      : "bg-parchment text-ink border-rule hover:bg-parchment-deep hover:border-rule-strong"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFilterToggle('issuingBodies', body);
+                  }}
+                >
+                  {formatSnakeCaseToHumanReadable(body)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
- {/* Legal concepts filter - Only show if there are legal concepts */}
- {availableFilters.legalConcepts.length > 0 && (
- <div className="space-y-3">
- <h3 className="text-sm font-bold text-slate-900">
- Legal Concepts
- </h3>
- <div className="flex flex-wrap gap-3">
- {availableFilters.legalConcepts.map((concept) => (
- <button
- key={concept}
- type="button"
- className={cn(
- // Technical Chip Architecture
-"inline-flex items-center",
-"px-4 py-2",
-"rounded-lg",
-"gap-2",
-"bg-white/40",
-"border border-white/80",
-"text-slate-500",
-"text-sm",
-"font-medium",
-"cursor-pointer",
-"transition-all duration-200 ease-in-out",
- filters.legalConcepts.has(concept)
- ? cn(
-"bg-blue-500/8",
-"border-blue-500",
-"text-blue-700",
-"shadow-sm"
- )
- : cn(
-"hover:bg-white",
-"hover:text-slate-900",
-"hover:-translate-y-0.5",
-"hover:shadow-sm"
- )
- )}
- onClick={() => onFilterToggle('legalConcepts', concept)}
- >
- {concept}
- </button>
- ))}
- </div>
- </div>
- )}
+        {/* Legal concepts filter - Only show if there are legal concepts */}
+        {availableFilters.legalConcepts.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              Legal Concepts
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {availableFilters.legalConcepts.map((concept) => (
+                <button
+                  key={concept}
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-1 rounded-none text-xs font-mono transition-colors border",
+                    filters.legalConcepts.has(concept)
+                      ? "bg-ink text-parchment border-ink font-medium"
+                      : "bg-parchment text-ink border-rule hover:bg-parchment-deep hover:border-rule-strong"
+                  )}
+                  onClick={() => onFilterToggle('legalConcepts', concept)}
+                >
+                  {concept}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
- {/* Advanced Filters (Jurisdiction, Court Level, Legal Domain, Custom Metadata) */}
- <AdvancedFilterPanel
- filters={filters}
- availableFilters={availableFilters}
- onFilterToggle={onFilterToggle}
- onCustomMetadataToggle={onCustomMetadataToggle || (() => {})}
- onClearCustomMetadata={onClearCustomMetadata || (() => {})}
- searchResults={searchResults}
- customMetadataValues={customMetadataValues}
- />
- </div>
- </div>
- );
+        {/* Advanced Filters (Jurisdiction, Court Level, Legal Domain, Custom Metadata) */}
+        <AdvancedFilterPanel
+          filters={filters}
+          availableFilters={availableFilters}
+          onFilterToggle={onFilterToggle}
+          onCustomMetadataToggle={onCustomMetadataToggle || (() => {})}
+          onClearCustomMetadata={onClearCustomMetadata || (() => {})}
+          searchResults={searchResults}
+          customMetadataValues={customMetadataValues}
+        />
+      </div>
+    </div>
+  );
 }

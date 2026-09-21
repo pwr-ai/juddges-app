@@ -221,65 +221,61 @@ export function SearchResultFeedback({
 
  return (
  <div className={cn('inline-flex items-center gap-1', className)}>
- {/* Thumbs Up - Document is relevant */}
- <button
- onClick={(e) => {
- e.stopPropagation();
- handleFeedback('relevant');
- }}
- disabled={isSubmitting}
- className={cn(
- 'group relative inline-flex items-center justify-center p-1.5 rounded-lg',
- 'transition-all duration-200 active:scale-95',
- 'border border-transparent',
- 'hover:bg-green-50',
- 'hover:text-green-600',
- 'hover:border-green-200',
- 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1',
- feedbackState === 'relevant' && 'bg-green-50 border-green-200',
- isSubmitting && 'opacity-50 cursor-not-allowed'
- )}
- title="Helpful"
- aria-label="Mark as helpful"
- >
- <ThumbsUp
- size={14}
- className={cn(
- 'transition-colors',
- feedbackState === 'relevant' ? 'text-green-500 fill-green-500' : 'text-slate-400'
- )}
- />
- </button>
+      {/* Thumbs Up - Document is relevant */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleFeedback('relevant');
+        }}
+        disabled={isSubmitting}
+        className={cn(
+          'group relative inline-flex items-center justify-center p-1.5 rounded-none',
+          'transition-colors',
+          'border border-transparent',
+          'hover:bg-parchment-deep hover:text-ink hover:border-rule',
+          'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink',
+          feedbackState === 'relevant' && 'bg-parchment-deep border-rule text-ink',
+          isSubmitting && 'opacity-50 cursor-not-allowed'
+        )}
+        title="Helpful"
+        aria-label="Mark as helpful"
+      >
+        <ThumbsUp
+          size={14}
+          className={cn(
+            'transition-colors',
+            feedbackState === 'relevant' ? 'text-ink fill-ink' : 'text-muted-foreground'
+          )}
+        />
+      </button>
 
- {/* Thumbs Down - Document is not relevant */}
- <button
- onClick={(e) => {
- e.stopPropagation();
- handleFeedback('not_relevant');
- }}
- disabled={isSubmitting}
- className={cn(
- 'group relative inline-flex items-center justify-center p-1.5 rounded-lg',
- 'transition-all duration-200 active:scale-95',
- 'border border-transparent',
- 'hover:bg-red-50',
- 'hover:text-red-600',
- 'hover:border-red-200',
- 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1',
- feedbackState === 'not_relevant' && 'bg-red-50 border-red-200',
- isSubmitting && 'opacity-50 cursor-not-allowed'
- )}
- title="Not helpful"
- aria-label="Mark as not helpful"
- >
- <ThumbsDown
- size={14}
- className={cn(
- 'transition-colors',
- feedbackState === 'not_relevant' ? 'text-red-500 fill-red-500' : 'text-slate-400'
- )}
- />
- </button>
+      {/* Thumbs Down - Document is not relevant */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleFeedback('not_relevant');
+        }}
+        disabled={isSubmitting}
+        className={cn(
+          'group relative inline-flex items-center justify-center p-1.5 rounded-none',
+          'transition-colors',
+          'border border-transparent',
+          'hover:bg-parchment-deep hover:text-oxblood hover:border-rule',
+          'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink',
+          feedbackState === 'not_relevant' && 'bg-parchment-deep border-rule text-oxblood',
+          isSubmitting && 'opacity-50 cursor-not-allowed'
+        )}
+        title="Not helpful"
+        aria-label="Mark as not helpful"
+      >
+        <ThumbsDown
+          size={14}
+          className={cn(
+            'transition-colors',
+            feedbackState === 'not_relevant' ? 'text-oxblood fill-oxblood' : 'text-muted-foreground'
+          )}
+        />
+      </button>
  </div>
  );
 }

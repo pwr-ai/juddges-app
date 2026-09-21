@@ -39,6 +39,7 @@ from app.argumentation import router as argumentation_router
 from app.auth import verify_api_key
 from app.clustering import router as clustering_router
 from app.collections import router as collections_router
+from app.collections_from_filter import router as collections_from_filter_router
 from app.dashboard import router as dashboard_router
 from app.embeddings_api import router as embeddings_router
 from app.example_questions import router as example_questions_router
@@ -685,6 +686,8 @@ add_routes(
 # Routers protected by API key only (no extra prefix/tag overrides).
 API_KEY_PROTECTED_ROUTERS = [
     documents_router,
+    # literal /collections/<segment> routes must register before the /{collection_id} catch-all
+    collections_from_filter_router,
     collections_router,
     publications_router,
     extraction_router,

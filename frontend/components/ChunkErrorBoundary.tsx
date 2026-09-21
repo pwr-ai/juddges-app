@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, ReactNode } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import { logger } from "@/lib/logger";
 
 interface Props {
@@ -60,7 +61,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
         return (
           <div className="flex min-h-screen items-center justify-center bg-background">
             <div className="text-center">
-              <div className="mb-4 text-4xl">🔄</div>
+              <RefreshCw aria-hidden className="mx-auto mb-4 size-8 text-ink-soft" />
               <h2 className="mb-2 text-xl font-semibold">Loading updates...</h2>
               <p className="text-muted-foreground">
                 The application is being updated. Please wait...
@@ -73,7 +74,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-screen items-center justify-center bg-background">
           <div className="max-w-md text-center">
-            <div className="mb-4 text-4xl">⚠️</div>
+            <AlertTriangle aria-hidden className="mx-auto mb-4 size-8 text-oxblood" />
             <h2 className="mb-2 text-xl font-semibold">Something went wrong</h2>
             <p className="mb-4 text-muted-foreground">
               {this.state.error?.message || "An unexpected error occurred"}

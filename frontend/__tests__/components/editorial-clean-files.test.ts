@@ -97,6 +97,8 @@ const CLEAN_FILES = [
   'components/app-sidebar.tsx',
   'components/onboarding/welcome-modal.tsx',
   'app/admin/page.tsx',
+  'components/SaveSearchDialog.tsx',
+  'components/ChunkErrorBoundary.tsx',
   'app/admin/content/page.tsx',
   'app/admin/documents/page.tsx',
   'app/admin/system/page.tsx',
@@ -112,6 +114,63 @@ const CLEAN_FILES = [
   'components/legal/professional-acknowledgment.tsx',
   'components/admin/AdminGuard.tsx',
   'components/extraction-results-table.tsx',
+  'lib/styles/components/calendar.tsx',
+  'lib/styles/components/search-filters.tsx',
+  'lib/styles/components/advanced-filter-panel.tsx',
+  'lib/styles/components/search/SearchEmptyState.tsx',
+  'lib/styles/components/search/SearchHeader.tsx',
+  'lib/styles/components/search/SearchForm.tsx',
+  'lib/styles/components/search/SearchResultsSection.tsx',
+  'lib/styles/components/search-input.tsx',
+  'lib/styles/components/search-result-feedback.tsx',
+  'lib/styles/components/document-dialog.tsx',
+  'components/SaveSearchDialog.tsx',
+  'app/saved-searches/page.tsx',
+  'lib/styles/components/chat/chat-message.tsx',
+  'lib/styles/components/chat/chat-input.tsx',
+  'lib/styles/components/chat/chat-history.tsx',
+  'lib/styles/components/chat/chat-container.tsx',
+  'lib/styles/components/chat/chat-message-list.tsx',
+  'lib/styles/components/chat/chat-interface.tsx',
+  'lib/styles/components/chat/chat-message-styles.tsx',
+  'lib/styles/components/schema-status-selector.tsx',
+  'lib/styles/components/schemas/SchemaActionsBar.tsx',
+  'lib/styles/components/schemas/SchemaCard.tsx',
+  'lib/styles/components/schemas/SchemaPreview.tsx',
+  'lib/styles/components/schema-preview.tsx',
+  'app/schemas/page.tsx',
+  'app/schemas/[id]/client.tsx',
+  'app/schemas/base/page.tsx',
+  'app/status/page.tsx',
+  'app/help/page.tsx',
+  'app/terms/page.tsx',
+  'app/argumentation-analysis/page.tsx',
+  'app/legal/disclaimer/page.tsx',
+  'app/ecosystem/page.tsx',
+  'app/team/page.tsx',
+  'app/contact/page.tsx',
+  'app/history/page.tsx',
+  'app/judge-fingerprint/page.tsx',
+  'app/auth/error/page.tsx',
+  'app/auth/login/page.tsx',
+  'lib/document-fields.ts',
+  'components/schema-studio/FieldCard.tsx',
+  'components/schema-studio/FieldEditor.tsx',
+  'components/schema-studio/versions/VersionsTab.tsx',
+  'lib/schema-editor/rjsf/custom-widgets/DescriptionWidget.tsx',
+  'lib/schema-editor/rjsf/rjsf-config.ts',
+  'types/schema-playground.ts',
+  'lib/styles/colors/surfaces.ts',
+  'lib/styles/components/buttons.ts',
+  'lib/styles/components/button.tsx',
+  'lib/styles/components/variant-button.tsx',
+  'lib/styles/components/delete-button.tsx',
+  'lib/styles/components/toggle-button.tsx',
+  'lib/styles/components/dropdown-button.tsx',
+  'lib/styles/components/searchable-dropdown-button.tsx',
+  'components/error-boundary.tsx',
+  'app/publications/admin/[id]/page.tsx',
+  'lib/styles/components/highlighted-text.tsx',
 ];
 
 /**
@@ -219,5 +278,40 @@ describe('app/globals.css', () => {
     expect(css).not.toMatch(/glass-page-background/);
     expect(css).not.toMatch(/@keyframes (shimmer-slide|text-shimmer)/);
     expect(css).not.toMatch(/animate-(shimmer-slide|text-shimmer)/);
+  });
+});
+
+/**
+ * The ratchet's `hue` pattern omits `red` and `yellow` (see HUES in
+ * scripts/assert-no-banned-classes.js), so tinted status blocks in those two
+ * families slip past it. Pin the surfaces that have been migrated off them.
+ */
+describe('legacy red/yellow status tints', () => {
+  const TINT = /\b(bg|text|border|from|to|via|ring)-(red|yellow)-\d/;
+
+  it.each([
+    'app/settings/page.tsx',
+    'components/SaveSearchDialog.tsx',
+    'components/ChunkErrorBoundary.tsx',
+  ])('%s uses editorial tones instead', (file) => {
+    expect(read(file)).not.toMatch(TINT);
+  });
+});
+
+/** Emoji used as icons (#641 misc) — lucide glyphs or nothing. */
+describe('emoji-free files', () => {
+  const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+
+  it.each(['components/ChunkErrorBoundary.tsx'])('%s uses no emoji as icons', (file) => {
+    expect(read(file)).not.toMatch(EMOJI);
+  });
+});
+
+/** #641 asks for the admin figures to render through the <Stat> primitive. */
+describe('app/admin/page.tsx', () => {
+  it('renders its figures with <Stat> rather than hand-rolled numerals', () => {
+    const source = read('app/admin/page.tsx');
+    expect(source).not.toMatch(/text-3xl font-semibold/);
+    expect(source).toMatch(/<Stat\b/);
   });
 });

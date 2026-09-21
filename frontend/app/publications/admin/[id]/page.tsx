@@ -64,7 +64,7 @@ export default function EditPublicationPage({ params }: EditPublicationPageProps
           </Link>
           <h1 className="text-3xl font-bold">Edit Publication</h1>
         </div>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="border-l-2 border-l-oxblood bg-parchment-deep px-4 py-3 text-sm text-ink">
           {error}
         </div>
       </div>

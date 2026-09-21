@@ -59,36 +59,28 @@ export function SearchEmptyState({
  description="We couldn't find any documents matching your search query"
  query={query}
  variant="search"
- tip={
- lastSearchMode === 'rabbit' ? (
- <div className="inline-flex items-start gap-2 px-4 py-3 rounded-xl bg-gradient-to-br from-blue-50/60 via-cyan-50/40 to-blue-50/40 backdrop-blur-sm border border-blue-200/50 shadow-sm">
- <Lightbulb className="h-4 w-4 text-primary mt-0.5 flex-shrink-0"/>
- <p className="text-sm text-muted-foreground/80 leading-relaxed text-left">
- <span className="font-semibold text-foreground/90">Tip:</span> Try switching to{' '}
- <span className="font-semibold bg-gradient-to-br from-primary via-blue-600 to-cyan-600 bg-clip-text text-transparent">
- Thinking Mode
- </span>{' '}
- for more comprehensive results. It uses{' '}
- <span className="font-semibold bg-gradient-to-br from-primary via-blue-600 to-cyan-600 bg-clip-text text-transparent">
- extended AI reasoning
- </span>{' '}
- to find relevant documents.
- </p>
- </div>
- ) : lastSearchMode === 'thinking' ? (
- <div className="inline-flex items-start gap-2 px-4 py-3 rounded-xl bg-gradient-to-br from-blue-50/60 via-cyan-50/40 to-blue-50/40 backdrop-blur-sm border border-blue-200/50 shadow-sm">
- <Lightbulb className="h-4 w-4 text-primary mt-0.5 flex-shrink-0"/>
- <p className="text-sm text-muted-foreground/80 leading-relaxed text-left">
- <span className="font-semibold text-foreground/90">Tip:</span> Try our{' '}
- <span className="font-semibold bg-gradient-to-br from-primary via-blue-600 to-cyan-600 bg-clip-text text-transparent">
- AI Assistant
- </span>{' '}
- instead. It uses conversational AI to understand your needs, retrieve relevant documents, and provide
- detailed explanations in a natural dialogue.
- </p>
- </div>
- ) : undefined
- }
+        tip={
+          lastSearchMode === 'rabbit' ? (
+            <div className="inline-flex items-start gap-2 px-4 py-3 rounded-none bg-parchment-deep border border-rule">
+              <Lightbulb className="h-4 w-4 text-ink mt-0.5 flex-shrink-0" />
+              <p className="text-xs font-mono text-muted-foreground leading-relaxed text-left">
+                <span className="font-semibold text-ink">Tip:</span> Try switching to{' '}
+                <span className="font-semibold text-ink">Thinking Mode</span>{' '}
+                for more comprehensive results. It uses extended reasoning to find relevant documents.
+              </p>
+            </div>
+          ) : lastSearchMode === 'thinking' ? (
+            <div className="inline-flex items-start gap-2 px-4 py-3 rounded-none bg-parchment-deep border border-rule">
+              <Lightbulb className="h-4 w-4 text-ink mt-0.5 flex-shrink-0" />
+              <p className="text-xs font-mono text-muted-foreground leading-relaxed text-left">
+                <span className="font-semibold text-ink">Tip:</span> Try our{' '}
+                <span className="font-semibold text-ink">AI Assistant</span>{' '}
+                instead. It uses conversational AI to understand your needs, retrieve relevant documents, and provide
+                detailed explanations in a natural dialogue.
+              </p>
+            </div>
+          ) : undefined
+        }
  secondaryAction={{
  label: 'Back',
  onClick: onBack,

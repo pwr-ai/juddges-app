@@ -26,3 +26,4 @@ export { FieldTypeBadge } from "./FieldTypeBadge";
 export { StatusBadge } from "./StatusBadge";
 export { EditorialCardSkeleton } from "./EditorialCardSkeleton";
 export { EditorialPagination } from "./EditorialPagination";
+export { FlowStepper } from "./FlowStepper";
