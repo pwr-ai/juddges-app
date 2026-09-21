@@ -2127,6 +2127,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/compare/pairs/{pair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comparison of a saved PL/UK collection pair (base + extension schema fields)
+         * @description Base fields over the pair's two collections, plus the extension tally.
+         *
+         *     No request filters are accepted: the membership is the pair's own
+         *     `pl_collection_id`/`uk_collection_id`, and the pair must belong to the
+         *     caller (`find_pair` scopes by user; anything else is a 404). `filters` in
+         *     the response is the server-built `{"collection_ids": [pl, uk]}`, which
+         *     `POST /compare/export` accepts for the CSV of the same numbers.
+         */
+        get: operations["compare_pair_compare_pairs__pair_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dashboard/featured-examples": {
         parameters: {
             query?: never;
@@ -8389,6 +8415,49 @@ export interface components {
             questions: string[];
         };
         /**
+         * ExtensionCompare
+         * @description Side-by-side counts for the extension schema both sides were extracted with.
+         *
+         *     Present only when the newest SUCCESS job of each collection ran the same
+         *     `schema_id`; `fields` may be empty when that schema has no enum/boolean
+         *     field. Coverage denominators are the job's completed documents, not the
+         *     collection size, so `totals` here can differ from the base `totals`.
+         */
+        ExtensionCompare: {
+            /** Fields */
+            fields: components["schemas"]["CompareField"][];
+            /** Jobs */
+            jobs: {
+                [key: string]: components["schemas"]["ExtensionJobRef"];
+            };
+            /** Schema Id */
+            schema_id: string;
+            /** Schema Name */
+            schema_name?: string | null;
+            /**
+             * Source
+             * @description 'schema:<extraction_schema_id>', as on each field
+             */
+            source: string;
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * ExtensionJobRef
+         * @description The extraction job whose `results` fed one side of the extension tally.
+         */
+        ExtensionJobRef: {
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Job Id
+             * @description Celery task id, as used by /extractions/jobs/{job_id}
+             */
+            job_id: string;
+        };
+        /**
          * ExtractedDataFilterRequest
          * @description Request for filtering documents by extracted_data fields.
          */
@@ -9732,6 +9801,45 @@ export interface components {
              * @description Current offset (0-indexed)
              */
             offset: number;
+        };
+        /**
+         * PairCompareResponse
+         * @description `CompareResponse` over a saved pair's membership, plus the extension tally.
+         *
+         *     `fields` holds the base-schema fields only; extension-schema fields live in
+         *     `extension.fields` (each with `source = 'schema:<id>'`). Exactly one of
+         *     `extension` / `extension_reason` is set.
+         */
+        PairCompareResponse: {
+            extension?: components["schemas"]["ExtensionCompare"] | null;
+            /** Extension Reason */
+            extension_reason?: ("no_jobs" | "no_job_pl" | "no_job_uk" | "schema_mismatch" | "schema_not_found" | "extension_failed") | null;
+            /** Fields */
+            fields: components["schemas"]["CompareField"][];
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /**
+             * Ignored Filter Keys
+             * @default []
+             */
+            ignored_filter_keys: string[];
+            /**
+             * Jurisdictions
+             * @default [
+             *       "PL",
+             *       "UK"
+             *     ]
+             */
+            jurisdictions: string[];
+            pair: components["schemas"]["PairSummary"];
+            /** Text Query */
+            text_query?: string | null;
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
         };
         /**
          * PairSide
@@ -16009,6 +16117,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompareResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_pair_compare_pairs__pair_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairCompareResponse"];
                 };
             };
             /** @description Validation Error */

@@ -6177,6 +6177,87 @@
         "title": "ExampleQuestionsResponse",
         "type": "object"
       },
+      "ExtensionCompare": {
+        "description": "Side-by-side counts for the extension schema both sides were extracted with.\n\nPresent only when the newest SUCCESS job of each collection ran the same\n`schema_id`; `fields` may be empty when that schema has no enum/boolean\nfield. Coverage denominators are the job's completed documents, not the\ncollection size, so `totals` here can differ from the base `totals`.",
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/CompareField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "jobs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ExtensionJobRef"
+            },
+            "title": "Jobs",
+            "type": "object"
+          },
+          "schema_id": {
+            "title": "Schema Id",
+            "type": "string"
+          },
+          "schema_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Name"
+          },
+          "source": {
+            "description": "'schema:<extraction_schema_id>', as on each field",
+            "title": "Source",
+            "type": "string"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "schema_id",
+          "source",
+          "jobs",
+          "totals",
+          "fields"
+        ],
+        "title": "ExtensionCompare",
+        "type": "object"
+      },
+      "ExtensionJobRef": {
+        "description": "The extraction job whose `results` fed one side of the extension tally.",
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "job_id": {
+            "description": "Celery task id, as used by /extractions/jobs/{job_id}",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "title": "ExtensionJobRef",
+        "type": "object"
+      },
       "ExtractedDataFilterRequest": {
         "description": "Request for filtering documents by extracted_data fields.",
         "properties": {
@@ -8667,6 +8748,100 @@
           "loaded_count"
         ],
         "title": "PaginationMetadata",
+        "type": "object"
+      },
+      "PairCompareResponse": {
+        "description": "`CompareResponse` over a saved pair's membership, plus the extension tally.\n\n`fields` holds the base-schema fields only; extension-schema fields live in\n`extension.fields` (each with `source = 'schema:<id>'`). Exactly one of\n`extension` / `extension_reason` is set.",
+        "properties": {
+          "extension": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtensionCompare"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extension_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_jobs",
+                  "no_job_pl",
+                  "no_job_uk",
+                  "schema_mismatch",
+                  "schema_not_found",
+                  "extension_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extension Reason"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/CompareField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "ignored_filter_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored Filter Keys",
+            "type": "array"
+          },
+          "jurisdictions": {
+            "default": [
+              "PL",
+              "UK"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Jurisdictions",
+            "type": "array"
+          },
+          "pair": {
+            "$ref": "#/components/schemas/PairSummary"
+          },
+          "text_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Query"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "totals",
+          "fields",
+          "filters",
+          "pair"
+        ],
+        "title": "PairCompareResponse",
         "type": "object"
       },
       "PairSide": {
@@ -21136,6 +21311,57 @@
           }
         ],
         "summary": "Side-by-side PL/UK value distributions for base-schema fields",
+        "tags": [
+          "compare"
+        ]
+      }
+    },
+    "/compare/pairs/{pair_id}": {
+      "get": {
+        "description": "Base fields over the pair's two collections, plus the extension tally.\n\nNo request filters are accepted: the membership is the pair's own\n`pl_collection_id`/`uk_collection_id`, and the pair must belong to the\ncaller (`find_pair` scopes by user; anything else is a 404). `filters` in\nthe response is the server-built `{\"collection_ids\": [pl, uk]}`, which\n`POST /compare/export` accepts for the CSV of the same numbers.",
+        "operationId": "compare_pair_compare_pairs__pair_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pair_id",
+            "required": true,
+            "schema": {
+              "title": "Pair Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairCompareResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Comparison of a saved PL/UK collection pair (base + extension schema fields)",
         "tags": [
           "compare"
         ]
