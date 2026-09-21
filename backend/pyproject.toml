@@ -157,6 +157,10 @@ ignore = [
 "tests/**/*.py" = ["S101", "S106", "SIM102", "RUF059"]
 "scripts/**/*.py" = ["S608"]
 "examples/**/*.py" = ["S113"]
+# LLM-facing prompt uses en dashes for date ranges (PL/EN typographic convention).
+"app/extraction_domain/nl_filter_generator.py" = ["RUF001"]
+# Pins the prompt's literal en-dash date-range phrasing (e.g. "2015–2024").
+"tests/app/test_nl_filter_prompt_contract.py" = ["RUF001"]
 
 [tool.coverage.run]
 source = ["app", "juddges_search", "schema_generator_agent"]

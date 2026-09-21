@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExtractionSchema } from '@/types/extraction_schemas';
-import { GlassTabs, GlassTabsContent, GlassTabsList, GlassTabsTrigger } from '@/lib/styles/components';
+import { EditorialTabs, EditorialTabsContent, EditorialTabsList, EditorialTabsTrigger } from '@/lib/styles/components';
 import { toast } from 'sonner';
 import { FileJson, Plus, ArrowUpDown, X, Globe } from 'lucide-react';
 import {
@@ -381,7 +381,7 @@ export default function SchemasPage() {
 
  {/* Tabs and Pagination Container - Flex layout to keep pagination at bottom */}
  <div className="flex flex-col flex-1 min-h-0 mt-0.5">
- <GlassTabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="w-full mb-2 flex-1 flex flex-col min-h-0">
+ <EditorialTabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="w-full mb-2 flex-1 flex flex-col min-h-0">
  <div className="flex items-center gap-3 mb-3 flex-nowrap">
  {/* Status info - First */}
  <div className="text-sm text-muted-foreground whitespace-nowrap shrink-0 min-w-[140px]">
@@ -398,11 +398,11 @@ export default function SchemasPage() {
 
  {/* Tabs - Second, with flex-1 to push it slightly left */}
  <div className="flex-1 flex justify-center">
- <GlassTabsList className="grid grid-cols-3 w-fit shrink-0">
- <GlassTabsTrigger value="all">All</GlassTabsTrigger>
- <GlassTabsTrigger value="my-schemas">My Schemas</GlassTabsTrigger>
- <GlassTabsTrigger value="public-schemas">Public</GlassTabsTrigger>
- </GlassTabsList>
+ <EditorialTabsList className="grid grid-cols-3 w-fit shrink-0">
+ <EditorialTabsTrigger value="all">All</EditorialTabsTrigger>
+ <EditorialTabsTrigger value="my-schemas">My Schemas</EditorialTabsTrigger>
+ <EditorialTabsTrigger value="public-schemas">Public</EditorialTabsTrigger>
+ </EditorialTabsList>
  </div>
 
  {/* Sort and View controls - Third */}
@@ -431,7 +431,7 @@ export default function SchemasPage() {
  </div>
  </div>
 
- <GlassTabsContent value="all"className="mt-0 flex-1 min-h-0">
+ <EditorialTabsContent value="all"className="mt-0 flex-1 min-h-0">
  {/* Active Filters Row */}
  {hasActiveFilters && (
  <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -524,9 +524,9 @@ export default function SchemasPage() {
  )}
  </motion.div>
  </AnimatePresence>
- </GlassTabsContent>
+ </EditorialTabsContent>
 
- <GlassTabsContent value="my-schemas"className="mt-0">
+ <EditorialTabsContent value="my-schemas"className="mt-0">
  {/* Active Filters Row */}
  {hasActiveFilters && (
  <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -619,9 +619,9 @@ export default function SchemasPage() {
  )}
  </motion.div>
  </AnimatePresence>
- </GlassTabsContent>
+ </EditorialTabsContent>
 
- <GlassTabsContent value="public-schemas"className="mt-0">
+ <EditorialTabsContent value="public-schemas"className="mt-0">
  {/* Active Filters Row */}
  {hasActiveFilters && (
  <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -709,8 +709,8 @@ export default function SchemasPage() {
  )}
  </motion.div>
  </AnimatePresence>
- </GlassTabsContent>
- </GlassTabs>
+ </EditorialTabsContent>
+ </EditorialTabs>
 
  {/* Pagination - Always rendered in same position at bottom */}
  <motion.div

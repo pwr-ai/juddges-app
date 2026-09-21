@@ -1,20 +1,19 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Banned-class ratchet for the Editorial migration (#637, #638).
+ * Banned-class gate for the Editorial migration (#637, #638, #642).
  *
- * Counts pre-Editorial "AI slop" tells in the frontend source and fails when
- * any family's count rises above `scripts/banned-classes.baseline.json`.
- * Each migration PR lowers the baseline; once every count is zero the gate
- * becomes a hard fail (#642).
+ * Counts pre-Editorial "AI slop" tells in the frontend source and fails if
+ * any are found. This was a ratchet against
+ * `scripts/banned-classes.baseline.json` while #638-#641 and #676 drove the
+ * counts down; every family reached zero in #642, so the baseline is gone and
+ * any hit is now a hard failure.
  *
- *   node scripts/assert-no-banned-classes.js                  # check
- *   node scripts/assert-no-banned-classes.js --update-baseline # rewrite baseline to current counts
+ *   node scripts/assert-no-banned-classes.js   # check (exit 1 on any hit)
  */
 const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
-const BASELINE_PATH = path.join(__dirname, 'banned-classes.baseline.json');
 const SCAN_DIRS = ['app', 'components', 'lib', 'hooks'];
 const SCAN_EXTENSIONS = new Set(['.tsx', '.ts', '.css']);
 const ALLOWLIST_PREFIXES = ['components/editorial/', 'components/ui/skeleton.tsx'];
@@ -24,13 +23,21 @@ const HUES =
 
 // Name → regex. Keep in sync with DESIGN.md "Avoid" and the #638 issue body.
 const PATTERNS = {
-  glass: /backdrop-blur|\bglass-/g,
-  gradient: /bg-gradient-to-|bg-linear-to-|bg-clip-text/g,
+  // `backdrop-filter` catches the CSS property; the utility alone missed a
+  // live blur on every toast (#713).
+  glass: /backdrop-blur|backdrop-filter|\bglass-/g,
+  gradient: /bg-gradient-to-|bg-linear-to-|bg-clip-text|(?:linear|radial|conic)-gradient\(/g,
   hue: new RegExp(`\\b(bg|text|border|from|to|via|ring)-(${HUES})-\\d`, 'g'),
   'transition-all': /transition-all/g,
-  radius: /rounded-(xl|2xl|3xl|\[\d+px\]|\[[\d.]+rem\])\b/g,
-  'hover-fx': /hover:scale-|shadow-(xl|2xl)\b/g,
-  motion: /animate-(ping|bounce|shimmer)\b|repeat:\s*Infinity/g,
+  // The `\b` belongs only on the bare sizes: an arbitrary value is already
+  // self-delimiting, and `rounded-[24px]"` has no word boundary to match.
+  radius: /rounded-(?:(?:xl|2xl|3xl)\b|\[\d+px\]|\[[\d.]+rem\])/g,
+  // `(?<!-)` keeps this on utility classes: `--shadow-xl: var(--shadow-lg)` in
+  // globals.css is the cap that neutralises the oversized shadow, not a use of it.
+  'hover-fx': /hover:scale-|(?<!-)shadow-(xl|2xl)\b/g,
+  // Targets the sweep, not the repeat count: a blinking caret and a skeleton
+  // pulse both loop forever and are both permitted (DESIGN.md 4a, 6).
+  motion: /animate-(ping|bounce|shimmer)\b|repeat:\s*Infinity|(?:@keyframes|animation:)[^;{}]*shimmer/g,
   'ai-glyph': /\bSparkles\b|\bWand2\b/g,
 };
 
@@ -46,17 +53,6 @@ function countBannedPatterns(files) {
     }
   }
   return counts;
-}
-
-function compareToBaseline(counts, baseline) {
-  const regressions = [];
-  const improvements = [];
-  for (const [name, actual] of Object.entries(counts)) {
-    const expected = baseline[name] ?? 0;
-    if (actual > expected) regressions.push({ name, baseline: expected, actual });
-    else if (actual < expected) improvements.push({ name, baseline: expected, actual });
-  }
-  return { regressions, improvements };
 }
 
 function* walk(dir) {
@@ -85,51 +81,49 @@ function readSourceFiles() {
   return files;
 }
 
-function formatRow({ name, baseline, actual }) {
-  return `  ${name.padEnd(16)} baseline ${String(baseline).padStart(5)}  actual ${String(actual).padStart(5)}`;
+function formatRow({ name, count, files }) {
+  const where = files.slice(0, 3).join(', ') + (files.length > 3 ? `, +${files.length - 3} more` : '');
+  return `  ${name.padEnd(16)} ${String(count).padStart(4)}  ${where}`;
 }
 
-function main(argv) {
-  const counts = countBannedPatterns(readSourceFiles());
-
-  if (argv.includes('--update-baseline')) {
-    fs.writeFileSync(BASELINE_PATH, `${JSON.stringify(counts, null, 2)}\n`);
-    console.log(`Wrote ${path.relative(ROOT, BASELINE_PATH)}`);
-    return 0;
+function findOffenders(files) {
+  const offenders = [];
+  for (const [name, pattern] of Object.entries(PATTERNS)) {
+    let count = 0;
+    const hit = [];
+    for (const file of files) {
+      const n = (file.content.match(pattern) ?? []).length;
+      if (n > 0) {
+        count += n;
+        hit.push(file.path);
+      }
+    }
+    if (count > 0) offenders.push({ name, count, files: hit });
   }
+  return offenders;
+}
 
-  const baseline = fs.existsSync(BASELINE_PATH)
-    ? JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'))
-    : {};
-  const { regressions, improvements } = compareToBaseline(counts, baseline);
+function main() {
+  const offenders = findOffenders(readSourceFiles());
 
-  if (regressions.length > 0) {
+  if (offenders.length > 0) {
     console.error(
       [
-        'Banned classes increased above scripts/banned-classes.baseline.json (#637):',
-        ...regressions.map(formatRow),
+        'Banned pre-Editorial classes found (#637):',
+        ...offenders.map(formatRow),
         '',
         'Use the Editorial primitives in components/editorial/ (docs/reference/DESIGN.md) instead.',
+        'These patterns are a hard failure - there is no baseline to raise.',
       ].join('\n')
     );
     return 1;
   }
 
-  if (improvements.length > 0) {
-    console.log(
-      [
-        'Banned classes dropped below the baseline — lower it with',
-        '`node scripts/assert-no-banned-classes.js --update-baseline`:',
-        ...improvements.map(formatRow),
-      ].join('\n')
-    );
-  }
-
   return 0;
 }
 
-module.exports = { PATTERNS, countBannedPatterns, compareToBaseline, isAllowlisted };
+module.exports = { PATTERNS, countBannedPatterns, findOffenders, isAllowlisted };
 
 if (require.main === module) {
-  process.exit(main(process.argv.slice(2)));
+  process.exit(main());
 }

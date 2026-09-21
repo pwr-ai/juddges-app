@@ -28,6 +28,7 @@ interface FilterState {
   filters: BaseSchemaFilters;
   textQuery: string;
   page: number;
+  nlQuestion?: string;
 }
 
 interface UseExtractedDataFiltersResult extends FilterState {
@@ -35,6 +36,7 @@ interface UseExtractedDataFiltersResult extends FilterState {
   setFilters: (next: BaseSchemaFilters) => void;
   setTextQuery: (next: string) => void;
   setPage: (page: number) => void;
+  setNlQuestion: (next: string | undefined) => void;
   removeFilter: (field: keyof BaseSchemaFilters) => void;
   clearAll: () => void;
   /** Active filter count (excludes empty arrays / empty strings). */
@@ -142,6 +144,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
       filters: decodeFilters(searchParams.get("f")),
       textQuery: searchParams.get("q") ?? "",
       page: Math.max(1, Number(searchParams.get("page") ?? "1") || 1),
+      nlQuestion: searchParams.get("nl") ?? undefined,
     }),
     // intentionally only on mount; later updates use writeUrl
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,6 +180,10 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setState((prev) => ({ ...prev, page: Math.max(1, page) }));
   }, []);
 
+  const setNlQuestion = useCallback((next: string | undefined) => {
+    setState((prev) => ({ ...prev, nlQuestion: next }));
+  }, []);
+
   const removeFilter = useCallback((field: keyof BaseSchemaFilters) => {
     setState((prev) => {
       const nextFilters = { ...prev.filters };
@@ -186,7 +193,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
   }, []);
 
   const clearAll = useCallback(() => {
-    setState((prev) => ({ ...prev, filters: {}, textQuery: "", page: 1 }));
+    setState((prev) => ({ ...prev, filters: {}, textQuery: "", page: 1, nlQuestion: undefined }));
   }, []);
 
   const activeCount = useMemo(() => countActive(state.filters), [state.filters]);
@@ -197,6 +204,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setFilters,
     setTextQuery,
     setPage,
+    setNlQuestion,
     removeFilter,
     clearAll,
     activeCount,
