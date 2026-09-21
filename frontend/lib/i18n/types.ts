@@ -121,6 +121,7 @@ export interface NavigationTranslations {
   // Analysis section
   analysis: string;
   documentRelationships: string;
+  compare: string;
 
   // Advanced tools
   advancedTools: string;
@@ -678,6 +679,45 @@ export interface LegalTranslations {
 }
 
 /**
+ * Translation namespace for the PL/UK comparison page (`/compare`)
+ */
+export interface CompareTranslations {
+  pageTitle: string;
+  pageSubtitle: string;
+  emptyTitle: string;
+  emptyBody: string;
+  askQuestion: string;
+  matching: string;
+  matchingPl: string;
+  matchingUk: string;
+  shareAxis: string;
+  coverageBadge: string;
+  sectionPrimary: string;
+  sectionPartial: string;
+  sectionUnavailable: string;
+  unavailableOne: string;
+  unavailableBoth: string;
+  noMatchesTitle: string;
+  noMatchesBody: string;
+  jurisdictionIgnored: string;
+  savePair: string;
+  savePairTitle: string;
+  savePairName: string;
+  savePairHint: string;
+  savePairTooLarge: string;
+  saved: string;
+  openCollections: string;
+  exportCsv: string;
+  copyLink: string;
+  linkCopied: string;
+  pairEyebrow: string;
+  pairSchemaSection: string;
+  pairNoSchema: string;
+  extractOnBoth: string;
+  dataNote: string;
+}
+
+/**
  * Complete translations structure
  */
 export interface Translations {
@@ -693,6 +733,7 @@ export interface Translations {
   dashboard: DashboardTranslations;
   judgeFingerprint: JudgeFingerprintTranslations;
   reasoningLines: ReasoningLinesTranslations;
+  compare: CompareTranslations;
 }
 
 /**
@@ -711,7 +752,8 @@ export type TranslationKey =
   | `legal.${keyof LegalTranslations}`
   | `dashboard.${keyof DashboardTranslations}`
   | `judgeFingerprint.${keyof JudgeFingerprintTranslations}`
-  | `reasoningLines.${keyof ReasoningLinesTranslations}`;
+  | `reasoningLines.${keyof ReasoningLinesTranslations}`
+  | `compare.${keyof CompareTranslations}`;
 
 /**
  * Interpolation values for dynamic translations
