@@ -777,7 +777,12 @@ filter API](../reference/base-schema-filter-api.md).
 
 `filters`/`text_query` are the same `BaseSchemaFilters` shape as `POST
 /extractions/base-schema/filter`; `fields` is optional (defaults to every
-comparable base field).
+comparable base field, up to `MAX_FIELDS` = the registry size — a longer
+list fails request validation with `422` before any other check runs). A
+`jurisdiction` key in `filters` (e.g. carried in from a
+`/search/extractions` permalink) is stripped server-side and reported in
+`ignored_filter_keys`; `collection_ids` is not stripped, it is
+ownership-checked instead (see errors below).
 
 **Example Response (200):**
 
@@ -809,10 +814,10 @@ comparable base field).
 }
 ```
 
-**Errors:** `400 UNKNOWN_FIELD` (`fields` names a non-comparable field),
-`400 INVALID_COLLECTION_ID` / `404 COLLECTION_NOT_FOUND`
-(`filters.collection_ids` malformed or not owned), `500 COMPARE_FAILED`,
-`503 DATABASE_UNAVAILABLE`.
+**Errors:** `422` (`fields` longer than `MAX_FIELDS`), `400 UNKNOWN_FIELD`
+(`fields` names a non-comparable field), `400 INVALID_COLLECTION_ID` / `404
+COLLECTION_NOT_FOUND` (`filters.collection_ids` malformed or not owned),
+`500 COMPARE_FAILED`, `503 DATABASE_UNAVAILABLE`.
 
 **`POST /compare/export`** — same request body as `/compare/facets`; returns
 a long-format CSV (`Content-Type: text/csv; charset=utf-8`, UTF-8 BOM,

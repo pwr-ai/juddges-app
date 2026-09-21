@@ -37,19 +37,24 @@ step of the **Explore** sidebar flow (see `docs/reference/sidebar-map.md`).
    non-null value in that column). The 80 % rule decides primary vs. partial;
    a jurisdiction at exactly 0 % covered moves the whole field to
    "unavailable" instead of drawing a zero-height bar next to a real one.
-5. **Save as pair.** Click **Save as PL/UK pair**, give it a name, and submit.
-   This creates two collections (`"<name> — PL"`, `"<name> — UK"`) from the
-   current filter and links them; `/collections` then shows a `name · PL` /
-   `name · UK` badge on each side, linking back to `/compare/<pairId>`.
-6. **Run the same extension schema on both, then revisit `/compare/<id>`.**
-   From `/collections`, use *Extract on … collection* to run one extraction
-   schema on the PL collection and the same schema on the UK collection. Once
-   both have a completed job, reopen `/compare/<pairId>` — it adds an
-   extension-schema section below the base fields, tallied from each side's
-   newest successful job. If the two collections' newest jobs ran different
-   schemas, or only one side has a completed job, the pair still shows its
-   base-field comparison; the extension section explains why it is missing
-   instead of guessing.
+5. **Save as pair.** Click **Save as collection pair**, give it a name in the
+   "Save both result sets" dialog, and submit. This creates two collections
+   (`"<name> — PL"`, `"<name> — UK"`) from the current filter and links
+   them; `/collections` then shows a `<name> · PL` / `<name> · UK` badge on
+   each side, linking back to `/compare/<pairId>`.
+6. **Run the same extension schema on both, then revisit `/compare/<pairId>`.**
+   Open the pair (via the badge on `/collections`, or the link `/compare/<pairId>`
+   you land on after saving). Until both sides have a completed extraction
+   job, the extension section shows **Extract on PL collection** / **Extract
+   on UK collection** buttons that open `/extract?collection=<id>` for each
+   side — pick the same schema for both, or pick the second one to match a
+   schema you already ran on the other side. Once both collections have a
+   completed job with the **same** schema, reopen `/compare/<pairId>` — it
+   adds an extension-schema section below the base fields, tallied from
+   each side's newest successful job. If the two collections' newest jobs
+   ran different schemas, or only one side has a completed job, the pair
+   still shows its base-field comparison; the extension section explains
+   why it is missing instead of guessing.
 7. **Export CSV.** The export button downloads a long-format CSV of exactly
    the numbers on screen (UTF-8 with a BOM, so Excel renders Polish labels
    correctly). One row per (field, value, jurisdiction):
@@ -78,8 +83,9 @@ step of the **Explore** sidebar flow (see `docs/reference/sidebar-map.md`).
 
 - `case_type` and `court_level` are not exposed here — they are `judgments`
   columns, not base-schema fields, and are known to be miscoded on the UK
-  side (`case_type = 'Civil'` on every UK row, `court_level = 'Crown Court'`
-  regardless of the actual court; see
+  side (`case_type = 'Civil'` on every UK row — 1,000/1,000 sampled;
+  `court_level = 'Crown Court'` on most UK rows — 887/1,000 sampled — for
+  what are actually Court of Appeal decisions; see
   `docs/reference/APP_STATUS_2026-08-21.md` §4). This is a data defect, not a
   missing feature, and it is out of scope to fix here.
 - Free-text fields such as `keywords`/`legal_topics` are not comparable and

@@ -365,15 +365,26 @@ Success — `200 CompareResponse`:
   charted; `missing_in` names which), `"partial"` (every jurisdiction
   covered, but at least one below 80 %, `LOW_COVERAGE_THRESHOLD` — charted
   with a coverage badge), `"primary"` (every jurisdiction at or above 80 %).
-- `ignored_filter_keys` is currently always `[]` for this endpoint (unlike
-  `/collections/from-filter`'s `split_by_jurisdiction`, `/compare` never
-  drops `jurisdiction` from the request because it never accepts one — the
-  frontend's filter bar has no jurisdiction control).
+- `ignored_filter_keys`: `CompareService.compare()` runs `filters` through
+  the same `strip_ignored()` as `/collections/from-filter`
+  (`IGNORED_FILTER_KEYS = ("jurisdiction",)`, shared from
+  `app.extraction_domain.filter_ids`) before calling the facet RPC, so a
+  `jurisdiction` key present in `filters` — e.g. one carried in from a
+  `/search/extractions` permalink pasted into `/compare` — is dropped and
+  named in `ignored_filter_keys`; the response's own `filters` is the
+  stripped copy. The frontend shows `compare.jurisdictionIgnored` ("The
+  jurisdiction condition was ignored — this page always shows PL and UK.")
+  when that happens. `collection_ids` is **not** stripped — it goes through
+  `check_collection_ids_ownership()` instead (below), because it selects a
+  membership rather than a jurisdiction.
 
-Errors: `400 UNKNOWN_FIELD` (a requested field is not in the registry;
-`detail.fields` names the offending ones — either `select_base_fields()`'s
-own check or the service's `FieldNotComparableError` are both surfaced this
-way), `400 INVALID_COLLECTION_ID` / `404 COLLECTION_NOT_FOUND`
+Errors: `422` (FastAPI/Pydantic request validation — `fields` has more than
+`MAX_FIELDS` entries, i.e. more than the registry size; this happens before
+any of the checks below run), `400 UNKNOWN_FIELD` (a requested field passed
+validation but is not in the registry; `detail.fields` names the offending
+ones — either `select_base_fields()`'s own check or the service's
+`FieldNotComparableError` are both surfaced this way), `400
+INVALID_COLLECTION_ID` / `404 COLLECTION_NOT_FOUND`
 (`filters.collection_ids` malformed or not owned — same
 `check_collection_ids_ownership()` as `/collections/from-filter`), `500
 COMPARE_FAILED` (any other failure computing the comparison), `503
