@@ -188,6 +188,7 @@ function ExtractionSearchPage() {
     setFilters,
     setTextQuery,
     setPage,
+    setNlQuestion,
     removeFilter,
     clearAll,
     activeCount,
@@ -255,9 +256,11 @@ function ExtractionSearchPage() {
   const applyNlFilters = (
     nextFilters: BaseSchemaFilters,
     nextTextQuery: string,
+    question: string,
   ) => {
     setFilters(nextFilters);
     setTextQuery(nextTextQuery);
+    setNlQuestion(question);
   };
 
   const resetDrawerFilters = () => {
