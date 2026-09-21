@@ -60,6 +60,108 @@ PostgREST matches by argument names, and a second overload answers HTTP 300.
 Pinned by `backend/tests/db/test_migration_chain.py`
 (`EXPECTED_RPC_ARGS`, `test_rpc_has_exactly_one_overload`).
 
+## RPC `public.aggregate_extracted_data(p_filters, p_text_query, p_fields, p_sample_size, p_seed, p_top_n)`
+
+```sql
+aggregate_extracted_data(
+  p_filters      jsonb   default '{}',   -- same shape as list_extracted_filter_matches
+  p_text_query   text    default null,
+  p_fields       text[]  default null,   -- null = the default 7-field set; 1..50 entries
+  p_sample_size  int     default null,   -- null = whole cohort
+  p_seed         int     default null,   -- required when p_sample_size is set
+  p_top_n        int     default 20      -- values kept per categorical field, 1..100
+) returns jsonb
+```
+
+Per-field distributions over the cohort returned by
+`list_extracted_filter_matches(p_filters, p_text_query)` — no predicate is
+re-implemented here. `SECURITY INVOKER`, defined in migration
+`20260921000003_aggregate_extracted_data.sql`, next to the private helper
+`public._aggregate_column_for_field(p_field)` (field name → column name).
+Sampling is deterministic and exact-n: the cohort ids are ordered by
+`md5(id::text || p_seed::text), id` inside a CTE and the first
+`p_sample_size` are kept, so the same cohort and seed always produce the same
+sample. `p_fields` is capped to 1–50 entries and `p_top_n` to 1–100; both are
+enforced before the cohort query runs.
+
+Return shape:
+
+```json
+{
+  "total": 4312,
+  "sample_n": 1000,
+  "seed": 42,
+  "fields": {
+    "convict_offences":     {"kind": "categorical", "multi": true, "values": [{"value": "possession", "count": 812}, ...], "other": 44, "null": 0, "covered": 1000},
+    "victim_age_offence":   {"kind": "numeric", "buckets": [{"lo": 10, "hi": 15, "count": 12}, ...], "min": 0, "max": 90, "null": 3, "covered": 997},
+    "decision_date":        {"kind": "year", "values": [{"value": "2019", "count": 301}, ...], "null": 0, "covered": 1000}
+  }
+}
+```
+
+`kind` dispatches on the column's `information_schema.udt_name`: `text[]`
+(`multi: true`, `unnest`ed so a judgment can appear under several values) and
+scalar `text`/`bool`/`varchar` (`multi: false`) are `categorical`, integer and
+numeric/float columns are `numeric` (a `width_bucket` histogram, `buckets: []`
+when the field is all-`NULL` over the cohort), and `date`/`timestamp`/
+`timestamptz` columns are `year`. An empty cohort or an all-`NULL` field
+yields the same shape with zeroed counts, never an error. Field names not in
+the allowlist raise `field % is not aggregable`.
+
+Grants follow the same pattern as the other RPCs in this file: Supabase
+grants `EXECUTE` to `anon` by default, so the migration runs
+`REVOKE ALL ON FUNCTION aggregate_extracted_data(...) FROM PUBLIC, anon;`
+before `GRANT EXECUTE ON FUNCTION aggregate_extracted_data(...) TO
+authenticated, service_role;`. `_aggregate_column_for_field` carries the same
+revoke/grant pair.
+
+## `POST /extractions/base-schema/aggregate`
+
+Implemented in `backend/app/extraction_domain/results_router.py`. Request
+model `AggregateRequest`, response model `AggregateResponse`
+(`backend/app/models.py`).
+
+Request body:
+
+```json
+{
+  "filters": { "...": "BaseSchemaFilters" },
+  "text_query": "string, optional",
+  "fields": ["offender_gender", "..."],
+  "sample_size": 1000,
+  "seed": 42,
+  "top_n": 20
+}
+```
+
+- `fields` — optional; `null`/omitted means the default 7-field set
+  (`offender_gender`, `convict_offences`, `sentences_received`,
+  `appeal_outcome`, `did_offender_confess`, `court_name`, `decision_date`).
+  Validated by `validate_fields()` (`app/extraction_domain/aggregate_fields.py`)
+  against the same allowlist as the SQL side; an unknown field is `422`
+  naming it (`code: FIELD_NOT_AGGREGABLE`).
+- `sample_size` — optional, `1..20000`; requires `seed`, enforced by a
+  `model_validator` (`422` naming `seed` when it's missing).
+- `seed` — optional, bounded to Postgres `int4` (`-2^31..2^31-1`) so it fits
+  the RPC's `INT` parameter without an overflow at the database.
+- `top_n` — `1..100`, default `20`.
+
+Response mirrors the RPC's JSONB return shape (`{total, sample_n, seed,
+fields}`) unchanged.
+
+**`collection_ids` is rejected exactly like `/base-schema/filter`**
+(`400 COLLECTION_IDS_NOT_ALLOWED`), for the same reason: the RPC is
+`SECURITY INVOKER` but the backend calls it with the service-role client, so
+honouring `collection_ids` would let any signed-in caller probe any
+collection's membership. Unlike `/base-schema/filter`, this endpoint does
+require a bearer user (`get_current_user`) — the gate is login, not
+collection ownership, since the cohort itself stays corpus-wide.
+
+Errors: `422 FIELD_NOT_AGGREGABLE` (bad `fields` entry, or `seed` missing
+with `sample_size` set), `400 COLLECTION_IDS_NOT_ALLOWED`,
+`503 DATABASE_UNAVAILABLE`, `500 AGGREGATE_FAILED` (RPC call raised, or
+returned something that isn't the expected dict).
+
 ## `POST /collections/from-filter`
 
 Implemented in `backend/app/collections_from_filter.py`.

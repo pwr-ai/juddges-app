@@ -230,6 +230,121 @@
         "title": "AddDocumentsRequest",
         "type": "object"
       },
+      "AggregateRequest": {
+        "description": "Request for POST /extractions/base-schema/aggregate (#707).",
+        "properties": {
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fields to aggregate; null = the default set. Must be aggregable (see aggregate_fields.py).",
+            "title": "Fields"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "description": "Same shape as ExtractedDataFilterRequest.filters (list_extracted_filter_matches keys)",
+            "title": "Filters",
+            "type": "object"
+          },
+          "sample_size": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seeded random sample size; null = whole cohort",
+            "title": "Sample Size"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "maximum": 2147483647.0,
+                "minimum": -2147483648.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when sample_size is set",
+            "title": "Seed"
+          },
+          "text_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Full-text query across text fields",
+            "title": "Text Query"
+          },
+          "top_n": {
+            "default": 20,
+            "description": "Values kept per categorical field; the rest fold into 'other'",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Top N",
+            "type": "integer"
+          }
+        },
+        "title": "AggregateRequest",
+        "type": "object"
+      },
+      "AggregateResponse": {
+        "description": "Response for POST /extractions/base-schema/aggregate \u2014 mirrors the RPC's JSONB.",
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "sample_n": {
+            "title": "Sample N",
+            "type": "integer"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "sample_n",
+          "fields"
+        ],
+        "title": "AggregateResponse",
+        "type": "object"
+      },
       "AppEventIn": {
         "additionalProperties": false,
         "description": "A single event inside the batch envelope.",
@@ -23003,6 +23118,56 @@
           }
         ],
         "summary": "Extract using universal base schema",
+        "tags": [
+          "extraction"
+        ]
+      }
+    },
+    "/extractions/base-schema/aggregate": {
+      "post": {
+        "description": "Per-field distributions (categorical / numeric / year) over the judgments matching the filters, optionally over a seeded random sample. Login required.",
+        "operationId": "aggregate_extracted_data_extractions_base_schema_aggregate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AggregateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AggregateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Aggregate extracted data over a cohort",
         "tags": [
           "extraction"
         ]
