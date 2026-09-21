@@ -4,6 +4,8 @@ Converts a user's plain-English (or Polish) question into the JSON `p_filters`
 shape accepted by the Postgres RPC `filter_documents_by_extracted_data` (defined
 in supabase/migrations/20260226000001_create_judgment_base_extractions_table.sql
 and extended by 20260505000001_extend_base_schema_filterable_searchable.sql).
+Besides the `base_*` extraction fields, two core `judgments` columns are also
+exposed: `jurisdiction` and `decision_date`.
 
 The output is validated by Pydantic; every enum-constrained field uses
 `Literal[...]` mirroring the CHECK constraints in the migration, so an LLM
@@ -33,6 +35,8 @@ from typing import TYPE_CHECKING, Any, Literal
 from juddges_search.llms import get_default_llm
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.models import Jurisdiction  # noqa: TC001 - pydantic field, needed at runtime
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
@@ -88,6 +92,12 @@ AppealOutcome = Literal[
     "outcome_unknown",
 ]
 
+# Core columns deliberately NOT exposed to the NL translator until the data is
+# fixed (docs/reference/APP_STATUS_2026-08-21.md §4: case_type='Civil' on UK
+# criminal appeals, court_level='Crown Court' wrong). Tested in
+# tests/app/test_nl_filter_generator.py and test_nl_filter_prompt_contract.py.
+NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type", "court_level"})
+
 
 # ---------------------------------------------------------------------------
 # Range helpers (mirror the {"min": ..., "max": ...} / {"from":, "to":} shapes
@@ -128,6 +138,19 @@ class BaseSchemaFilter(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    # --- core judgment columns (not base_*; filtered on judgments.*) ---------
+    jurisdiction: list[Jurisdiction] | None = Field(
+        default=None,
+        description="Country of the court: PL (Poland) and/or UK (United Kingdom).",
+    )
+    decision_date: DateRange | str | None = Field(
+        default=None,
+        description=(
+            "Date the judgment was handed down (judgments.decision_date). Use for "
+            "'from 2015 to 2024', 'w latach 2015-2024', 'since 2020', 'po 2020 r.'."
+        ),
+    )
 
     # --- scalar enums (IN-list) ------------------------------------------------
     appellant: list[Appellant] | None = None
