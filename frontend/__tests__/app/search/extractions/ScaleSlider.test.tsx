@@ -16,6 +16,15 @@ describe("ScaleSlider", () => {
     expect(screen.getByRole("radio", { name: "extraction.statsAll" })).toBeEnabled();
   });
 
+  it("displays a stop larger than the cohort as 'all' (disabled, unchecked, no reshuffle)", () => {
+    render(<ScaleSlider cohortTotal={320} sampleSize={1000} seed={7} onChange={() => {}} onReshuffle={() => {}} />);
+    expect(screen.getByRole("radio", { name: "extraction.statsAll" })).toBeChecked();
+    const stop = screen.getByRole("radio", { name: "1,000" });
+    expect(stop).toBeDisabled();
+    expect(stop).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: /statsReshuffle/ })).not.toBeInTheDocument();
+  });
+
   it("reports a stop as a number and 'all' as undefined", () => {
     const onChange = jest.fn();
     render(<ScaleSlider cohortTotal={9000} sampleSize={undefined} seed={7} onChange={onChange} onReshuffle={() => {}} />);

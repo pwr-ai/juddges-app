@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { EditorialButton } from "@/components/editorial";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -64,40 +64,74 @@ function isDrillable(field: string): boolean {
   return control === "enum_multi" || control === "tag_array" || control === "boolean_tri";
 }
 
+/** Trailing debounce; starts at the current value so mount sends one request. */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(id);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 /** Statistics body of /search/extractions (#708, spec §5.2). */
 export function StatisticsView(props: StatisticsViewProps) {
   const { filters, textQuery, sampleSize, seed, fields, onSampling, onReshuffle, onFields, onDrillBack } = props;
   const { t } = useTranslation();
   const [yAxis, setYAxis] = useState<"count" | "percent">("count");
   const { data: stats } = useDashboardStats();
-  const corpusTotal = stats?.total_judgments ?? 0;
+  const corpusTotal = typeof stats?.total_judgments === "number" ? stats.total_judgments : null;
 
+  // Only the free-text query is debounced: it changes per keystroke, while
+  // filters, fields, sampling and seed are discrete choices sent at once.
+  const debouncedQuery = useDebouncedValue(textQuery.trim(), 300);
   const request = useMemo<AggregateRequest>(
     () => ({
       filters,
-      text_query: textQuery.trim() === "" ? undefined : textQuery.trim(),
+      ...(debouncedQuery !== "" ? { text_query: debouncedQuery } : {}),
       fields,
-      sample_size: sampleSize,
-      seed: sampleSize === undefined ? undefined : seed,
+      ...(sampleSize !== undefined ? { sample_size: sampleSize, seed } : {}),
     }),
-    [filters, textQuery, fields, sampleSize, seed],
+    [filters, debouncedQuery, fields, sampleSize, seed],
   );
-  const { data, isLoading, error } = useExtractionAggregate(request);
+  const { data, isLoading, isFetching, error, refetch } = useExtractionAggregate(request);
 
   const addValue = (field: string, value: string) => {
     const patch = drillBackPatch(field, value);
     if (patch) onDrillBack(patch);
   };
 
+  // Mounted in the error state too, so a failed sample can be resized (#708 review).
+  const controls = (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <ScaleSlider cohortTotal={data?.total ?? Number.POSITIVE_INFINITY} sampleSize={sampleSize} seed={seed} onChange={onSampling} onReshuffle={onReshuffle} />
+      <div role="radiogroup" aria-label={t("extraction.statsYAxis")} className="inline-flex border border-[color:var(--rule)] font-mono text-xs">
+        {(["count", "percent"] as const).map((v) => (
+          <button key={v} type="button" role="radio" aria-checked={yAxis === v} onClick={() => setYAxis(v)}
+            className={yAxis === v ? "bg-[color:var(--ink)] px-2 py-1 text-[color:var(--parchment)]" : "px-2 py-1 text-[color:var(--ink-soft)]"}>
+            {v === "count" ? t("extraction.statsYAxisCount") : t("extraction.statsYAxisPercent")}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   if (error) {
     return (
-      <div role="alert">
-        <ErrorCard message={t("extraction.statsError")} />
+      <div className="space-y-4" aria-busy={isFetching}>
+        {controls}
+        <div role="alert">
+          <ErrorCard message={t("extraction.statsError")} onRetry={() => void refetch()} retryLabel={t("common.retry")} />
+        </div>
       </div>
     );
   }
   if (!data && isLoading) {
-    return <p className="py-8 font-mono text-xs text-[color:var(--ink-soft)]">…</p>;
+    return (
+      <p role="status" aria-label={t("common.loading")} className="py-8 font-mono text-xs text-[color:var(--ink-soft)]">
+        …
+      </p>
+    );
   }
   if (!data) return null;
   if (data.total === 0) {
@@ -108,28 +142,21 @@ export function StatisticsView(props: StatisticsViewProps) {
   const addable = AGGREGABLE_FIELDS.filter((f) => !fields.includes(f));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" aria-busy={isFetching}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--rule)] py-2 text-sm">
         <p className="text-[color:var(--ink-soft)]">
-          {t("extraction.statsCohortLine", { matched: data.total.toLocaleString("en-US"), corpus: corpusTotal.toLocaleString("en-US") })}
+          {corpusTotal === null
+            ? t("extraction.statsCohortLineNoCorpus", { matched: data.total.toLocaleString("en-US") })
+            : t("extraction.statsCohortLine", { matched: data.total.toLocaleString("en-US"), corpus: corpusTotal.toLocaleString("en-US") })}
           {sampled && ` · ${t("extraction.statsSampleLine", { n: data.sample_n.toLocaleString("en-US"), seed: String(data.seed ?? "") })}`}
+          {isFetching && ` ${t("extraction.statsUpdating")}`}
         </p>
         <button type="button" onClick={() => onDrillBack(undefined)} className="font-mono text-xs underline hover:text-[color:var(--ink)]">
           {t("extraction.statsShowJudgments")}
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ScaleSlider cohortTotal={data.total} sampleSize={sampleSize} seed={seed} onChange={onSampling} onReshuffle={onReshuffle} />
-        <div role="radiogroup" aria-label={t("extraction.statsYAxisCount")} className="inline-flex border border-[color:var(--rule)] font-mono text-xs">
-          {(["count", "percent"] as const).map((v) => (
-            <button key={v} type="button" role="radio" aria-checked={yAxis === v} onClick={() => setYAxis(v)}
-              className={yAxis === v ? "bg-[color:var(--ink)] px-2 py-1 text-[color:var(--parchment)]" : "px-2 py-1 text-[color:var(--ink-soft)]"}>
-              {v === "count" ? t("extraction.statsYAxisCount") : t("extraction.statsYAxisPercent")}
-            </button>
-          ))}
-        </div>
-      </div>
+      {controls}
 
       <div className="grid gap-4 md:grid-cols-2">
         {fields.map((field) =>

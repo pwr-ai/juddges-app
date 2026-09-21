@@ -13,10 +13,12 @@ export interface ScaleSliderProps {
 
 /**
  * Discrete sample-size stops 10 · 50 · 100 · 1,000 · 5,000 · all (#708).
- * Stops larger than the cohort are disabled; "all" is `undefined`.
+ * Stops larger than the cohort are disabled; "all" is `undefined`. A
+ * `sampleSize` above the cohort (URL from a wider cohort) displays as "all".
  */
 export function ScaleSlider({ cohortTotal, sampleSize, seed, onChange, onReshuffle }: ScaleSliderProps) {
   const { t } = useTranslation();
+  const effective = sampleSize !== undefined && sampleSize > cohortTotal ? undefined : sampleSize;
   const stops: { value: number | undefined; label: string }[] = [
     ...SCALE_STOPS.map((n) => ({ value: n, label: n.toLocaleString("en-US") })),
     { value: undefined, label: t("extraction.statsAll") },
@@ -27,7 +29,7 @@ export function ScaleSlider({ cohortTotal, sampleSize, seed, onChange, onReshuff
       <div role="radiogroup" aria-label={t("extraction.statsScale")} className="inline-flex border border-[color:var(--rule)]">
         {stops.map((s) => {
           const disabled = s.value !== undefined && s.value > cohortTotal;
-          const checked = s.value === sampleSize;
+          const checked = s.value === effective;
           return (
             <button
               key={s.label}
@@ -47,7 +49,7 @@ export function ScaleSlider({ cohortTotal, sampleSize, seed, onChange, onReshuff
           );
         })}
       </div>
-      {sampleSize !== undefined && (
+      {effective !== undefined && (
         <>
           <span>seed {seed}</span>
           <button type="button" onClick={onReshuffle} className="underline hover:text-[color:var(--ink)]">

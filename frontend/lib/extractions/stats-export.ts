@@ -10,7 +10,8 @@ export interface CohortDefinition {
   text_query?: string;
   sample_size?: number;
   seed: number | null;
-  corpus_total: number;
+  /** `null` when the dashboard stats were unavailable at export time. */
+  corpus_total: number | null;
   cohort_total: number;
   sample_n: number;
   fields: string[];
@@ -23,7 +24,7 @@ export function buildCohortDefinition(args: {
   textQuery?: string;
   response: AggregateResponse;
   fields: string[];
-  corpusTotal: number;
+  corpusTotal: number | null;
   now?: Date;
 }): CohortDefinition {
   const { filters, textQuery, response, fields, corpusTotal } = args;

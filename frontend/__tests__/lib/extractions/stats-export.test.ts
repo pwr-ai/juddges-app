@@ -89,6 +89,12 @@ describe("buildCohortDefinition", () => {
     });
   });
 
+  it("emits corpus_total null when the corpus size is unknown", () => {
+    const def = buildCohortDefinition({ filters: {}, response, fields: [], corpusTotal: null });
+    expect(def.corpus_total).toBeNull();
+    expect(Object.keys(def)).toEqual(["filters", "sample_size", "seed", "corpus_total", "cohort_total", "sample_n", "fields", "schema_version", "generated_at"]);
+  });
+
   it("omits sample_size when the whole cohort was used", () => {
     const def = buildCohortDefinition({ filters: {}, response: { ...response, sample_n: 120, seed: null }, fields: [], corpusTotal: 12907 });
     expect(def.sample_size).toBeUndefined();

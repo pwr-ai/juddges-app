@@ -76,6 +76,15 @@ describe("useExtractedDataFilters stats state", () => {
     expect(result.current.statsFields).toEqual(["court_name"]);
   });
 
+  it("ignores an n that is not a slider stop and does not write it back", () => {
+    search = "view=stats&n=77&seed=1";
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.sampleSize).toBeUndefined();
+    const lastUrl = replace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).toContain("view=stats");
+    expect(lastUrl).not.toMatch(/[?&]n=/);
+  });
+
   it("defaults to list / all / default fields, and reshuffle assigns a new seed once in the statistics view", () => {
     search = "";
     const { result } = renderHook(() => useExtractedDataFilters());

@@ -370,6 +370,9 @@ export interface ExtractionTranslations {
   statsExportCohort: string;
   statsEmpty: string;
   statsError: string;
+  statsCohortLineNoCorpus: string;
+  statsYAxis: string;
+  statsUpdating: string;
 }
 
 /**

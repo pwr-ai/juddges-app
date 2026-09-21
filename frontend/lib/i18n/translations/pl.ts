@@ -310,6 +310,9 @@ export const pl: Translations = {
     statsExportCohort: 'Eksport definicji kohorty',
     statsEmpty: 'Żadne orzeczenie nie pasuje do filtrów.',
     statsError: 'Nie udało się policzyć statystyk.',
+    statsCohortLineNoCorpus: '{{matched}} orzeczeń pasuje',
+    statsYAxis: 'Oś Y',
+    statsUpdating: '(aktualizacja…)',
   },
 
   auth: {

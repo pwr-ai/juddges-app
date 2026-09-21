@@ -47,7 +47,7 @@ export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemo
   const byName = new Map(rows.map((r) => [r.name, r]));
   const isModelScore = field.startsWith("deep_");
   return (
-    <section className="border border-[color:var(--rule)] bg-white p-4" aria-label={aggregateFieldLabel(field)}>
+    <section className="border border-[color:var(--rule)] bg-[color:var(--parchment)] p-4" aria-label={aggregateFieldLabel(field)}>
       <header className="mb-2 flex items-start justify-between gap-2">
         <div>
           <h3 className="font-serif text-base text-[color:var(--ink)]">{aggregateFieldLabel(field)}</h3>
@@ -67,6 +67,7 @@ export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemo
         color={BAR}
         colors={rows.map((r) => r.color)}
         showCounts
+        leftMargin={80}
         height={Math.max(160, 28 * items.length + 60)}
         xAxisTitle={yAxis === "percent" ? t("extraction.statsYAxisPercent") : t("extraction.statsYAxisCount")}
         onBarClick={(name) => {

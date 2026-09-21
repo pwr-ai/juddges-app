@@ -9,7 +9,7 @@
 //   ?page=<n>           — 1-based page (default 1)
 //   ?nl=<text>          — optional: the natural-language question a filter came from (Spec B)
 //   ?view=stats         — statistics view instead of the list (#708; omitted for list)
-//   ?n=<int>            — sample size for the statistics view (omitted for "all")
+//   ?n=<int>            — sample size for the statistics view, one of SCALE_STOPS (omitted for "all")
 //   ?seed=<int>         — sampling seed, only emitted while the statistics view is active
 //   ?fields=a,b,c       — statistics fields (omitted when equal to the default set)
 //
@@ -26,7 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BaseSchemaFilters } from "@/types/base-schema-filter";
 
-import { DEFAULT_AGGREGATE_FIELDS, isAggregableField } from "./aggregate-fields";
+import { DEFAULT_AGGREGATE_FIELDS, SCALE_STOPS, isAggregableField } from "./aggregate-fields";
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -48,8 +48,14 @@ function parseInt1(raw: string | null): number | undefined {
   return Number.isInteger(n) && n >= 1 ? n : undefined;
 }
 
+/** Only the slider's stops are valid; anything else falls back to "all". */
+function parseSampleSize(raw: string | null): number | undefined {
+  const n = parseInt1(raw);
+  return n !== undefined && SCALE_STOPS.includes(n) ? n : undefined;
+}
+
 function newSeed(): number {
-  return Math.floor(Math.random() * 1_000_000);
+  return Math.floor(Math.random() * 1_000_000) + 1;
 }
 
 interface FilterState {
@@ -194,7 +200,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
       page: Math.max(1, Number(searchParams.get("page") ?? "1") || 1),
       nlQuestion: searchParams.get("nl") ?? undefined,
       view: searchParams.get("view") === "stats" ? "stats" : "list",
-      sampleSize: parseInt1(searchParams.get("n")),
+      sampleSize: parseSampleSize(searchParams.get("n")),
       seed: parseInt1(searchParams.get("seed")) ?? newSeed(),
       statsFields: parseFields(searchParams.get("fields")),
     }),

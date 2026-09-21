@@ -310,6 +310,9 @@ export const en: Translations = {
     statsExportCohort: 'Export cohort definition',
     statsEmpty: 'No judgments match these filters.',
     statsError: 'Statistics could not be computed.',
+    statsCohortLineNoCorpus: '{{matched}} judgments match',
+    statsYAxis: 'Y axis',
+    statsUpdating: '(updating…)',
   },
 
   auth: {
