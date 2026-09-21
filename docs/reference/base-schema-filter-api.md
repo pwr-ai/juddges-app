@@ -1,8 +1,9 @@
 # Base-schema filter API (reference)
 
-Shared filter contract used by `/search/extractions` and "save filter as
-collection", designed to also support the planned NL-question-to-filter flow
-and PL/UK comparison.
+Shared filter contract used by `/search/extractions`, "save filter as
+collection", and the NL-question-to-filter flow (`POST
+/extractions/base-schema/nl-filter`); also designed to support the planned
+PL/UK comparison.
 
 ## RPC `public.list_extracted_filter_matches(p_filters JSONB, p_text_query TEXT)`
 
@@ -156,6 +157,77 @@ loop, whereas `/collections/from-filter` runs the loop server-side.
 - `frontend/app/api/utils/backend-proxy.ts::proxyToBackend()` — shared authenticated BFF → FastAPI forwarder. Requires a Supabase session (401 otherwise); passes the upstream response's status and body through unchanged, including FastAPI's `{"detail": {...}}` error envelope, so error unwrapping happens in exactly one frontend place. Supports `passthroughHeaders` (for binary/streamed responses that return `2xx`) and a `timeoutMs` (default `30_000`).
 - `frontend/lib/api/collections.ts::createCollectionFromFilter(request)` — POSTs to `/api/collections/from-filter`, and on a non-OK response unwraps either the FastAPI `{detail: {...}}` shape or the BFF's flat `{error}` shape into one `CollectionFromFilterError` (has `.code`, `.status`, and optionally `.total`/`.cap`/`.jurisdiction`). On success it fires a `collection_created` analytics event per created collection and returns the parsed `CollectionFromFilterResponse`.
 
+## `POST /extractions/base-schema/nl-filter`
+
+Implemented in `backend/app/extraction_domain/results_router.py::nl_to_filter`,
+translator in `backend/app/extraction_domain/nl_filter_generator.py`.
+Authenticated (`get_current_user`). Body `{"query": "<NL question>"}` →
+`{"filters": {...}, "text_query": "..." | null}` (an `NLFilterResponse`, the
+same shape `BaseSchemaFilter.to_rpc_payload()` returns). It is an opt-in
+"paste your question" shortcut that pre-fills the `/search/extractions` form
+— it never runs a search itself. Every request is logged (fire-and-forget)
+via `record_search_query` in `search_analytics` so NL→filter usage can be
+compared against form usage later.
+
+Errors: `422 NL_FILTER_INVALID` when the LLM's output fails Pydantic
+validation (an unknown/hallucinated enum value — surfaced as a 422 so the
+caller can ask the user to rephrase rather than run a poisoned query); `502
+NL_FILTER_FAILED` on any other translation failure.
+
+### `BaseSchemaFilter` (`nl_filter_generator.py`)
+
+A Pydantic model (`extra="forbid"`) mirroring every key
+`filter_documents_by_extracted_data` accepts, structured-output-decoded from
+an LLM (`llm.with_structured_output(BaseSchemaFilter)`, `use_mini_model=True`
+by default) driven by a versioned system prompt (`SYSTEM_PROMPT`,
+`NL_FILTER_PROMPT`). Field groups: core judgment columns (`jurisdiction:
+list[Jurisdiction] | None`, `decision_date: DateRange | str | None`), scalar
+and multi-value enums (one `Literal[...]` type per CHECK constraint in the
+base-extraction migrations, so a hallucinated value raises a
+`ValidationError` instead of reaching the database), free-text array
+fields, booleans, numerics (`NumericRange | float | None`), a second date
+field (`date_of_appeal_court_judgment`), ILIKE substring fields, and a
+sibling `text_query: str | None` carried outside `p_filters`.
+`to_rpc_payload()` calls `model_dump(exclude_none=True, by_alias=True)`,
+pops `text_query` out of the dump, and returns `{"filters": ..., "text_query":
+...}` — the exact body `POST /extractions/base-schema/filter` and
+`/collections/from-filter` expect.
+
+`NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type",
+"court_level"})` — these two `judgments` columns are deliberately **not**
+modeled on `BaseSchemaFilter` at all (not merely hidden) because the data is
+wrong (`case_type='Civil'` on UK criminal appeals, `court_level='Crown
+Court'` on Court of Appeal; see `docs/reference/APP_STATUS_2026-08-21.md`
+§4). `tests/app/test_nl_filter_prompt_contract.py` pins that neither field
+name appears in the system prompt text or in the model's JSON Schema, so a
+future prompt edit can't reintroduce them silently.
+
+**Date semantics** (`SYSTEM_PROMPT` rule 4 — Polish and English phrasings
+both map to the same ISO range):
+
+| Phrase | Range |
+|---|---|
+| "in 2024" / "w 2024 r." | `{"from": "2024-01-01", "to": "2024-12-31"}` |
+| "since 2020" / "od 2020" | `{"from": "2020-01-01"}` — **inclusive** of 2020 |
+| "after 2020" / "po 2020" | `{"from": "2021-01-01"}` — **strictly next year**, exclusive of 2020 |
+| "before 2010" / "przed 2010" | `{"to": "2009-12-31"}` — previous year-end, exclusive of 2010 |
+| "between 2015 and 2024" / "2015–2024" / "w latach 2015–2024" | `{"from": "2015-01-01", "to": "2024-12-31"}` |
+
+`decision_date` (judgment date, populated for every PL and UK row) is the
+prompt's default date field; `date_of_appeal_court_judgment` is used only
+when the user names the appeal-court judgment date explicitly — the two
+fields are easy to conflate (an earlier prompt revision defaulted to the
+latter) and users relying on the old default now get `decision_date`
+instead.
+
+`jurisdiction` (rule 8) is set only when the user names a country or legal
+system — "UK" / "England" / "brytyjskie" / "w Anglii" → `["UK"]`; "Poland" /
+"polskie" / "w Polsce" → `["PL"]`; "PL i UK" / "both countries" → `["PL",
+"UK"]`. Writing the question in Polish is **not** by itself a reason to set
+`["PL"]` — this deliberately does not reuse the diacritics-based PL/EN
+heuristic in `backend/app/query_analysis.py`, which serves a different
+(free-text search) heuristic where that inference is appropriate.
+
 ## Frontend URL state
 
 `?f=<base64url JSON of BaseSchemaFilters>` · `?q=<text_query>` · `?page=<n>` ·
@@ -198,6 +270,57 @@ The adapter this file replaced passed epoch-second numbers straight into
 this adapter converts both ways through the epoch helpers instead. It also
 accepts `{min,max}` with ISO-string values for date ranges (reachable only via
 a hand-edited URL) by treating `min`/`max` as `from`/`to` before converting.
+
+### `frontend/components/search/ScopeFilters.tsx`
+
+`<ScopeFilters filters onChange disabled? />` — a "Scope" strip rendered on
+`/search/extractions` above `BaseFiltersDrawer`, one `EnumMultiControl` for
+`jurisdiction` and one `DateRangeControl` for `decision_date`, both driven by
+`CORE_FILTER_FIELD_BY_NAME` and `coreToDrawerValue`/`applyCoreChange` from
+`drawer-adapter.ts` above. It renders unconditionally (no feature flag) and
+is deliberately outside `BaseFiltersDrawer` — the two core columns never
+touch `FILTER_FIELDS`/`FIELDS_BY_GROUP`, so the drawer and its facet counts
+are provably unchanged by this feature.
+
+### Result rows and document highlighting
+
+`frontend/lib/extractions/document-href.ts::buildDocumentHref(id, filters):
+string` builds each `/search/extractions` result row's link via
+`buildFilterHref` — `/documents/{id}?f=<same filters blob>`, plus a
+`#base-fields` anchor (`BASE_FIELDS_ANCHOR`) appended whenever the filter
+blob is non-empty (the presence of a query string is itself "the filter
+carried something", so there's no second `encodeFilters` call to decide the
+anchor).
+
+`app/documents/[id]/_components/DocumentPageClient.tsx` reads `?f=` back
+with `decodeFilters()`, fetches the document's metadata, and calls
+`frontend/lib/extractions/filter-match.ts::matchedMetadataKeys(filters,
+metadata): Set<string>` to compute which metadata keys satisfied the filter.
+`matchedMetadataKeys` mirrors the RPC's per-control-kind matching semantics
+(`= ANY` / array overlap / range / ILIKE) against a small
+`CORE_FIELD_TO_METADATA_KEY` map (`jurisdiction` → `country`, `decision_date`
+→ `date_issued`; everything else is `base_<field>`), so a highlighted cell is
+exactly one the query actually matched on — not merely a field the filter
+mentioned.
+
+The result feeds `KeyInformation` (`frontend/lib/styles/components/key-information.tsx`)
+via three props: `id={BASE_FIELDS_ANCHOR}` (the scroll target for the row
+link above), `highlightKeys` (the matched-key set, rendered with emphasis),
+and `highlightCaption` (e.g. "3 fields matched your filter"), plus a
+screen-reader-only "Matched filter" marker on each highlighted cell.
+
+### `SaveAsCollectionDialog` (`frontend/components/search/SaveAsCollectionDialog.tsx`)
+
+Rendered in the `/search/extractions` results bar. `defaultName` is the `?nl=`
+question when one is present, else a `Filtered judgments — <date>` fallback;
+the field is editable up to 255 chars before saving. The trigger button is
+disabled only when `total === 0` (via a `title` tooltip) or while the parent
+page is loading/erroring — **there is no client-side row-count cap**. On
+submit it calls `createCollectionFromFilter` and on success routes to
+`/collections/{collections[0].collection.id}`; on a `CollectionFromFilterError`
+with `total`/`cap` set (the `413` case) it renders the backend's message
+plus `"(<total> matched, limit <cap>.)"` inline in the dialog rather than
+guessing a limit client-side.
 
 ## Completeness helpers (backend)
 
