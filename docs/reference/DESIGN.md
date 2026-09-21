@@ -463,17 +463,28 @@ These are gate failures, not preferences:
 | Name | Why |
 |---|---|
 | `animate-shimmer`, `shimmer-slide`, `text-shimmer` | A sweeping highlight implies progress it does not have. Removed from `globals.css` in #642 |
+| a CSS `@keyframes`/`animation` named `*shimmer*` | Same rule, written in CSS. `ai-badge-shimmer` hid here until #713 |
 | `animate-ping` | A radar pulse on a static element is noise |
 | `animate-bounce` | The juggler |
-| `repeat: Infinity` (framer-motion) | Nothing in a document should move forever |
+| `repeat: Infinity` (framer-motion) | A decorative loop driven from JS |
 | `transition-all` | Animates properties you did not choose, including layout ones. Name the property |
 
-`animate-pulse` is permitted, and only for skeletons (§4a).
+**The tell is the sweep, not the repeat count.** Three things legitimately run
+forever, and the gate is written so it does not flag them:
 
-**Anything that loops forever is forbidden.** A reader's eye is drawn to
-movement; perpetual movement means perpetual distraction on a page meant for
-close reading. If motion is needed to show that work is happening, state it in
-words instead — see the `READING N JUDGMENTS…` eyebrow in §5b.
+- `animate-pulse` on a **skeleton** (§4a) — it marks a region as pending, and
+  stops when the content arrives.
+- `caret-blink` on a **text caret** — a cursor that stops blinking stops
+  reading as a cursor. It is an input affordance, not page decoration.
+- `animate-spin` on a **determinate-length wait** inside a control the reader
+  just activated.
+
+What is forbidden is perpetual motion that decorates rather than informs: a
+highlight sweeping across a badge that is doing nothing, a glow that pulses on
+a static card. A reader's eye is drawn to movement, so on a page meant for
+close reading, movement must earn its place. If motion would only be saying
+"work is happening", say it in words instead — see the `READING N JUDGMENTS…`
+eyebrow in §5b.
 
 Respect `prefers-reduced-motion: reduce` for every reveal: replace movement
 with a cross-fade, never with nothing.
@@ -590,6 +601,13 @@ site. If a pattern is genuinely wrong — as `hover-fx` was, matching the
 the distinction with a test in
 `frontend/__tests__/scripts/assert-no-banned-classes.test.ts`. Do not add an
 allowlist entry to make a red build green.
+
+The gate reads `.css` as well as `.ts`/`.tsx`, and since #713 it matches CSS
+**properties** (`backdrop-filter`, `linear-gradient(`) as well as Tailwind
+class names. Writing a rule in plain CSS is not a way around it. It is still
+not a complete check — hardcoded hex colours and arbitrary `shadow-[…]` values
+are not patterns — so a green gate means "no known tell", not "on-system".
+Read the section that applies and use the tokens.
 
 ---
 
