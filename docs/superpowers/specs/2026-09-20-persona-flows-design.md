@@ -85,7 +85,9 @@ Return shape:
 }
 ```
 
-- `filter_documents_by_extracted_data` is static plpgsql: it parses `p_filters` into typed locals and applies `(v_x IS NULL OR j.base_x && v_x)` predicates that hit the `_gin` indexes. There is no WHERE string to share, and wrapping the predicates in a per-row boolean helper would bypass every index. The aggregate function therefore **duplicates the predicate block verbatim** (copied, not rewritten), and drift is caught by a Database Contract test: for a fixed set of filter payloads, `aggregate_extracted_data(...)->>'total'` must equal `filter_documents_by_extracted_data(...).total_count`. Any future filter added to one function without the other fails that test.
+- The cohort is `list_extracted_filter_matches(p_filters, p_text_query)` from #682 (`supabase/migrations/20260920000001_shared_extracted_filter_matches.sql`): the aggregate function selects its ids in a CTE, orders them by `md5(id::text || p_seed::text)`, keeps the first `p_sample_size`, and runs one dynamic per-field aggregate over `judgments WHERE id = ANY(sample)`. No predicate is re-implemented; a Database Contract test asserts `aggregate_extracted_data(...)->>'total'` equals `filter_documents_by_extracted_data(...).total_count` for a fixed set of filter payloads, so the two cannot disagree on the cohort.
+- `collection_ids` is rejected by the aggregate endpoint exactly as `/base-schema/filter` rejects it (`results_router.py:475-487`, HTTP 400 `COLLECTION_IDS_NOT_ALLOWED`): the RPC is SECURITY INVOKER and the backend calls it with the service-role client, so honouring the key would let any signed-in caller probe any collection's membership. "Statistics over a saved collection" is therefore a named gap, owned by #685 together with the auth deferral. The spec's earlier "accept a collection" wording in §5.2 is withdrawn.
+- Aggregable fields are one allowlist in three places — `frontend/lib/extractions/aggregable-fields.json` (canonical), `backend/app/extraction_domain/aggregate_fields.py`, and the SQL kind dispatch — with a test that the Python set equals the JSON. Free-text fields and extraction metadata are never aggregable.
 - Most `base_*` fields are `text[]` columns; categorical aggregation `unnest`s them, so a judgment with two convict offences counts once per offence and the card says "counts are per value, a judgment can appear in more than one bar".
 - Sampling is `ORDER BY md5(id::text || p_seed::text) LIMIT p_sample_size` inside a CTE: deterministic, exact-n, no `TABLESAMPLE` (block-level, inexact). Same cohort + same seed = same sample, which is what a methods section needs.
 - Field kinds come from `_base_field_to_column` + column type: `text[]`/enum → categorical (arrays are `unnest`ed), numeric → `width_bucket` histogram (reusing the bucket logic in `get_numeric_histogram`), `date` → year, free text → not aggregable (rejected with an error listing aggregable fields).
@@ -199,6 +201,7 @@ Each phase becomes one issue linked from #687; B and C are split into backend-th
 - Codebook export and formal kappa (idea 7); Phase C's agreement badge is the minimal form.
 - Guest access to statistics; per-1000 normalisation; charts on the public landing page.
 - Any change to search ranking, Meilisearch, or the extraction prompts themselves.
+- Statistics over a saved collection (blocked on the collection_ids auth deferral; #685).
 
 ## 10. Open questions for review
 
