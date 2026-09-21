@@ -11,7 +11,7 @@ function base(origin?: string): string {
  * two pages.
  */
 export function buildComparePermalink(filters: BaseSchemaFilters, textQuery: string, origin?: string): string {
-  return buildFilterHref("/compare", { filters, textQuery }, origin ?? window.location.origin);
+  return buildFilterHref("/compare", { filters, textQuery }, base(origin));
 }
 
 export function buildPairPermalink(pairId: string, origin?: string): string {
