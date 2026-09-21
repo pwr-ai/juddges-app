@@ -1,9 +1,12 @@
+from typing import Any, Literal
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
 from juddges_search.db.collections_db import UNSET
 from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
+from app.collection_pairs import get_collection_pairs_db
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.models import validate_id_format
 from app.services.audit_service import log_audit_background
@@ -20,9 +23,19 @@ class Collection(BaseModel):
     updated_at: str
 
 
+class CollectionPairRef(BaseModel):
+    """The PL/UK pair a collection belongs to, as seen from that collection's side."""
+
+    id: str
+    name: str
+    role: Literal["PL", "UK"]
+    partner_collection_id: str
+
+
 class CollectionWithDocuments(Collection):
     documents: list[str] = []
     document_count: int = 0
+    pair: CollectionPairRef | None = None
 
 
 class CreateCollectionRequest(BaseModel):
@@ -47,7 +60,9 @@ class AddDocumentRequest(BaseModel):
         return validate_id_format(v, "document_id")
 
 
-def transform_collection(data) -> CollectionWithDocuments:
+def transform_collection(
+    data, pair: dict[str, Any] | None = None
+) -> CollectionWithDocuments:
     documents = []
     # Translate join-table rows (`collection_judgments` / `judgment_id`) into the
     # API's `documents: list[str]` shape.
@@ -66,16 +81,19 @@ def transform_collection(data) -> CollectionWithDocuments:
         updated_at=data["updated_at"],
         documents=documents,
         document_count=document_count,
+        pair=CollectionPairRef(**pair) if pair else None,
     )
 
 
 @router.get("", response_model=list[CollectionWithDocuments])
 async def list_collections(
     db=Depends(get_collections_db),
+    pairs_db=Depends(get_collection_pairs_db),
     user: AuthenticatedUser = Depends(get_current_user),
 ):
     collections = await db.get_user_collections(user.id)
-    return [transform_collection(c) for c in collections]
+    pairs = await pairs_db.pairs_by_collection(user.id)
+    return [transform_collection(c, pairs.get(c["id"])) for c in collections]
 
 
 @router.post("", response_model=Collection)

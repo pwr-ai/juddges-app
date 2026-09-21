@@ -2072,6 +2072,13 @@
             "title": "Collections",
             "type": "array"
           },
+          "ignored_filter_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored Filter Keys",
+            "type": "array"
+          },
           "pair_id": {
             "anyOf": [
               {
@@ -2130,6 +2137,97 @@
         "title": "CollectionLink",
         "type": "object"
       },
+      "CollectionPair": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sides": {
+            "items": {
+              "$ref": "#/components/schemas/PairSide"
+            },
+            "title": "Sides",
+            "type": "array"
+          },
+          "text_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Query"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "filters",
+          "created_at",
+          "updated_at",
+          "sides"
+        ],
+        "title": "CollectionPair",
+        "type": "object"
+      },
+      "CollectionPairRef": {
+        "description": "The PL/UK pair a collection belongs to, as seen from that collection's side.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "partner_collection_id": {
+            "title": "Partner Collection Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "PL",
+              "UK"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "partner_collection_id"
+        ],
+        "title": "CollectionPairRef",
+        "type": "object"
+      },
       "CollectionWithDocuments": {
         "properties": {
           "created_at": {
@@ -2168,6 +2266,16 @@
             "title": "Name",
             "type": "string"
           },
+          "pair": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionPairRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "updated_at": {
             "title": "Updated At",
             "type": "string"
@@ -2185,6 +2293,222 @@
           "updated_at"
         ],
         "title": "CollectionWithDocuments",
+        "type": "object"
+      },
+      "CompareField": {
+        "properties": {
+          "coverage": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CoverageStat"
+            },
+            "title": "Coverage",
+            "type": "object"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "enum",
+              "enum_array",
+              "boolean"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "missing_in": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing In",
+            "type": "array"
+          },
+          "source": {
+            "description": "'base' or 'schema:<extraction_schema_id>'",
+            "title": "Source",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "primary",
+              "partial",
+              "unavailable",
+              "empty"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/CompareValue"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "field",
+          "label",
+          "source",
+          "kind",
+          "coverage",
+          "tier",
+          "values"
+        ],
+        "title": "CompareField",
+        "type": "object"
+      },
+      "CompareRequest": {
+        "description": "Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.",
+        "properties": {
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 17,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Base-schema field names to compare, in this order (duplicates collapse to the first occurrence); defaults to every comparable field in registry order",
+            "title": "Fields"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "text_query": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Query"
+          }
+        },
+        "title": "CompareRequest",
+        "type": "object"
+      },
+      "CompareResponse": {
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/CompareField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "ignored_filter_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored Filter Keys",
+            "type": "array"
+          },
+          "jurisdictions": {
+            "default": [
+              "PL",
+              "UK"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Jurisdictions",
+            "type": "array"
+          },
+          "pair": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PairSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Query"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "totals",
+          "fields",
+          "filters"
+        ],
+        "title": "CompareResponse",
+        "type": "object"
+      },
+      "CompareValue": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "shares": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "count / covered per jurisdiction; null where covered is 0",
+            "title": "Shares",
+            "type": "object"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "counts",
+          "shares"
+        ],
+        "title": "CompareValue",
         "type": "object"
       },
       "ConsentHistoryEntry": {
@@ -2586,6 +2910,38 @@
         "title": "ConvertGuestResponse",
         "type": "object"
       },
+      "CoverageStat": {
+        "description": "How many matched judgments have the field filled, per jurisdiction.",
+        "properties": {
+          "covered": {
+            "title": "Covered",
+            "type": "integer"
+          },
+          "ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "covered / total; null when total is 0",
+            "title": "Ratio"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "covered",
+          "total",
+          "ratio"
+        ],
+        "title": "CoverageStat",
+        "type": "object"
+      },
       "CreateCollectionFromFilterRequest": {
         "description": "Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.",
         "properties": {
@@ -2611,6 +2967,12 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "split_by_jurisdiction": {
+            "default": false,
+            "description": "Create one collection per jurisdiction (\"<name> \u2014 PL\", \"<name> \u2014 UK\") linked as a pair. `filters.jurisdiction` is ignored (echoed in `ignored_filter_keys`); the size cap applies per side; `name` is limited to 200 characters.",
+            "title": "Split By Jurisdiction",
+            "type": "boolean"
           },
           "text_query": {
             "anyOf": [
@@ -8305,6 +8667,57 @@
           "loaded_count"
         ],
         "title": "PaginationMetadata",
+        "type": "object"
+      },
+      "PairSide": {
+        "description": "One side of a pair. No document_count: the read path cannot compute it\ncheaply -- ``GET /collections`` already carries per-collection counts.",
+        "properties": {
+          "collection_id": {
+            "title": "Collection Id",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "enum": [
+              "PL",
+              "UK"
+            ],
+            "title": "Jurisdiction",
+            "type": "string"
+          }
+        },
+        "required": [
+          "jurisdiction",
+          "collection_id"
+        ],
+        "title": "PairSide",
+        "type": "object"
+      },
+      "PairSummary": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pl_collection_id": {
+            "title": "Pl Collection Id",
+            "type": "string"
+          },
+          "uk_collection_id": {
+            "title": "Uk Collection Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "pl_collection_id",
+          "uk_collection_id"
+        ],
+        "title": "PairSummary",
         "type": "object"
       },
       "PlatformStats": {
@@ -20023,7 +20436,131 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Create a collection from a base-schema filter result",
+        "summary": "Create a collection (or a PL/UK pair) from a base-schema filter result",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/collections/pairs": {
+      "get": {
+        "operationId": "list_pairs_collections_pairs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CollectionPair"
+                  },
+                  "title": "Response List Pairs Collections Pairs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the caller's PL/UK collection pairs (newest first)",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/collections/pairs/{pair_id}": {
+      "delete": {
+        "operationId": "delete_pair_collections_pairs__pair_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pair_id",
+            "required": true,
+            "schema": {
+              "title": "Pair Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlink a PL/UK pair (both collections are kept)",
+        "tags": [
+          "collections"
+        ]
+      },
+      "get": {
+        "operationId": "get_pair_collections_pairs__pair_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pair_id",
+            "required": true,
+            "schema": {
+              "title": "Pair Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionPair"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get one PL/UK collection pair",
         "tags": [
           "collections"
         ]
@@ -20504,6 +21041,103 @@
         "summary": "Remove Document By Url",
         "tags": [
           "collections"
+        ]
+      }
+    },
+    "/compare/export": {
+      "post": {
+        "description": "One row per (field, value, jurisdiction); UTF-8 with BOM for Excel.\n\nBuilt from the same `CompareResponse` as `/compare/facets`, so the file\nholds exactly the numbers shown on screen. Headers follow the results\nexport: `Content-Disposition` attachment + `X-Rows-Count`.",
+        "operationId": "compare_export_compare_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Long-format CSV of the comparison",
+        "tags": [
+          "compare"
+        ]
+      }
+    },
+    "/compare/facets": {
+      "post": {
+        "operationId": "compare_facets_compare_facets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Side-by-side PL/UK value distributions for base-schema fields",
+        "tags": [
+          "compare"
         ]
       }
     },

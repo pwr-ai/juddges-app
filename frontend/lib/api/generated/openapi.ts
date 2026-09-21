@@ -1951,9 +1951,44 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a collection from a base-schema filter result */
+        /** Create a collection (or a PL/UK pair) from a base-schema filter result */
         post: operations["create_collection_from_filter_collections_from_filter_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collections/pairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's PL/UK collection pairs (newest first) */
+        get: operations["list_pairs_collections_pairs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collections/pairs/{pair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one PL/UK collection pair */
+        get: operations["get_pair_collections_pairs__pair_id__get"];
+        put?: never;
+        post?: never;
+        /** Unlink a PL/UK pair (both collections are kept) */
+        delete: operations["delete_pair_collections_pairs__pair_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2046,6 +2081,47 @@ export interface paths {
          * @description Remove a document from a collection (document_id in URL path).
          */
         delete: operations["remove_document_by_url_collections__collection_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/compare/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Long-format CSV of the comparison
+         * @description One row per (field, value, jurisdiction); UTF-8 with BOM for Excel.
+         *
+         *     Built from the same `CompareResponse` as `/compare/facets`, so the file
+         *     holds exactly the numbers shown on screen. Headers follow the results
+         *     export: `Content-Disposition` attachment + `X-Rows-Count`.
+         */
+        post: operations["compare_export_compare_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/compare/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Side-by-side PL/UK value distributions for base-schema fields */
+        post: operations["compare_facets_compare_facets_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6452,6 +6528,8 @@ export interface components {
         CollectionFromFilterResponse: {
             /** Collections */
             collections: components["schemas"]["CreatedCollection"][];
+            /** Ignored Filter Keys */
+            ignored_filter_keys?: string[];
             /** Pair Id */
             pair_id?: string | null;
             /** Total Matched */
@@ -6465,6 +6543,44 @@ export interface components {
             created_at?: string | null;
             /** Description */
             description?: string | null;
+        };
+        /** CollectionPair */
+        CollectionPair: {
+            /** Created At */
+            created_at: string;
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Sides */
+            sides: components["schemas"]["PairSide"][];
+            /** Text Query */
+            text_query?: string | null;
+            /** Updated At */
+            updated_at: string;
+            /** User Id */
+            user_id: string;
+        };
+        /**
+         * CollectionPairRef
+         * @description The PL/UK pair a collection belongs to, as seen from that collection's side.
+         */
+        CollectionPairRef: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Partner Collection Id */
+            partner_collection_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "PL" | "UK";
         };
         /** CollectionWithDocuments */
         CollectionWithDocuments: {
@@ -6486,10 +6602,106 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            pair?: components["schemas"]["CollectionPairRef"] | null;
             /** Updated At */
             updated_at: string;
             /** User Id */
             user_id: string;
+        };
+        /** CompareField */
+        CompareField: {
+            /** Coverage */
+            coverage: {
+                [key: string]: components["schemas"]["CoverageStat"];
+            };
+            /** Field */
+            field: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "enum" | "enum_array" | "boolean";
+            /** Label */
+            label: string;
+            /**
+             * Missing In
+             * @default []
+             */
+            missing_in: string[];
+            /**
+             * Source
+             * @description 'base' or 'schema:<extraction_schema_id>'
+             */
+            source: string;
+            /**
+             * Tier
+             * @enum {string}
+             */
+            tier: "primary" | "partial" | "unavailable" | "empty";
+            /** Values */
+            values: components["schemas"]["CompareValue"][];
+        };
+        /**
+         * CompareRequest
+         * @description Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.
+         */
+        CompareRequest: {
+            /**
+             * Fields
+             * @description Base-schema field names to compare, in this order (duplicates collapse to the first occurrence); defaults to every comparable field in registry order
+             */
+            fields?: string[] | null;
+            /** Filters */
+            filters?: {
+                [key: string]: unknown;
+            };
+            /** Text Query */
+            text_query?: string | null;
+        };
+        /** CompareResponse */
+        CompareResponse: {
+            /** Fields */
+            fields: components["schemas"]["CompareField"][];
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /**
+             * Ignored Filter Keys
+             * @default []
+             */
+            ignored_filter_keys: string[];
+            /**
+             * Jurisdictions
+             * @default [
+             *       "PL",
+             *       "UK"
+             *     ]
+             */
+            jurisdictions: string[];
+            pair?: components["schemas"]["PairSummary"] | null;
+            /** Text Query */
+            text_query?: string | null;
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+        };
+        /** CompareValue */
+        CompareValue: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /**
+             * Shares
+             * @description count / covered per jurisdiction; null where covered is 0
+             */
+            shares: {
+                [key: string]: number | null;
+            };
+            /** Value */
+            value: string;
         };
         /**
          * ConsentHistoryEntry
@@ -6716,6 +6928,21 @@ export interface components {
             user_id: string;
         };
         /**
+         * CoverageStat
+         * @description How many matched judgments have the field filled, per jurisdiction.
+         */
+        CoverageStat: {
+            /** Covered */
+            covered: number;
+            /**
+             * Ratio
+             * @description covered / total; null when total is 0
+             */
+            ratio: number | null;
+            /** Total */
+            total: number;
+        };
+        /**
          * CreateCollectionFromFilterRequest
          * @description Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.
          */
@@ -6728,6 +6955,12 @@ export interface components {
             };
             /** Name */
             name: string;
+            /**
+             * Split By Jurisdiction
+             * @description Create one collection per jurisdiction ("<name> — PL", "<name> — UK") linked as a pair. `filters.jurisdiction` is ignored (echoed in `ignored_filter_keys`); the size cap applies per side; `name` is limited to 200 characters.
+             * @default false
+             */
+            split_by_jurisdiction: boolean;
             /** Text Query */
             text_query?: string | null;
         };
@@ -9499,6 +9732,31 @@ export interface components {
              * @description Current offset (0-indexed)
              */
             offset: number;
+        };
+        /**
+         * PairSide
+         * @description One side of a pair. No document_count: the read path cannot compute it
+         *     cheaply -- ``GET /collections`` already carries per-collection counts.
+         */
+        PairSide: {
+            /** Collection Id */
+            collection_id: string;
+            /**
+             * Jurisdiction
+             * @enum {string}
+             */
+            jurisdiction: "PL" | "UK";
+        };
+        /** PairSummary */
+        PairSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Pl Collection Id */
+            pl_collection_id: string;
+            /** Uk Collection Id */
+            uk_collection_id: string;
         };
         /**
          * PlatformStats
@@ -15341,6 +15599,86 @@ export interface operations {
             };
         };
     };
+    list_pairs_collections_pairs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionPair"][];
+                };
+            };
+        };
+    };
+    get_pair_collections_pairs__pair_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionPair"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_pair_collections_pairs__pair_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_collection_collections__collection_id__get: {
         parameters: {
             query?: {
@@ -15605,6 +15943,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_export_compare_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_facets_compare_facets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareResponse"];
                 };
             };
             /** @description Validation Error */
