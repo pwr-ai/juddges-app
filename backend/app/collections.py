@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
 from juddges_search.db.collections_db import UNSET
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.collection_pairs import get_collection_pairs_db
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
-from app.models import validate_id_format
+from app.models import Jurisdiction, validate_id_format
 from app.services.audit_service import log_audit_background
 
 router = APIRouter(prefix="/collections", tags=["collections"])
@@ -28,7 +28,7 @@ class CollectionPairRef(BaseModel):
 
     id: str
     name: str
-    role: Literal["PL", "UK"]
+    role: Jurisdiction
     partner_collection_id: str
 
 
@@ -92,7 +92,15 @@ async def list_collections(
     user: AuthenticatedUser = Depends(get_current_user),
 ):
     collections = await db.get_user_collections(user.id)
-    pairs = await pairs_db.pairs_by_collection(user.id)
+    # Best-effort: a transient failure on the low-traffic collection_pairs
+    # table must not break the core list endpoint (issue #684 review round 1).
+    # `pairs_by_collection` -> `list_pairs` -> `_handle_error` raises
+    # HTTPException on any PostgrestAPIError, so that's caught here too.
+    try:
+        pairs = await pairs_db.pairs_by_collection(user.id)
+    except Exception as e:
+        logger.warning(f"Failed to load collection pairs for user {user.id}: {e}")
+        pairs = {}
     return [transform_collection(c, pairs.get(c["id"])) for c in collections]
 
 

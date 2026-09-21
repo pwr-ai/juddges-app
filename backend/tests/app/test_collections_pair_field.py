@@ -3,11 +3,18 @@
 `transform_collection` now takes an optional `pair` dict from
 `CollectionPairsDB.pairs_by_collection(user_id)` (one call per list request,
 no N+1) and surfaces it as `CollectionPairRef | None` on each collection.
+
+The pair lookup is best-effort (review round 1): `list_pairs` ->
+`_handle_error` raises `HTTPException` on any `PostgrestAPIError`, and a
+transient failure on the low-traffic `collection_pairs` table must not break
+the core list endpoint -- `test_list_collections_degrades_when_pairs_lookup_fails`
+covers that.
 """
 
 from __future__ import annotations
 
 import pytest
+from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from juddges_search.db.supabase_db import get_collections_db
 
@@ -72,7 +79,15 @@ class _Pairs:
         }
 
 
-async def test_list_collections_marks_paired_collections():
+class _FailingPairs:
+    """Mimics `pairs_by_collection` -> `list_pairs` -> `_handle_error` on a
+    PostgrestAPIError: it raises `HTTPException(500)`."""
+
+    async def pairs_by_collection(self, user_id):
+        raise HTTPException(status_code=500, detail="collection_pairs unavailable")
+
+
+async def _get_collections():
     async def _user():
         return AuthenticatedUser(
             user_data={"id": USER, "email": "u@x.test", "role": "authenticated"},
@@ -81,16 +96,20 @@ async def test_list_collections_marks_paired_collections():
 
     app.dependency_overrides[jwt_get_current_user] = _user
     app.dependency_overrides[get_collections_db] = lambda: _Cols()
-    app.dependency_overrides[get_collection_pairs_db] = lambda: _Pairs()
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test",
             headers={"X-API-Key": "test-api-key-12345"},
         ) as ac:
-            response = await ac.get("/collections")
+            return await ac.get("/collections")
     finally:
         app.dependency_overrides.clear()
+
+
+async def test_list_collections_marks_paired_collections():
+    app.dependency_overrides[get_collection_pairs_db] = lambda: _Pairs()
+    response = await _get_collections()
 
     assert response.status_code == 200
     by_id = {c["id"]: c for c in response.json()}
@@ -102,3 +121,29 @@ async def test_list_collections_marks_paired_collections():
     }
     assert by_id["c-uk"]["pair"]["role"] == "UK"
     assert by_id["c-solo"]["pair"] is None
+
+    # The pair annotation is additive: everything else about a paired
+    # collection's shape is untouched.
+    assert by_id["c-pl"]["name"] == "Q — PL"
+    assert by_id["c-pl"]["document_count"] == 1
+    assert by_id["c-pl"]["documents"] == ["a"]
+    assert by_id["c-uk"]["name"] == "Q — UK"
+    assert by_id["c-uk"]["document_count"] == 0
+    assert by_id["c-uk"]["documents"] == []
+
+
+async def test_list_collections_degrades_when_pairs_lookup_fails():
+    """A transient failure on collection_pairs must not break /collections
+    (review round 1): all collections still come back, each with pair: null."""
+    app.dependency_overrides[get_collection_pairs_db] = lambda: _FailingPairs()
+    response = await _get_collections()
+
+    assert response.status_code == 200
+    by_id = {c["id"]: c for c in response.json()}
+    assert set(by_id) == {"c-pl", "c-uk", "c-solo"}
+    assert by_id["c-pl"]["pair"] is None
+    assert by_id["c-uk"]["pair"] is None
+    assert by_id["c-solo"]["pair"] is None
+    # Collection data itself is intact, not just present.
+    assert by_id["c-pl"]["name"] == "Q — PL"
+    assert by_id["c-pl"]["document_count"] == 1
