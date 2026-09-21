@@ -29,6 +29,8 @@ describe("KeyInformation highlight", () => {
     const matched = document.querySelectorAll('[data-matched="true"]');
     expect(matched).toHaveLength(2);
     expect(document.querySelectorAll('[data-matched="false"]').length).toBeGreaterThan(0);
+    // Matched cells carry a non-visual marker too, so the signal isn't colour-only (a11y).
+    expect(screen.getAllByText("Matched filter")).toHaveLength(2);
   });
 
   it("renders unchanged when highlightKeys is absent", () => {

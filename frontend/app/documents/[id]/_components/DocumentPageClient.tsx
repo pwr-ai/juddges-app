@@ -94,10 +94,7 @@ export function DocumentPageClient({
   }, [htmlString]);
 
   const highlightKeys = useMemo(
-    () =>
-      metadata
-        ? matchedMetadataKeys(filtersFromSearch, metadata as Record<string, unknown>)
-        : new Set<string>(),
+    () => (metadata ? matchedMetadataKeys(filtersFromSearch, metadata) : new Set<string>()),
     [filtersFromSearch, metadata],
   );
 

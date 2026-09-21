@@ -172,6 +172,7 @@ const FieldCell = memo(function FieldCell({
         <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500 mb-1">
           {config.label}
         </div>
+        {matched && <span className="sr-only">Matched filter</span>}
         <div className="text-sm text-slate-900 break-words">
           {isUrl ? (
             <a
