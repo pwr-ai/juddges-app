@@ -80,11 +80,16 @@ def base_compare_fields() -> list[FieldSpec]:
 
 
 def select_base_fields(requested: list[str] | None) -> list[FieldSpec]:
-    """Resolve requested field names against the base registry, keeping request order."""
+    """Resolve requested field names against the base registry, keeping request order.
+
+    Repeated names collapse to their first occurrence: callers pay one RPC per
+    returned spec, so duplicates would only multiply identical queries.
+    """
     if not requested:
         return base_compare_fields()
     by_name = {s.field: s for s in base_compare_fields()}
-    unknown = [f for f in requested if f not in by_name]
+    wanted = list(dict.fromkeys(requested))
+    unknown = [f for f in wanted if f not in by_name]
     if unknown:
         raise ValueError(f"Not comparable base fields: {', '.join(unknown)}")
-    return [by_name[f] for f in requested]
+    return [by_name[f] for f in wanted]

@@ -88,3 +88,9 @@ def test_select_base_fields_defaults_to_all_and_validates_names():
     ]
     with pytest.raises(ValueError, match="keywords"):
         select_base_fields(["keywords"])
+
+
+def test_select_base_fields_dedupes_preserving_first_occurrence_order():
+    """Repeated names collapse to one spec each -- the router pays one RPC per spec."""
+    specs = select_base_fields(["appellant", "plea_point", "appellant", "plea_point"])
+    assert [s.field for s in specs] == ["appellant", "plea_point"]

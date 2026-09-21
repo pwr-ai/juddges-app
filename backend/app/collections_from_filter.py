@@ -126,10 +126,6 @@ async def check_collection_ids_ownership(
         raise _collection_not_found()
 
 
-# Pre-#684 name, kept so existing call sites and docs keep resolving.
-_check_collection_ids_ownership = check_collection_ids_ownership
-
-
 async def create_collection_from_ids(
     db: Any, *, user_id: str, name: str, description: str | None, ids: list[str]
 ) -> tuple[dict[str, Any], int]:

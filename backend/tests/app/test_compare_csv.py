@@ -2,21 +2,23 @@
 
 The pure functions are tested on a hand-built response; the endpoint goes
 through the ASGI app like test_compare_router.py (synthetic Bearer user, stub
-collections DB, RPC client patched on the router module).
+collections DB, ``FakeRpcClient`` patched on the router module).
 """
 
 from __future__ import annotations
 
 import csv
 import io
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from juddges_search.db.supabase_db import get_collections_db
 
 from app.compare.csv_export import CSV_COLUMNS, csv_bytes, to_csv_rows
 from app.compare.models import CompareField, CompareResponse, CompareValue, CoverageStat
+from app.compare.service import FACET_RPC
 from app.server import app
+from tests.app._fakes import FakeRpcClient
 
 pytestmark = [pytest.mark.unit]
 
@@ -136,21 +138,21 @@ def stub_db():
         app.dependency_overrides.pop(get_collections_db, None)
 
 
-def _fake_rpc_client():
-    fake = MagicMock()
-    fake.rpc.return_value.execute.return_value = MagicMock(
-        data=[
-            {
-                "jurisdiction": "PL",
-                "value": "a",
-                "count": 1,
-                "total": 1,
-                "covered": 1,
-                "coverage": 1.0,
-            },
-        ]
+def _fake_rpc_client() -> FakeRpcClient:
+    return FakeRpcClient(
+        {
+            FACET_RPC: [
+                {
+                    "jurisdiction": "PL",
+                    "value": "a",
+                    "count": 1,
+                    "total": 1,
+                    "covered": 1,
+                    "coverage": 1.0,
+                },
+            ]
+        }
     )
-    return fake
 
 
 @pytest.mark.anyio
@@ -185,12 +187,14 @@ async def test_export_requires_bearer_user(client, valid_api_headers, stub_db):
 
 @pytest.mark.anyio
 async def test_export_rejects_non_comparable_field(authenticated_client, stub_db):
-    with patch("app.compare.router.supabase_client", MagicMock()):
+    fake = _fake_rpc_client()
+    with patch("app.compare.router.supabase_client", fake):
         response = await authenticated_client.post(
             "/compare/export", json={"filters": {}, "fields": ["keywords"]}
         )
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "UNKNOWN_FIELD"
+    assert fake.calls == []
 
 
 @pytest.mark.anyio
@@ -207,7 +211,7 @@ async def test_export_foreign_collection_id_is_404(authenticated_client, stub_db
         )
     assert response.status_code == 404
     assert response.json()["detail"]["code"] == "COLLECTION_NOT_FOUND"
-    fake.rpc.assert_not_called()
+    assert fake.calls == []
 
 
 @pytest.mark.anyio

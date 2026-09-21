@@ -14,8 +14,13 @@ export only changes the serialisation. Order of checks, and why:
    RLS, so a foreign id would otherwise leak another user's collection
    distribution. 400 `INVALID_COLLECTION_ID` / 404 `COLLECTION_NOT_FOUND`,
    never saying which id.
-4. `CompareService.compare` -- one facet RPC per field; any other failure is
-   500 `COMPARE_FAILED`.
+4. `CompareService.compare` -- one blocking facet RPC per field, run via
+   `asyncio.to_thread` so the loop stays free (same as `services/search.py`);
+   any other failure is 500 `COMPARE_FAILED`.
+
+`fields` is bounded by the registry size (`MAX_FIELDS`) and deduplicated by
+`select_base_fields`, so one request can never cost more RPC calls than there
+are comparable fields.
 
 Every endpoint requires a Bearer user (`get_current_user`) on top of the
 router-level API key: they read collection membership, so there is no
@@ -24,6 +29,7 @@ anonymous mode.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from io import BytesIO
 from typing import Any
@@ -44,6 +50,10 @@ from app.core.supabase import supabase_client
 
 router = APIRouter(prefix="/compare", tags=["compare"])
 
+# Upper bound on `fields`: after deduplication a request can name at most every
+# comparable field once, so anything longer is malformed (422), not just wasteful.
+MAX_FIELDS = len(base_compare_fields())
+
 
 class CompareRequest(BaseModel):
     """Same `filters`/`text_query` shape as POST /extractions/base-schema/filter."""
@@ -52,9 +62,11 @@ class CompareRequest(BaseModel):
     text_query: str | None = Field(default=None, max_length=1000)
     fields: list[str] | None = Field(
         default=None,
+        max_length=MAX_FIELDS,
         description=(
-            "Base-schema field names to compare, in this order; "
-            "defaults to every comparable field in registry order"
+            "Base-schema field names to compare, in this order (duplicates "
+            "collapse to the first occurrence); defaults to every comparable "
+            "field in registry order"
         ),
     )
 
@@ -100,9 +112,10 @@ async def _run_compare(
     client = _require_db()
     specs = _resolve_fields(request.fields)
     await check_collection_ids_ownership(db, request.filters, user_id=user_id)
+    service = CompareService(client)
     try:
-        return CompareService(client).compare(
-            request.filters, request.text_query, specs
+        return await asyncio.to_thread(
+            service.compare, request.filters, request.text_query, specs
         )
     except FieldNotComparableError as exc:
         # Registry and service disagree on a field: still the caller's 400.

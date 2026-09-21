@@ -4,18 +4,21 @@ Runs through the ASGI app with dependency overrides, like
 test_collections_from_filter.py: the Bearer user is a synthetic
 ``AuthenticatedUser`` (``authenticated_client``), the collections DB is a stub
 that answers ``get_user_collections`` from a list, and the facet RPC client is
-patched on ``app.compare.router.supabase_client`` so no network is touched.
+a ``FakeRpcClient`` patched on ``app.compare.router.supabase_client`` so no
+network is touched.
 """
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from juddges_search.db.supabase_db import get_collections_db
 
+from app.compare.fields import base_compare_fields
 from app.compare.service import FACET_RPC
 from app.server import app
+from tests.app._fakes import FakeRpcClient
 
 pytestmark = [pytest.mark.anyio, pytest.mark.unit, pytest.mark.api]
 
@@ -44,18 +47,10 @@ def _rows(field: str):
     ]
 
 
-def _client_returning(rows_by_field):
-    client = MagicMock()
-
-    def _rpc(name, params):
-        m = MagicMock()
-        m.execute.return_value = MagicMock(
-            data=rows_by_field.get(params["field_path"], [])
-        )
-        return m
-
-    client.rpc.side_effect = _rpc
-    return client
+def _client_returning(rows_by_field: dict[str, list[dict]]) -> FakeRpcClient:
+    return FakeRpcClient(
+        {FACET_RPC: lambda params: rows_by_field.get(params["field_path"], [])}
+    )
 
 
 class _StubDb:
@@ -102,14 +97,16 @@ async def test_facets_returns_compare_response(authenticated_client, stub_db):
     assert body["fields"][0]["field"] == "appeal_outcome"
     assert body["fields"][0]["values"][0]["shares"] == {"PL": 0.8, "UK": 0.5}
     assert body["ignored_filter_keys"] == []
-    fake.rpc.assert_called_once_with(
-        FACET_RPC,
-        {
-            "p_filters": {"appellant": ["offender"]},
-            "field_path": "appeal_outcome",
-            "p_text_query": None,
-        },
-    )
+    assert fake.calls == [
+        (
+            FACET_RPC,
+            {
+                "p_filters": {"appellant": ["offender"]},
+                "field_path": "appeal_outcome",
+                "p_text_query": None,
+            },
+        )
+    ]
     # No collection_ids in the filter: ownership lookup is skipped entirely.
     assert stub_db.get_user_collections_calls == []
 
@@ -122,7 +119,7 @@ async def test_facets_defaults_to_all_base_fields(authenticated_client, stub_db)
         )
     assert response.status_code == 200
     assert len(response.json()["fields"]) == 17
-    assert fake.rpc.call_count == 17
+    assert len(fake.calls) == 17
 
 
 async def test_facets_strips_jurisdiction_and_echoes_it(authenticated_client, stub_db):
@@ -134,11 +131,11 @@ async def test_facets_strips_jurisdiction_and_echoes_it(authenticated_client, st
         )
     assert response.status_code == 200, response.text
     assert response.json()["ignored_filter_keys"] == ["jurisdiction"]
-    assert fake.rpc.call_args.args[1]["p_filters"] == {}
+    assert fake.calls[0][1]["p_filters"] == {}
 
 
 async def test_facets_rejects_non_comparable_field(authenticated_client, stub_db):
-    fake = MagicMock()
+    fake = _client_returning({})
     with patch("app.compare.router.supabase_client", fake):
         response = await authenticated_client.post(
             "/compare/facets", json={"filters": {}, "fields": ["keywords"]}
@@ -148,7 +145,38 @@ async def test_facets_rejects_non_comparable_field(authenticated_client, stub_db
     assert detail["code"] == "UNKNOWN_FIELD"
     assert "keywords" in detail["message"]
     assert detail["fields"] == ["keywords"]
-    fake.rpc.assert_not_called()
+    assert fake.calls == []
+
+
+# --- request-size guards: one RPC per field, so `fields` is bounded ----------
+
+
+async def test_facets_dedupes_repeated_fields_to_one_rpc_each(
+    authenticated_client, stub_db
+):
+    fake = _client_returning({})
+    n = len(base_compare_fields())
+    with patch("app.compare.router.supabase_client", fake):
+        response = await authenticated_client.post(
+            "/compare/facets", json={"filters": {}, "fields": ["appellant"] * n}
+        )
+    assert response.status_code == 200, response.text
+    assert [f["field"] for f in response.json()["fields"]] == ["appellant"]
+    assert len(fake.calls) == 1
+
+
+async def test_facets_rejects_more_fields_than_the_registry_has(
+    authenticated_client, stub_db
+):
+    fake = _client_returning({})
+    n = len(base_compare_fields())
+    with patch("app.compare.router.supabase_client", fake):
+        response = await authenticated_client.post(
+            "/compare/facets",
+            json={"filters": {}, "fields": ["appellant"] * (n + 1)},
+        )
+    assert response.status_code == 422, response.text
+    assert fake.calls == []
 
 
 async def test_facets_503_without_database(authenticated_client, stub_db):
@@ -161,14 +189,40 @@ async def test_facets_503_without_database(authenticated_client, stub_db):
 
 
 async def test_facets_500_when_rpc_raises(authenticated_client, stub_db):
-    fake = MagicMock()
-    fake.rpc.side_effect = RuntimeError("boom")
+    def _boom(_params):
+        raise RuntimeError("boom")
+
+    fake = FakeRpcClient({FACET_RPC: _boom})
     with patch("app.compare.router.supabase_client", fake):
         response = await authenticated_client.post(
             "/compare/facets", json={"filters": {}, "fields": ["appellant"]}
         )
     assert response.status_code == 500
     assert response.json()["detail"]["code"] == "COMPARE_FAILED"
+
+
+async def test_facets_runs_the_blocking_service_off_the_event_loop(
+    authenticated_client, stub_db
+):
+    """The sync RPC loop must not run on the loop thread (asyncio.to_thread)."""
+    import asyncio
+    import threading
+
+    loop_thread = threading.get_ident()
+    seen: list[int] = []
+
+    def _record(_params):
+        seen.append(threading.get_ident())
+        return []
+
+    fake = FakeRpcClient({FACET_RPC: _record})
+    with patch("app.compare.router.supabase_client", fake):
+        response = await authenticated_client.post(
+            "/compare/facets", json={"filters": {}, "fields": ["appellant"]}
+        )
+    assert response.status_code == 200, response.text
+    assert asyncio.get_running_loop() is not None
+    assert seen and all(t != loop_thread for t in seen)
 
 
 # --- collection_ids ownership (service-role client bypasses RLS) ------------
@@ -191,7 +245,7 @@ async def test_facets_foreign_collection_id_is_404_and_never_reaches_rpc(
         )
     assert response.status_code == 404, response.text
     assert response.json()["detail"]["code"] == "COLLECTION_NOT_FOUND"
-    fake.rpc.assert_not_called()
+    assert fake.calls == []
     assert stub_db.get_user_collections_calls == ["test-user-id-123"]
 
 
@@ -207,7 +261,7 @@ async def test_facets_non_uuid_collection_id_is_400(authenticated_client, stub_d
         )
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "INVALID_COLLECTION_ID"
-    fake.rpc.assert_not_called()
+    assert fake.calls == []
     # Malformed ids are rejected before any DB lookup.
     assert stub_db.get_user_collections_calls == []
 
@@ -226,7 +280,5 @@ async def test_facets_owned_collection_ids_pass_through_to_rpc(
             },
         )
     assert response.status_code == 200, response.text
-    assert fake.rpc.call_args.args[1]["p_filters"] == {
-        "collection_ids": [_OWNED_COLLECTION_ID]
-    }
+    assert fake.calls[0][1]["p_filters"] == {"collection_ids": [_OWNED_COLLECTION_ID]}
     assert stub_db.get_user_collections_calls == ["test-user-id-123"]
