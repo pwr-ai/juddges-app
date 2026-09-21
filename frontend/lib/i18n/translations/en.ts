@@ -618,5 +618,9 @@ export const en: Translations = {
     pairNoSchema: 'Run the same extraction schema on both collections to compare its fields here.',
     extractOnBoth: 'Extract on {{jurisdiction}} collection',
     dataNote: 'Shares are computed over documents where the field is coded. Coverage differs between jurisdictions; free-text topics are Polish-only and are not compared.',
+    loadError: 'The comparison could not be loaded. Your filters are still applied — try again.',
+    filtersToggle: 'Extracted fields',
+    textPlaceholder: 'Free text — case names, charges, courts… (Enter to apply)',
+    loading: 'Comparing…',
   },
 };

@@ -40,6 +40,9 @@ const DEEP_LINK_ONLY_ROUTES: ReadonlyMap<string, string> = new Map([
   ['/blog', 'Public blog index; entered from post permalinks and external links.'],
   ['/blog/admin', 'Author tool; entered from the blog admin editors.'],
   ['/blog/admin/new', 'Entered from /blog/admin.'],
+  // #684 Task 16 ships the page; Task 19 adds the sidebar entry in
+  // lib/navigation/flows.ts and must drop this line when it does.
+  ['/compare', 'Entered by permalink from /search/extractions until #684 Task 19 links it.'],
   ['/cookies', 'Entered from the privacy policy.'],
   ['/ecosystem', 'Entered from /about and the landing page.'],
   ['/legal/disclaimer', 'Entered from the AI disclaimer badge.'],

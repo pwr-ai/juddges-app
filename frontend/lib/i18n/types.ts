@@ -715,6 +715,10 @@ export interface CompareTranslations {
   pairNoSchema: string;
   extractOnBoth: string;
   dataNote: string;
+  loadError: string;
+  filtersToggle: string;
+  textPlaceholder: string;
+  loading: string;
 }
 
 /**

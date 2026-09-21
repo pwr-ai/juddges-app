@@ -618,5 +618,9 @@ export const pl: Translations = {
     pairNoSchema: 'Uruchom ten sam schemat ekstrakcji na obu kolekcjach, aby porównać tu jego pola.',
     extractOnBoth: 'Ekstrahuj — kolekcja {{jurisdiction}}',
     dataNote: 'Udziały liczone są wśród dokumentów, w których pole zostało zakodowane. Pokrycie różni się między jurysdykcjami; tematy tekstowe są tylko polskie i nie są porównywane.',
+    loadError: 'Nie udało się wczytać porównania. Filtry pozostały bez zmian — spróbuj ponownie.',
+    filtersToggle: 'Pola ekstrakcji',
+    textPlaceholder: 'Tekst — nazwy spraw, zarzuty, sądy… (Enter, aby zastosować)',
+    loading: 'Porównywanie…',
   },
 };
