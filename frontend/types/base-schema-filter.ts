@@ -226,6 +226,9 @@ export interface CreateCollectionFromFilterRequest {
   description?: string;
   filters: BaseSchemaFilters;
   text_query?: string | null;
+  // Spec C (PL/UK compare): create one PL + one UK collection linked as a
+  // pair instead of a single collection. See backend/app/collections_from_filter.py.
+  split_by_jurisdiction?: boolean;
 }
 
 export interface CreatedCollection {
