@@ -317,57 +317,51 @@ export function ItemFeedback({
  return (
  <>
  <div className={cn('inline-flex items-center gap-2', className)}>
- {/* Thumbs Up Button */}
- <button
- onClick={() => handleFeedback('liked')}
- className={cn(
- 'group relative inline-flex items-center justify-center p-2 rounded-lg',
- 'transition-all duration-200 active:scale-95',
- 'border border-transparent',
- 'hover:bg-green-50',
- 'hover:text-green-600',
- 'hover:border-green-200',
- 'hover:shadow-sm hover:shadow-green-500/5',
- 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2',
- feedbackState === 'liked' && 'bg-green-50 border-green-200'
- )}
- title="This was helpful"
- aria-label="This was helpful"
- >
- <ThumbsUp
- size={16}
- className={cn(
- 'transition-colors',
- feedbackState === 'liked' && 'text-green-500 fill-green-500'
- )}
- />
- </button>
+        {/* Thumbs Up Button */}
+        <button
+          onClick={() => handleFeedback('liked')}
+          className={cn(
+            'group relative inline-flex items-center justify-center p-1.5 rounded-none',
+            'transition-colors duration-150',
+            'border border-rule bg-parchment',
+            'text-ink-soft hover:text-ink hover:bg-parchment-deep',
+            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink',
+            feedbackState === 'liked' && 'border-ink bg-parchment-deep text-ink font-semibold'
+          )}
+          title="This was helpful"
+          aria-label="This was helpful"
+        >
+          <ThumbsUp
+            size={14}
+            className={cn(
+              'transition-colors',
+              feedbackState === 'liked' && 'text-ink fill-ink'
+            )}
+          />
+        </button>
 
- {/* Thumbs Down Button */}
- <button
- onClick={() => handleFeedback('disliked')}
- className={cn(
- 'group relative inline-flex items-center justify-center p-2 rounded-lg',
- 'transition-all duration-200 active:scale-95',
- 'border border-transparent',
- 'hover:bg-red-50',
- 'hover:text-red-600',
- 'hover:border-red-200',
- 'hover:shadow-sm hover:shadow-red-500/5',
- 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2',
- feedbackState === 'disliked' && 'bg-red-50 border-red-200'
- )}
- title="This wasn't helpful"
- aria-label="This wasn't helpful"
- >
- <ThumbsDown
- size={16}
- className={cn(
- 'transition-colors',
- feedbackState === 'disliked' && 'text-red-500 fill-red-500'
- )}
- />
- </button>
+        {/* Thumbs Down Button */}
+        <button
+          onClick={() => handleFeedback('disliked')}
+          className={cn(
+            'group relative inline-flex items-center justify-center p-1.5 rounded-none',
+            'transition-colors duration-150',
+            'border border-rule bg-parchment',
+            'text-ink-soft hover:text-oxblood hover:bg-parchment-deep',
+            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-oxblood',
+            feedbackState === 'disliked' && 'border-oxblood bg-parchment-deep text-oxblood font-semibold'
+          )}
+          title="This wasn't helpful"
+          aria-label="This wasn't helpful"
+        >
+          <ThumbsDown
+            size={14}
+            className={cn(
+              'transition-colors',
+              feedbackState === 'disliked' && 'text-oxblood fill-oxblood'
+            )}
+          />
+        </button>
  </div>
 
  {/* Feedback Comment Dialog */}

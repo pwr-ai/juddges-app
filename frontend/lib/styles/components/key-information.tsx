@@ -157,29 +157,29 @@ const FieldCell = memo(function FieldCell({
     <div
       data-matched={matched ? 'true' : 'false'}
       className={cn(
-        'flex items-start gap-3 rounded-xl border border-slate-200/60 bg-white/70 p-3 backdrop-blur-sm',
+        'flex items-start gap-3 rounded-none border border-rule bg-parchment p-3',
         wide && 'sm:col-span-2 lg:col-span-2 xl:col-span-2 2xl:col-span-3',
         matched &&
           'border-[color:var(--gold)] bg-[color:var(--gold-soft)]/40 ring-1 ring-[color:var(--gold)]',
       )}
     >
       <div className="flex-shrink-0 mt-0.5">
-        <div className="rounded-lg p-2 bg-slate-100/80 border border-slate-200/50">
-          <Icon className="h-4 w-4 text-slate-600" />
+        <div className="rounded-none p-1.5 bg-parchment-deep border border-rule">
+          <Icon className="h-3.5 w-3.5 text-ink-soft" />
         </div>
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+        <div className="text-[0.7rem] font-mono uppercase tracking-wider text-ink-soft mb-1">
           {config.label}
         </div>
         {matched && <span className="sr-only">Matched filter</span>}
-        <div className="text-sm text-slate-900 break-words">
+        <div className="text-sm text-ink break-words">
           {isUrl ? (
             <a
               href={display}
               target="_blank"
               rel="noopener noreferrer nofollow"
-              className="inline-flex items-center gap-1 text-primary hover:text-primary/80 underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 text-oxblood hover:text-oxblood-deep underline-offset-4 hover:underline"
             >
               <span className="truncate">{display}</span>
               <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -221,15 +221,15 @@ export const KeyInformation = memo(function KeyInformation({
     <section
       id={id}
       className={cn(
-        'rounded-2xl border border-slate-200/50 bg-white/60 backdrop-blur-md p-6',
+        'rounded-none border border-rule bg-parchment p-6',
         className,
       )}
       aria-label={title ?? 'Document metadata'}
     >
       {title && (
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-bold text-lg text-foreground">{title}</h3>
-          <span className="text-xs font-medium text-muted-foreground">
+          <h3 className="font-serif font-medium text-lg text-ink">{title}</h3>
+          <span className="text-xs font-mono text-ink-soft">
             {fields.length} {fields.length === 1 ? 'field' : 'fields'}
           </span>
         </div>

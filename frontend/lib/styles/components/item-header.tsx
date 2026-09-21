@@ -49,7 +49,7 @@ export function ItemHeader({
  return (
  <Component
  className={cn(
- 'text-sm font-medium text-slate-700',
+ 'text-sm font-medium text-ink',
  className,
  headerClassName
  )}
