@@ -3,15 +3,15 @@
  *
  * The gate counts pre-Editorial "AI slop" tells (glass blur, gradients,
  * Tailwind default hues, transition-all, big radii, scale hovers, decorative
- * AI glyphs) and fails when any count rises above the committed baseline, so
- * the migration in #637 cannot regress while it is in progress.
+ * AI glyphs). It was a ratchet against a committed baseline while #637 was in
+ * progress; since #642 every family is at zero and any hit is a hard failure.
  */
 
 // Plain CommonJS so `npm run validate` can run it with no build step.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const gate = require('../../scripts/assert-no-banned-classes');
 
-const { countBannedPatterns, compareToBaseline, isAllowlisted, PATTERNS } = gate;
+const { countBannedPatterns, findOffenders, isAllowlisted, PATTERNS } = gate;
 
 type Counts = Record<string, number>;
 
@@ -59,6 +59,44 @@ describe('countBannedPatterns', () => {
   });
 });
 
+describe('pattern targeting: class usage, not token definitions', () => {
+  // globals.css caps the oversized shadows by aliasing the tokens down:
+  //   --shadow-xl: var(--shadow-lg);
+  // That line is the countermeasure, not a violation. Counting it made the
+  // gate score its own fix and put a literal zero out of reach (#642).
+  it('ignores --shadow-xl / --shadow-2xl custom-property definitions', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'app/globals.css',
+        content: [
+          '  --shadow-xl: var(--shadow-lg);',
+          '  --shadow-2xl: var(--shadow-lg);',
+          '  --shadow-xl: var(--shadow-xl);',
+          '  --shadow-2xl: var(--shadow-2xl);',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts['hover-fx']).toBe(0);
+  });
+
+  it('still counts shadow-xl and shadow-2xl used as utility classes', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'components/x.tsx',
+        content: '<div className="shadow-xl hover:shadow-2xl md:shadow-xl" />',
+      },
+    ]);
+    expect(counts['hover-fx']).toBe(3);
+  });
+
+  it('still counts hover:scale-', () => {
+    const counts = countBannedPatterns([
+      { path: 'components/x.tsx', content: '<div className="hover:scale-105" />' },
+    ]);
+    expect(counts['hover-fx']).toBe(1);
+  });
+});
+
 describe('isAllowlisted', () => {
   it('skips the editorial primitives and the neutral skeleton', () => {
     expect(isAllowlisted('components/editorial/EditorialCard.tsx')).toBe(true);
@@ -68,24 +106,20 @@ describe('isAllowlisted', () => {
   });
 });
 
-describe('compareToBaseline', () => {
-  it('flags a pattern whose count rose above the baseline', () => {
-    const result = compareToBaseline({ ...zeroCounts(), glass: 5 }, { ...zeroCounts(), glass: 4 });
-
-    expect(result.regressions).toEqual([{ name: 'glass', baseline: 4, actual: 5 }]);
-    expect(result.improvements).toEqual([]);
+describe('findOffenders', () => {
+  it('reports nothing for a clean set of files', () => {
+    expect(
+      findOffenders([{ path: 'components/x.tsx', content: '<div className="bg-parchment text-ink" />' }])
+    ).toEqual([]);
   });
 
-  it('reports a pattern whose count dropped so the baseline can be lowered', () => {
-    const result = compareToBaseline({ ...zeroCounts(), hue: 2 }, { ...zeroCounts(), hue: 9 });
+  it('names the family, the total count and the files it came from', () => {
+    const offenders = findOffenders([
+      { path: 'components/a.tsx', content: '<div className="backdrop-blur-sm" />' },
+      { path: 'components/b.tsx', content: '<div className="backdrop-blur-md glass-panel" />' },
+      { path: 'components/c.tsx', content: '<div className="bg-parchment" />' },
+    ]);
 
-    expect(result.regressions).toEqual([]);
-    expect(result.improvements).toEqual([{ name: 'hue', baseline: 9, actual: 2 }]);
-  });
-
-  it('treats a pattern missing from the baseline as zero', () => {
-    const result = compareToBaseline({ ...zeroCounts(), motion: 1 }, {});
-
-    expect(result.regressions).toEqual([{ name: 'motion', baseline: 0, actual: 1 }]);
+    expect(offenders).toEqual([{ name: 'glass', count: 3, files: ['components/a.tsx', 'components/b.tsx'] }]);
   });
 });
