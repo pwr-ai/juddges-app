@@ -20,7 +20,8 @@ import { UnavailableFields } from "./UnavailableFields";
 
 const pageLogger = logger.child("ComparePage");
 
-function TierSection({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+/** Exported for reuse by PairContent's extension-schema section (Task 18). */
+export function TierSection({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section aria-labelledby={id} role="region" className="space-y-6">
       <Eyebrow id={id} as="p">
@@ -48,6 +49,12 @@ export interface CompareViewProps {
   request: CompareRequest;
   /** Task 17 mounts the save-pair dialog behind this; no handler → no button. */
   onSavePair?: () => void;
+  /**
+   * Override the `?f=…&q=…` deep link `buildComparePermalink` would compute
+   * from `request`. `/compare/[pairId]` (Task 18) passes `buildPairPermalink`
+   * here instead — the pair has its own stable, shorter URL.
+   */
+  permalink?: string;
 }
 
 /**
@@ -56,14 +63,14 @@ export interface CompareViewProps {
  * badge; `unavailable` are listed in words; `empty` (no data on either side)
  * are hidden — nothing is ever drawn as a 0 % bar.
  */
-export function CompareView({ data, request, onSavePair }: CompareViewProps) {
+export function CompareView({ data, request, onSavePair, permalink: permalinkOverride }: CompareViewProps) {
   const { t } = useTranslation();
   const byTier = (tier: Tier): CompareField[] => data.fields.filter((f) => f.tier === tier);
   const primary = byTier("primary");
   const partial = byTier("partial");
   const unavailable = byTier("unavailable");
   const nothing = (data.totals.PL ?? 0) === 0 && (data.totals.UK ?? 0) === 0;
-  const permalink = buildComparePermalink(request.filters, request.text_query ?? "");
+  const permalink = permalinkOverride ?? buildComparePermalink(request.filters, request.text_query ?? "");
   let figure = 0;
 
   return (

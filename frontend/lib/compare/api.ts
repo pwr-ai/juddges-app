@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createCollectionFromFilter } from "@/lib/api/collections";
 import type { BaseSchemaFilters, CollectionFromFilterResponse } from "@/types/base-schema-filter";
 
-import type { CompareRequest, CompareResponse } from "./types";
+import type { CompareRequest, CompareResponse, PairCompareResponse } from "./types";
 
 async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, {
@@ -32,9 +32,9 @@ export function useCompare(req: CompareRequest, enabled: boolean) {
   });
 }
 
-export async function fetchComparePair(pairId: string, signal?: AbortSignal): Promise<CompareResponse> {
+export async function fetchComparePair(pairId: string, signal?: AbortSignal): Promise<PairCompareResponse> {
   const res = await fetch(`/api/compare/pairs/${encodeURIComponent(pairId)}`, { signal });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
   return res.json();
 }
 
