@@ -31,6 +31,7 @@ EXPECTED_TABLES = {
     "publication_schemas",
     "publication_collections",
     "publication_extraction_jobs",
+    "collection_pairs",
 }
 
 

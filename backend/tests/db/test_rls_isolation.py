@@ -96,6 +96,21 @@ def _seed_owned_row(conn, table: str, owner: str) -> str:
             f"INSERT INTO public.{table} (id, post_id, user_id) VALUES (%s, %s, %s)",
             (row_id, post_id, owner),
         )
+    elif table == "collection_pairs":
+        pl_id, uk_id = str(uuid.uuid4()), str(uuid.uuid4())
+        for cid, label in ((pl_id, "PL"), (uk_id, "UK")):
+            _exec(
+                conn,
+                "INSERT INTO public.collections (id, user_id, name) VALUES (%s, %s, %s)",
+                (cid, owner, f"pair — {label}"),
+            )
+        _exec(
+            conn,
+            "INSERT INTO public.collection_pairs "
+            "(id, user_id, name, filters, pl_collection_id, uk_collection_id) "
+            "VALUES (%s, %s, 'pair', '{}'::jsonb, %s, %s)",
+            (row_id, owner, pl_id, uk_id),
+        )
     else:  # pragma: no cover - a new table must be added deliberately
         raise AssertionError(f"no seed defined for {table}")
     return row_id
@@ -109,6 +124,7 @@ OWNER_SCOPED_TABLES = [
     "saved_searches",
     "blog_likes",
     "blog_bookmarks",
+    "collection_pairs",
 ]
 
 
