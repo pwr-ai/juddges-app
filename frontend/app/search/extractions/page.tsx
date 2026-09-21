@@ -33,6 +33,9 @@ import type {
 } from "@/types/base-schema-filter";
 import type { BaseFilterValue } from "@/lib/store/searchStore";
 
+import { StatisticsView } from "./_components/StatisticsView";
+import { ViewToggle } from "./_components/ViewToggle";
+
 const pageLogger = logger.child("ExtractionSearchPage");
 
 // =============================================================================
@@ -204,6 +207,14 @@ function ExtractionSearchPage() {
     clearAll,
     activeCount,
     nlQuestion,
+    view,
+    sampleSize,
+    seed,
+    statsFields,
+    setView,
+    setSampling,
+    reshuffle,
+    setStatsFields,
   } = useExtractedDataFilters();
 
   const request = useMemo<BaseSchemaFilterRequest>(
@@ -216,7 +227,12 @@ function ExtractionSearchPage() {
     [filters, textQuery, page, pageSize],
   );
 
-  const { data, isLoading, isFetching, error, refetch } = useExtractionResults(request);
+  // The list query only runs behind the list view; the statistics view owns
+  // its own aggregate query (#708).
+  const { data, isLoading, isFetching, error, refetch } = useExtractionResults(
+    request,
+    view === "list",
+  );
 
   // Never render the raw exception: it leaks internals and gives the reader
   // nothing to act on. Keep it in the console instead.
@@ -346,22 +362,30 @@ function ExtractionSearchPage() {
       */}
       <div className="sticky top-0 z-10 border-b border-[color:var(--rule)] bg-[color:var(--parchment)] py-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-[color:var(--ink-soft)]">
-            {isLoading
-              ? "Searching…"
-              : total === 0
-                ? "No results"
-                : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
-            {isFetching && !isLoading && " (updating…)"}
-          </p>
+          <div className="flex items-center gap-3">
+            <ViewToggle view={view} onChange={setView} />
+            {/* In the statistics view the cohort line replaces this count. */}
+            {view === "list" && (
+              <p className="text-sm text-[color:var(--ink-soft)]">
+                {isLoading
+                  ? "Searching…"
+                  : total === 0
+                    ? "No results"
+                    : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
+                {isFetching && !isLoading && " (updating…)"}
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-2">
-            <SaveAsCollectionDialog
-              filters={filters}
-              textQuery={textQuery}
-              total={total}
-              defaultName={nlQuestion ?? ""}
-              disabled={isLoading || Boolean(error)}
-            />
+            {view === "list" && (
+              <SaveAsCollectionDialog
+                filters={filters}
+                textQuery={textQuery}
+                total={total}
+                defaultName={nlQuestion ?? ""}
+                disabled={isLoading || Boolean(error)}
+              />
+            )}
             {error && (
               <Button variant="ghost" size="sm" onClick={() => clearAll()}>
                 Reset
@@ -391,7 +415,24 @@ function ExtractionSearchPage() {
         </div>
       )}
 
-      {!error && (
+      {!error && view === "stats" && (
+        <StatisticsView
+          filters={filters}
+          textQuery={textQuery}
+          sampleSize={sampleSize}
+          seed={seed}
+          fields={statsFields}
+          onSampling={(n) => setSampling(n)}
+          onReshuffle={reshuffle}
+          onFields={setStatsFields}
+          onDrillBack={(patch) => {
+            if (patch) setFilters({ ...filters, ...patch });
+            setView("list");
+          }}
+        />
+      )}
+
+      {!error && view === "list" && (
         <ResultList
           rows={rows}
           isLoading={isLoading}
@@ -401,7 +442,7 @@ function ExtractionSearchPage() {
         />
       )}
 
-      {total > pageSize && (
+      {view === "list" && total > pageSize && (
         <Pagination
           currentPage={page}
           totalPages={totalPages}

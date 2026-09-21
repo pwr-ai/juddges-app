@@ -160,6 +160,7 @@ export interface NavigationTranslations {
   // Legal domain navigation
   searchJudgments: string;
   searchExtractedData: string;
+  statistics: string;
   topicTrends: string;
   topicModeling: string;
   savedSearches: string;

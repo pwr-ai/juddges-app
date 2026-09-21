@@ -116,6 +116,7 @@ export const en: Translations = {
     // Legal domain navigation
     searchJudgments: 'Search Judgments',
     searchExtractedData: 'Search Extracted Data',
+    statistics: 'Statistics',
     topicTrends: 'Topic Trends',
     topicModeling: 'Topic Modeling',
     savedSearches: 'Saved Searches',
