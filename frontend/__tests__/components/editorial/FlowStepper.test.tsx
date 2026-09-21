@@ -7,9 +7,13 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 
 let mockPathname = '/reasoning-lines/42';
+let mockSearch = '';
 let mockUser: { app_metadata?: { is_admin?: boolean } } | null = { app_metadata: {} };
 
-jest.mock('next/navigation', () => ({ usePathname: () => mockPathname }));
+jest.mock('next/navigation', () => ({
+  usePathname: () => mockPathname,
+  useSearchParams: () => new URLSearchParams(mockSearch),
+}));
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: mockUser, loading: false }),
 }));
@@ -26,6 +30,7 @@ const { FlowStepper } = require('@/components/editorial/FlowStepper');
 describe('FlowStepper', () => {
   beforeEach(() => {
     mockPathname = '/reasoning-lines/42';
+    mockSearch = '';
     mockUser = { app_metadata: {} };
   });
 
@@ -55,6 +60,22 @@ describe('FlowStepper', () => {
     mockUser = null;
     const { container } = render(<FlowStepper />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('places /search/extractions on the list step and links next to the statistics view', () => {
+    mockPathname = '/search/extractions';
+    render(<FlowStepper />);
+    expect(screen.getByRole('navigation')).toHaveTextContent('Step 1 of 4');
+    expect(screen.getByRole('link', { name: /common\.next/ })).toHaveAttribute('href', '/search/extractions?view=stats');
+  });
+
+  it('places /search/extractions?view=stats on the statistics step', () => {
+    mockPathname = '/search/extractions';
+    mockSearch = 'view=stats';
+    render(<FlowStepper />);
+    expect(screen.getByRole('navigation')).toHaveTextContent('Step 2 of 4');
+    expect(screen.getByRole('link', { name: /common\.previous/ })).toHaveAttribute('href', '/search/extractions');
+    expect(screen.getByRole('link', { name: /common\.next/ })).toHaveAttribute('href', '/collections');
   });
 
   it('omits the previous link on the first step and the next link on the last', () => {
