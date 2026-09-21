@@ -38,6 +38,7 @@ from app.api.search import router as search_router
 from app.argumentation import router as argumentation_router
 from app.auth import verify_api_key
 from app.clustering import router as clustering_router
+from app.collection_pairs import router as collection_pairs_router
 from app.collections import router as collections_router
 from app.collections_from_filter import router as collections_from_filter_router
 from app.compare.router import router as compare_router
@@ -689,6 +690,7 @@ API_KEY_PROTECTED_ROUTERS = [
     documents_router,
     # literal /collections/<segment> routes must register before the /{collection_id} catch-all
     collections_from_filter_router,
+    collection_pairs_router,
     collections_router,
     compare_router,
     publications_router,
