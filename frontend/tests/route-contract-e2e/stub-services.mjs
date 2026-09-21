@@ -495,6 +495,9 @@ const server = createServer((request, response) => {
   }
 
   if (request.method === 'GET' && url.pathname === '/dashboard/stats') {
+    // Intentionally partial: StatisticsView only reads `total_judgments`
+    // (the corpus size in the cohort line) — the real payload has ~12 more
+    // fields (jurisdictions, court_levels, data_completeness, ...).
     logRequest(request, url);
     sendJson(response, 200, { total_judgments: 12907 });
     return;
