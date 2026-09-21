@@ -164,6 +164,10 @@ substitute: it runs on a remote machine and cannot reach `localhost`.
   `browser_snapshot`, `browser_click`, …). The default mode reads the
   accessibility tree, not screenshots — assert on roles and names, the same
   locators the specs use.
+- **Not a gate:** a manual pass through MCP is evidence for the PR
+  description; it does not replace a route-contract spec
+  (`frontend/tests/route-contract-e2e/`) for a flow that must stay green on
+  every PR. Turn a repeated exploration into a spec.
 - **Why `--isolated`:** the profile lives in memory, so cookies and
   localStorage from one run never leak into the next and nothing is written
   to disk. Two sessions in two worktrees can run it concurrently (verified
@@ -172,10 +176,10 @@ substitute: it runs on a remote machine and cannot reach `localhost`.
   `frontend/tests/e2e/auth.setup.ts`) when the flow is behind the login wall
   on the dev server. The route-contract stub's synthetic session is only for
   the `:3006` standalone build, not for `:3026`.
-- **Not a gate:** a manual pass through MCP is evidence for the PR
-  description; it does not replace a route-contract spec
-  (`frontend/tests/route-contract-e2e/`) for a flow that must stay green on
-  every PR. Turn a repeated exploration into a spec.
+- **Origins:** `--allowed-origins` is deliberately not set. The browser
+  Supabase client calls the project's Supabase origin directly, so a
+  localhost-only allowlist would break every signed-in flow. Do not follow
+  external links during verification; the dev server is the target.
 
 ## Code Quality
 
