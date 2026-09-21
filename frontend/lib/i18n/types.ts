@@ -713,11 +713,14 @@ export interface CompareTranslations {
   pairEyebrow: string;
   pairSchemaSection: string;
   pairNoSchema: string;
+  pairSchemaEmpty: string;
   pairExtensionNoJobPl: string;
   pairExtensionNoJobUk: string;
   pairExtensionSchemaMismatch: string;
   pairExtensionSchemaNotFound: string;
   pairExtensionFailed: string;
+  pairNotFound: string;
+  backToCompare: string;
   extractOnBoth: string;
   dataNote: string;
   loadError: string;

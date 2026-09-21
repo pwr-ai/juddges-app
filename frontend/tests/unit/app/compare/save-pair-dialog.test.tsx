@@ -164,4 +164,29 @@ describe("SavePairDialog", () => {
     resolveSave(savedResponse);
     await waitFor(() => expect(push).toHaveBeenCalled());
   });
+
+  it("keeps save disabled after a successful save, even before the parent unmounts the dialog", async () => {
+    createCollectionPair.mockResolvedValue(savedResponse);
+    render(
+      <SavePairDialog open onOpenChange={() => {}} onSaved={() => {}} request={{ filters: {}, text_query: "x" }} />,
+    );
+    const saveButton = screen.getByRole("button", { name: "compare.savePair" });
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/compare/p1"));
+
+    expect(saveButton).toBeDisabled();
+    fireEvent.click(saveButton);
+    expect(createCollectionPair).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs and shows an error when the backend omits a pair_id", async () => {
+    createCollectionPair.mockResolvedValue({ ...savedResponse, pair_id: null });
+    render(
+      <SavePairDialog open onOpenChange={() => {}} onSaved={() => {}} request={{ filters: {}, text_query: "x" }} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "compare.savePair" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
 });

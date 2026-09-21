@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 jest.mock("@/contexts/LanguageContext", () => ({
   useTranslation: () => ({
@@ -104,6 +104,103 @@ describe("PairContent", () => {
     expect(screen.queryByText("compare.pairNoSchema")).not.toBeInTheDocument();
   });
 
+  it("renders an extension field with one side uncovered as a sentence, never a chart", () => {
+    useComparePair.mockReturnValue({
+      data: {
+        ...base,
+        fields: [],
+        extension: {
+          schema_id: "s1",
+          schema_name: "Sentencing",
+          source: "schema:s1",
+          jobs: {},
+          totals: { PL: 3, UK: 2 },
+          fields: [
+            {
+              field: "verdict",
+              label: "Verdict",
+              source: "schema:s1",
+              kind: "enum",
+              tier: "unavailable",
+              missing_in: ["UK"],
+              coverage: { PL: { covered: 3, total: 3, ratio: 1 }, UK: { covered: 0, total: 2, ratio: 0 } },
+              values: [{ value: "guilty", counts: { PL: 3, UK: 0 }, shares: { PL: 1, UK: null } }],
+            },
+          ],
+        },
+        extension_reason: null,
+      },
+      isLoading: false,
+      isError: false,
+    });
+    render(<PairContent pairId="p1" />);
+
+    const region = screen.getByRole("region", { name: "compare.pairSchemaSection" });
+    expect(region).toHaveTextContent("compare.unavailableOne");
+    expect(within(region).queryByTestId("bivariate")).not.toBeInTheDocument();
+  });
+
+  it("hides an extension field with the empty tier entirely", () => {
+    useComparePair.mockReturnValue({
+      data: {
+        ...base,
+        fields: [],
+        extension: {
+          schema_id: "s1",
+          schema_name: "Sentencing",
+          source: "schema:s1",
+          jobs: {},
+          totals: { PL: 0, UK: 0 },
+          fields: [
+            {
+              field: "verdict",
+              label: "Verdict",
+              source: "schema:s1",
+              kind: "enum",
+              tier: "empty",
+              missing_in: ["PL", "UK"],
+              coverage: { PL: { covered: 0, total: 0, ratio: null }, UK: { covered: 0, total: 0, ratio: null } },
+              values: [],
+            },
+          ],
+        },
+        extension_reason: null,
+      },
+      isLoading: false,
+      isError: false,
+    });
+    render(<PairContent pairId="p1" />);
+
+    const region = screen.getByRole("region", { name: "compare.pairSchemaSection" });
+    expect(region).not.toHaveTextContent("Verdict");
+    expect(within(region).queryByTestId("bivariate")).not.toBeInTheDocument();
+  });
+
+  it("shows a nothing-comparable notice when the extension ran but has no fields", () => {
+    useComparePair.mockReturnValue({
+      data: {
+        ...base,
+        fields: [],
+        extension: {
+          schema_id: "s1",
+          schema_name: "Free text",
+          source: "schema:s1",
+          jobs: {},
+          totals: { PL: 3, UK: 2 },
+          fields: [],
+        },
+        extension_reason: null,
+      },
+      isLoading: false,
+      isError: false,
+    });
+    render(<PairContent pairId="p1" />);
+
+    expect(screen.getByText("compare.pairSchemaEmpty")).toBeInTheDocument();
+    expect(screen.queryByText("compare.pairNoSchema")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /extractOnBoth/ })).not.toBeInTheDocument();
+  });
+
   it("renders the base fields through CompareView", () => {
     useComparePair.mockReturnValue({
       data: {
@@ -136,9 +233,31 @@ describe("PairContent", () => {
     expect(screen.queryByRole("heading", { name: "Fraud" })).not.toBeInTheDocument();
   });
 
-  it("shows an error state", () => {
-    useComparePair.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+  it("shows the generic try-again error for a non-404 failure", () => {
+    useComparePair.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: Object.assign(new Error("HTTP 500"), { status: 500 }),
+    });
     render(<PairContent pairId="p1" />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("compare.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("compare.pairNotFound")).not.toBeInTheDocument();
+  });
+
+  it("shows a dedicated not-found state, no try-again copy, on a 404", () => {
+    useComparePair.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: Object.assign(new Error("HTTP 404"), { status: 404 }),
+    });
+    render(<PairContent pairId="p1" />);
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("compare.pairNotFound")).toBeInTheDocument();
+    expect(screen.queryByText("compare.loadError")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "compare.backToCompare" })).toHaveAttribute("href", "/compare");
   });
 });

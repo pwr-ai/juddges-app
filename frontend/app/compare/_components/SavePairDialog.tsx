@@ -35,7 +35,10 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { CollectionFromFilterError } from "@/lib/api/collections";
 import { createCollectionPair } from "@/lib/compare/api";
 import type { CompareRequest } from "@/lib/compare/types";
+import logger from "@/lib/logger";
 import type { BaseSchemaFilters, CollectionFromFilterResponse } from "@/types/base-schema-filter";
+
+const log = logger.child("SavePairDialog");
 
 /** Backend bound on the pair name in split mode (see collections_from_filter.py). */
 const NAME_MAX_LENGTH = 200;
@@ -73,16 +76,23 @@ export function SavePairDialog({ open, onOpenChange, request, defaultName, onSav
   const [name, setName] = useState(() => initialName(request, defaultName));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<DialogError | null>(null);
+  // Latched once a save actually produces a pair id: the redirect is
+  // fire-and-forget (router.push doesn't unmount synchronously, e.g. in
+  // tests that mock the router), so without this a second click before
+  // navigation lands would fire a second createCollectionPair call.
+  const [succeeded, setSucceeded] = useState(false);
   // Tracks the `open` value the above state was last seeded for. Adjusting
   // state during render (rather than in an effect) on an `open` transition
   // avoids an extra render pass; the same instance is reused across opens
-  // from CompareContent, so a stale name/error would otherwise leak through.
+  // from CompareContent, so a stale name/error/succeeded would otherwise
+  // leak through.
   const [seededFor, setSeededFor] = useState(open);
   if (open !== seededFor) {
     setSeededFor(open);
     if (open) {
       setName(initialName(request, defaultName));
       setError(null);
+      setSucceeded(false);
     }
   }
 
@@ -93,7 +103,7 @@ export function SavePairDialog({ open, onOpenChange, request, defaultName, onSav
 
   const handleSave = async () => {
     const trimmed = name.trim();
-    if (trimmed === "") return;
+    if (trimmed === "" || succeeded) return;
     setSaving(true);
     setError(null);
     try {
@@ -104,7 +114,13 @@ export function SavePairDialog({ open, onOpenChange, request, defaultName, onSav
       });
       onSaved(result);
       setSaving(false);
-      if (result.pair_id) router.push(`/compare/${result.pair_id}`);
+      if (result.pair_id) {
+        setSucceeded(true);
+        router.push(`/compare/${result.pair_id}`);
+      } else {
+        log.error("createCollectionPair returned no pair_id", result);
+        setError({ message: "The pair was saved, but its id was missing — check the collections list." });
+      }
     } catch (e) {
       if (e instanceof CollectionFromFilterError) {
         setError(e.status === 413 ? { title: t("compare.savePairTooLarge"), message: e.message } : { message: e.message });
@@ -148,7 +164,7 @@ export function SavePairDialog({ open, onOpenChange, request, defaultName, onSav
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
             {t("common.cancel")}
           </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={saving || name.trim() === ""}>
+          <Button type="button" onClick={() => void handleSave()} disabled={saving || succeeded || name.trim() === ""}>
             {saving ? "Saving…" : t("compare.savePair")}
           </Button>
         </DialogFooter>
