@@ -379,6 +379,52 @@ class ExtractedDataFilterRequest(BaseModel):
     )
 
 
+class AggregateRequest(BaseModel):
+    """Request for POST /extractions/base-schema/aggregate (#707)."""
+
+    filters: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Same shape as ExtractedDataFilterRequest.filters (list_extracted_filter_matches keys)",
+    )
+    text_query: str | None = Field(
+        default=None, description="Full-text query across text fields"
+    )
+    fields: list[str] | None = Field(
+        default=None,
+        description="Fields to aggregate; null = the default set. Must be aggregable (see aggregate_fields.py).",
+    )
+    sample_size: int | None = Field(
+        default=None,
+        ge=1,
+        le=20000,
+        description="Seeded random sample size; null = whole cohort",
+    )
+    seed: int | None = Field(
+        default=None, description="Required when sample_size is set"
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Values kept per categorical field; the rest fold into 'other'",
+    )
+
+    @model_validator(mode="after")
+    def _seed_required_with_sample(self) -> "AggregateRequest":
+        if self.sample_size is not None and self.seed is None:
+            raise ValueError("seed is required when sample_size is set")
+        return self
+
+
+class AggregateResponse(BaseModel):
+    """Response for POST /extractions/base-schema/aggregate — mirrors the RPC's JSONB."""
+
+    total: int
+    sample_n: int
+    seed: int | None = None
+    fields: dict[str, dict[str, Any]]
+
+
 class NLFilterRequest(BaseModel):
     """Request for translating a natural-language question into base-schema filters."""
 

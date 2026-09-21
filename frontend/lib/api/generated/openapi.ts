@@ -3090,6 +3090,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extractions/base-schema/aggregate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aggregate extracted data over a cohort
+         * @description Per-field distributions (categorical / numeric / year) over the judgments matching the filters, optionally over a seeded random sample. Login required.
+         */
+        post: operations["aggregate_extracted_data_extractions_base_schema_aggregate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/extractions/base-schema/definition": {
         parameters: {
             query?: never;
@@ -5511,6 +5531,63 @@ export interface components {
              * @description List of document IDs to add (max 100 per request)
              */
             document_ids: string[];
+        };
+        /**
+         * AggregateRequest
+         * @description Request for POST /extractions/base-schema/aggregate (#707).
+         */
+        AggregateRequest: {
+            /**
+             * Fields
+             * @description Fields to aggregate; null = the default set. Must be aggregable (see aggregate_fields.py).
+             */
+            fields?: string[] | null;
+            /**
+             * Filters
+             * @description Same shape as ExtractedDataFilterRequest.filters (list_extracted_filter_matches keys)
+             */
+            filters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Sample Size
+             * @description Seeded random sample size; null = whole cohort
+             */
+            sample_size?: number | null;
+            /**
+             * Seed
+             * @description Required when sample_size is set
+             */
+            seed?: number | null;
+            /**
+             * Text Query
+             * @description Full-text query across text fields
+             */
+            text_query?: string | null;
+            /**
+             * Top N
+             * @description Values kept per categorical field; the rest fold into 'other'
+             * @default 20
+             */
+            top_n: number;
+        };
+        /**
+         * AggregateResponse
+         * @description Response for POST /extractions/base-schema/aggregate — mirrors the RPC's JSONB.
+         */
+        AggregateResponse: {
+            /** Fields */
+            fields: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /** Sample N */
+            sample_n: number;
+            /** Seed */
+            seed?: number | null;
+            /** Total */
+            total: number;
         };
         /**
          * AppEventIn
@@ -17116,6 +17193,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BaseSchemaExtractionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    aggregate_extracted_data_extractions_base_schema_aggregate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AggregateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AggregateResponse"];
                 };
             };
             /** @description Validation Error */
