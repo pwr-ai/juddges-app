@@ -456,7 +456,12 @@ async def filter_by_extracted_data(
     # access via verify_api_key, and the frontend enforces login before
     # reaching these endpoints.  Adding get_current_user here would be low-cost
     # consistency, but is intentionally deferred until a user-scoped filter is
-    # required.  Re-evaluate if per-user judgment collections are introduced.
+    # required.  `collection_ids` is rejected below instead: that key is
+    # RLS-gated on `list_extracted_filter_matches` (SECURITY INVOKER), and this
+    # endpoint calls it with the service-role client, so honouring the key here
+    # would let any caller probe membership of any collection. Re-evaluate both
+    # the auth deferral and this rejection if per-user judgment collections are
+    # introduced.
 ):
     """
     Filter documents by extracted_data fields.
@@ -467,6 +472,20 @@ async def filter_by_extracted_data(
     - Array containment queries (e.g., keywords, convict_offences)
     - Range queries on numeric fields (e.g., num_victims, case_number)
     """
+    if "collection_ids" in request.filters:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Filter Not Allowed",
+                "message": (
+                    "The 'collection_ids' filter is not allowed on this endpoint. "
+                    "Use POST /collections/from-filter, which authenticates the "
+                    "caller and verifies collection ownership."
+                ),
+                "code": "COLLECTION_IDS_NOT_ALLOWED",
+            },
+        )
+
     if not supabase:
         raise HTTPException(
             status_code=503,

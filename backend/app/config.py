@@ -54,6 +54,11 @@ class Settings:
     MAX_CSV_STRING_LENGTH: int = int(os.getenv("MAX_CSV_STRING_LENGTH", "500"))
     MAX_RETURN_PROPERTIES: int = int(os.getenv("MAX_RETURN_PROPERTIES", "50"))
 
+    # Max documents a single "save filter as collection" call may create (per collection).
+    SAVE_FROM_FILTER_MAX_DOCUMENTS: int = int(
+        os.getenv("SAVE_FROM_FILTER_MAX_DOCUMENTS", "5000")
+    )
+
 
 # Global settings instance
 settings = Settings()

@@ -485,6 +485,48 @@ export const FILTER_FIELD_BY_NAME: Record<string, FilterFieldConfig> =
   Object.fromEntries(FILTER_FIELDS.map((c) => [c.field, c]));
 
 // -----------------------------------------------------------------------------
+// Core judgment columns (judgments.jurisdiction, judgments.decision_date).
+//
+// Filtered by the RPC since 20260920000001, but kept OUT of FILTER_FIELDS on
+// purpose: FIELDS_BY_GROUP drives BaseFiltersDrawer and filter-fields-map.ts
+// (Meili `base_*` columns), and neither applies to these two. They are
+// surfaced by ActiveFilterChips + the URL blob (+ Spec B's ScopeFilters) only.
+// -----------------------------------------------------------------------------
+
+const JURISDICTIONS = ["PL", "UK"] as const;
+
+export const CORE_FILTER_FIELDS: readonly FilterFieldConfig[] = [
+  {
+    field: "jurisdiction",
+    label: "Jurisdiction",
+    help: "Country of the court.",
+    group: "court_date",
+    control: "enum_multi",
+    enumValues: JURISDICTIONS,
+  },
+  {
+    field: "decision_date",
+    label: "Decision date",
+    help: "Date the judgment was handed down (both jurisdictions).",
+    group: "court_date",
+    control: "date_range",
+  },
+] as const;
+
+export const CORE_FILTER_FIELD_BY_NAME: Record<string, FilterFieldConfig> =
+  Object.fromEntries(CORE_FILTER_FIELDS.map((c) => [c.field, c]));
+
+/** Every field the RPC accepts: base_* registry + core columns. */
+export const ALL_FILTER_FIELD_BY_NAME: Record<string, FilterFieldConfig> = {
+  ...FILTER_FIELD_BY_NAME,
+  ...CORE_FILTER_FIELD_BY_NAME,
+};
+
+export function isCoreFilterField(field: string): boolean {
+  return field in CORE_FILTER_FIELD_BY_NAME;
+}
+
+// -----------------------------------------------------------------------------
 // Quick filters — highest-signal fields surfaced inline above the advanced
 // drawer (see GitHub issue #139). The strip shares the same filter-state
 // instance as the drawer; the drawer stays the source of truth for everything
@@ -524,6 +566,7 @@ export const FIELDS_BY_GROUP: Record<FilterGroup, FilterFieldConfig[]> =
 
 /** Format a snake_case enum value for display ("gender_male" → "Gender male"). */
 export function formatEnumLabel(value: string): string {
+  if (/^[A-Z]{2}$/.test(value)) return value;
   return value.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
