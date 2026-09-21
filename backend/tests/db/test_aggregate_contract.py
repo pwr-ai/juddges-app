@@ -8,8 +8,10 @@ documented shape; (4) categorical "other"/null arithmetic; (5) grants.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
+from collections import Counter
 
 import pytest
 
@@ -23,13 +25,15 @@ pytestmark = pytest.mark.db
 def cohort(conn):
     token = f"agg-{uuid.uuid4()}"
     ids = []
+    years: dict[str, str] = {}
     for i in range(12):
+        year = f"20{10 + i // 3:02d}"
         ids.append(
             _seed(
                 conn,
                 token,
                 "PL" if i % 2 == 0 else "UK",
-                f"20{10 + i // 3:02d}-01-15",
+                f"{year}-01-15",
                 # real enum members: chk_judgments_base_appeal_outcome rejects anything else
                 appeal_outcome=["outcome_conviction_quashed"]
                 if i < 4
@@ -38,9 +42,11 @@ def cohort(conn):
                 if i % 3 == 0
                 else ["possession"],
                 num_victims=i % 4,
+                victim_age_offence=i * 0.5,
                 did_offender_confess=(i % 2 == 0),
             )
         )
+        years[ids[-1]] = year
     # one row outside the cohort keyword, must never be counted
     outsider = _seed(
         conn,
@@ -49,7 +55,7 @@ def cohort(conn):
         "2015-01-01",
         appeal_outcome=["outcome_conviction_quashed"],
     )
-    yield {"token": token, "ids": ids}
+    yield {"token": token, "ids": ids, "years": years}
     _exec(
         conn,
         "DELETE FROM public.judgments WHERE id = ANY(%s::uuid[])",
@@ -101,17 +107,39 @@ def test_total_equals_filter_wrapper_total(conn, cohort):
         assert _agg(conn, filters)["total"] == _wrapper_total(conn, filters)
 
 
+def _expected_sample(ids: list[str], seed: int, n: int) -> list[str]:
+    """The SQL orders the cohort by md5(id::text || p_seed::text), then id."""
+
+    def key(i: str) -> tuple[str, str]:
+        digest = hashlib.md5(f"{i}{seed}".encode(), usedforsecurity=False)
+        return digest.hexdigest(), i
+
+    return sorted(ids, key=key)[:n]
+
+
+def _year_values(sample: list[str], years: dict[str, str]) -> list[dict]:
+    counts = Counter(years[i] for i in sample)
+    return [{"value": y, "count": c} for y, c in sorted(counts.items())]
+
+
 def test_sample_is_deterministic_per_seed_and_bounded(conn, cohort):
     f = {"keywords": [cohort["token"]]}
     a = _agg(conn, f, p_sample_size=5, p_seed=42)
     b = _agg(conn, f, p_sample_size=5, p_seed=42)
-    c = _agg(conn, f, p_sample_size=5, p_seed=43)
     assert a == b
     assert a["sample_n"] == 5 and a["total"] == 12 and a["seed"] == 42
-    assert (
-        a["fields"] != c["fields"]
-        or a["fields"]["decision_date"] != c["fields"]["decision_date"]
+    # pins the sampling formula, not just repeatability
+    exp42 = _expected_sample(cohort["ids"], 42, 5)
+    assert a["fields"]["decision_date"]["values"] == _year_values(
+        exp42, cohort["years"]
     )
+    exp43 = _expected_sample(cohort["ids"], 43, 5)
+    c = _agg(conn, f, p_sample_size=5, p_seed=43)
+    assert c["fields"]["decision_date"]["values"] == _year_values(
+        exp43, cohort["years"]
+    )
+    if _year_values(exp42, cohort["years"]) != _year_values(exp43, cohort["years"]):
+        assert a["fields"]["decision_date"] != c["fields"]["decision_date"]
     big = _agg(conn, f, p_sample_size=500, p_seed=1)
     assert big["sample_n"] == 12
 
@@ -119,6 +147,12 @@ def test_sample_is_deterministic_per_seed_and_bounded(conn, cohort):
 def test_seed_required_with_sample_size(conn, cohort):
     with pytest.raises(Exception, match="p_seed"):
         _agg(conn, {"keywords": [cohort["token"]]}, p_sample_size=3)
+
+
+def test_null_top_n_is_rejected(conn, cohort):
+    # NULL used to slip past the range guard and empty every categorical list
+    with pytest.raises(Exception, match="p_top_n"):
+        _agg(conn, {"keywords": [cohort["token"]]}, p_top_n=None)
 
 
 def test_every_allowlisted_field_aggregates(conn, cohort):
@@ -154,15 +188,55 @@ def test_categorical_other_and_null_arithmetic(conn, cohort):
     assert ao["other"] == 4
 
 
+def test_array_null_and_empty_elements_are_dropped(conn):
+    token = f"agg-{uuid.uuid4()}"
+    ids = [
+        _seed(conn, token, "PL", "2020-01-01", convict_offences=["", None, "x"]),
+        _seed(conn, token, "PL", "2020-01-01", convict_offences=["", None]),
+    ]
+    try:
+        co = _agg(conn, {"keywords": [token]}, p_fields=["convict_offences"])
+        co = co["fields"]["convict_offences"]
+        assert co["values"] == [{"value": "x", "count": 1}]
+        assert co["other"] == 0
+        # a row left with no element counts as null, like '' on a scalar column
+        assert co["covered"] == 1 and co["null"] == 1
+    finally:
+        _exec(
+            conn,
+            "DELETE FROM public.judgments WHERE id = ANY(%s::uuid[])",
+            (ids,),
+        )
+
+
 def test_numeric_and_year_shapes(conn, cohort):
     out = _agg(
         conn,
         {"keywords": [cohort["token"]]},
-        p_fields=["num_victims", "decision_date", "did_offender_confess"],
+        p_fields=[
+            "num_victims",
+            "victim_age_offence",
+            "decision_date",
+            "did_offender_confess",
+        ],
     )
     nv = out["fields"]["num_victims"]
     assert nv["kind"] == "numeric" and nv["min"] == 0 and nv["max"] == 3
     assert sum(b["count"] for b in nv["buckets"]) == nv["covered"] == 12
+    # integer column: one unit bucket per value, half-open integer bounds
+    assert [b["lo"] for b in nv["buckets"]] == [0, 1, 2, 3]
+    assert [b["hi"] for b in nv["buckets"]] == [1, 2, 3, 4]
+    assert [b["count"] for b in nv["buckets"]] == [3, 3, 3, 3]
+    assert all(
+        isinstance(b["lo"], int | float) and isinstance(b["hi"], int | float)
+        for b in nv["buckets"]
+    )
+    # non-integer column: 20 equal-width buckets, float bounds (0.275 not numeric scale)
+    va = out["fields"]["victim_age_offence"]
+    assert va["min"] == 0 and va["max"] == 5.5 and len(va["buckets"]) == 20
+    assert va["buckets"][0] == {"lo": 0, "hi": 0.275, "count": 1}
+    assert va["buckets"][-1]["hi"] == 5.5
+    assert sum(b["count"] for b in va["buckets"]) == va["covered"] == 12
     yr = out["fields"]["decision_date"]
     assert yr["kind"] == "year"
     assert [v["value"] for v in yr["values"]] == ["2010", "2011", "2012", "2013"]

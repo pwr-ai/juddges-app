@@ -57,7 +57,8 @@ BEGIN
     IF p_sample_size IS NOT NULL AND p_sample_size < 1 THEN
         RAISE EXCEPTION 'p_sample_size must be >= 1' USING ERRCODE = '22023';
     END IF;
-    IF p_top_n < 1 OR p_top_n > 100 THEN
+    -- NULL would slip past the range check and then `rn <= NULL` would empty every list.
+    IF p_top_n IS NULL OR p_top_n < 1 OR p_top_n > 100 THEN
         RAISE EXCEPTION 'p_top_n must be between 1 and 100' USING ERRCODE = '22023';
     END IF;
 
@@ -84,9 +85,12 @@ BEGIN
         END IF;
 
         IF v_udt = '_text' THEN
-            -- array column: one row per value; "multi": a judgment can appear under several values
+            -- array column: one row per value; "multi": a judgment can appear under several values.
+            -- NULL and '' elements are dropped before counting (the scalar branch treats '' as
+            -- null too); a row whose array has no element left counts as null, not covered.
             EXECUTE format($q$
-                WITH s AS (SELECT j.%1$I AS col FROM public.judgments j WHERE j.id = ANY($1)),
+                WITH s AS (SELECT array_remove(array_remove(j.%1$I, NULL), '') AS col
+                             FROM public.judgments j WHERE j.id = ANY($1)),
                      v AS (SELECT x AS value, COUNT(*) AS cnt FROM s, LATERAL unnest(s.col) AS x GROUP BY x),
                      r AS (SELECT value, cnt, ROW_NUMBER() OVER (ORDER BY cnt DESC, value) AS rn FROM v)
                 SELECT jsonb_build_object(
@@ -110,9 +114,37 @@ BEGIN
                     'covered', (SELECT COUNT(*) FROM s WHERE col IS NOT NULL AND col <> ''))
             $q$, v_column) INTO v_part USING v_ids, p_top_n;
 
-        ELSIF v_udt IN ('int2', 'int4', 'int8', 'numeric', 'float4', 'float8') THEN
+        ELSIF v_udt IN ('int2', 'int4', 'int8') THEN
+            -- Integer columns: at most 20 buckets with an integer width
+            -- ceil((hi - lo + 1) / 20) and half-open integer bounds [lo, hi), the last
+            -- one clamped to max + 1. A 0..3 column therefore yields exactly four
+            -- unit buckets instead of twenty fractional ones.
+            EXECUTE format($q$
+                WITH s AS (SELECT j.%1$I::bigint AS col FROM public.judgments j WHERE j.id = ANY($1)),
+                     b AS (SELECT MIN(col) AS lo, MAX(col) AS hi FROM s WHERE col IS NOT NULL),
+                     w AS (SELECT lo, hi, CEIL((hi - lo + 1)::numeric / 20)::bigint AS wd
+                             FROM b WHERE lo IS NOT NULL),  -- no non-null value => buckets: []
+                     w2 AS (SELECT lo, hi, wd, CEIL((hi - lo + 1)::numeric / wd)::int AS n FROM w),
+                     k AS (SELECT LEAST(((s.col - w2.lo) / w2.wd)::int + 1, w2.n) AS bk
+                             FROM s, w2 WHERE s.col IS NOT NULL),
+                     g AS (SELECT bk, COUNT(*) AS cnt FROM k GROUP BY bk),
+                     e AS (SELECT gs AS bk,
+                                  w2.lo + (gs - 1) * w2.wd AS lo,
+                                  LEAST(w2.lo + gs * w2.wd, w2.hi + 1) AS hi
+                             FROM w2, generate_series(1, w2.n) AS gs)
+                SELECT jsonb_build_object(
+                    'kind', 'numeric',
+                    'buckets', COALESCE((SELECT jsonb_agg(jsonb_build_object('lo', e.lo::float8, 'hi', e.hi::float8, 'count', COALESCE(g.cnt, 0)) ORDER BY e.bk)
+                                         FROM e LEFT JOIN g USING (bk)), '[]'::jsonb),
+                    'min', (SELECT lo::float8 FROM b), 'max', (SELECT hi::float8 FROM b),
+                    'null', (SELECT COUNT(*) FROM s WHERE col IS NULL),
+                    'covered', (SELECT COUNT(*) FROM s WHERE col IS NOT NULL))
+            $q$, v_column) INTO v_part USING v_ids;
+
+        ELSIF v_udt IN ('numeric', 'float4', 'float8') THEN
             -- 20 equal-width buckets between min and max of the sample; a single
-            -- distinct value yields one bucket [v, v].
+            -- distinct value yields one bucket [v, v]. Bounds are emitted as float8 so
+            -- the JSON carries 0.15, not numeric's 0.15000000000000000000.
             EXECUTE format($q$
                 WITH s AS (SELECT j.%1$I::numeric AS col FROM public.judgments j WHERE j.id = ANY($1)),
                      b AS (SELECT MIN(col) AS lo, MAX(col) AS hi FROM s WHERE col IS NOT NULL),
@@ -130,9 +162,9 @@ BEGIN
                             WHERE w.lo IS NOT NULL)  -- no non-null value => buckets: []
                 SELECT jsonb_build_object(
                     'kind', 'numeric',
-                    'buckets', COALESCE((SELECT jsonb_agg(jsonb_build_object('lo', e.lo, 'hi', e.hi, 'count', COALESCE(g.cnt, 0)) ORDER BY e.bk)
+                    'buckets', COALESCE((SELECT jsonb_agg(jsonb_build_object('lo', e.lo::float8, 'hi', e.hi::float8, 'count', COALESCE(g.cnt, 0)) ORDER BY e.bk)
                                          FROM e LEFT JOIN g USING (bk)), '[]'::jsonb),
-                    'min', (SELECT lo FROM b), 'max', (SELECT hi FROM b),
+                    'min', (SELECT lo::float8 FROM b), 'max', (SELECT hi::float8 FROM b),
                     'null', (SELECT COUNT(*) FROM s WHERE col IS NULL),
                     'covered', (SELECT COUNT(*) FROM s WHERE col IS NOT NULL))
             $q$, v_column) INTO v_part USING v_ids;
