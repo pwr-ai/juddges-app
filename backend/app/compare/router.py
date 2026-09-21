@@ -1,6 +1,7 @@
-"""HTTP surface of the PL/UK comparison: `/compare/facets` (export, pairs later).
+"""HTTP surface of the PL/UK comparison: `/compare/facets`, `/compare/export`.
 
-Order of checks in `_run_compare`, and why:
+Both endpoints take the same body (`CompareRequest`) and share `_run_compare`;
+export only changes the serialisation. Order of checks, and why:
 
 1. `supabase_client` configured, else 503 `DATABASE_UNAVAILABLE`.
 2. Requested `fields` resolved against the base comparable registry
@@ -23,14 +24,18 @@ anonymous mode.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from io import BytesIO
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.collections_from_filter import check_collection_ids_ownership
+from app.compare.csv_export import csv_bytes, to_csv_rows
 from app.compare.fields import FieldSpec, base_compare_fields, select_base_fields
 from app.compare.models import CompareResponse
 from app.compare.service import CompareService, FieldNotComparableError
@@ -127,3 +132,29 @@ async def compare_facets(
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> CompareResponse:
     return await _run_compare(request, db=db, user_id=user.id)
+
+
+@router.post("/export", summary="Long-format CSV of the comparison")
+async def compare_export(
+    request: CompareRequest,
+    db=Depends(get_collections_db),
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> StreamingResponse:
+    """One row per (field, value, jurisdiction); UTF-8 with BOM for Excel.
+
+    Built from the same `CompareResponse` as `/compare/facets`, so the file
+    holds exactly the numbers shown on screen. Headers follow the results
+    export: `Content-Disposition` attachment + `X-Rows-Count`.
+    """
+    response = await _run_compare(request, db=db, user_id=user.id)
+    rows = to_csv_rows(response)
+    filename = f"compare_{datetime.now(UTC).strftime('%Y-%m-%d')}.csv"
+    logger.info("compare export: {} rows as {}", len(rows), filename)
+    return StreamingResponse(
+        BytesIO(csv_bytes(rows)),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Rows-Count": str(len(rows)),
+        },
+    )
