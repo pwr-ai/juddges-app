@@ -7,6 +7,8 @@ import { ActiveFilterChips } from "@/components/filters/extracted-search-filters
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { NlFilterDialog } from "@/components/search/NlFilterDialog";
 import { QuickFilters } from "@/components/search/QuickFilters";
+import { SaveAsCollectionDialog } from "@/components/search/SaveAsCollectionDialog";
+import { ScopeFilters } from "@/components/search/ScopeFilters";
 import { Eyebrow, Headline } from "@/components/editorial";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,8 @@ import {
   useExtractionResults,
 } from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
+import type { FilterUrlState } from "@/lib/extractions/use-extracted-data-filters";
+import { buildDocumentHref } from "@/lib/extractions/document-href";
 import { applyDrawerChange, toDrawerFilters } from "@/lib/extractions/drawer-adapter";
 import { isCoreFilterField } from "@/lib/extractions/base-schema-filter-config";
 import type {
@@ -94,11 +98,17 @@ function SubstringInputs({
   );
 }
 
-function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
+function ResultRow({
+  row,
+  urlState,
+}: {
+  row: BaseSchemaFilterResultRow;
+  urlState: FilterUrlState;
+}) {
   const date = row.decision_date ? new Date(row.decision_date) : null;
   return (
     <Link
-      href={`/documents/${row.id}`}
+      href={buildDocumentHref(row.id, urlState)}
       className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment-deep)]"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -134,11 +144,13 @@ export function ResultList({
   isLoading,
   hasActiveFilters,
   onClearAll,
+  urlState,
 }: {
   rows: BaseSchemaFilterResultRow[];
   isLoading: boolean;
   hasActiveFilters: boolean;
   onClearAll: () => void;
+  urlState: FilterUrlState;
 }) {
   if (isLoading && rows.length === 0) {
     return (
@@ -172,7 +184,7 @@ export function ResultList({
   return (
     <div className="space-y-3">
       {rows.map((row) => (
-        <ResultRow key={row.id} row={row} />
+        <ResultRow key={row.id} row={row} urlState={urlState} />
       ))}
     </div>
   );
@@ -187,9 +199,11 @@ function ExtractionSearchPage() {
     setFilters,
     setTextQuery,
     setPage,
+    setNlQuestion,
     removeFilter,
     clearAll,
     activeCount,
+    nlQuestion,
   } = useExtractedDataFilters();
 
   const request = useMemo<BaseSchemaFilterRequest>(
@@ -254,9 +268,11 @@ function ExtractionSearchPage() {
   const applyNlFilters = (
     nextFilters: BaseSchemaFilters,
     nextTextQuery: string,
+    question: string,
   ) => {
     setFilters(nextFilters);
     setTextQuery(nextTextQuery);
+    setNlQuestion(question);
   };
 
   const resetDrawerFilters = () => {
@@ -304,6 +320,8 @@ function ExtractionSearchPage() {
           onChange={setSubstringFilter}
         />
 
+        <ScopeFilters filters={filters} onChange={setFilters} />
+
         <QuickFilters
           filters={drawerFilters}
           onChange={setDrawerFilter}
@@ -336,11 +354,20 @@ function ExtractionSearchPage() {
                 : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
             {isFetching && !isLoading && " (updating…)"}
           </p>
-          {error && (
-            <Button variant="ghost" size="sm" onClick={() => clearAll()}>
-              Reset
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <SaveAsCollectionDialog
+              filters={filters}
+              textQuery={textQuery}
+              total={total}
+              defaultName={nlQuestion ?? ""}
+              disabled={isLoading || Boolean(error)}
+            />
+            {error && (
+              <Button variant="ghost" size="sm" onClick={() => clearAll()}>
+                Reset
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -370,6 +397,7 @@ function ExtractionSearchPage() {
           isLoading={isLoading}
           hasActiveFilters={activeCount > 0 || textQuery.trim().length > 0}
           onClearAll={clearAll}
+          urlState={{ filters, textQuery, page, nlQuestion }}
         />
       )}
 
