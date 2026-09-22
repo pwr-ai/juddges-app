@@ -150,6 +150,18 @@ Optional: `LANGFUSE_*` (observability), `REDIS_*` (Celery + guest sessions). `WE
 - Backend: `pytest`. Mark tests with `@pytest.mark.unit` or `@pytest.mark.integration`. Integration tests need real services (DB, Redis, OpenAI).
 - Frontend: Jest (unit) + Playwright (E2E).
 
+## Finishing a frontend change
+
+A `Stop` hook (`.claude/settings.json` → `scripts/verify-frontend-evidence.sh
+--check`) refuses to end a turn while `frontend/` differs from `origin/main`
+and no evidence marker matches the current diff hash. Produce the marker with
+the **frontend-verify** skill (`bash scripts/verify-frontend-evidence.sh
+--record`): it builds with the route-contract env, runs
+`npm run test:e2e:route-contract`, and seals
+`frontend/test-results/.last-verify.json` only if the suite is green. Any later
+edit under `frontend/` re-arms the gate. `SKIP_FRONTEND_VERIFY=1` disables the
+check for sessions that cannot run the suite — say so in the reply when used.
+
 ## Agent browser verification (MCP)
 
 `.mcp.json` registers a project-scoped `playwright` MCP server
@@ -167,7 +179,8 @@ substitute: it runs on a remote machine and cannot reach `localhost`.
 - **Not a gate:** a manual pass through MCP is evidence for the PR
   description; it does not replace a route-contract spec
   (`frontend/tests/route-contract-e2e/`) for a flow that must stay green on
-  every PR. Turn a repeated exploration into a spec.
+  every PR — that is what the Stop hook above checks. Turn a repeated
+  exploration into a spec.
 - **Why `--isolated`:** the profile lives in memory, so cookies and
   localStorage from one run never leak into the next and nothing is written
   to disk. Two sessions in two worktrees can run it concurrently (verified
