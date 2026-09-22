@@ -131,6 +131,15 @@ EXPECTED_RPC_ARGS = {
     ],
     # backend/app/extraction_domain/filter_ids.py
     "list_extracted_filter_matches": ["p_filters", "p_text_query"],
+    # backend/app/extraction_domain/results_router.py — POST /base-schema/aggregate (#707)
+    "aggregate_extracted_data": [
+        "p_filters",
+        "p_text_query",
+        "p_fields",
+        "p_sample_size",
+        "p_seed",
+        "p_top_n",
+    ],
 }
 
 
