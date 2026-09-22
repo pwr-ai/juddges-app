@@ -160,6 +160,7 @@ export interface NavigationTranslations {
   // Legal domain navigation
   searchJudgments: string;
   searchExtractedData: string;
+  statistics: string;
   topicTrends: string;
   topicModeling: string;
   savedSearches: string;
@@ -347,6 +348,31 @@ export interface ExtractionTranslations {
   extractedData: string;
   exportToExcel: string;
   exportToJson: string;
+
+  // Statistics view (#708)
+  statsView: string;
+  listView: string;
+  statsCohortLine: string;
+  statsSampleLine: string;
+  statsShowJudgments: string;
+  statsScale: string;
+  statsAll: string;
+  statsReshuffle: string;
+  statsYAxisCount: string;
+  statsYAxisPercent: string;
+  statsOther: string;
+  statsMissing: string;
+  statsMultiNote: string;
+  statsModelScore: string;
+  statsAddField: string;
+  statsRemoveField: string;
+  statsExportCsv: string;
+  statsExportCohort: string;
+  statsEmpty: string;
+  statsError: string;
+  statsCohortLineNoCorpus: string;
+  statsYAxis: string;
+  statsUpdating: string;
 }
 
 /**
