@@ -9,8 +9,9 @@ step of the **Explore** sidebar flow (see `docs/reference/sidebar-map.md`).
 
 ## Steps
 
-1. **Open `/compare`.** It starts with no filter, showing every comparable
-   base-schema field over the whole corpus split PL / UK.
+1. **Open `/compare`.** It starts with no filter and shows an empty state
+   ("Ask a research question") — it never runs a whole-corpus comparison on
+   its own. Add a filter or a text query to run it.
 2. **Describe the question or pick chips.** Either click **Describe your
    search** and type a question in Polish or English (the same NL dialog as
    `/search/extractions`; see
