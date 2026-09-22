@@ -23,6 +23,12 @@
 -- working with no code change.
 -- =============================================================================
 
+-- Both tables are written on every uncached LLM call, and ENABLE ROW LEVEL
+-- SECURITY needs ACCESS EXCLUSIVE. Fail fast rather than queue behind a live
+-- cache write and block every writer behind us; re-running the migration is
+-- cheap, a lock pile-up on the primary is not.
+SET lock_timeout = '5s';
+
 CREATE TABLE IF NOT EXISTS public.full_llm_cache (
     prompt   VARCHAR NOT NULL,
     llm      VARCHAR NOT NULL,
@@ -48,8 +54,9 @@ CREATE INDEX IF NOT EXISTS ix_full_md5_llm_cache_prompt_md5
     ON public.full_md5_llm_cache (prompt_md5);
 
 -- No policies: the cache has no client-side reader or writer. RLS with zero
--- policies denies every PostgREST role, which is exactly the intent, and is
--- the only thing that clears Supabase's `rls_disabled_in_public` lint.
+-- policies denies anon and authenticated outright — not `service_role`, which
+-- is BYPASSRLS and is handled by the revoke below — and it is the only thing
+-- that clears Supabase's `rls_disabled_in_public` lint.
 ALTER TABLE public.full_llm_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.full_md5_llm_cache ENABLE ROW LEVEL SECURITY;
 
@@ -57,7 +64,14 @@ ALTER TABLE public.full_md5_llm_cache ENABLE ROW LEVEL SECURITY;
 -- Supabase applies mean a table is writable by anon the moment it exists, and
 -- an RLS denial is silent. Revoking turns a client write into an error and
 -- means adding a policy later cannot open writes on its own.
-REVOKE ALL ON public.full_llm_cache FROM anon, authenticated;
-REVOKE ALL ON public.full_md5_llm_cache FROM anon, authenticated;
-GRANT ALL ON public.full_llm_cache TO service_role;
-GRANT ALL ON public.full_md5_llm_cache TO service_role;
+--
+-- `service_role` is revoked too, which is not the usual pattern here. It is
+-- BYPASSRLS, so RLS alone does not hold it back, and the service key is used
+-- by PostgREST callers all over the backend
+-- (`backend/app/core/supabase.py` and friends). Leaving the default grant in
+-- place would reopen exactly what this migration closes. The cache has no
+-- PostgREST caller at all: `langchain_cache.py` connects straight to Postgres
+-- as the owning `postgres` role over DATABASE_URL, which is unaffected by
+-- either RLS or these grants.
+REVOKE ALL ON public.full_llm_cache FROM anon, authenticated, service_role;
+REVOKE ALL ON public.full_md5_llm_cache FROM anon, authenticated, service_role;

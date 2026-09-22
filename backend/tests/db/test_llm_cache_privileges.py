@@ -2,9 +2,12 @@
 
 `full_llm_cache` / `full_md5_llm_cache` are created by SQLAlchemy at backend
 boot, not by a migration, which is how they reached production with RLS off and
-anon holding ALL. The first test pins the two tables; the second is the gate
-that would have caught them — any table in `public` with RLS off fails, whoever
+anon holding ALL. The first test pins the two tables; the last is the gate that
+would have caught them — any table in `public` with RLS off fails, whoever
 created it.
+
+`service_role` is in the role list on purpose: it is BYPASSRLS, so for that
+role the grant is the only boundary there is.
 
 These assert the privilege, not its effect: with RLS on and no policy, a client
 write is denied silently and a "the row did not change" assertion passes either
@@ -21,7 +24,7 @@ CACHE_TABLES = ("full_llm_cache", "full_md5_llm_cache")
 
 
 @pytest.mark.parametrize("table", CACHE_TABLES)
-@pytest.mark.parametrize("role", ("anon", "authenticated"))
+@pytest.mark.parametrize("role", ("anon", "authenticated", "service_role"))
 @pytest.mark.parametrize("priv", ("SELECT", "INSERT", "UPDATE", "DELETE"))
 def test_llm_cache_is_unreachable_from_api_roles(conn, table, role, priv):
     with conn.cursor() as cur:
