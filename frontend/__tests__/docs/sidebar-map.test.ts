@@ -17,7 +17,7 @@ function routesInDoc(): string[] {
   const md = readFileSync(DOC, "utf8");
   const sidebarPart = md.split("## Not in the sidebar")[0];
   const seen = new Set<string>();
-  for (const m of sidebarPart.matchAll(/`(\/[a-z0-9\-\/]*)`/g)) seen.add(m[1]);
+  for (const m of sidebarPart.matchAll(/`(\/[a-z0-9\-\/?=]*)`/g)) seen.add(m[1]);
   return [...seen];
 }
 

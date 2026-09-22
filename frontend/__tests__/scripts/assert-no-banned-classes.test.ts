@@ -106,6 +106,97 @@ describe('isAllowlisted', () => {
   });
 });
 
+describe('raw CSS, not just Tailwind class names (#713)', () => {
+  // Every pattern was shaped like a utility class, so a rule written in plain
+  // CSS walked straight past the gate. components.css hid a live
+  // `backdrop-filter` blur on every toast and a dead purple gradient.
+  it('counts backdrop-filter, not only the backdrop-blur utility', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'lib/styles/x.css',
+        content: [
+          '  backdrop-filter: blur(20px) saturate(180%) !important;',
+          '  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.glass).toBe(2);
+  });
+
+  it('counts CSS gradient functions, not only bg-gradient-to-', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'lib/styles/x.css',
+        content: [
+          '  background-image: linear-gradient(to bottom right, #a, #b);',
+          '  background: radial-gradient(circle, #a, #b);',
+          '  background: conic-gradient(#a, #b);',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.gradient).toBe(3);
+  });
+
+  it('counts a shimmer animation declared in CSS', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'lib/styles/x.css',
+        content: [
+          '@keyframes ai-badge-shimmer {',
+          '  animation: ai-badge-shimmer 3s ease-in-out infinite;',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.motion).toBe(2);
+  });
+
+  // `infinite` on its own is not the tell. A blinking text caret and a
+  // skeleton pulse both loop forever and are both permitted (DESIGN.md
+  // §4a, §6), so the pattern targets the sweep, not the repeat count.
+  it('leaves the permitted perpetual animations alone', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'app/globals.css',
+        content: [
+          '  animation: caret-blink 1.06s steps(1, end) infinite;',
+          '  animation: fadeInSlide 500ms ease-out forwards, pulse 2s ease-in-out infinite;',
+          '  // Prevent infinite loops when the chat is missing',
+          '  /** Pagination metadata for progressive loading (infinite scroll) */',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.motion).toBe(0);
+  });
+
+  it('does not let the shimmer match run past a rule boundary', () => {
+    // A declaration with no trailing semicolon is legal CSS, so `[^;{]*` would
+    // have run past the closing brace into the next rule and matched there.
+    const counts = countBannedPatterns([
+      {
+        path: 'app/globals.css',
+        content: ['.x { animation: caret-blink 1s infinite }', '.y::after { content: "shimmer" }'].join('\n'),
+      },
+    ]);
+    expect(counts.motion).toBe(0);
+  });
+
+  it('counts an arbitrary radius that ends a string literal', () => {
+    // `rounded-(...)\b` never matched here: between `]` and `"` there are two
+    // non-word characters, so there is no boundary to anchor against.
+    const counts = countBannedPatterns([
+      { path: 'components/x.tsx', content: 'className={cn("rounded-[24px]")}' },
+    ]);
+    expect(counts.radius).toBe(1);
+  });
+
+  it('still does not count a radius utility that merely starts the same way', () => {
+    const counts = countBannedPatterns([
+      { path: 'components/x.tsx', content: '<div className="rounded-xlarge rounded-none" />' },
+    ]);
+    expect(counts.radius).toBe(0);
+  });
+});
+
 describe('findOffenders', () => {
   it('reports nothing for a clean set of files', () => {
     expect(

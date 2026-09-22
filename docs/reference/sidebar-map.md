@@ -26,9 +26,10 @@ Design: `docs/superpowers/specs/2026-09-20-persona-flows-design.md` §2, §4.
 | Step | Route | What it does |
 |---|---|---|
 | 1. Search Extracted Data | `/search/extractions` | Filter the corpus on the 51 pre-extracted base fields (facets, NL filter, CSV export). Rows open the reader at `/documents/[id]`. |
-| 2. Research Collections | `/collections` | Named judgment sets — the working folder for a research question. |
-| 3. Topic Trends | `/topics` | Popular and trending search topics. |
-| 4. Compare PL / UK | `/compare` | One structured filter run against both jurisdictions side by side; saved pairs open at `/compare/[pairId]`. |
+| 2. Statistics | `/search/extractions?view=stats` | Distributions of the pre-extracted fields over the current cohort, at 10 … all. |
+| 3. Research Collections | `/collections` | Named judgment sets — the working folder for a research question. |
+| 4. Topic Trends | `/topics` | Popular and trending search topics. |
+| 5. Compare PL / UK | `/compare` | One structured filter run against both jurisdictions side by side; saved pairs open at `/compare/[pairId]`. |
 
 ## Code — your own extraction schema
 
@@ -59,6 +60,4 @@ Design: `docs/superpowers/specs/2026-09-20-persona-flows-design.md` §2, §4.
 
 Reachable by URL or in-page link only: `/documents/[id]` (the reader — every
 result row links here), the static PL/UK comparison, `/schema-chat`,
-`/settings`, `/statistics`, `/help`, `/about`, `/changelog`. The Statistics
-view over a cohort (spec Phase B) will be added to the Explore flow when it
-ships.
+`/settings`, `/statistics`, `/help`, `/about`, `/changelog`.

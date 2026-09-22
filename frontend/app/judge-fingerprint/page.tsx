@@ -97,7 +97,7 @@ export default function JudgeFingerprintPage() {
       </div>
 
       {/* Search section */}
-      <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+      <BaseCard clickable={false} variant="light">
         <div className="space-y-3">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {t('judgeFingerprint.searchLabel')}
@@ -131,7 +131,7 @@ export default function JudgeFingerprintPage() {
 
       {/* Comparison radar chart (shown when 2+ profiles loaded) */}
       {showComparison && !isLoading && (
-        <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+        <BaseCard clickable={false} variant="light">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
@@ -171,7 +171,7 @@ export default function JudgeFingerprintPage() {
           />
 
           {/* How it works */}
-          <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+          <BaseCard clickable={false} variant="light">
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-foreground">
                 {t('judgeFingerprint.howItWorks')}

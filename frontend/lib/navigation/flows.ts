@@ -10,6 +10,7 @@
  */
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   FileJson,
   Fingerprint,
   FolderOpen,
@@ -34,7 +35,11 @@ export interface FlowStep {
   /** Always a `navigation.*` key — the sidebar and stepper both call t(). */
   labelKey: TranslationKey;
   icon: LucideIcon;
-  /** `exact`: pathname === href. `prefix`: href itself or any child route. */
+  /**
+   * `exact`: pathname === href. `prefix`: href itself or any child route.
+   * An `exact` href may carry a `?query`; it then matches only when the
+   * current search string contains that query (see `isStepActive`).
+   */
   match: "exact" | "prefix";
   /** Rendered only when `user.app_metadata.is_admin === true` (#607). */
   adminOnly?: boolean;
@@ -61,6 +66,7 @@ export const FLOWS: readonly Flow[] = [
     labelKey: "navigation.flowExplore",
     steps: [
       { href: "/search/extractions", labelKey: "navigation.searchExtractedData", icon: FileJson, match: "exact" },
+      { href: "/search/extractions?view=stats", labelKey: "navigation.statistics", icon: BarChart3, match: "exact" },
       { href: "/collections", labelKey: "navigation.researchCollections", icon: FolderOpen, match: "prefix" },
       { href: "/topics", labelKey: "navigation.topicTrends", icon: TrendingUp, match: "exact" },
       { href: "/compare", labelKey: "navigation.compare", icon: GitCompareArrows, match: "prefix" },
@@ -87,9 +93,17 @@ export const FLOWS: readonly Flow[] = [
   },
 ];
 
-export function isStepActive(step: FlowStep, pathname: string): boolean {
-  if (step.match === "exact") return pathname === step.href;
-  return pathname === step.href || pathname.startsWith(`${step.href}/`);
+/**
+ * `search` is the current query string (`?view=stats`), passed in explicitly:
+ * reading `window.location` here would render differently on the server and
+ * trip hydration. Callers without it (the sidebar) get plain path matching.
+ */
+export function isStepActive(step: FlowStep, pathname: string, search = ""): boolean {
+  const [path, query] = step.href.split("?");
+  if (step.match === "prefix") return pathname === path || pathname.startsWith(`${path}/`);
+  if (pathname !== path) return false;
+  if (query) return search.includes(query); // "/search/extractions?view=stats"
+  return !search.includes("view=stats"); // the plain list step yields to the stats step
 }
 
 export function visibleSteps(flow: Flow, isAdmin: boolean): FlowStep[] {
@@ -99,10 +113,11 @@ export function visibleSteps(flow: Flow, isAdmin: boolean): FlowStep[] {
 export function findFlowStep(
   pathname: string,
   isAdmin: boolean,
+  search = "",
 ): { flow: Flow; step: FlowStep; index: number; total: number } | null {
   for (const flow of FLOWS) {
     const steps = visibleSteps(flow, isAdmin);
-    const i = steps.findIndex((s) => isStepActive(s, pathname));
+    const i = steps.findIndex((s) => isStepActive(s, pathname, search));
     if (i !== -1) {
       return { flow, step: steps[i], index: i + 1, total: steps.length };
     }

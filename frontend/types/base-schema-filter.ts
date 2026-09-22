@@ -249,3 +249,40 @@ export interface CollectionFromFilterResponse {
   total_matched: number;
   pair_id: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Statistics over a cohort (#707 / #708) — mirrors backend AggregateRequest /
+// AggregateResponse and the RPC's JSONB.
+// ---------------------------------------------------------------------------
+
+export interface AggregateValueCount {
+  value: string;
+  count: number;
+}
+
+export interface AggregateBucket {
+  lo: number;
+  hi: number;
+  count: number;
+}
+
+export type FieldAggregate =
+  | { kind: "categorical"; multi: boolean; values: AggregateValueCount[]; other: number; null: number; covered: number }
+  | { kind: "numeric"; buckets: AggregateBucket[]; null: number; covered: number; min: number | null; max: number | null }
+  | { kind: "year"; values: AggregateValueCount[]; null: number; covered: number };
+
+export interface AggregateRequest {
+  filters: BaseSchemaFilters;
+  text_query?: string;
+  fields?: string[];
+  sample_size?: number;
+  seed?: number;
+  top_n?: number;
+}
+
+export interface AggregateResponse {
+  total: number;
+  sample_n: number;
+  seed: number | null;
+  fields: Record<string, FieldAggregate>;
+}

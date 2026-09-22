@@ -18,10 +18,10 @@ describe("FLOWS inventory", () => {
     expect(FLOWS.map((f) => f.id)).toEqual(["ask", "explore", "code", "case"]);
   });
 
-  it("keeps every route the sidebar rendered before #690, plus the two extraction routes", () => {
+  it("keeps every route the sidebar rendered before #690, plus the three extraction routes", () => {
     const expected = [
       "/search", "/chat", "/history",
-      "/search/extractions", "/collections", "/topics", "/compare",
+      "/search/extractions", "/search/extractions?view=stats", "/collections", "/topics", "/compare",
       "/schemas", "/extract", "/extractions",
       "/precedents", "/reasoning-lines", "/judge-fingerprint", "/argumentation-analysis",
     ];
@@ -87,6 +87,12 @@ describe("visibleSteps / findFlowStep", () => {
     expect(findFlowStep("/search/extractions", false)?.flow.id).toBe("explore");
     expect(findFlowStep("/extract", false)?.step.href).toBe("/extract");
     expect(findFlowStep("/extractions/9", false)?.step.href).toBe("/extractions");
+  });
+
+  it("distinguishes the list and statistics steps of /search/extractions by the view param", () => {
+    expect(findFlowStep("/search/extractions", false, "?view=stats")?.step.href).toBe("/search/extractions?view=stats");
+    expect(findFlowStep("/search/extractions", false, "")?.step.href).toBe("/search/extractions");
+    expect(findFlowStep("/search/extractions", false)?.step.href).toBe("/search/extractions");
   });
 
   it("returns null outside any flow", () => {
