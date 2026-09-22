@@ -18,7 +18,14 @@
 # hotfixes). Explicit, never the default.
 set -euo pipefail
 
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+# Anchored to this script's own location, never to the caller's cwd: a hook may
+# run from anywhere, and a cwd-derived root outside the repo made every git
+# query fail and the gate pass silently.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
+  echo "frontend-verify: $SCRIPT_DIR is not inside a git repository — cannot evaluate the gate" >&2
+  exit 0
+fi
 MARKER="$ROOT/frontend/test-results/.last-verify.json"   # test-results/ is gitignored
 MAX_BLOCKS=3                                             # loop guard per diff hash
 SKILL_HINT='run /frontend-verify (or: bash scripts/verify-frontend-evidence.sh --record)'
