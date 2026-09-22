@@ -209,7 +209,9 @@ def test_latest_success_jobs_scopes_the_query_and_keeps_the_newest_per_collectio
     assert query.filter_values("eq", "status") == [JOB_STATUS_SUCCESS]
     assert query.filter_values("eq", "user_id") == ["u1"]
     assert query.filter_values("not.is", "schema_id") == ["null"]
-    assert query.order == [("completed_at", True)]
+    # nullsfirst=False: a NULL completed_at (shouldn't happen for a SUCCESS
+    # row, but costs nothing to guard) must never sort ahead of a real one.
+    assert query.order == [("completed_at", True, False)]
 
 
 # --- endpoint -----------------------------------------------------------------

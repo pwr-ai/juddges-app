@@ -47,7 +47,7 @@ class TableQuery:
     table: str
     select: str | None = None
     filters: list[tuple[str, str, Any]] = field(default_factory=list)
-    order: list[tuple[str, bool]] = field(default_factory=list)
+    order: list[tuple[str, bool, bool | None]] = field(default_factory=list)
     limit: int | None = None
 
     def filter_values(self, op: str, column: str) -> list[Any]:
@@ -97,8 +97,15 @@ class _FakeTableBuilder:
     def not_(self) -> _NotProxy:
         return _NotProxy(self)
 
-    def order(self, column: str, *, desc: bool = False, **_: Any):
-        self.query.order.append((column, desc))
+    def order(
+        self,
+        column: str,
+        *,
+        desc: bool = False,
+        nullsfirst: bool | None = None,
+        **_: Any,
+    ):
+        self.query.order.append((column, desc, nullsfirst))
         return self
 
     def limit(self, size: int, **_: Any):

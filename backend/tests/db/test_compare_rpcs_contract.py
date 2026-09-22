@@ -64,11 +64,14 @@ def _seed(conn, token: str, jurisdiction: str, decision_date: str, **base) -> st
 
 @pytest.fixture
 def corpus(conn):
-    """2 PL + 2 UK judgments exercising array/boolean/scalar-text facet fields.
+    """2 PL + 3 UK judgments exercising array/boolean/scalar-text facet fields.
 
-    appeal_outcome (array): pl_a one value, pl_b NULL; uk_a two values, uk_b one.
-    did_offender_confess (bool): pl_a true, pl_b false; uk_a true, uk_b NULL.
-    case_name (scalar text): pl_a filled, pl_b NULL; uk_a NULL, uk_b ''.
+    appeal_outcome (array): pl_a one value, pl_b NULL; uk_a two values, uk_b
+        one, uk_c an EMPTY array (`{}`) -- the "filled" unnest check must
+        treat this the same as NULL: not covered, no value row.
+    did_offender_confess (bool): pl_a true, pl_b false; uk_a true, uk_b/uk_c
+        NULL.
+    case_name (scalar text): pl_a filled, pl_b NULL; uk_a/uk_c NULL, uk_b ''.
     """
     token = f"cmp-{uuid.uuid4()}"
     ids = {
@@ -104,6 +107,13 @@ def corpus(conn):
             appeal_outcome=["outcome_dismissed_or_refused"],
             case_name="",
         ),
+        "uk_c": _seed(
+            conn,
+            token,
+            "UK",
+            "2024-05-20",
+            appeal_outcome=[],
+        ),
     }
     yield token, ids
     _exec(
@@ -131,11 +141,29 @@ def test_array_field_counts_each_element_per_jurisdiction(conn, corpus):
     # PL: pl_a has one value, pl_b has NULL -> total 2, covered 1
     assert by[("PL", "outcome_dismissed_or_refused")][2:5] == (1, 2, 1)
     assert float(by[("PL", "outcome_dismissed_or_refused")][5]) == 0.5
-    # UK: uk_a two elements, uk_b one -> counts 1/1/1, total 2, covered 2
-    assert by[("UK", "outcome_conviction_quashed")][2:5] == (1, 2, 2)
-    assert by[("UK", "outcome_other")][2:5] == (1, 2, 2)
-    assert by[("UK", "outcome_dismissed_or_refused")][2:5] == (1, 2, 2)
-    assert float(by[("UK", "outcome_other")][5]) == 1.0
+    # UK: uk_a two elements, uk_b one, uk_c an EMPTY array -> counts 1/1/1,
+    # total 3 (uk_c counted), covered 2 (uk_c's empty array is not covered)
+    assert by[("UK", "outcome_conviction_quashed")][2:5] == (1, 3, 2)
+    assert by[("UK", "outcome_other")][2:5] == (1, 3, 2)
+    assert by[("UK", "outcome_dismissed_or_refused")][2:5] == (1, 3, 2)
+    assert float(by[("UK", "outcome_other")][5]) == 0.6667  # ROUND(2::numeric/3, 4)
+    # The empty array yields no value row of its own.
+    assert ("UK", None) not in by
+
+
+def test_empty_array_is_not_covered_and_has_no_value_row(conn, corpus):
+    """uk_c's `appeal_outcome=[]` must count toward `total` but not `covered`,
+    and must not appear as (nor produce) a value row -- unlike a scalar
+    all-NULL jurisdiction, UK still has other covered documents here, so this
+    is exercised through the per-value rows rather than the NULL-summary-row
+    path covered by `test_scalar_text_field_treats_empty_string_as_not_covered`.
+    """
+    token, _ = corpus
+    rows = _facets(conn, {"keywords": [token]}, "appeal_outcome")
+    uk_rows = [r for r in rows if r[0] == "UK"]
+    assert all(r[1] != "" for r in uk_rows)  # no empty-string/empty-array value
+    total, covered = uk_rows[0][3], uk_rows[0][4]
+    assert (total, covered) == (3, 2)
 
 
 def test_boolean_field_values_are_text_true_false(conn, corpus):
@@ -146,7 +174,7 @@ def test_boolean_field_values_are_text_true_false(conn, corpus):
     assert values[("UK", "true")] == 1
     assert ("UK", "false") not in values
     uk = next(r for r in rows if r[0] == "UK")
-    assert uk[3:5] == (2, 1)  # total 2, covered 1 (uk_b is NULL)
+    assert uk[3:5] == (3, 1)  # total 3, covered 1 (uk_b and uk_c are NULL)
 
 
 def test_scalar_text_field_treats_empty_string_as_not_covered(conn, corpus):
@@ -155,10 +183,10 @@ def test_scalar_text_field_treats_empty_string_as_not_covered(conn, corpus):
     pl = [r for r in rows if r[0] == "PL"]
     uk = [r for r in rows if r[0] == "UK"]
     assert pl == [("PL", "Case A", 1, 2, 1, pl[0][5])]
-    # UK has no filled case_name (one NULL, one ''): a single summary row
+    # UK has no filled case_name (two NULL, one ''): a single summary row
     assert len(uk) == 1
     assert uk[0][1] is None and uk[0][2] is None
-    assert uk[0][3:5] == (2, 0)
+    assert uk[0][3:5] == (3, 0)
     assert float(uk[0][5]) == 0.0
 
 

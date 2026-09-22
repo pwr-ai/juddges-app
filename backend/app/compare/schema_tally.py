@@ -143,7 +143,10 @@ def latest_success_jobs(
 
     Scoped by `user_id` because the client is service-role (bypasses RLS); jobs
     without a `schema_id` (base-schema runs) are skipped. `results` is not
-    selected here — see `load_job_results`.
+    selected here — see `load_job_results`. `nullsfirst=False` keeps a
+    still-running/never-completed row (`completed_at IS NULL`, which
+    shouldn't occur for status=SUCCESS but costs nothing to guard) from
+    sorting ahead of a real timestamp.
     """
     response = (
         client.table("extraction_jobs")
@@ -152,7 +155,7 @@ def latest_success_jobs(
         .eq("user_id", user_id)
         .eq("status", JOB_STATUS_SUCCESS)
         .not_.is_("schema_id", "null")
-        .order("completed_at", desc=True)
+        .order("completed_at", desc=True, nullsfirst=False)
         .execute()
     )
     newest: dict[str, dict[str, Any]] = {}
