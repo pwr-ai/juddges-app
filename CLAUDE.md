@@ -150,6 +150,50 @@ Optional: `LANGFUSE_*` (observability), `REDIS_*` (Celery + guest sessions). `WE
 - Backend: `pytest`. Mark tests with `@pytest.mark.unit` or `@pytest.mark.integration`. Integration tests need real services (DB, Redis, OpenAI).
 - Frontend: Jest (unit) + Playwright (E2E).
 
+## Finishing a frontend change
+
+A `Stop` hook (`.claude/settings.json` → `scripts/verify-frontend-evidence.sh
+--check`) refuses to end a turn while `frontend/` differs from `origin/main`
+and no evidence marker matches the current diff hash. Produce the marker with
+the **frontend-verify** skill (`bash scripts/verify-frontend-evidence.sh
+--record`): it builds with the route-contract env, runs
+`npm run test:e2e:route-contract`, and seals
+`frontend/test-results/.last-verify.json` only if the suite is green. Any later
+edit under `frontend/` re-arms the gate. `SKIP_FRONTEND_VERIFY=1` disables the
+check for sessions that cannot run the suite — say so in the reply when used.
+
+## Agent browser verification (MCP)
+
+`.mcp.json` registers a project-scoped `playwright` MCP server
+(`@playwright/mcp`, pinned; `--headless --isolated`). It runs locally next to
+the dev server, so an agent can drive the real UI before claiming a
+frontend change is done. The Claude-in-Chrome extension is **not** a
+substitute: it runs on a remote machine and cannot reach `localhost`.
+
+- **When:** any change under `frontend/` that alters what a user sees or
+  clicks. Start the dev server (`cd frontend && npm run dev`, `:3026`) and
+  drive the changed flow via the `playwright` tools (`browser_navigate`,
+  `browser_snapshot`, `browser_click`, …). The default mode reads the
+  accessibility tree, not screenshots — assert on roles and names, the same
+  locators the specs use.
+- **Not a gate:** a manual pass through MCP is evidence for the PR
+  description; it does not replace a route-contract spec
+  (`frontend/tests/route-contract-e2e/`) for a flow that must stay green on
+  every PR — that is what the Stop hook above checks. Turn a repeated
+  exploration into a spec.
+- **Why `--isolated`:** the profile lives in memory, so cookies and
+  localStorage from one run never leak into the next and nothing is written
+  to disk. Two sessions in two worktrees can run it concurrently (verified
+  with two servers in parallel).
+- **Signed-in flows:** pass `--storage-state=<file>` (see `STORAGE_STATE` in
+  `frontend/tests/e2e/auth.setup.ts`) when the flow is behind the login wall
+  on the dev server. The route-contract stub's synthetic session is only for
+  the `:3006` standalone build, not for `:3026`.
+- **Origins:** `--allowed-origins` is deliberately not set. The browser
+  Supabase client calls the project's Supabase origin directly, so a
+  localhost-only allowlist would break every signed-in flow. Do not follow
+  external links during verification; the dev server is the target.
+
 ## Code Quality
 
 - Backend: Ruff (format + lint).
