@@ -33,10 +33,11 @@ interface NlFilterResponse {
 interface NlFilterDialogProps {
   /**
    * Called when the user accepts the translated filters. Receives the structured
-   * filters plus the free-text query (already split out by the backend). The
-   * parent should populate form state — it must NOT trigger a search.
+   * filters plus the free-text query (already split out by the backend), plus
+   * the original question so the page can keep it in the URL. The parent
+   * should populate form state — it must NOT trigger a search.
    */
-  onApply: (filters: BaseSchemaFilters, textQuery: string) => void;
+  onApply: (filters: BaseSchemaFilters, textQuery: string, question: string) => void;
   disabled?: boolean;
 }
 
@@ -104,7 +105,7 @@ export function NlFilterDialog({ onApply, disabled }: NlFilterDialogProps) {
 
   const handleApply = () => {
     if (!preview) return;
-    onApply(preview.filters, preview.text_query ?? "");
+    onApply(preview.filters, preview.text_query ?? "", query.trim());
     handleOpenChange(false);
   };
 

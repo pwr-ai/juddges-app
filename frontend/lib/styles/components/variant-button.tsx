@@ -57,6 +57,7 @@ type GlassProps = {
   className?: string;
   type?: "button" | "submit" | "reset";
   variant?: "blue" | "white";
+  "aria-label"?: string;
 };
 
 type PrimaryProps = {
@@ -187,6 +188,7 @@ function renderGlass(props: GlassProps): React.JSX.Element {
       onClick={onClick}
       disabled={disabled || isLoading}
       className={glassButtonClassName(isWhite, className)}
+      aria-label={props["aria-label"]}
     >
       {isLoading ? (
         <>

@@ -8,6 +8,10 @@
 //   ?f=<base64-json>    — opaque blob holding the structured filters
 //   ?page=<n>           — 1-based page (default 1)
 //   ?nl=<text>          — optional: the natural-language question a filter came from (Spec B)
+//   ?view=stats         — statistics view instead of the list (#708; omitted for list)
+//   ?n=<int>            — sample size for the statistics view, one of SCALE_STOPS (omitted for "all")
+//   ?seed=<int>         — sampling seed, only emitted while the statistics view is active
+//   ?fields=a,b,c       — statistics fields (omitted when equal to the default set)
 //
 // The blob is opaque on purpose: the field set is wide (42 keys) and any
 // schema growth would force a URL-format migration if we encoded each field
@@ -18,16 +22,52 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BaseSchemaFilters } from "@/types/base-schema-filter";
 
+import { DEFAULT_AGGREGATE_FIELDS, SCALE_STOPS, isAggregableField } from "./aggregate-fields";
+
 const DEFAULT_PAGE_SIZE = 25;
+
+export type ResultView = "list" | "stats";
+
+function sameFields(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
+
+function parseFields(raw: string | null): string[] {
+  if (!raw) return [...DEFAULT_AGGREGATE_FIELDS];
+  const fields = raw.split(",").map((s) => s.trim()).filter(isAggregableField);
+  return fields.length > 0 ? fields : [...DEFAULT_AGGREGATE_FIELDS];
+}
+
+function parseInt1(raw: string | null): number | undefined {
+  if (raw == null) return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 ? n : undefined;
+}
+
+/** Only the slider's stops are valid; anything else falls back to "all". */
+function parseSampleSize(raw: string | null): number | undefined {
+  const n = parseInt1(raw);
+  return n !== undefined && SCALE_STOPS.includes(n) ? n : undefined;
+}
+
+function newSeed(): number {
+  return Math.floor(Math.random() * 1_000_000) + 1;
+}
 
 interface FilterState {
   filters: BaseSchemaFilters;
   textQuery: string;
   page: number;
+  nlQuestion?: string;
+  /** Statistics view state (#708). */
+  view: ResultView;
+  sampleSize?: number;
+  seed: number;
+  statsFields: string[];
 }
 
 interface UseExtractedDataFiltersResult extends FilterState {
@@ -35,10 +75,15 @@ interface UseExtractedDataFiltersResult extends FilterState {
   setFilters: (next: BaseSchemaFilters) => void;
   setTextQuery: (next: string) => void;
   setPage: (page: number) => void;
+  setNlQuestion: (next: string | undefined) => void;
   removeFilter: (field: keyof BaseSchemaFilters) => void;
   clearAll: () => void;
   /** Active filter count (excludes empty arrays / empty strings). */
   activeCount: number;
+  setView: (view: ResultView) => void;
+  setSampling: (sampleSize: number | undefined, seed?: number) => void;
+  reshuffle: () => void;
+  setStatsFields: (fields: string[]) => void;
 }
 
 // -----------------------------------------------------------------------------
@@ -110,6 +155,11 @@ export interface FilterUrlState {
   textQuery?: string;
   page?: number;
   nlQuestion?: string;
+  /** Statistics view state (#708). All optional; omitted at defaults. */
+  view?: ResultView;
+  sampleSize?: number;
+  seed?: number;
+  fields?: string[];
 }
 
 export function buildFilterSearchParams(state: FilterUrlState): URLSearchParams {
@@ -121,6 +171,12 @@ export function buildFilterSearchParams(state: FilterUrlState): URLSearchParams 
   if ((state.page ?? 1) > 1) params.set("page", String(state.page));
   const nl = (state.nlQuestion ?? "").trim();
   if (nl !== "") params.set("nl", nl.slice(0, 255));
+  if (state.view === "stats") params.set("view", "stats");
+  if (state.sampleSize !== undefined) params.set("n", String(state.sampleSize));
+  if (state.seed !== undefined) params.set("seed", String(state.seed));
+  if (state.fields && !sameFields(state.fields, DEFAULT_AGGREGATE_FIELDS)) {
+    params.set("fields", state.fields.join(","));
+  }
   return params;
 }
 
@@ -142,6 +198,11 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
       filters: decodeFilters(searchParams.get("f")),
       textQuery: searchParams.get("q") ?? "",
       page: Math.max(1, Number(searchParams.get("page") ?? "1") || 1),
+      nlQuestion: searchParams.get("nl") ?? undefined,
+      view: searchParams.get("view") === "stats" ? "stats" : "list",
+      sampleSize: parseSampleSize(searchParams.get("n")),
+      seed: parseInt1(searchParams.get("seed")) ?? newSeed(),
+      statsFields: parseFields(searchParams.get("fields")),
     }),
     // intentionally only on mount; later updates use writeUrl
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,9 +211,35 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
 
   const [state, setState] = useState<FilterState>(initial);
 
+  // Query strings this hook wrote itself and has not yet seen land in
+  // `searchParams`. Anything else arriving in the URL is an external
+  // navigation (FlowStepper / sidebar link to `?view=stats` on this same
+  // route — no remount) and `view` is adopted from it. The rest of the state
+  // is then re-emitted by writeUrl, so a bare `?view=stats` href ends up
+  // carrying the current cohort again.
+  const emitted = useRef<Set<string>>(new Set());
+  const urlQuery = searchParams.toString();
+  const lastUrlQuery = useRef(urlQuery);
+
+  // Declared before the writeUrl effect so lastUrlQuery is current when that
+  // effect decides whether its write will ever land (a write equal to the
+  // current URL produces no searchParams change, so it must not be recorded).
+  useEffect(() => {
+    lastUrlQuery.current = urlQuery;
+    if (emitted.current.delete(urlQuery)) return; // our own write landing
+    const urlView: ResultView = new URLSearchParams(urlQuery).get("view") === "stats" ? "stats" : "list";
+    setState((prev) => (prev.view === urlView ? prev : { ...prev, view: urlView }));
+  }, [urlQuery]);
+
   const writeUrl = useCallback(
     (next: FilterState) => {
-      const queryString = buildFilterSearchParams(next).toString();
+      const queryString = buildFilterSearchParams({
+        ...next,
+        seed: next.view === "stats" ? next.seed : undefined,
+        fields: next.view === "stats" ? next.statsFields : undefined,
+        sampleSize: next.view === "stats" ? next.sampleSize : undefined,
+      }).toString();
+      if (queryString !== lastUrlQuery.current) emitted.current.add(queryString);
       const url = queryString ? `?${queryString}` : window.location.pathname;
       router.replace(url, { scroll: false });
     },
@@ -177,6 +264,10 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setState((prev) => ({ ...prev, page: Math.max(1, page) }));
   }, []);
 
+  const setNlQuestion = useCallback((next: string | undefined) => {
+    setState((prev) => ({ ...prev, nlQuestion: next }));
+  }, []);
+
   const removeFilter = useCallback((field: keyof BaseSchemaFilters) => {
     setState((prev) => {
       const nextFilters = { ...prev.filters };
@@ -186,7 +277,23 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
   }, []);
 
   const clearAll = useCallback(() => {
-    setState((prev) => ({ ...prev, filters: {}, textQuery: "", page: 1 }));
+    setState((prev) => ({ ...prev, filters: {}, textQuery: "", page: 1, nlQuestion: undefined }));
+  }, []);
+
+  const setView = useCallback((view: ResultView) => {
+    setState((prev) => ({ ...prev, view }));
+  }, []);
+
+  const setSampling = useCallback((sampleSize: number | undefined, seed?: number) => {
+    setState((prev) => ({ ...prev, sampleSize, seed: seed ?? prev.seed }));
+  }, []);
+
+  const reshuffle = useCallback(() => {
+    setState((prev) => ({ ...prev, seed: newSeed() }));
+  }, []);
+
+  const setStatsFields = useCallback((fields: string[]) => {
+    setState((prev) => ({ ...prev, statsFields: fields.filter(isAggregableField) }));
   }, []);
 
   const activeCount = useMemo(() => countActive(state.filters), [state.filters]);
@@ -197,8 +304,13 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setFilters,
     setTextQuery,
     setPage,
+    setNlQuestion,
     removeFilter,
     clearAll,
     activeCount,
+    setView,
+    setSampling,
+    reshuffle,
+    setStatsFields,
   };
 }

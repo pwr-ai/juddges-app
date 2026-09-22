@@ -1,6 +1,6 @@
 # How to test the base-schema filter RPC
 
-This guide gives 10 worked example queries that exercise every tier of the
+This guide gives 12 worked example queries that exercise every tier of the
 `filter_documents_by_extracted_data` RPC after the migration in
 `supabase/migrations/20260505000001_extend_base_schema_filterable_searchable.sql`.
 
@@ -251,11 +251,44 @@ FROM filter_documents_by_extracted_data('{}'::jsonb, NULL, 50, 100);
 total on every row — useful for rendering a paginator without a second
 round-trip.
 
+## Query 11 — Jurisdiction (core column, added 2026-09-20)
+
+**Intent:** "Only Polish judgments."
+
+```json
+{ "filters": { "jurisdiction": ["PL"] }, "limit": 50 }
+```
+
+```sql
+SELECT id, jurisdiction, decision_date
+FROM filter_documents_by_extracted_data('{"jurisdiction":["PL"]}'::jsonb, NULL, 50, 0);
+```
+
+## Query 12 — Decision-date window + jurisdiction
+
+**Intent:** "PL and UK judgments handed down 2015–2024."
+
+```json
+{ "filters": { "jurisdiction": ["PL","UK"], "decision_date": { "from": "2015-01-01", "to": "2024-12-31" } } }
+```
+
+```sql
+SELECT id, jurisdiction, decision_date
+FROM filter_documents_by_extracted_data(
+  '{"jurisdiction":["PL","UK"],"decision_date":{"from":"2015-01-01","to":"2024-12-31"}}'::jsonb,
+  NULL, 50, 0);
+```
+
+`decision_date` also accepts `{"min","max"}` and a scalar `"YYYY-MM-DD"`,
+mirroring `date_of_appeal_court_judgment`. Both keys are read by the shared
+RPC `list_extracted_filter_matches` (`filter_documents_by_extracted_data` is
+a thin wrapper over it — same signature, same columns).
+
 ---
 
 ## Smoke-test snippet
 
-Run all 10 in one psql session:
+Run all 12 in one psql session:
 
 ```sql
 \echo 'Q1: co-defendants ≥ 2'
@@ -287,4 +320,10 @@ SELECT count(*) FROM filter_documents_by_extracted_data('{"offender_gender":["ge
 
 \echo 'Q10: pagination'
 SELECT id, total_count FROM filter_documents_by_extracted_data('{}'::jsonb, NULL, 50, 100);
+
+\echo 'Q11: jurisdiction'
+SELECT count(*) FROM filter_documents_by_extracted_data('{"jurisdiction":["PL"]}'::jsonb, NULL, 1000, 0);
+
+\echo 'Q12: decision-date window + jurisdiction'
+SELECT count(*) FROM filter_documents_by_extracted_data('{"jurisdiction":["PL","UK"],"decision_date":{"from":"2015-01-01","to":"2024-12-31"}}'::jsonb, NULL, 1000, 0);
 ```

@@ -1,8 +1,9 @@
 # Base-schema filter API (reference)
 
-Shared filter contract used by `/search/extractions` and "save filter as
-collection", designed to also support the planned NL-question-to-filter flow
-and PL/UK comparison.
+Shared filter contract used by `/search/extractions`, "save filter as
+collection", and the NL-question-to-filter flow (`POST
+/extractions/base-schema/nl-filter`); also designed to support the planned
+PL/UK comparison.
 
 ## RPC `public.list_extracted_filter_matches(p_filters JSONB, p_text_query TEXT)`
 
@@ -58,6 +59,108 @@ id`, same `LIMIT`/`OFFSET` clamping. The signature is a wire contract:
 PostgREST matches by argument names, and a second overload answers HTTP 300.
 Pinned by `backend/tests/db/test_migration_chain.py`
 (`EXPECTED_RPC_ARGS`, `test_rpc_has_exactly_one_overload`).
+
+## RPC `public.aggregate_extracted_data(p_filters, p_text_query, p_fields, p_sample_size, p_seed, p_top_n)`
+
+```sql
+aggregate_extracted_data(
+  p_filters      jsonb   default '{}',   -- same shape as list_extracted_filter_matches
+  p_text_query   text    default null,
+  p_fields       text[]  default null,   -- null = the default 7-field set; 1..50 entries
+  p_sample_size  int     default null,   -- null = whole cohort
+  p_seed         int     default null,   -- required when p_sample_size is set
+  p_top_n        int     default 20      -- values kept per categorical field, 1..100
+) returns jsonb
+```
+
+Per-field distributions over the cohort returned by
+`list_extracted_filter_matches(p_filters, p_text_query)` — no predicate is
+re-implemented here. `SECURITY INVOKER`, defined in migration
+`20260921000003_aggregate_extracted_data.sql`, next to the private helper
+`public._aggregate_column_for_field(p_field)` (field name → column name).
+Sampling is deterministic and exact-n: the cohort ids are ordered by
+`md5(id::text || p_seed::text), id` inside a CTE and the first
+`p_sample_size` are kept, so the same cohort and seed always produce the same
+sample. `p_fields` is capped to 1–50 entries and `p_top_n` to 1–100; both are
+enforced before the cohort query runs.
+
+Return shape:
+
+```json
+{
+  "total": 4312,
+  "sample_n": 1000,
+  "seed": 42,
+  "fields": {
+    "convict_offences":     {"kind": "categorical", "multi": true, "values": [{"value": "possession", "count": 812}, ...], "other": 44, "null": 0, "covered": 1000},
+    "victim_age_offence":   {"kind": "numeric", "buckets": [{"lo": 10, "hi": 15, "count": 12}, ...], "min": 0, "max": 90, "null": 3, "covered": 997},
+    "decision_date":        {"kind": "year", "values": [{"value": "2019", "count": 301}, ...], "null": 0, "covered": 1000}
+  }
+}
+```
+
+`kind` dispatches on the column's `information_schema.udt_name`: `text[]`
+(`multi: true`, `unnest`ed so a judgment can appear under several values) and
+scalar `text`/`bool`/`varchar` (`multi: false`) are `categorical`, integer and
+numeric/float columns are `numeric` (a `width_bucket` histogram, `buckets: []`
+when the field is all-`NULL` over the cohort), and `date`/`timestamp`/
+`timestamptz` columns are `year`. An empty cohort or an all-`NULL` field
+yields the same shape with zeroed counts, never an error. Field names not in
+the allowlist raise `field % is not aggregable`.
+
+Grants follow the same pattern as the other RPCs in this file: Supabase
+grants `EXECUTE` to `anon` by default, so the migration runs
+`REVOKE ALL ON FUNCTION aggregate_extracted_data(...) FROM PUBLIC, anon;`
+before `GRANT EXECUTE ON FUNCTION aggregate_extracted_data(...) TO
+authenticated, service_role;`. `_aggregate_column_for_field` carries the same
+revoke/grant pair.
+
+## `POST /extractions/base-schema/aggregate`
+
+Implemented in `backend/app/extraction_domain/results_router.py`. Request
+model `AggregateRequest`, response model `AggregateResponse`
+(`backend/app/models.py`).
+
+Request body:
+
+```json
+{
+  "filters": { "...": "BaseSchemaFilters" },
+  "text_query": "string, optional",
+  "fields": ["offender_gender", "..."],
+  "sample_size": 1000,
+  "seed": 42,
+  "top_n": 20
+}
+```
+
+- `fields` — optional; `null`/omitted means the default 7-field set
+  (`offender_gender`, `convict_offences`, `sentences_received`,
+  `appeal_outcome`, `did_offender_confess`, `court_name`, `decision_date`).
+  Validated by `validate_fields()` (`app/extraction_domain/aggregate_fields.py`)
+  against the same allowlist as the SQL side; an unknown field is `422`
+  naming it (`code: FIELD_NOT_AGGREGABLE`).
+- `sample_size` — optional, `1..20000`; requires `seed`, enforced by a
+  `model_validator` (`422` naming `seed` when it's missing).
+- `seed` — optional, bounded to Postgres `int4` (`-2^31..2^31-1`) so it fits
+  the RPC's `INT` parameter without an overflow at the database.
+- `top_n` — `1..100`, default `20`.
+
+Response mirrors the RPC's JSONB return shape (`{total, sample_n, seed,
+fields}`) unchanged.
+
+**`collection_ids` is rejected exactly like `/base-schema/filter`**
+(`400 COLLECTION_IDS_NOT_ALLOWED`), for the same reason: the RPC is
+`SECURITY INVOKER` but the backend calls it with the service-role client, so
+honouring `collection_ids` would let any signed-in caller probe any
+collection's membership. Unlike `/base-schema/filter`, this endpoint does
+require a bearer user (`get_current_user`) — the gate is login, not
+collection ownership, since the cohort itself stays corpus-wide.
+
+Errors: `422 FIELD_NOT_AGGREGABLE` (bad `fields` entry, or `seed` missing
+with `sample_size` set), `400 COLLECTION_IDS_NOT_ALLOWED`,
+`503 DATABASE_UNAVAILABLE`, `500 AGGREGATE_FAILED` (RPC call raised, or
+returned something that isn't the expected dict).
 
 ## `POST /collections/from-filter`
 
@@ -156,6 +259,77 @@ loop, whereas `/collections/from-filter` runs the loop server-side.
 - `frontend/app/api/utils/backend-proxy.ts::proxyToBackend()` — shared authenticated BFF → FastAPI forwarder. Requires a Supabase session (401 otherwise); passes the upstream response's status and body through unchanged, including FastAPI's `{"detail": {...}}` error envelope, so error unwrapping happens in exactly one frontend place. Supports `passthroughHeaders` (for binary/streamed responses that return `2xx`) and a `timeoutMs` (default `30_000`).
 - `frontend/lib/api/collections.ts::createCollectionFromFilter(request)` — POSTs to `/api/collections/from-filter`, and on a non-OK response unwraps either the FastAPI `{detail: {...}}` shape or the BFF's flat `{error}` shape into one `CollectionFromFilterError` (has `.code`, `.status`, and optionally `.total`/`.cap`/`.jurisdiction`). On success it fires a `collection_created` analytics event per created collection and returns the parsed `CollectionFromFilterResponse`.
 
+## `POST /extractions/base-schema/nl-filter`
+
+Implemented in `backend/app/extraction_domain/results_router.py::nl_to_filter`,
+translator in `backend/app/extraction_domain/nl_filter_generator.py`.
+Authenticated (`get_current_user`). Body `{"query": "<NL question>"}` →
+`{"filters": {...}, "text_query": "..." | null}` (an `NLFilterResponse`, the
+same shape `BaseSchemaFilter.to_rpc_payload()` returns). It is an opt-in
+"paste your question" shortcut that pre-fills the `/search/extractions` form
+— it never runs a search itself. Every request is logged (fire-and-forget)
+via `record_search_query` in `search_analytics` so NL→filter usage can be
+compared against form usage later.
+
+Errors: `422 NL_FILTER_INVALID` when the LLM's output fails Pydantic
+validation (an unknown/hallucinated enum value — surfaced as a 422 so the
+caller can ask the user to rephrase rather than run a poisoned query); `502
+NL_FILTER_FAILED` on any other translation failure.
+
+### `BaseSchemaFilter` (`nl_filter_generator.py`)
+
+A Pydantic model (`extra="forbid"`) mirroring every key
+`filter_documents_by_extracted_data` accepts, structured-output-decoded from
+an LLM (`llm.with_structured_output(BaseSchemaFilter)`, `use_mini_model=True`
+by default) driven by a versioned system prompt (`SYSTEM_PROMPT`,
+`NL_FILTER_PROMPT`). Field groups: core judgment columns (`jurisdiction:
+list[Jurisdiction] | None`, `decision_date: DateRange | str | None`), scalar
+and multi-value enums (one `Literal[...]` type per CHECK constraint in the
+base-extraction migrations, so a hallucinated value raises a
+`ValidationError` instead of reaching the database), free-text array
+fields, booleans, numerics (`NumericRange | float | None`), a second date
+field (`date_of_appeal_court_judgment`), ILIKE substring fields, and a
+sibling `text_query: str | None` carried outside `p_filters`.
+`to_rpc_payload()` calls `model_dump(exclude_none=True, by_alias=True)`,
+pops `text_query` out of the dump, and returns `{"filters": ..., "text_query":
+...}` — the exact body `POST /extractions/base-schema/filter` and
+`/collections/from-filter` expect.
+
+`NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type",
+"court_level"})` — these two `judgments` columns are deliberately **not**
+modeled on `BaseSchemaFilter` at all (not merely hidden) because the data is
+wrong (`case_type='Civil'` on UK criminal appeals, `court_level='Crown
+Court'` on Court of Appeal; see `docs/reference/APP_STATUS_2026-08-21.md`
+§4). `tests/app/test_nl_filter_prompt_contract.py` pins that neither field
+name appears in the system prompt text or in the model's JSON Schema, so a
+future prompt edit can't reintroduce them silently.
+
+**Date semantics** (`SYSTEM_PROMPT` rule 4 — Polish and English phrasings
+both map to the same ISO range):
+
+| Phrase | Range |
+|---|---|
+| "in 2024" / "w 2024 r." | `{"from": "2024-01-01", "to": "2024-12-31"}` |
+| "since 2020" / "od 2020" | `{"from": "2020-01-01"}` — **inclusive** of 2020 |
+| "after 2020" / "po 2020" | `{"from": "2021-01-01"}` — **strictly next year**, exclusive of 2020 |
+| "before 2010" / "przed 2010" | `{"to": "2009-12-31"}` — previous year-end, exclusive of 2010 |
+| "between 2015 and 2024" / "2015–2024" / "w latach 2015–2024" | `{"from": "2015-01-01", "to": "2024-12-31"}` |
+
+`decision_date` (judgment date, populated for every PL and UK row) is the
+prompt's default date field; `date_of_appeal_court_judgment` is used only
+when the user names the appeal-court judgment date explicitly — the two
+fields are easy to conflate (an earlier prompt revision defaulted to the
+latter) and users relying on the old default now get `decision_date`
+instead.
+
+`jurisdiction` (rule 8) is set only when the user names a country or legal
+system — "UK" / "England" / "brytyjskie" / "w Anglii" → `["UK"]`; "Poland" /
+"polskie" / "w Polsce" → `["PL"]`; "PL i UK" / "both countries" → `["PL",
+"UK"]`. Writing the question in Polish is **not** by itself a reason to set
+`["PL"]` — this deliberately does not reuse the diacritics-based PL/EN
+heuristic in `backend/app/query_analysis.py`, which serves a different
+(free-text search) heuristic where that inference is appropriate.
+
 ## Frontend URL state
 
 `?f=<base64url JSON of BaseSchemaFilters>` · `?q=<text_query>` · `?page=<n>` ·
@@ -163,7 +337,7 @@ loop, whereas `/collections/from-filter` runs the loop server-side.
 
 One codec, both in `frontend/lib/extractions/use-extracted-data-filters.ts`:
 
-- `buildFilterSearchParams(state: FilterUrlState): URLSearchParams` — the single place that writes `f`/`q`/`page`/`nl`. `FilterUrlState` already has an optional `nlQuestion` field and the function already serialises it to `?nl=`; the `useExtractedDataFilters()` hook itself does not yet read/write `nlQuestion` in its own state (`FilterState` has no `nlQuestion` field, and `initial` only reads `f`/`q`/`page`) — wiring the hook up to `?nl=` is planned follow-up work (NL-filter-to-collection spec), not part of this Foundation change. Callers that already have a question string (e.g. a future NL dialog) can pass it straight into `buildFilterSearchParams`/`buildFilterHref` today.
+- `buildFilterSearchParams(state: FilterUrlState): URLSearchParams` — the single place that writes `f`/`q`/`page`/`nl`. `FilterUrlState` has an optional `nlQuestion` field and the function serialises it to `?nl=`. `useExtractedDataFilters()` reads/writes `nlQuestion` too: `FilterState.nlQuestion` is populated from `?nl=` on mount, `setNlQuestion(next: string | undefined)` updates it (round-tripping through `writeUrl`/`buildFilterSearchParams`), and `clearAll()` resets it to `undefined`. `NlFilterDialog.onApply(filters, textQuery, question)` passes the trimmed question through, and `/search/extractions`'s `applyNlFilters` calls `setNlQuestion(question)` alongside `setFilters`/`setTextQuery` so a shared link or reload keeps the originating question (used later to default a "Save as collection" name).
 - `buildFilterHref(pathname, state, origin = ""): string` — `pathname` + the query string from `buildFilterSearchParams`, optionally prefixed by an absolute `origin`.
 
 Core fields `jurisdiction`/`decision_date` are registered in
@@ -198,6 +372,57 @@ The adapter this file replaced passed epoch-second numbers straight into
 this adapter converts both ways through the epoch helpers instead. It also
 accepts `{min,max}` with ISO-string values for date ranges (reachable only via
 a hand-edited URL) by treating `min`/`max` as `from`/`to` before converting.
+
+### `frontend/components/search/ScopeFilters.tsx`
+
+`<ScopeFilters filters onChange disabled? />` — a "Scope" strip rendered on
+`/search/extractions` above `BaseFiltersDrawer`, one `EnumMultiControl` for
+`jurisdiction` and one `DateRangeControl` for `decision_date`, both driven by
+`CORE_FILTER_FIELD_BY_NAME` and `coreToDrawerValue`/`applyCoreChange` from
+`drawer-adapter.ts` above. It renders unconditionally (no feature flag) and
+is deliberately outside `BaseFiltersDrawer` — the two core columns never
+touch `FILTER_FIELDS`/`FIELDS_BY_GROUP`, so the drawer and its facet counts
+are provably unchanged by this feature.
+
+### Result rows and document highlighting
+
+`frontend/lib/extractions/document-href.ts::buildDocumentHref(id, filters):
+string` builds each `/search/extractions` result row's link via
+`buildFilterHref` — `/documents/{id}?f=<same filters blob>`, plus a
+`#base-fields` anchor (`BASE_FIELDS_ANCHOR`) appended whenever the filter
+blob is non-empty (the presence of a query string is itself "the filter
+carried something", so there's no second `encodeFilters` call to decide the
+anchor).
+
+`app/documents/[id]/_components/DocumentPageClient.tsx` reads `?f=` back
+with `decodeFilters()`, fetches the document's metadata, and calls
+`frontend/lib/extractions/filter-match.ts::matchedMetadataKeys(filters,
+metadata): Set<string>` to compute which metadata keys satisfied the filter.
+`matchedMetadataKeys` mirrors the RPC's per-control-kind matching semantics
+(`= ANY` / array overlap / range / ILIKE) against a small
+`CORE_FIELD_TO_METADATA_KEY` map (`jurisdiction` → `country`, `decision_date`
+→ `date_issued`; everything else is `base_<field>`), so a highlighted cell is
+exactly one the query actually matched on — not merely a field the filter
+mentioned.
+
+The result feeds `KeyInformation` (`frontend/lib/styles/components/key-information.tsx`)
+via three props: `id={BASE_FIELDS_ANCHOR}` (the scroll target for the row
+link above), `highlightKeys` (the matched-key set, rendered with emphasis),
+and `highlightCaption` (e.g. "3 fields matched your filter"), plus a
+screen-reader-only "Matched filter" marker on each highlighted cell.
+
+### `SaveAsCollectionDialog` (`frontend/components/search/SaveAsCollectionDialog.tsx`)
+
+Rendered in the `/search/extractions` results bar. `defaultName` is the `?nl=`
+question when one is present, else a `Filtered judgments — <date>` fallback;
+the field is editable up to 255 chars before saving. The trigger button is
+disabled only when `total === 0` (via a `title` tooltip) or while the parent
+page is loading/erroring — **there is no client-side row-count cap**. On
+submit it calls `createCollectionFromFilter` and on success routes to
+`/collections/{collections[0].collection.id}`; on a `CollectionFromFilterError`
+with `total`/`cap` set (the `413` case) it renders the backend's message
+plus `"(<total> matched, limit <cap>.)"` inline in the dialog rather than
+guessing a limit client-side.
 
 ## Completeness helpers (backend)
 

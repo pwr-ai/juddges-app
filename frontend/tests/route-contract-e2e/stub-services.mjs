@@ -7,6 +7,7 @@ const USER_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
 const LOGGABLE_QUERY_KEYS = new Set([
   'chat_id',
+  'q',
   'id',
   'include_results',
   'job_id',
@@ -61,6 +62,30 @@ const EXTRACTABLE_DOCUMENT_IDS = [
   'route-contract-extract-document-1',
   'route-contract-extract-document-2',
 ];
+/**
+ * The collection → extraction flow contract (#692). Its own collection, job id
+ * and document set so the extraction-path contract above keeps asserting on an
+ * unchanged 2-document sequence.
+ *
+ * The collection starts empty: the spec fills it through the real save popover
+ * (one `POST /collections/{id}/documents` per selected result) and the stub
+ * records what arrived. Six search hits are served so the spec can select a
+ * strict subset.
+ */
+const FLOW = {
+  collectionId: '50000000-0000-4000-8000-000000000002',
+  collectionName: 'Route contract flow collection',
+  jobId: '30000000-0000-4000-8000-000000000008',
+  hits: Array.from({ length: 6 }, (_, index) => ({
+    id: `route-contract-flow-document-${index + 1}`,
+    title: `Route contract flow judgment ${index + 1}`,
+    case_number: `II AKa 30${index + 1}/2026`,
+    jurisdiction: 'pl',
+    court_name: 'Route contract appellate court',
+    decision_date: '2026-08-06',
+  })),
+};
+
 const CHAT_OWNERS = new Map([
   [IDS.chat.known, USER_ID],
   [IDS.chat.hidden, OTHER_USER_ID],
@@ -70,6 +95,36 @@ let requests = [];
 let shuttingDown = false;
 let sequencedPolls = 0;
 let sequencedServed = [];
+let flowDocumentIds = [];
+let flowSubmittedDocumentIds = null;
+let flowPolls = 0;
+let flowServed = [];
+
+/**
+ * Resolves to the request's JSON object, or `{}` for anything that is not one
+ * (aborted body, invalid JSON, a JSON scalar or array). Never rejects, so the
+ * handlers built on it always answer.
+ */
+function readJsonBody(request) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    const done = (parsed) =>
+      resolve(
+        parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+          ? parsed
+          : {},
+      );
+    request.on('data', (chunk) => chunks.push(chunk));
+    request.on('error', () => done(null));
+    request.on('end', () => {
+      try {
+        done(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+      } catch {
+        done(null);
+      }
+    });
+  });
+}
 
 function sendJson(response, status, body, headers = {}) {
   response.writeHead(status, {
@@ -173,9 +228,35 @@ function messagesResponse(url, response) {
   sendJson(response, 200, messages);
 }
 
+/** A flow search hit in the shape `/documents/{id}` and `/documents/batch` serve. */
+function flowDocument(hit) {
+  return {
+    document_id: hit.id,
+    title: hit.title,
+    document_number: hit.case_number,
+    document_type: 'judgment',
+    language: 'pl',
+    date_issued: hit.decision_date,
+    court_name: hit.court_name,
+  };
+}
+
 function collectionResponse(collectionId, response) {
   if (collectionId === IDS.collection.missing) {
     sendJson(response, 404, { detail: 'Collection not found' });
+    return;
+  }
+  if (collectionId === FLOW.collectionId) {
+    sendJson(response, 200, {
+      id: FLOW.collectionId,
+      user_id: USER_ID,
+      name: FLOW.collectionName,
+      description: 'Collection the flow contract fills from search results',
+      created_at: '2026-08-06T00:00:00.000Z',
+      updated_at: '2026-08-06T00:00:00.000Z',
+      documents: flowDocumentIds,
+      document_count: flowDocumentIds.length,
+    });
     return;
   }
   const userId =
@@ -249,14 +330,26 @@ function collectionListResponse(response) {
       documents: [],
       document_count: EXTRACTABLE_DOCUMENT_IDS.length,
     },
+    {
+      id: FLOW.collectionId,
+      user_id: USER_ID,
+      name: FLOW.collectionName,
+      description: 'Collection the flow contract fills from search results',
+      created_at: '2026-08-06T00:00:00.000Z',
+      updated_at: '2026-08-06T00:00:00.000Z',
+      documents: flowDocumentIds,
+      document_count: flowDocumentIds.length,
+    },
   ]);
 }
 
-function collectionDocumentsResponse(response) {
+function collectionDocumentsResponse(collectionId, response) {
+  const documentIds =
+    collectionId === FLOW.collectionId ? flowDocumentIds : EXTRACTABLE_DOCUMENT_IDS;
   sendJson(
     response,
     200,
-    EXTRACTABLE_DOCUMENT_IDS.map((documentId, index) => ({
+    documentIds.map((documentId, index) => ({
       id: `route-contract-collection-row-${index + 1}`,
       document_id: documentId,
       document_date: '2026-08-06',
@@ -358,6 +451,64 @@ function sequencedExtractionResponse(url, response) {
   });
 }
 
+/**
+ * Same one-step-per-poll contract as `sequencedExtractionResponse`, for the
+ * flow job. Totals and results come from the `document_ids` the extract page
+ * POSTed to `/extractions/db`, not from the collection: an extract page that
+ * submits the wrong set shows up here as the wrong `total_documents`.
+ */
+function flowExtractionResponse(url, response) {
+  const submitted = flowSubmittedDocumentIds ?? [];
+  const total = submitted.length;
+  const steps = [
+    { status: 'PENDING', completed: 0, results: null },
+    { status: 'IN_PROGRESS', completed: Math.ceil(total / 2), results: null },
+    {
+      status: 'COMPLETED',
+      completed: total,
+      results: submitted.map((documentId) => {
+        const hit = FLOW.hits.find(({ id }) => id === documentId);
+        const n = documentId.replace(/^.*-/, '');
+        return {
+          collection_id: FLOW.collectionId,
+          document_id: documentId,
+          status: 'completed',
+          created_at: '2026-08-06T00:00:00.000Z',
+          updated_at: '2026-08-06T00:01:00.000Z',
+          started_at: '2026-08-06T00:00:30.000Z',
+          completed_at: '2026-08-06T00:01:00.000Z',
+          error_message: null,
+          extracted_data: {
+            case_number: hit?.case_number ?? documentId,
+            ruling_summary: `Flow outcome for judgment ${n}`,
+          },
+        };
+      }),
+    },
+  ];
+  const isSnapshotRead = url.searchParams.get('include_results') === 'false';
+  const step = steps[Math.min(flowPolls, steps.length - 1)];
+  if (!isSnapshotRead) {
+    flowPolls += 1;
+    flowServed.push({
+      status: step.status,
+      completed_documents: step.completed,
+      total_documents: total,
+    });
+  }
+  sendJson(response, 200, {
+    job_id: FLOW.jobId,
+    status: step.status,
+    schema_name: 'Route contract schema',
+    collection_name: FLOW.collectionName,
+    completed_documents: step.completed,
+    total_documents: total,
+    created_at: '2026-08-06T00:00:00.000Z',
+    updated_at: '2026-08-06T00:01:00.000Z',
+    results: isSnapshotRead ? null : step.results,
+  });
+}
+
 function extractionResponse(jobId, response) {
   const statusById = new Map([
     [IDS.extraction.missing, 404],
@@ -398,6 +549,10 @@ const server = createServer((request, response) => {
     requests = [];
     sequencedPolls = 0;
     sequencedServed = [];
+    flowDocumentIds = [];
+    flowSubmittedDocumentIds = null;
+    flowPolls = 0;
+    flowServed = [];
     response.writeHead(204);
     response.end();
     return;
@@ -412,7 +567,27 @@ const server = createServer((request, response) => {
     request.method === 'GET' &&
     url.pathname === `${CONTROL_PREFIX}extraction-sequence`
   ) {
-    sendJson(response, 200, { served: sequencedServed });
+    const jobId = url.searchParams.get('job_id') ?? IDS.extraction.sequenced;
+    const servedByJob = new Map([
+      [IDS.extraction.sequenced, sequencedServed],
+      [FLOW.jobId, flowServed],
+    ]);
+    if (!servedByJob.has(jobId)) {
+      sendJson(response, 404, { error: 'no sequenced job with that id', jobId });
+      return;
+    }
+    sendJson(response, 200, { served: servedByJob.get(jobId) });
+    return;
+  }
+
+  if (
+    request.method === 'GET' &&
+    url.pathname === `${CONTROL_PREFIX}flow-collection`
+  ) {
+    sendJson(response, 200, {
+      document_ids: flowDocumentIds,
+      submitted_document_ids: flowSubmittedDocumentIds,
+    });
     return;
   }
 
@@ -482,6 +657,50 @@ const server = createServer((request, response) => {
     return;
   }
 
+  // Typing in the search box fans out to autocomplete and suggest, and the
+  // page reports outcomes to the events sink. None of them carry the flow;
+  // they are answered empty so the strict-stub check stays focused on requests
+  // that do.
+  if (
+    request.method === 'GET' &&
+    (url.pathname === '/api/search/autocomplete' ||
+      url.pathname === '/api/search/suggest')
+  ) {
+    logRequest(request, url);
+    sendJson(response, 200, {
+      query: url.searchParams.get('q') ?? '',
+      topic_hits: [],
+      suggestion_hits: [],
+    });
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/events') {
+    logRequest(request, url);
+    request.resume();
+    sendJson(response, 200, { accepted: 0 });
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/search/documents') {
+    logRequest(request, url);
+    sendJson(response, 200, {
+      documents: FLOW.hits,
+      query: url.searchParams.get('q') ?? '',
+      query_time_ms: 1,
+      pagination: {
+        offset: 0,
+        limit: FLOW.hits.length,
+        loaded_count: FLOW.hits.length,
+        estimated_total: FLOW.hits.length,
+        has_more: false,
+        next_offset: null,
+      },
+      total_count: FLOW.hits.length,
+    });
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/collections') {
     logRequest(request, url);
     collectionListResponse(response);
@@ -494,22 +713,117 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/dashboard/stats') {
+    // Intentionally partial: StatisticsView only reads `total_judgments`
+    // (the corpus size in the cohort line) — the real payload has ~12 more
+    // fields (jurisdictions, court_levels, data_completeness, ...).
+    logRequest(request, url);
+    sendJson(response, 200, { total_judgments: 12907 });
+    return;
+  }
+
   if (request.method === 'POST' && url.pathname === '/documents/batch') {
     logRequest(request, url);
-    request.resume();
-    // Metadata enrichment is best-effort in the extract page, so an empty list
-    // exercises the real code path without inventing judgment metadata.
-    sendJson(response, 200, { documents: [] });
+    readJsonBody(request).then((body) => {
+      // Flow documents answer with their search-hit metadata so the collection
+      // page renders titles. Everything else keeps the empty list: metadata
+      // enrichment is best-effort in the extract page, so that exercises the
+      // real code path without inventing judgment metadata.
+      const ids = Array.isArray(body.document_ids) ? body.document_ids : [];
+      const documents = FLOW.hits
+        .filter(({ id }) => ids.includes(id))
+        .map(flowDocument);
+      sendJson(response, 200, { documents });
+    });
     return;
   }
 
   if (request.method === 'POST' && url.pathname === '/extractions/db') {
     logRequest(request, url);
+    readJsonBody(request).then((body) => {
+      const isFlow = body.collection_id === FLOW.collectionId;
+      if (isFlow) {
+        flowSubmittedDocumentIds = Array.isArray(body.document_ids)
+          ? body.document_ids
+          : [];
+      }
+      sendJson(response, 202, {
+        job_id: isFlow ? FLOW.jobId : IDS.extraction.sequenced,
+        status: 'accepted',
+        message: 'Extraction job created successfully',
+      });
+    });
+    return;
+  }
+
+  const addDocumentMatch = url.pathname.match(
+    /^\/collections\/([^/]+)\/documents$/,
+  );
+  if (request.method === 'POST' && addDocumentMatch) {
+    logRequest(request, url);
+    const collectionId = decodeURIComponent(addDocumentMatch[1]);
+    readJsonBody(request).then((body) => {
+      if (collectionId !== FLOW.collectionId || typeof body.document_id !== 'string') {
+        sendJson(response, 404, { detail: 'Collection not found' });
+        return;
+      }
+      if (!flowDocumentIds.includes(body.document_id)) {
+        flowDocumentIds.push(body.document_id);
+      }
+      sendJson(response, 200, {
+        message: 'Document added to collection',
+        collection_id: collectionId,
+        document_id: body.document_id,
+      });
+    });
+    return;
+  }
+
+  if (
+    request.method === 'POST' &&
+    url.pathname === '/extractions/base-schema/aggregate'
+  ) {
+    logRequest(request, url);
     request.resume();
-    sendJson(response, 202, {
-      job_id: IDS.extraction.sequenced,
-      status: 'accepted',
-      message: 'Extraction job created successfully',
+    sendJson(response, 200, {
+      total: 320,
+      sample_n: 100,
+      seed: 7,
+      fields: {
+        appeal_outcome: {
+          kind: 'categorical',
+          multi: true,
+          values: [
+            { value: 'dismissed', count: 60 },
+            { value: 'allowed', count: 30 },
+          ],
+          other: 0,
+          null: 10,
+          covered: 90,
+        },
+        decision_date: {
+          kind: 'year',
+          values: [{ value: '2019', count: 100 }],
+          null: 0,
+          covered: 100,
+        },
+      },
+    });
+    return;
+  }
+
+  if (
+    request.method === 'POST' &&
+    url.pathname === '/extractions/base-schema/filter'
+  ) {
+    logRequest(request, url);
+    request.resume();
+    sendJson(response, 200, {
+      documents: [],
+      total_count: 320,
+      limit: 20,
+      offset: 0,
+      has_more: false,
     });
     return;
   }
@@ -519,7 +833,10 @@ const server = createServer((request, response) => {
   );
   if (request.method === 'GET' && collectionDocumentsMatch) {
     logRequest(request, url);
-    collectionDocumentsResponse(response);
+    collectionDocumentsResponse(
+      decodeURIComponent(collectionDocumentsMatch[1]),
+      response,
+    );
     return;
   }
 
@@ -527,6 +844,18 @@ const server = createServer((request, response) => {
   if (request.method === 'GET' && collectionMatch) {
     logRequest(request, url);
     collectionResponse(decodeURIComponent(collectionMatch[1]), response);
+    return;
+  }
+
+  const flowDocumentMatch = url.pathname.match(/^\/documents\/([^/]+)$/);
+  const flowHit =
+    flowDocumentMatch &&
+    FLOW.hits.find(({ id }) => id === decodeURIComponent(flowDocumentMatch[1]));
+  if (request.method === 'GET' && flowHit) {
+    logRequest(request, url);
+    // `useCollection.loadDocument` reads `data.document`, matching the backend
+    // `GET /documents/{id}` envelope.
+    sendJson(response, 200, { document: flowDocument(flowHit) });
     return;
   }
 
@@ -545,6 +874,10 @@ const server = createServer((request, response) => {
     const jobId = decodeURIComponent(extractionMatch[1]);
     if (jobId === IDS.extraction.sequenced) {
       sequencedExtractionResponse(url, response);
+      return;
+    }
+    if (jobId === FLOW.jobId) {
+      flowExtractionResponse(url, response);
       return;
     }
     extractionResponse(jobId, response);
