@@ -35,10 +35,11 @@ export function TierSection({ id, title, children }: { id: string; title: string
 function IgnoredFiltersNotice({ keys }: { keys: string[] }) {
   const { t } = useTranslation();
   if (keys.length === 0) return null;
+  const hasJurisdiction = keys.includes("jurisdiction");
   const others = keys.filter((k) => k !== "jurisdiction");
   return (
     <p role="status" className="border border-rule bg-parchment-deep px-3 py-2 text-xs text-ink">
-      {t("compare.jurisdictionIgnored")}
+      {hasJurisdiction ? t("compare.jurisdictionIgnored") : t("compare.filterKeysIgnored")}
       {others.length > 0 && <span className="ml-2 font-mono text-ink-soft">({others.join(", ")})</span>}
     </p>
   );

@@ -700,11 +700,16 @@ export interface CompareTranslations {
   noMatchesTitle: string;
   noMatchesBody: string;
   jurisdictionIgnored: string;
+  filterKeysIgnored: string;
   savePair: string;
   savePairTitle: string;
   savePairName: string;
   savePairHint: string;
   savePairTooLarge: string;
+  savePairSaving: string;
+  savePairGenericError: string;
+  baseSchemaEyebrow: string;
+  extendedSchemaEyebrow: string;
   saved: string;
   openCollections: string;
   exportCsv: string;

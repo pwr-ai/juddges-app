@@ -43,6 +43,25 @@ describe('BivariateBarChart', () => {
     expect(data[0].hovertemplate).toContain('%{y:.1f}%');
   });
 
+  it('honours yTickSuffix in the showCounts bar-top labels', () => {
+    render(
+      <BivariateBarChart
+        categories={['a']} ukData={[76.3]} plData={[42]}
+        yTickSuffix="%" showCounts
+      />,
+    );
+    const { data } = plotProps();
+    expect(data[0].text).toEqual(['76.3%']);
+    expect(data[1].text).toEqual(['42%']);
+  });
+
+  it('omits the suffix from showCounts labels when yTickSuffix is unset', () => {
+    render(<BivariateBarChart categories={['a']} ukData={[76]} plData={[42]} showCounts />);
+    const { data } = plotProps();
+    expect(data[0].text).toEqual(['76']);
+    expect(data[1].text).toEqual(['42']);
+  });
+
   it('is still importable from the dataset-comparison private folder', async () => {
     const legacy = await import('@/app/dataset-comparison/_components/BivariateBarChart');
     expect(legacy.BivariateBarChart).toBe(BivariateBarChart);

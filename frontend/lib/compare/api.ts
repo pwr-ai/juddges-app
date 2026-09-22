@@ -3,9 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { createCollectionFromFilter } from "@/lib/api/collections";
+import { downloadBlob } from "@/lib/file-export";
 import type { BaseSchemaFilters, CollectionFromFilterResponse } from "@/types/base-schema-filter";
 
 import type { CompareRequest, CompareResponse, PairCompareResponse } from "./types";
+
+/** True when `error` is one of our `.status`-tagged fetch failures. */
+function errorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object" || !("status" in error)) return undefined;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === "number" ? status : undefined;
+}
 
 async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, {
@@ -14,7 +22,10 @@ async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Pr
     body: JSON.stringify(body),
     signal,
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const message = (await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`;
+    throw Object.assign(new Error(message), { status: res.status });
+  }
   return res.json() as Promise<T>;
 }
 
@@ -29,6 +40,14 @@ export function useCompare(req: CompareRequest, enabled: boolean) {
     enabled,
     staleTime: 60_000,
     placeholderData: (prev) => prev,
+    // A 4xx (bad filter, not found, ...) will not succeed on retry; only
+    // let the default QueryClient retry (`retry: 1`, app/providers.tsx)
+    // apply to transient failures.
+    retry: (failureCount, error) => {
+      const status = errorStatus(error);
+      if (status != null && status >= 400 && status < 500) return false;
+      return failureCount < 1;
+    },
   });
 }
 
@@ -43,6 +62,10 @@ export function useComparePair(pairId: string) {
     queryKey: ["compare-pair", pairId],
     queryFn: ({ signal }) => fetchComparePair(pairId, signal),
     staleTime: 60_000,
+    // A 404 (deleted / inaccessible pair) will not succeed on retry; the
+    // default QueryClient (`retry: 1`, app/providers.tsx) would otherwise
+    // double-fetch before PairContent can show the not-found state.
+    retry: (failureCount, error) => errorStatus(error) !== 404 && failureCount < 1,
   });
 }
 
@@ -76,8 +99,5 @@ export async function downloadCompareCsv(req: CompareRequest): Promise<void> {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "compare.csv";
-  const url = URL.createObjectURL(await res.blob());
-  const a = Object.assign(document.createElement("a"), { href: url, download: name });
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(await res.blob(), name);
 }

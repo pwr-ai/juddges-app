@@ -179,14 +179,16 @@ describe("SavePairDialog", () => {
     expect(createCollectionPair).toHaveBeenCalledTimes(1);
   });
 
-  it("logs and shows an error when the backend omits a pair_id", async () => {
+  it("logs and shows an error when the backend omits a pair_id, without calling onSaved", async () => {
     createCollectionPair.mockResolvedValue({ ...savedResponse, pair_id: null });
+    const onSaved = jest.fn();
     render(
-      <SavePairDialog open onOpenChange={() => {}} onSaved={() => {}} request={{ filters: {}, text_query: "x" }} />,
+      <SavePairDialog open onOpenChange={() => {}} onSaved={onSaved} request={{ filters: {}, text_query: "x" }} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "compare.savePair" }));
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
   });
 });

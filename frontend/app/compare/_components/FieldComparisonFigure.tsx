@@ -22,7 +22,7 @@ export function FieldComparisonFigure({ field, index }: { field: CompareField; i
   return (
     <ChartFigure
       figure={String(index).padStart(2, "0")}
-      eyebrow={field.source === "base" ? "Base schema" : "Extended schema"}
+      eyebrow={field.source === "base" ? t("compare.baseSchemaEyebrow") : t("compare.extendedSchemaEyebrow")}
       title={field.label}
       caption={field.tier === "partial" ? <CoverageBadge coverage={field.coverage} /> : undefined}
       source={source}

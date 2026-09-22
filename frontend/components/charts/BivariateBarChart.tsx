@@ -86,10 +86,11 @@ export function BivariateBarChart({
       family: 'Geist Mono, ui-monospace, monospace',
       size: 11,
     };
-    ukTrace.text = ukData.map(v => v.toLocaleString());
+    const suffix = yTickSuffix ?? '';
+    ukTrace.text = ukData.map(v => `${v.toLocaleString()}${suffix}`);
     ukTrace.textposition = 'outside';
     ukTrace.textfont = { ...baseFont, color: editorialSeries.uk };
-    plTrace.text = plData.map(v => v.toLocaleString());
+    plTrace.text = plData.map(v => `${v.toLocaleString()}${suffix}`);
     plTrace.textposition = 'outside';
     plTrace.textfont = { ...baseFont, color: editorialSeries.pl };
   }

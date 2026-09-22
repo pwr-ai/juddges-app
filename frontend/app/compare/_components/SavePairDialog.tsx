@@ -112,10 +112,13 @@ export function SavePairDialog({ open, onOpenChange, request, defaultName, onSav
         filters: request.filters,
         text_query: request.text_query ?? null,
       });
-      onSaved(result);
       setSaving(false);
+      // Checked before `onSaved` fires: the parent handler (e.g. closing the
+      // dialog) must not run ahead of the "id missing" error below, or the
+      // error would never be visible.
       if (result.pair_id) {
         setSucceeded(true);
+        onSaved(result);
         router.push(`/compare/${result.pair_id}`);
       } else {
         log.error("createCollectionPair returned no pair_id", result);
@@ -125,7 +128,7 @@ export function SavePairDialog({ open, onOpenChange, request, defaultName, onSav
       if (e instanceof CollectionFromFilterError) {
         setError(e.status === 413 ? { title: t("compare.savePairTooLarge"), message: e.message } : { message: e.message });
       } else {
-        setError({ message: e instanceof Error ? e.message : "Could not save the pair." });
+        setError({ message: e instanceof Error ? e.message : t("compare.savePairGenericError") });
       }
       setSaving(false);
     }
@@ -165,7 +168,7 @@ export function SavePairDialog({ open, onOpenChange, request, defaultName, onSav
             {t("common.cancel")}
           </Button>
           <Button type="button" onClick={() => void handleSave()} disabled={saving || succeeded || name.trim() === ""}>
-            {saving ? "Saving…" : t("compare.savePair")}
+            {saving ? t("compare.savePairSaving") : t("compare.savePair")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -204,4 +204,20 @@ describe('CompareView', () => {
     expect(screen.queryAllByTestId('bivariate')).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'compare.savePair' })).not.toBeInTheDocument();
   });
+
+  it('shows a generic ignored-filters notice when jurisdiction was not one of them', () => {
+    render(<CompareView data={{ ...data, ignored_filter_keys: ['appellant'] }} request={request} />);
+    expect(screen.getByText('compare.filterKeysIgnored')).toBeInTheDocument();
+    expect(screen.getByText('(appellant)')).toBeInTheDocument();
+    expect(screen.queryByText('compare.jurisdictionIgnored')).not.toBeInTheDocument();
+  });
+
+  it('leads with the jurisdiction notice and lists the rest when both are ignored', () => {
+    render(
+      <CompareView data={{ ...data, ignored_filter_keys: ['jurisdiction', 'appellant'] }} request={request} />,
+    );
+    expect(screen.getByText('compare.jurisdictionIgnored')).toBeInTheDocument();
+    expect(screen.getByText('(appellant)')).toBeInTheDocument();
+    expect(screen.queryByText('compare.filterKeysIgnored')).not.toBeInTheDocument();
+  });
 });
