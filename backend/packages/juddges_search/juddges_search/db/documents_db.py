@@ -261,12 +261,19 @@ class SupabaseVectorDB(SupabaseClientMixin):
         Used to turn a docket typed into the precedents query box into a source
         document. Exact match only — `case_number` is indexed both plainly and
         with trigrams, but a fuzzy match would silently search the wrong case.
+
+        `case_number` has no unique constraint and Polish appellate dockets
+        repeat across the eleven courts of appeal, so multiple rows can match.
+        Orders by `decision_date` descending before taking the top row so the
+        result is deterministic rather than whatever order PostgREST happens
+        to return.
         """
         try:
             r = (
                 self.client.table("judgments")
                 .select(_JUDGMENT_LIST_COLS)
                 .eq("case_number", case_number)
+                .order("decision_date", desc=True)
                 .limit(1)
                 .execute()
             )

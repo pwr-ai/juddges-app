@@ -9,8 +9,11 @@ from app.precedents import (
     COHORT_MATCH_COUNT,
     FindPrecedentsResponse,
     PrecedentCohortItem,
+    ResolvedCase,
     _build_cohort,
     _empty_precedents_response,
+    _resolve_case_query,
+    _search_precedent_candidates,
 )
 
 UUID_A = "11111111-1111-1111-1111-111111111111"
@@ -94,9 +97,16 @@ async def test_cohort_of_no_candidates_makes_no_db_call() -> None:
     db.get_cohort_fields_by_ids.assert_not_called()
 
 
+@pytest.mark.asyncio
 @pytest.mark.unit
-def test_cohort_match_count_is_one_hundred() -> None:
-    assert COHORT_MATCH_COUNT == 100
+async def test_search_requests_cohort_match_count() -> None:
+    db = MagicMock()
+    db.search_by_vector = AsyncMock(return_value=[])
+
+    await _search_precedent_candidates(db, embedding=[0.1, 0.2])
+
+    _, kwargs = db.search_by_vector.call_args
+    assert kwargs["match_count"] == COHORT_MATCH_COUNT
 
 
 @pytest.mark.unit
@@ -117,9 +127,6 @@ def test_cohort_item_defaults_missing_arrays_to_empty() -> None:
     assert item.case_number is None
 
 
-from app.precedents import ResolvedCase, _resolve_case_query  # noqa: E402
-
-
 def _db_with_case(row: dict[str, Any] | None) -> MagicMock:
     db = MagicMock()
     db.get_document_by_case_number = AsyncMock(return_value=row)
@@ -133,6 +140,7 @@ def _db_with_case(row: dict[str, Any] | None) -> MagicMock:
     [
         ("Compare with III CSK 245/22 please", "III CSK 245/22"),
         ("what happened in [2023] EWCA Civ 1234 exactly", "[2023] EWCA Civ 1234"),
+        ("Compare with II AKa 47/23 please", "II AKa 47/23"),
     ],
 )
 async def test_resolves_pl_and_uk_dockets(query: str, expected: str) -> None:
@@ -173,3 +181,32 @@ def test_empty_response_can_carry_the_resolved_case() -> None:
 
     assert response.resolved_case == resolved
     assert response.cohort == []
+
+
+@pytest.mark.unit
+def test_empty_response_carries_a_cohort_built_before_the_failure() -> None:
+    """A cohort fetched successfully must survive a downstream ranking-pass
+    failure (spec §7.1) — the empty response is not forced to `cohort=[]`."""
+    cohort = [PrecedentCohortItem(document_id=UUID_A, similarity_score=0.81)]
+
+    response = _empty_precedents_response("q", None, cohort=cohort)
+
+    assert response.cohort == cohort
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_cohort_fetch_failure_degrades_to_empty_list() -> None:
+    db = MagicMock()
+    db.get_cohort_fields_by_ids = AsyncMock(side_effect=RuntimeError("timeout"))
+
+    assert await _build_cohort(db, SIMILAR_RESULTS) == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_case_number_lookup_failure_degrades_to_none() -> None:
+    db = MagicMock()
+    db.get_document_by_case_number = AsyncMock(side_effect=RuntimeError("timeout"))
+
+    assert await _resolve_case_query(db, "see III CSK 245/22") is None

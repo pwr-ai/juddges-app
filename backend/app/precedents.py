@@ -28,7 +28,13 @@ PRECEDENTS_RATE_LIMIT = "30/hour"
 # Raw vector candidates exposed as the cohort (#724, spec §7.1). The ranked
 # `precedents` slice is still taken from the top `limit` of this same pool, so a
 # wider pool does not change what the LLM sees.
-COHORT_MATCH_COUNT = 100
+#
+# Measured against production: `search_judgments_by_embedding` never sets
+# `hnsw.ef_search`, so the index default of 40 caps the result set regardless
+# of `match_count` — requesting 100 or 200 both returned 40 rows. 40 is what
+# actually binds here, not an arbitrary choice; raising it needs an
+# ef_search migration (tracked separately, out of scope for this PR).
+COHORT_MATCH_COUNT = 40
 
 
 # ===== Request/Response Models =====
@@ -177,9 +183,8 @@ class FindPrecedentsResponse(BaseModel):
         description="AI-enhanced version of the query used for search",
     )
     cohort: list[PrecedentCohortItem] = Field(
-        default_factory=list,
         description=(
-            "Raw vector candidates (up to 100) with the fields the UI groups by, "
+            "Raw vector candidates (up to 40) with the fields the UI groups by, "
             "collected before the AI ranking pass. Present even when the ranking "
             "pass returns nothing."
         ),
@@ -381,15 +386,21 @@ def _empty_precedents_response(
     query: str,
     enhanced_query: str | None,
     resolved_case: "ResolvedCase | None" = None,
+    cohort: list[PrecedentCohortItem] | None = None,
 ) -> FindPrecedentsResponse:
-    """Build a consistent empty response payload."""
+    """Build a consistent empty response payload.
+
+    `cohort` defaults to `[]` for the "no similar_results at all" path, but
+    callers that already built a cohort before hitting an empty
+    `candidates_data` (spec §7.1) pass it through so it survives.
+    """
     return FindPrecedentsResponse(
         query=query,
         precedents=[],
         total_found=0,
         search_strategy="semantic_similarity",
         enhanced_query=enhanced_query,
-        cohort=[],
+        cohort=cohort if cohort is not None else [],
         resolved_case=resolved_case,
     )
 
@@ -415,14 +426,14 @@ async def _build_search_text(request: FindPrecedentsRequest) -> str:
 
 
 async def _search_precedent_candidates(
-    db: Any, embedding: list[float], limit: int
+    db: Any, embedding: list[float]
 ) -> list[dict[str, Any]]:
     """Run vector similarity search with service-level error handling."""
     search_kwargs: dict[str, Any] = {
         "query_embedding": embedding,
         # The cohort needs the wide pool (#724); the ranked slice still comes
         # from `similar_results[:limit]`, so ranking is unaffected.
-        "match_count": max(min(limit * 2, 50), COHORT_MATCH_COUNT),
+        "match_count": COHORT_MATCH_COUNT,
         "match_threshold": 0.3,
     }
     try:
@@ -472,7 +483,11 @@ async def _build_cohort(
     if not ordered_ids:
         return []
 
-    rows = await db.get_cohort_fields_by_ids(ordered_ids)
+    try:
+        rows = await db.get_cohort_fields_by_ids(ordered_ids)
+    except Exception as e:
+        logger.error(f"Cohort fetch failed: {e}")
+        return []
     rows_by_id = {row.get("id"): row for row in rows}
     similarity_by_id = {
         r.get("document_id"): r.get("similarity") or 0.0 for r in similar_results
@@ -512,7 +527,11 @@ async def _resolve_case_query(db: Any, query: str) -> ResolvedCase | None:
     if not case_number:
         return None
 
-    row = await db.get_document_by_case_number(case_number)
+    try:
+        row = await db.get_document_by_case_number(case_number)
+    except Exception as e:
+        logger.error(f"Case-number lookup failed for {case_number}: {e}")
+        return None
     if not row or not row.get("id"):
         logger.info(
             f"Case number {case_number} not found; falling back to semantic search"
@@ -629,9 +648,7 @@ async def find_precedents(
         logger.info(f"Enhanced query: {enhanced_text[:200]}...")
 
     embedding = await generate_embedding(enhanced_text)
-    similar_results = await _search_precedent_candidates(
-        db=db, embedding=embedding, limit=effective_request.limit
-    )
+    similar_results = await _search_precedent_candidates(db=db, embedding=embedding)
     if not similar_results:
         return _empty_precedents_response(
             precedents_request.query, enhanced_query, resolved_case=resolved_case
@@ -653,7 +670,10 @@ async def find_precedents(
     )
     if not candidates_data:
         return _empty_precedents_response(
-            precedents_request.query, enhanced_query, resolved_case=resolved_case
+            precedents_request.query,
+            enhanced_query,
+            resolved_case=resolved_case,
+            cohort=cohort,
         )
 
     analysis_map, analysis_enhanced_query = await _build_analysis_map(

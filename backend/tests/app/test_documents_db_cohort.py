@@ -24,7 +24,7 @@ def _db_with_rows(rows: list[dict[str, Any]]) -> tuple[SupabaseVectorDB, MagicMo
     client.table.return_value.select.return_value.in_.return_value.execute.return_value = MagicMock(
         data=rows
     )
-    client.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+    client.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
         data=rows
     )
     db.client = client
@@ -104,7 +104,10 @@ async def test_case_number_lookup_returns_first_row() -> None:
     client.table.return_value.select.return_value.eq.assert_called_with(
         "case_number", "III CSK 245/22"
     )
-    client.table.return_value.select.return_value.eq.return_value.limit.assert_called_with(
+    client.table.return_value.select.return_value.eq.return_value.order.assert_called_with(
+        "decision_date", desc=True
+    )
+    client.table.return_value.select.return_value.eq.return_value.order.return_value.limit.assert_called_with(
         1
     )
 
