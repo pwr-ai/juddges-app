@@ -828,6 +828,59 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.method === 'POST' && url.pathname === '/precedents/find') {
+    // The "In similar cases…" cohort block (#726). Four cohort members, three
+    // `dismissed`/one `allowed`, so the default appeal_outcome grouping has a
+    // clickable majority bucket. Two ranked precedents: `p-dismissed` stays
+    // ranked after filtering to `dismissed`, `p-allowed` gets filtered out.
+    logRequest(request, url);
+    request.resume();
+    sendJson(response, 200, {
+      query: 'a juvenile drug appeal with three co-defendants',
+      precedents: [
+        {
+          document_id: 'p-dismissed',
+          title: 'R v Dismissed',
+          document_type: 'judgment',
+          date_issued: '2023-01-01',
+          court_name: 'Court of Appeal',
+          outcome: null,
+          legal_bases: null,
+          summary: null,
+          similarity_score: 0.82,
+          relevance_score: null,
+          matching_factors: [],
+          relevance_explanation: null,
+        },
+        {
+          document_id: 'p-allowed',
+          title: 'R v Allowed',
+          document_type: 'judgment',
+          date_issued: '2022-06-01',
+          court_name: 'Court of Appeal',
+          outcome: null,
+          legal_bases: null,
+          summary: null,
+          similarity_score: 0.71,
+          relevance_score: null,
+          matching_factors: [],
+          relevance_explanation: null,
+        },
+      ],
+      total_found: 2,
+      search_strategy: 'semantic_similarity',
+      enhanced_query: null,
+      cohort: [
+        { document_id: 'p-dismissed', similarity_score: 0.82, case_number: 'C-1', title: 'R v Dismissed', jurisdiction: 'UK', court_name: 'Court of Appeal', decision_date: '2023-01-01', appeal_outcome: ['dismissed'], sentences_received: [], convict_offences: ['theft'] },
+        { document_id: 'c-2', similarity_score: 0.78, case_number: 'C-2', title: 'R v Two', jurisdiction: 'UK', court_name: 'Court of Appeal', decision_date: '2023-02-01', appeal_outcome: ['dismissed'], sentences_received: [], convict_offences: [] },
+        { document_id: 'c-3', similarity_score: 0.74, case_number: 'C-3', title: 'R v Three', jurisdiction: 'UK', court_name: 'Court of Appeal', decision_date: '2023-03-01', appeal_outcome: ['dismissed'], sentences_received: [], convict_offences: [] },
+        { document_id: 'p-allowed', similarity_score: 0.71, case_number: 'C-4', title: 'R v Allowed', jurisdiction: 'UK', court_name: 'Court of Appeal', decision_date: '2022-06-01', appeal_outcome: ['allowed'], sentences_received: [], convict_offences: ['burglary'] },
+      ],
+      resolved_case: null,
+    });
+    return;
+  }
+
   const collectionDocumentsMatch = url.pathname.match(
     /^\/collections\/([^/]+)\/documents$/,
   );
