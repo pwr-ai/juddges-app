@@ -160,6 +160,7 @@ cython_debug/
 .claude/*
 !.claude/settings.json
 !.claude/skills/
+!.claude/agents/
 .claude/settings.local.json
 .context/
 .codex/
