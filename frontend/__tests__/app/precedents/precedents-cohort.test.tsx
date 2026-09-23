@@ -129,6 +129,44 @@ describe("precedents page — cohort block", () => {
     expect(screen.queryByText("#1")).not.toBeInTheDocument();
   });
 
+  it("gives distinct rank badges even when every precedent shares the same document_id", async () => {
+    // Reproduces the pre-fix backend defect (`document_id` empty on every
+    // ranked precedent) without relying on the backend fix: rank must come
+    // from list position, never from `findIndex` id equality.
+    await search({
+      query: "q",
+      precedents: [precedent(""), precedent("")],
+      total_found: 2,
+      search_strategy: "semantic_similarity",
+      enhanced_query: null,
+      cohort: makeCohort(),
+      resolved_case: null,
+    });
+
+    expect(await screen.findByText("#1")).toBeInTheDocument();
+    expect(screen.getByText("#2")).toBeInTheDocument();
+  });
+
+  it("suppresses the pre-search empty state when a cohort filter empties the ranked list", async () => {
+    await search({
+      query: "q",
+      precedents: [precedent("d1")],
+      total_found: 1,
+      search_strategy: "semantic_similarity",
+      enhanced_query: null,
+      cohort: makeCohort(),
+      resolved_case: null,
+    });
+
+    expect(await screen.findByText("Judgment d1")).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole("button", { name: "allowed: 1" }));
+
+    await waitFor(() => expect(screen.queryByText("Judgment d1")).not.toBeInTheDocument());
+    expect(screen.getByText("precedents.cohortNoRanked")).toBeInTheDocument();
+    expect(screen.queryByText("No precedents found")).not.toBeInTheDocument();
+  });
+
   it("clears the active cohort filter on a new search", async () => {
     const response = {
       query: "q",

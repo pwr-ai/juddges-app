@@ -235,9 +235,10 @@ export default function PrecedentsPage() {
   const cohort = useMemo(() => results?.cohort ?? [], [results]);
   const visiblePrecedents = useMemo(() => {
     if (!results) return [];
-    if (!cohortFilter) return results.precedents;
+    const ranked = results.precedents.map((p, i) => ({ precedent: p, rank: i + 1 }));
+    if (!cohortFilter) return ranked;
     const ids = cohortIdsWithValue(cohort, cohortFilter.field, cohortFilter.value);
-    return results.precedents.filter((p) => ids.has(p.document_id));
+    return ranked.filter(({ precedent }) => ids.has(precedent.document_id));
   }, [results, cohort, cohortFilter]);
 
   return (
@@ -407,6 +408,7 @@ export default function PrecedentsPage() {
             cohort={cohort}
             filter={cohortFilter}
             filteredRankedCount={visiblePrecedents.length}
+            totalRankedCount={results.precedents.length}
             onFilterChange={setCohortFilter}
           />
 
@@ -430,19 +432,16 @@ export default function PrecedentsPage() {
           {/* Results list */}
           {visiblePrecedents.length > 0 ? (
             <div className="space-y-3">
-              {visiblePrecedents.map((precedent) => (
+              {visiblePrecedents.map(({ precedent, rank }) => (
                 <PrecedentResultCard
                   key={precedent.document_id}
                   precedent={precedent}
-                  rank={
-                    results.precedents.findIndex((p) => p.document_id === precedent.document_id) +
-                    1
-                  }
+                  rank={rank}
                   onViewDocument={handleViewDocument}
                 />
               ))}
             </div>
-          ) : (
+          ) : cohortFilter ? null : (
             <EmptyState
               title="No precedents found"
               description="Try broadening your search query or adjusting the filters."
