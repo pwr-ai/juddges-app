@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scale, Search, Loader2, ChevronDown, ChevronUp, ExternalLink, Filter } from 'lucide-react';
 import {
@@ -14,6 +14,9 @@ import { EditorialCard, Eyebrow, Headline } from '@/components/editorial';
 import { Badge } from '@/components/ui/badge';
 import { findPrecedents, type FindPrecedentsResponse, type PrecedentMatch } from '@/lib/api';
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { CohortInsights, type CohortFilter } from '@/app/precedents/_components/CohortInsights';
+import { cohortIdsWithValue } from '@/lib/precedents/cohort-grouping';
 
 function PrecedentResultCard({
   precedent,
@@ -158,11 +161,13 @@ function PrecedentResultCard({
 
 export default function PrecedentsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<FindPrecedentsResponse | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [cohortFilter, setCohortFilter] = useState<CohortFilter | null>(null);
 
   // Filter state
   const [filterDocTypes, setFilterDocTypes] = useState<string[]>([]);
@@ -195,6 +200,7 @@ export default function PrecedentsPage() {
       });
 
       setResults(response);
+      setCohortFilter(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
@@ -225,6 +231,14 @@ export default function PrecedentsPage() {
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
     );
   };
+
+  const cohort = useMemo(() => results?.cohort ?? [], [results]);
+  const visiblePrecedents = useMemo(() => {
+    if (!results) return [];
+    if (!cohortFilter) return results.precedents;
+    const ids = cohortIdsWithValue(cohort, cohortFilter.field, cohortFilter.value);
+    return results.precedents.filter((p) => ids.has(p.document_id));
+  }, [results, cohort, cohortFilter]);
 
   return (
     <PageContainer width="medium" fillViewport>
@@ -380,6 +394,22 @@ export default function PrecedentsPage() {
       {/* Results */}
       {results && !isLoading && (
         <div className="space-y-4">
+          {results.resolved_case && (
+            <p
+              className="border border-rule bg-parchment-deep px-3 py-2 font-mono text-xs text-ink-soft"
+              role="status"
+            >
+              {t('precedents.resolvedCase', { caseNumber: results.resolved_case.case_number })}
+            </p>
+          )}
+
+          <CohortInsights
+            cohort={cohort}
+            filter={cohortFilter}
+            filteredRankedCount={visiblePrecedents.length}
+            onFilterChange={setCohortFilter}
+          />
+
           {/* Results header */}
           <div className="flex items-center justify-between border-b border-rule pb-3">
             <div className="space-y-1">
@@ -398,9 +428,9 @@ export default function PrecedentsPage() {
           </div>
 
           {/* Results list */}
-          {results.precedents.length > 0 ? (
+          {visiblePrecedents.length > 0 ? (
             <div className="space-y-3">
-              {results.precedents.map((precedent, idx) => (
+              {visiblePrecedents.map((precedent, idx) => (
                 <PrecedentResultCard
                   key={precedent.document_id}
                   precedent={precedent}
