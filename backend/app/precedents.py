@@ -16,6 +16,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.judgments_pkg import generate_embedding
+from app.judgments_pkg.query_attribute_parser import parse_query_attributes
 from app.models import validate_id_format
 from app.rate_limiter import limiter
 
@@ -23,6 +24,17 @@ router = APIRouter(prefix="/precedents", tags=["precedents"])
 
 # Per-endpoint rate limit for precedent search (lighter than full analysis endpoints)
 PRECEDENTS_RATE_LIMIT = "30/hour"
+
+# Raw vector candidates exposed as the cohort (#724, spec §7.1). The ranked
+# `precedents` slice is still taken from the top `limit` of this same pool, so a
+# wider pool does not change what the LLM sees.
+#
+# Measured against production: `search_judgments_by_embedding` never sets
+# `hnsw.ef_search`, so the index default of 40 caps the result set regardless
+# of `match_count` — requesting 100 or 200 both returned 40 rows. 40 is what
+# actually binds here, not an arbitrary choice; raising it needs an
+# ef_search migration (tracked separately, out of scope for this PR).
+COHORT_MATCH_COUNT = 40
 
 
 # ===== Request/Response Models =====
@@ -126,6 +138,39 @@ class PrecedentMatch(BaseModel):
     )
 
 
+class PrecedentCohortItem(BaseModel):
+    """One raw vector candidate, before the LLM ranking pass (#724).
+
+    Field names drop the `base_` prefix so the frontend can label them with the
+    same helper the statistics view uses (#708).
+    """
+
+    document_id: str = Field(description="Judgment UUID")
+    similarity_score: float = Field(description="Cosine similarity (0.0 to 1.0)")
+    case_number: str | None = Field(default=None, description="Court case number")
+    title: str | None = Field(default=None, description="Judgment title")
+    jurisdiction: str | None = Field(default=None, description="PL or UK")
+    court_name: str | None = Field(default=None, description="Court name")
+    decision_date: str | None = Field(default=None, description="ISO decision date")
+    appeal_outcome: list[str] = Field(
+        default_factory=list, description="base_appeal_outcome values"
+    )
+    sentences_received: list[str] = Field(
+        default_factory=list, description="base_sentences_received values"
+    )
+    convict_offences: list[str] = Field(
+        default_factory=list, description="base_convict_offences values"
+    )
+
+
+class ResolvedCase(BaseModel):
+    """A docket typed into the query box, resolved to a judgment (#724)."""
+
+    case_number: str = Field(description="The case number detected in the query")
+    document_id: str = Field(description="Judgment UUID it resolved to")
+    title: str | None = Field(default=None, description="Judgment title")
+
+
 class FindPrecedentsResponse(BaseModel):
     """Response model for precedent search."""
 
@@ -136,6 +181,20 @@ class FindPrecedentsResponse(BaseModel):
     enhanced_query: str | None = Field(
         default=None,
         description="AI-enhanced version of the query used for search",
+    )
+    cohort: list[PrecedentCohortItem] = Field(
+        description=(
+            "Raw vector candidates (up to 40) with the fields the UI groups by, "
+            "collected before the AI ranking pass. Present even when the ranking "
+            "pass returns nothing."
+        ),
+    )
+    resolved_case: ResolvedCase | None = Field(
+        default=None,
+        description=(
+            "Set when the query text contained a case number that matched a "
+            "judgment; that judgment was used as the source document."
+        ),
     )
 
 
@@ -324,15 +383,25 @@ async def _analyze_precedents(
 
 
 def _empty_precedents_response(
-    query: str, enhanced_query: str | None
+    query: str,
+    enhanced_query: str | None,
+    resolved_case: "ResolvedCase | None" = None,
+    cohort: list[PrecedentCohortItem] | None = None,
 ) -> FindPrecedentsResponse:
-    """Build a consistent empty response payload."""
+    """Build a consistent empty response payload.
+
+    `cohort` defaults to `[]` for the "no similar_results at all" path, but
+    callers that already built a cohort before hitting an empty
+    `candidates_data` (spec §7.1) pass it through so it survives.
+    """
     return FindPrecedentsResponse(
         query=query,
         precedents=[],
         total_found=0,
         search_strategy="semantic_similarity",
         enhanced_query=enhanced_query,
+        cohort=cohort if cohort is not None else [],
+        resolved_case=resolved_case,
     )
 
 
@@ -357,12 +426,14 @@ async def _build_search_text(request: FindPrecedentsRequest) -> str:
 
 
 async def _search_precedent_candidates(
-    db: Any, embedding: list[float], limit: int
+    db: Any, embedding: list[float]
 ) -> list[dict[str, Any]]:
     """Run vector similarity search with service-level error handling."""
     search_kwargs: dict[str, Any] = {
         "query_embedding": embedding,
-        "match_count": min(limit * 2, 50),
+        # The cohort needs the wide pool (#724); the ranked slice still comes
+        # from `similar_results[:limit]`, so ranking is unaffected.
+        "match_count": COHORT_MATCH_COUNT,
         "match_threshold": 0.3,
     }
     try:
@@ -396,6 +467,82 @@ async def _load_candidate_documents(
         candidates_data.append(doc_data)
 
     return candidates_data
+
+
+async def _build_cohort(
+    db: Any, similar_results: list[dict[str, Any]]
+) -> list[PrecedentCohortItem]:
+    """Assemble the raw candidate cohort in one batched select (#724).
+
+    Order follows `similar_results` (already similarity-sorted by the RPC), not
+    the order PostgREST happens to return rows in.
+    """
+    ordered_ids = [
+        r.get("document_id") for r in similar_results if r.get("document_id")
+    ]
+    if not ordered_ids:
+        return []
+
+    try:
+        rows = await db.get_cohort_fields_by_ids(ordered_ids)
+    except Exception as e:
+        logger.error(f"Cohort fetch failed: {e}")
+        return []
+    rows_by_id = {row.get("id"): row for row in rows}
+    similarity_by_id = {
+        r.get("document_id"): r.get("similarity") or 0.0 for r in similar_results
+    }
+
+    cohort: list[PrecedentCohortItem] = []
+    for doc_id in ordered_ids:
+        row = rows_by_id.get(doc_id)
+        if not row:
+            continue
+        decision_date = row.get("decision_date")
+        cohort.append(
+            PrecedentCohortItem(
+                document_id=doc_id,
+                similarity_score=float(similarity_by_id.get(doc_id) or 0.0),
+                case_number=row.get("case_number"),
+                title=row.get("title"),
+                jurisdiction=row.get("jurisdiction"),
+                court_name=row.get("court_name"),
+                decision_date=str(decision_date) if decision_date else None,
+                appeal_outcome=list(row.get("base_appeal_outcome") or []),
+                sentences_received=list(row.get("base_sentences_received") or []),
+                convict_offences=list(row.get("base_convict_offences") or []),
+            )
+        )
+    return cohort
+
+
+async def _resolve_case_query(db: Any, query: str) -> ResolvedCase | None:
+    """Detect a PL/UK docket in the query and resolve it to a judgment (#724).
+
+    Reuses the search parser's patterns rather than a second copy of them. An
+    unknown docket resolves to None: the text then goes through the normal
+    semantic path, which is the right fallback for a typo.
+    """
+    case_number = parse_query_attributes(query).case_number
+    if not case_number:
+        return None
+
+    try:
+        row = await db.get_document_by_case_number(case_number)
+    except Exception as e:
+        logger.error(f"Case-number lookup failed for {case_number}: {e}")
+        return None
+    if not row or not row.get("id"):
+        logger.info(
+            f"Case number {case_number} not found; falling back to semantic search"
+        )
+        return None
+
+    return ResolvedCase(
+        case_number=case_number,
+        document_id=str(row["id"]),
+        title=row.get("title"),
+    )
 
 
 async def _build_analysis_map(
@@ -480,36 +627,57 @@ async def find_precedents(
     )
 
     db = get_vector_db()
-    search_text = await _build_search_text(precedents_request)
+
+    resolved_case: ResolvedCase | None = None
+    effective_request = precedents_request
+    if not precedents_request.document_id:
+        resolved_case = await _resolve_case_query(db, precedents_request.query)
+        if resolved_case:
+            logger.info(
+                f"Query resolved to case {resolved_case.case_number} "
+                f"({resolved_case.document_id})"
+            )
+            effective_request = precedents_request.model_copy(
+                update={"document_id": resolved_case.document_id}
+            )
+
+    search_text = await _build_search_text(effective_request)
     enhanced_text, _ = await _enhance_query(search_text)
     enhanced_query = enhanced_text if enhanced_text != search_text else None
     if enhanced_query:
         logger.info(f"Enhanced query: {enhanced_text[:200]}...")
 
     embedding = await generate_embedding(enhanced_text)
-    similar_results = await _search_precedent_candidates(
-        db=db, embedding=embedding, limit=precedents_request.limit
-    )
+    similar_results = await _search_precedent_candidates(db=db, embedding=embedding)
     if not similar_results:
-        return _empty_precedents_response(precedents_request.query, enhanced_query)
+        return _empty_precedents_response(
+            precedents_request.query, enhanced_query, resolved_case=resolved_case
+        )
 
-    if precedents_request.document_id:
+    if effective_request.document_id:
         similar_results = [
             result
             for result in similar_results
-            if result.get("document_id") != precedents_request.document_id
+            if result.get("document_id") != effective_request.document_id
         ]
-    if precedents_request.filters:
-        similar_results = _apply_filters(similar_results, precedents_request.filters)
+    if effective_request.filters:
+        similar_results = _apply_filters(similar_results, effective_request.filters)
+
+    cohort = await _build_cohort(db, similar_results)
 
     candidates_data = await _load_candidate_documents(
-        similar_results, precedents_request.limit
+        similar_results, effective_request.limit
     )
     if not candidates_data:
-        return _empty_precedents_response(precedents_request.query, enhanced_query)
+        return _empty_precedents_response(
+            precedents_request.query,
+            enhanced_query,
+            resolved_case=resolved_case,
+            cohort=cohort,
+        )
 
     analysis_map, analysis_enhanced_query = await _build_analysis_map(
-        precedents_request, candidates_data
+        effective_request, candidates_data
     )
     if analysis_enhanced_query and not enhanced_query:
         enhanced_query = analysis_enhanced_query
@@ -518,11 +686,11 @@ async def find_precedents(
         _build_precedent_match(doc, analysis_map.get(doc.get("document_id", "")))
         for doc in candidates_data
     ]
-    precedents = _rank_precedents(precedents)[: precedents_request.limit]
+    precedents = _rank_precedents(precedents)[: effective_request.limit]
 
     search_strategy = (
         "semantic_similarity + ai_analysis"
-        if precedents_request.include_analysis
+        if effective_request.include_analysis
         else "semantic_similarity"
     )
 
@@ -532,6 +700,8 @@ async def find_precedents(
         total_found=len(precedents),
         search_strategy=search_strategy,
         enhanced_query=enhanced_query,
+        cohort=cohort,
+        resolved_case=resolved_case,
     )
 
 

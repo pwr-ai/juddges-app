@@ -75,6 +75,14 @@ _JUDGMENT_LIST_COLS = (
     "created_at, updated_at"
 )
 
+# Precedents cohort (#724): the grouping fields the "In similar cases…" block
+# needs, and nothing else. Deliberately excludes `full_text` (50-100 KB/row) and
+# the rest of the `base_*` block — this projection is fetched 100 rows at a time.
+_JUDGMENT_COHORT_COLS = (
+    "id, case_number, title, jurisdiction, court_name, decision_date, "
+    "base_appeal_outcome, base_sentences_received, base_convict_offences"
+)
+
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -219,6 +227,60 @@ class SupabaseVectorDB(SupabaseClientMixin):
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch judgments: {e}")
             return []
+
+    async def get_cohort_fields_by_ids(
+        self,
+        document_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        """Fetch the precedents-cohort projection for a batch of judgment UUIDs.
+
+        One round trip for the whole cohort (#724), unlike the per-candidate
+        `get_document_by_id` the precedents endpoint uses for its ranked slice.
+        Non-UUID values are dropped: the vector RPC returns `judgments.id`.
+
+        Returns rows deduplicated by `judgments.id`, in PostgREST's order.
+        """
+        if not document_ids:
+            return []
+
+        uuid_ids = [i for i in document_ids if _UUID_RE.match(i)]
+        if not uuid_ids:
+            return []
+
+        try:
+            r = self.client.table("judgments").select(_JUDGMENT_COHORT_COLS).in_("id", uuid_ids).execute()
+            rows_by_id: dict[str, dict[str, Any]] = {row["id"]: row for row in (r.data or [])}
+            return list(rows_by_id.values())
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Failed to fetch cohort fields: {e}")
+            return []
+
+    async def get_document_by_case_number(self, case_number: str) -> dict[str, Any] | None:
+        """Exact-match lookup on `judgments.case_number` (#724).
+
+        Used to turn a docket typed into the precedents query box into a source
+        document. Exact match only — `case_number` is indexed both plainly and
+        with trigrams, but a fuzzy match would silently search the wrong case.
+
+        `case_number` has no unique constraint and Polish appellate dockets
+        repeat across the eleven courts of appeal, so multiple rows can match.
+        Orders by `decision_date` descending before taking the top row so the
+        result is deterministic rather than whatever order PostgREST happens
+        to return.
+        """
+        try:
+            r = (
+                self.client.table("judgments")
+                .select(_JUDGMENT_LIST_COLS)
+                .eq("case_number", case_number)
+                .order("decision_date", desc=True)
+                .limit(1)
+                .execute()
+            )
+            return r.data[0] if r.data else None
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Failed to look up case_number {case_number}: {e}")
+            return None
 
     async def get_embedding_stats(self) -> dict[str, Any]:
         """Statistics about embedding coverage on `judgments`.

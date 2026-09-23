@@ -102,6 +102,27 @@ def test_extracts_uk_neutral_citation() -> None:
     assert parsed.case_number == "[2023] EWCA Civ 1234"
 
 
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("wyrok II AKa 47/23", "II AKa 47/23"),
+        ("wyrok I ACa 123/21", "I ACa 123/21"),
+        ("wyrok VI ACa 100/2023", "VI ACa 100/2023"),
+    ],
+)
+def test_extracts_mixed_case_appellate_docket(query: str, expected: str) -> None:
+    """PL appellate signatures (the dominant corpus format) use mixed-case
+    division codes, e.g. ``AKa``/``ACa`` — not all-uppercase like ``CSK``."""
+    parsed = parse_query_attributes(query)
+    assert parsed.case_number == expected
+
+
+def test_extracts_polish_case_number_still_matches_all_uppercase() -> None:
+    # Existing-behaviour regression: the Supreme Court signature must still parse.
+    parsed = parse_query_attributes("wyrok SN III CSK 245/22")
+    assert parsed.case_number == "III CSK 245/22"
+
+
 # ── judge extraction ──────────────────────────────────────────────────────
 
 
