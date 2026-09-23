@@ -8580,9 +8580,9 @@ export interface components {
         FindPrecedentsResponse: {
             /**
              * Cohort
-             * @description Raw vector candidates (up to 100) with the fields the UI groups by, collected before the AI ranking pass. Present even when the ranking pass returns nothing.
+             * @description Raw vector candidates (up to 40) with the fields the UI groups by, collected before the AI ranking pass. Present even when the ranking pass returns nothing.
              */
-            cohort?: components["schemas"]["PrecedentCohortItem"][];
+            cohort: components["schemas"]["PrecedentCohortItem"][];
             /**
              * Enhanced Query
              * @description AI-enhanced version of the query used for search
