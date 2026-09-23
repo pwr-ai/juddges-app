@@ -189,7 +189,6 @@ const CLEAN_FILES = [
   'lib/styles/components/data-table.tsx',
   'lib/styles/components/ai-disclaimer-badge.tsx',
   'lib/styles/components/editorial-tabs.tsx',
-  'lib/styles/components/legal-reference-badge.tsx',
   'lib/styles/components/pagination.tsx',
   'lib/styles/components/checkbox.tsx',
   'lib/styles/components/filter-toggle-group.tsx',
