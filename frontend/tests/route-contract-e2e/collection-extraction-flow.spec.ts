@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 import {
   ADAPTER_BASE_URL,
@@ -102,6 +102,70 @@ async function flowCollection(
   return (await response.json()) as FlowCollectionState;
 }
 
+/**
+ * Search, select the same five results, and save them to the flow
+ * collection. Shared by both tests below: the toast that results from this
+ * carries both "View Collection" and "Start Extraction", and each test
+ * exercises one of the two actions.
+ */
+async function searchSelectAndSave(
+  page: Page,
+  request: APIRequestContext,
+): Promise<void> {
+  await test.step('search returns the stubbed judgments', async () => {
+    await page.goto('/search');
+    await page.getByRole('textbox', { name: 'Search documents' }).fill(SEARCH_QUERY);
+    await page.getByRole('textbox', { name: 'Search documents' }).press('Enter');
+    await expect(
+      page.getByRole('checkbox', { name: `Select ${flowTitle(6)}` }),
+    ).toBeVisible();
+    // The stub answers the same six hits for any query, so the results
+    // rendering does not prove the typed text left the search box. The
+    // stub's request log does.
+    const searches = (await adapterRequests(request)).filter(
+      ({ path }) => path === '/api/search/documents',
+    );
+    expect(searches.map(({ query }) => query.q)).toEqual([SEARCH_QUERY]);
+  });
+
+  await test.step('select five of the six results', async () => {
+    for (const n of SELECTED) {
+      await page
+        .getByRole('checkbox', { name: `Select ${flowTitle(n)}` })
+        .click();
+    }
+    // The button label carries the count, so this asserts the store counted
+    // exactly the five clicks — not four, not all six.
+    await expect(
+      page.getByRole('button', { name: 'Save Selected (5)' }),
+    ).toBeVisible();
+  });
+
+  await test.step('save the selection to the flow collection', async () => {
+    await page.getByRole('button', { name: 'Save Selected (5)' }).click();
+    const popover = page.getByRole('dialog', {
+      name: 'Save documents to collection',
+    });
+    await popover.getByRole('button', { name: FLOW_COLLECTION_NAME }).click();
+    await popover
+      .getByRole('button', { name: 'Save 5 documents to collection' })
+      .click();
+
+    // The success toast is the user's confirmation. Its count is computed
+    // from settled POSTs, so it doubles as the assertion that all five
+    // `/api/collections/{id}/documents` calls came back 2xx.
+    await expect(
+      page.getByText('5 documents saved to collection'),
+    ).toBeVisible();
+
+    // Asserted from the stub's own record: the BFF forwarded exactly the
+    // five selected ids, and nothing for the unselected sixth.
+    expect((await flowCollection(request)).document_ids.sort()).toEqual(
+      SELECTED.map(flowDocumentId).sort(),
+    );
+  });
+}
+
 test.describe.serial('collection → extraction flow contract', () => {
   test.beforeEach(async ({ context, request }) => {
     await context.clearCookies();
@@ -119,64 +183,18 @@ test.describe.serial('collection → extraction flow contract', () => {
     await setSyntheticSession(context);
     const page = await context.newPage();
 
-    await test.step('search returns the stubbed judgments', async () => {
-      await page.goto('/search');
-      await page.getByRole('textbox', { name: 'Search documents' }).fill(SEARCH_QUERY);
-      await page.getByRole('textbox', { name: 'Search documents' }).press('Enter');
-      await expect(
-        page.getByRole('checkbox', { name: `Select ${flowTitle(6)}` }),
-      ).toBeVisible();
-      // The stub answers the same six hits for any query, so the results
-      // rendering does not prove the typed text left the search box. The
-      // stub's request log does.
-      const searches = (await adapterRequests(request)).filter(
-        ({ path }) => path === '/api/search/documents',
-      );
-      expect(searches.map(({ query }) => query.q)).toEqual([SEARCH_QUERY]);
-    });
-
-    await test.step('select five of the six results', async () => {
-      for (const n of SELECTED) {
-        await page
-          .getByRole('checkbox', { name: `Select ${flowTitle(n)}` })
-          .click();
-      }
-      // The button label carries the count, so this asserts the store counted
-      // exactly the five clicks — not four, not all six.
-      await expect(
-        page.getByRole('button', { name: 'Save Selected (5)' }),
-      ).toBeVisible();
-    });
-
-    await test.step('save the selection to the flow collection', async () => {
-      await page.getByRole('button', { name: 'Save Selected (5)' }).click();
-      const popover = page.getByRole('dialog', {
-        name: 'Save documents to collection',
-      });
-      await popover.getByRole('button', { name: FLOW_COLLECTION_NAME }).click();
-      await popover
-        .getByRole('button', { name: 'Save 5 documents to collection' })
-        .click();
-
-      // The success toast is the user's confirmation. Its count is computed
-      // from settled POSTs, so it doubles as the assertion that all five
-      // `/api/collections/{id}/documents` calls came back 2xx.
-      await expect(
-        page.getByText('5 documents saved to collection'),
-      ).toBeVisible();
-
-      // Asserted from the stub's own record: the BFF forwarded exactly the
-      // five selected ids, and nothing for the unselected sixth.
-      expect((await flowCollection(request)).document_ids.sort()).toEqual(
-        SELECTED.map(flowDocumentId).sort(),
-      );
-    });
+    await searchSelectAndSave(page, request);
 
     await test.step('the toast action opens the collection with the five documents', async () => {
-      // "Start Extraction" is also wired on this toast in the popover, but
-      // `showSuccessToast` renders only the primary action, so a user can only
-      // get here through "View Collection" (#709). The spec takes the
-      // path the product actually offers.
+      // The toast carries both actions (#709); "Start Extraction" is covered
+      // by the sibling test below, so this one takes the "View Collection"
+      // path.
+      await expect(
+        page.getByRole('button', { name: 'View Collection' }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Start Extraction', exact: true }),
+      ).toBeVisible();
       await page.getByRole('button', { name: 'View Collection' }).click();
       await expect(page).toHaveURL(
         `${APP_BASE_URL}/collections/${FLOW_COLLECTION_ID}`,
@@ -246,6 +264,37 @@ test.describe.serial('collection → extraction flow contract', () => {
         { status: 'IN_PROGRESS', completed_documents: 3, total_documents: 5 },
         { status: 'COMPLETED', completed_documents: 5, total_documents: 5 },
       ]);
+    });
+
+    await page.close();
+  });
+
+  test('the toast "Start Extraction" action preselects the collection on /extract', async ({
+    context,
+    request,
+  }) => {
+    await setSyntheticSession(context);
+    const page = await context.newPage();
+
+    await searchSelectAndSave(page, request);
+
+    await test.step('Start Extraction navigates to /extract with the collection preselected', async () => {
+      await expect(
+        page.getByRole('button', { name: 'Start Extraction', exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole('button', { name: 'Start Extraction', exact: true })
+        .click();
+      await expect(page).toHaveURL(
+        `${APP_BASE_URL}/extract?collection=${FLOW_COLLECTION_ID}`,
+      );
+      await expect(page.getByText('Pre-selected from URL')).toBeVisible();
+      // The collection picker shows the preselected collection's name, not
+      // the placeholder — the `?collection=` branch in useExtract.ts actually
+      // ran, not just navigation to the right URL.
+      await expect(
+        page.getByRole('button', { name: FLOW_COLLECTION_NAME }),
+      ).toBeVisible();
     });
 
     await page.close();
