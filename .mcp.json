@@ -3,6 +3,15 @@
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@0.0.82", "--headless", "--isolated"]
+    },
+    "playwright-test": {
+      "command": "npx",
+      "args": [
+        "playwright",
+        "run-test-mcp-server",
+        "--config",
+        "frontend/playwright.route-contract.config.ts"
+      ]
     }
   }
 }
