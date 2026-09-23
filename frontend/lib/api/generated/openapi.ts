@@ -8579,6 +8579,11 @@ export interface components {
          */
         FindPrecedentsResponse: {
             /**
+             * Cohort
+             * @description Raw vector candidates (up to 100) with the fields the UI groups by, collected before the AI ranking pass. Present even when the ranking pass returns nothing.
+             */
+            cohort?: components["schemas"]["PrecedentCohortItem"][];
+            /**
              * Enhanced Query
              * @description AI-enhanced version of the query used for search
              */
@@ -8593,6 +8598,8 @@ export interface components {
              * @description The original query
              */
             query: string;
+            /** @description Set when the query text contained a case number that matched a judgment; that judgment was used as the source document. */
+            resolved_case?: components["schemas"]["ResolvedCase"] | null;
             /**
              * Search Strategy
              * @description Description of the search strategy used
@@ -9620,6 +9627,65 @@ export interface components {
             search_count: number;
         };
         /**
+         * PrecedentCohortItem
+         * @description One raw vector candidate, before the LLM ranking pass (#724).
+         *
+         *     Field names drop the `base_` prefix so the frontend can label them with the
+         *     same helper the statistics view uses (#708).
+         */
+        PrecedentCohortItem: {
+            /**
+             * Appeal Outcome
+             * @description base_appeal_outcome values
+             */
+            appeal_outcome?: string[];
+            /**
+             * Case Number
+             * @description Court case number
+             */
+            case_number?: string | null;
+            /**
+             * Convict Offences
+             * @description base_convict_offences values
+             */
+            convict_offences?: string[];
+            /**
+             * Court Name
+             * @description Court name
+             */
+            court_name?: string | null;
+            /**
+             * Decision Date
+             * @description ISO decision date
+             */
+            decision_date?: string | null;
+            /**
+             * Document Id
+             * @description Judgment UUID
+             */
+            document_id: string;
+            /**
+             * Jurisdiction
+             * @description PL or UK
+             */
+            jurisdiction?: string | null;
+            /**
+             * Sentences Received
+             * @description base_sentences_received values
+             */
+            sentences_received?: string[];
+            /**
+             * Similarity Score
+             * @description Cosine similarity (0.0 to 1.0)
+             */
+            similarity_score: number;
+            /**
+             * Title
+             * @description Judgment title
+             */
+            title?: string | null;
+        };
+        /**
          * PrecedentFilters
          * @description Filters for narrowing down precedent search.
          */
@@ -10248,6 +10314,27 @@ export interface components {
              * @description ID of the document to remove
              */
             document_id: string;
+        };
+        /**
+         * ResolvedCase
+         * @description A docket typed into the query box, resolved to a judgment (#724).
+         */
+        ResolvedCase: {
+            /**
+             * Case Number
+             * @description The case number detected in the query
+             */
+            case_number: string;
+            /**
+             * Document Id
+             * @description Judgment UUID it resolved to
+             */
+            document_id: string;
+            /**
+             * Title
+             * @description Judgment title
+             */
+            title?: string | null;
         };
         /** Response */
         Response: {

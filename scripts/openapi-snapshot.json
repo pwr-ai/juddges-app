@@ -6693,6 +6693,14 @@
       "FindPrecedentsResponse": {
         "description": "Response model for precedent search.",
         "properties": {
+          "cohort": {
+            "description": "Raw vector candidates (up to 100) with the fields the UI groups by, collected before the AI ranking pass. Present even when the ranking pass returns nothing.",
+            "items": {
+              "$ref": "#/components/schemas/PrecedentCohortItem"
+            },
+            "title": "Cohort",
+            "type": "array"
+          },
           "enhanced_query": {
             "anyOf": [
               {
@@ -6717,6 +6725,17 @@
             "description": "The original query",
             "title": "Query",
             "type": "string"
+          },
+          "resolved_case": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolvedCase"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the query text contained a case number that matched a judgment; that judgment was used as the source document."
           },
           "search_strategy": {
             "description": "Description of the search strategy used",
@@ -8501,6 +8520,111 @@
         "title": "PopularQueryItem",
         "type": "object"
       },
+      "PrecedentCohortItem": {
+        "description": "One raw vector candidate, before the LLM ranking pass (#724).\n\nField names drop the `base_` prefix so the frontend can label them with the\nsame helper the statistics view uses (#708).",
+        "properties": {
+          "appeal_outcome": {
+            "description": "base_appeal_outcome values",
+            "items": {
+              "type": "string"
+            },
+            "title": "Appeal Outcome",
+            "type": "array"
+          },
+          "case_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Court case number",
+            "title": "Case Number"
+          },
+          "convict_offences": {
+            "description": "base_convict_offences values",
+            "items": {
+              "type": "string"
+            },
+            "title": "Convict Offences",
+            "type": "array"
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Court name",
+            "title": "Court Name"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO decision date",
+            "title": "Decision Date"
+          },
+          "document_id": {
+            "description": "Judgment UUID",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "PL or UK",
+            "title": "Jurisdiction"
+          },
+          "sentences_received": {
+            "description": "base_sentences_received values",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sentences Received",
+            "type": "array"
+          },
+          "similarity_score": {
+            "description": "Cosine similarity (0.0 to 1.0)",
+            "title": "Similarity Score",
+            "type": "number"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Judgment title",
+            "title": "Title"
+          }
+        },
+        "required": [
+          "document_id",
+          "similarity_score"
+        ],
+        "title": "PrecedentCohortItem",
+        "type": "object"
+      },
       "PrecedentFilters": {
         "description": "Filters for narrowing down precedent search.",
         "properties": {
@@ -10157,6 +10281,39 @@
           "document_id"
         ],
         "title": "RemoveDocumentRequest",
+        "type": "object"
+      },
+      "ResolvedCase": {
+        "description": "A docket typed into the query box, resolved to a judgment (#724).",
+        "properties": {
+          "case_number": {
+            "description": "The case number detected in the query",
+            "title": "Case Number",
+            "type": "string"
+          },
+          "document_id": {
+            "description": "Judgment UUID it resolved to",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Judgment title",
+            "title": "Title"
+          }
+        },
+        "required": [
+          "case_number",
+          "document_id"
+        ],
+        "title": "ResolvedCase",
         "type": "object"
       },
       "Response": {
