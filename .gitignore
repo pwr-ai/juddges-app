@@ -154,7 +154,13 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-.claude/
+# Agent config: everything under .claude/ is local except the shared Stop-hook
+# wiring and project skills. Git cannot re-include a path inside an excluded
+# directory, hence `.claude/*` rather than `.claude/`.
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+.claude/settings.local.json
 .context/
 .codex/
 .playwright-mcp/

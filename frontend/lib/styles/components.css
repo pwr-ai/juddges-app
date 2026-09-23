@@ -8,19 +8,6 @@
  * gives you no other hook.
  */
 
-/* Legal Reference Badge - Force text wrapping */
-[data-slot="legal-reference-badge"] {
-  display: inline-block !important;
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  width: auto !important;
-  flex-shrink: 1 !important;
-  flex-grow: 0 !important;
-}
-
 /*
  * Sonner toast. Sonner styles its own toasts, so these overrides are the only
  * way to reach them; `!important` is required to win against its inline layer.
