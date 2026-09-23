@@ -16,6 +16,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.judgments_pkg import generate_embedding
+from app.judgments_pkg.query_attribute_parser import parse_query_attributes
 from app.models import validate_id_format
 from app.rate_limiter import limiter
 
@@ -156,6 +157,14 @@ class PrecedentCohortItem(BaseModel):
     )
 
 
+class ResolvedCase(BaseModel):
+    """A docket typed into the query box, resolved to a judgment (#724)."""
+
+    case_number: str = Field(description="The case number detected in the query")
+    document_id: str = Field(description="Judgment UUID it resolved to")
+    title: str | None = Field(default=None, description="Judgment title")
+
+
 class FindPrecedentsResponse(BaseModel):
     """Response model for precedent search."""
 
@@ -173,6 +182,13 @@ class FindPrecedentsResponse(BaseModel):
             "Raw vector candidates (up to 100) with the fields the UI groups by, "
             "collected before the AI ranking pass. Present even when the ranking "
             "pass returns nothing."
+        ),
+    )
+    resolved_case: ResolvedCase | None = Field(
+        default=None,
+        description=(
+            "Set when the query text contained a case number that matched a "
+            "judgment; that judgment was used as the source document."
         ),
     )
 
@@ -362,7 +378,9 @@ async def _analyze_precedents(
 
 
 def _empty_precedents_response(
-    query: str, enhanced_query: str | None
+    query: str,
+    enhanced_query: str | None,
+    resolved_case: "ResolvedCase | None" = None,
 ) -> FindPrecedentsResponse:
     """Build a consistent empty response payload."""
     return FindPrecedentsResponse(
@@ -372,6 +390,7 @@ def _empty_precedents_response(
         search_strategy="semantic_similarity",
         enhanced_query=enhanced_query,
         cohort=[],
+        resolved_case=resolved_case,
     )
 
 
@@ -482,6 +501,31 @@ async def _build_cohort(
     return cohort
 
 
+async def _resolve_case_query(db: Any, query: str) -> ResolvedCase | None:
+    """Detect a PL/UK docket in the query and resolve it to a judgment (#724).
+
+    Reuses the search parser's patterns rather than a second copy of them. An
+    unknown docket resolves to None: the text then goes through the normal
+    semantic path, which is the right fallback for a typo.
+    """
+    case_number = parse_query_attributes(query).case_number
+    if not case_number:
+        return None
+
+    row = await db.get_document_by_case_number(case_number)
+    if not row or not row.get("id"):
+        logger.info(
+            f"Case number {case_number} not found; falling back to semantic search"
+        )
+        return None
+
+    return ResolvedCase(
+        case_number=case_number,
+        document_id=str(row["id"]),
+        title=row.get("title"),
+    )
+
+
 async def _build_analysis_map(
     request: FindPrecedentsRequest, candidates_data: list[dict[str, Any]]
 ) -> tuple[dict[str, dict[str, Any]], str | None]:
@@ -564,7 +608,21 @@ async def find_precedents(
     )
 
     db = get_vector_db()
-    search_text = await _build_search_text(precedents_request)
+
+    resolved_case: ResolvedCase | None = None
+    effective_request = precedents_request
+    if not precedents_request.document_id:
+        resolved_case = await _resolve_case_query(db, precedents_request.query)
+        if resolved_case:
+            logger.info(
+                f"Query resolved to case {resolved_case.case_number} "
+                f"({resolved_case.document_id})"
+            )
+            effective_request = precedents_request.model_copy(
+                update={"document_id": resolved_case.document_id}
+            )
+
+    search_text = await _build_search_text(effective_request)
     enhanced_text, _ = await _enhance_query(search_text)
     enhanced_query = enhanced_text if enhanced_text != search_text else None
     if enhanced_query:
@@ -572,30 +630,34 @@ async def find_precedents(
 
     embedding = await generate_embedding(enhanced_text)
     similar_results = await _search_precedent_candidates(
-        db=db, embedding=embedding, limit=precedents_request.limit
+        db=db, embedding=embedding, limit=effective_request.limit
     )
     if not similar_results:
-        return _empty_precedents_response(precedents_request.query, enhanced_query)
+        return _empty_precedents_response(
+            precedents_request.query, enhanced_query, resolved_case=resolved_case
+        )
 
-    if precedents_request.document_id:
+    if effective_request.document_id:
         similar_results = [
             result
             for result in similar_results
-            if result.get("document_id") != precedents_request.document_id
+            if result.get("document_id") != effective_request.document_id
         ]
-    if precedents_request.filters:
-        similar_results = _apply_filters(similar_results, precedents_request.filters)
+    if effective_request.filters:
+        similar_results = _apply_filters(similar_results, effective_request.filters)
 
     cohort = await _build_cohort(db, similar_results)
 
     candidates_data = await _load_candidate_documents(
-        similar_results, precedents_request.limit
+        similar_results, effective_request.limit
     )
     if not candidates_data:
-        return _empty_precedents_response(precedents_request.query, enhanced_query)
+        return _empty_precedents_response(
+            precedents_request.query, enhanced_query, resolved_case=resolved_case
+        )
 
     analysis_map, analysis_enhanced_query = await _build_analysis_map(
-        precedents_request, candidates_data
+        effective_request, candidates_data
     )
     if analysis_enhanced_query and not enhanced_query:
         enhanced_query = analysis_enhanced_query
@@ -604,11 +666,11 @@ async def find_precedents(
         _build_precedent_match(doc, analysis_map.get(doc.get("document_id", "")))
         for doc in candidates_data
     ]
-    precedents = _rank_precedents(precedents)[: precedents_request.limit]
+    precedents = _rank_precedents(precedents)[: effective_request.limit]
 
     search_strategy = (
         "semantic_similarity + ai_analysis"
-        if precedents_request.include_analysis
+        if effective_request.include_analysis
         else "semantic_similarity"
     )
 
@@ -619,6 +681,7 @@ async def find_precedents(
         search_strategy=search_strategy,
         enhanced_query=enhanced_query,
         cohort=cohort,
+        resolved_case=resolved_case,
     )
 
 

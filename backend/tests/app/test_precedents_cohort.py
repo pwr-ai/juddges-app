@@ -115,3 +115,61 @@ def test_cohort_item_defaults_missing_arrays_to_empty() -> None:
     assert item.sentences_received == []
     assert item.convict_offences == []
     assert item.case_number is None
+
+
+from app.precedents import ResolvedCase, _resolve_case_query  # noqa: E402
+
+
+def _db_with_case(row: dict[str, Any] | None) -> MagicMock:
+    db = MagicMock()
+    db.get_document_by_case_number = AsyncMock(return_value=row)
+    return db
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("Compare with III CSK 245/22 please", "III CSK 245/22"),
+        ("what happened in [2023] EWCA Civ 1234 exactly", "[2023] EWCA Civ 1234"),
+    ],
+)
+async def test_resolves_pl_and_uk_dockets(query: str, expected: str) -> None:
+    db = _db_with_case({"id": UUID_A, "case_number": expected, "title": "A v B"})
+
+    resolved = await _resolve_case_query(db, query)
+
+    assert resolved == ResolvedCase(
+        case_number=expected, document_id=UUID_A, title="A v B"
+    )
+    db.get_document_by_case_number.assert_awaited_once_with(expected)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_no_docket_in_query_skips_the_lookup() -> None:
+    db = _db_with_case({"id": UUID_A, "case_number": "X", "title": None})
+
+    assert await _resolve_case_query(db, "a burglary appeal by a juvenile") is None
+    db.get_document_by_case_number.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_unknown_docket_resolves_to_none() -> None:
+    db = _db_with_case(None)
+
+    assert await _resolve_case_query(db, "see III CSK 245/22") is None
+
+
+@pytest.mark.unit
+def test_empty_response_can_carry_the_resolved_case() -> None:
+    resolved = ResolvedCase(
+        case_number="III CSK 245/22", document_id=UUID_A, title="A v B"
+    )
+
+    response = _empty_precedents_response("q", None, resolved_case=resolved)
+
+    assert response.resolved_case == resolved
+    assert response.cohort == []
