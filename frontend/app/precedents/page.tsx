@@ -430,11 +430,14 @@ export default function PrecedentsPage() {
           {/* Results list */}
           {visiblePrecedents.length > 0 ? (
             <div className="space-y-3">
-              {visiblePrecedents.map((precedent, idx) => (
+              {visiblePrecedents.map((precedent) => (
                 <PrecedentResultCard
                   key={precedent.document_id}
                   precedent={precedent}
-                  rank={idx + 1}
+                  rank={
+                    results.precedents.findIndex((p) => p.document_id === precedent.document_id) +
+                    1
+                  }
                   onViewDocument={handleViewDocument}
                 />
               ))}

@@ -107,6 +107,28 @@ describe("precedents page — cohort block", () => {
     await waitFor(() => expect(screen.getByText("Judgment a1")).toBeInTheDocument());
   });
 
+  it("keeps the unfiltered rank on a surviving card, not its filtered position", async () => {
+    await search({
+      query: "q",
+      precedents: [precedent("a1"), precedent("d1")],
+      total_found: 2,
+      search_strategy: "semantic_similarity",
+      enhanced_query: null,
+      cohort: makeCohort(),
+      resolved_case: null,
+    });
+
+    expect(await screen.findByText("Judgment a1")).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole("button", { name: "dismissed: 3" }));
+
+    await waitFor(() => expect(screen.queryByText("Judgment a1")).not.toBeInTheDocument());
+    expect(screen.getByText("Judgment d1")).toBeInTheDocument();
+    // d1 was ranked #2 in the unfiltered list; the filter must not renumber it to #1.
+    expect(screen.getByText("#2")).toBeInTheDocument();
+    expect(screen.queryByText("#1")).not.toBeInTheDocument();
+  });
+
   it("clears the active cohort filter on a new search", async () => {
     const response = {
       query: "q",
