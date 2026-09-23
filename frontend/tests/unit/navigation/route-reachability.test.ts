@@ -66,6 +66,7 @@ const NAV_LINKED_ROUTES = [
   '/reasoning-lines',
   '/schemas',
   '/dataset-comparison',
+  '/compare',
 ] as const;
 
 const HREF_PATTERN = /(?:href|to)\s*[:=]\s*\{?\s*["'`](\/[^"'`#?]*)/g;

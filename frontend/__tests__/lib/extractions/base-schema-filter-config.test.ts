@@ -29,7 +29,12 @@ const CORE_KEYS = new Set<string>(["jurisdiction", "decision_date"]);
 
 // Sentinel object pinning every BaseSchemaFilters key. Matches the Pydantic
 // model in backend/app/extraction_domain/nl_filter_generator.py.
-const REQUIRED_KEYS: Record<keyof BaseSchemaFilters, true> = {
+//
+// `collection_ids` (#684 Task 18) is excluded: it is a server-built
+// membership key for a saved compare pair (`PairCompareResponse.filters`,
+// `{"collection_ids": [pl, uk]}`), never something the NL filter generator
+// or a filter-drawer UI produces.
+const REQUIRED_KEYS: Record<Exclude<keyof BaseSchemaFilters, "collection_ids">, true> = {
   appellant: true,
   plea_point: true,
   remand_decision: true,

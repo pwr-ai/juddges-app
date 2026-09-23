@@ -12,15 +12,21 @@ from httpx import ASGITransport, AsyncClient
 from juddges_search.db.supabase_db import get_collections_db
 
 import app.collections_from_filter as cff
+from app.collection_pairs import get_collection_pairs_db
 from app.core.auth_jwt import AuthenticatedUser
 from app.core.auth_jwt import get_current_user as jwt_get_current_user
-from app.extraction_domain.filter_ids import FilterIdsResult
+from app.extraction_domain.filter_ids import (
+    SAVE_FROM_FILTER_MAX_DOCUMENTS,
+    FilterIdsResult,
+)
 from app.server import app
 
 pytestmark = [pytest.mark.anyio, pytest.mark.unit, pytest.mark.collections]
 
 _HEADERS = {"X-API-Key": "test-api-key-12345"}
 _COLLECTION_ID = "00000000-0000-4000-a000-000000000001"
+_SECOND_COLLECTION_ID = "00000000-0000-4000-a000-000000000002"
+_PAIR_ID = "00000000-0000-4000-a000-00000000aa01"
 _OWNED_COLLECTION_ID = "00000000-0000-4000-a000-00000000c001"
 _FOREIGN_COLLECTION_ID = "00000000-0000-4000-a000-00000000c0ff"
 
@@ -31,6 +37,7 @@ class _StubDb:
         self.created: list[dict] = []
         self.deleted: list[str] = []
         self.fail_on_chunk: int | None = None
+        self.fail_on_create: int | None = None
         self.delete_should_fail: bool = False
         self.owned_collection_ids: list[str] = []
         self.get_user_collections_calls: list[str] = []
@@ -40,8 +47,12 @@ class _StubDb:
         return [{"id": cid} for cid in self.owned_collection_ids]
 
     async def create_collection(self, user_id, name, description=None):
+        index = len(self.created)
+        if self.fail_on_create is not None and index == self.fail_on_create:
+            raise HTTPException(status_code=500, detail="create boom")
         row = {
-            "id": _COLLECTION_ID,
+            # first collection gets _COLLECTION_ID, the second _SECOND_COLLECTION_ID
+            "id": f"00000000-0000-4000-a000-{index + 1:012x}",
             "user_id": user_id,
             "name": name,
             "description": description,
@@ -65,6 +76,31 @@ class _StubDb:
         return True
 
 
+class _StubPairsDb:
+    def __init__(self):
+        self.rows: list[dict] = []
+        self.should_fail: bool = False
+
+    async def create_pair(
+        self, user_id, name, filters, text_query, pl_collection_id, uk_collection_id
+    ):
+        if self.should_fail:
+            raise HTTPException(status_code=500, detail="pair boom")
+        row = {
+            "id": _PAIR_ID,
+            "user_id": user_id,
+            "name": name,
+            "filters": filters,
+            "text_query": text_query,
+            "pl_collection_id": pl_collection_id,
+            "uk_collection_id": uk_collection_id,
+            "created_at": "2026-09-20T00:00:00Z",
+            "updated_at": "2026-09-20T00:00:00Z",
+        }
+        self.rows.append(row)
+        return row
+
+
 def _ids(n: int) -> list[str]:
     return [f"00000000-0000-4000-a000-{i:012x}" for i in range(n)]
 
@@ -74,13 +110,26 @@ def _result(n: int) -> FilterIdsResult:
     return FilterIdsResult(ids=ids, by_jurisdiction={"PL": ids, "UK": []})
 
 
+def _split_result(pl: int, uk: int) -> FilterIdsResult:
+    pl_ids = [f"00000000-0000-4000-a000-0000000000{i:02x}" for i in range(pl)]
+    uk_ids = [f"00000000-0000-4000-b000-{i:012x}" for i in range(uk)]
+    return FilterIdsResult(
+        ids=pl_ids + uk_ids, by_jurisdiction={"PL": pl_ids, "UK": uk_ids}
+    )
+
+
 @pytest.fixture
 def stub_db():
     return _StubDb()
 
 
 @pytest.fixture
-def override_deps(stub_db, monkeypatch):
+def stub_pairs_db():
+    return _StubPairsDb()
+
+
+@pytest.fixture
+def override_deps(stub_db, stub_pairs_db, monkeypatch):
     user = AuthenticatedUser(
         user_data={
             "id": "00000000-0000-4000-a000-000000000abc",
@@ -95,12 +144,14 @@ def override_deps(stub_db, monkeypatch):
 
     app.dependency_overrides[jwt_get_current_user] = _user
     app.dependency_overrides[get_collections_db] = lambda: stub_db
+    app.dependency_overrides[get_collection_pairs_db] = lambda: stub_pairs_db
     monkeypatch.setattr(cff, "supabase_client", object())  # "available"
     try:
         yield user
     finally:
         app.dependency_overrides.pop(jwt_get_current_user, None)
         app.dependency_overrides.pop(get_collections_db, None)
+        app.dependency_overrides.pop(get_collection_pairs_db, None)
 
 
 @pytest.fixture
@@ -314,3 +365,362 @@ async def test_create_collection_from_ids_is_reusable_without_http(stub_db):
     )
     assert collection["id"] == _COLLECTION_ID and added == 1500
     assert [len(c) for c in stub_db.bulk_calls] == [1000, 500]
+
+
+# ---------------------------------------------------------------------------
+# split_by_jurisdiction=true — one PL + one UK collection and a collection_pairs row
+# ---------------------------------------------------------------------------
+
+
+async def test_split_creates_two_collections_and_a_pair(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    seen: dict[str, object] = {}
+
+    def _resolve(_client, filters, text_query):
+        seen["filters"], seen["text_query"] = filters, text_query
+        return _split_result(pl=3, uk=2)
+
+    monkeypatch.setattr(cff, "resolve_filter_ids", _resolve)
+    resp = await client.post(
+        "/collections/from-filter",
+        json={
+            "name": "Fraud, suspended",
+            "filters": {"jurisdiction": ["PL"], "appellant": ["offender"]},
+            "text_query": "fraud",
+            "split_by_jurisdiction": True,
+        },
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    # the caller's jurisdiction filter never reaches the RPC (it would blank one side)
+    assert seen == {"filters": {"appellant": ["offender"]}, "text_query": "fraud"}
+
+    body = resp.json()
+    assert body["pair_id"] == _PAIR_ID and body["total_matched"] == 5
+    assert body["ignored_filter_keys"] == ["jurisdiction"]
+    assert [(c["jurisdiction"], c["added_count"]) for c in body["collections"]] == [
+        ("PL", 3),
+        ("UK", 2),
+    ]
+    assert [c["collection"]["id"] for c in body["collections"]] == [
+        _COLLECTION_ID,
+        _SECOND_COLLECTION_ID,
+    ]
+    assert [c["name"] for c in stub_db.created] == [
+        "Fraud, suspended — PL",
+        "Fraud, suspended — UK",
+    ]
+    assert stub_db.bulk_calls == [
+        _split_result(3, 2).by_jurisdiction["PL"],
+        _split_result(3, 2).by_jurisdiction["UK"],
+    ]
+    pair = stub_pairs_db.rows[0]
+    assert pair["pl_collection_id"] == _COLLECTION_ID
+    assert pair["uk_collection_id"] == _SECOND_COLLECTION_ID
+    assert pair["filters"] == {"appellant": ["offender"]}
+    assert pair["text_query"] == "fraud" and pair["name"] == "Fraud, suspended"
+
+
+async def test_split_refuses_oversized_side_with_jurisdiction(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff,
+        "resolve_filter_ids",
+        lambda *_a, **_k: _split_result(pl=SAVE_FROM_FILTER_MAX_DOCUMENTS + 1, uk=1),
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "big", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 413
+    detail = resp.json()["detail"]
+    assert detail["code"] == "FILTER_TOO_LARGE"
+    assert detail["total"] == SAVE_FROM_FILTER_MAX_DOCUMENTS + 1
+    assert detail["cap"] == SAVE_FROM_FILTER_MAX_DOCUMENTS
+    assert detail["jurisdiction"] == "PL"
+    assert stub_db.created == [] and stub_pairs_db.rows == []
+
+
+async def test_split_allows_each_side_up_to_the_cap(
+    client, override_deps, stub_db, monkeypatch
+):
+    """The cap is per side, not on the combined total."""
+    cap = SAVE_FROM_FILTER_MAX_DOCUMENTS
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(pl=cap, uk=cap)
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "max", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["total_matched"] == 2 * cap
+    assert [len(c) for c in stub_db.bulk_calls] == [1000] * 10
+
+
+async def test_split_with_an_empty_side_is_400_naming_the_side(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(pl=4, uk=0)
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert detail["code"] == "FILTER_EMPTY" and detail["jurisdiction"] == "UK"
+    assert stub_db.created == [] and stub_pairs_db.rows == []
+
+
+async def test_split_with_nothing_matching_is_400_without_blaming_a_side(
+    client, override_deps, stub_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(pl=0, uk=0)
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert detail["code"] == "FILTER_EMPTY" and detail["jurisdiction"] is None
+    assert stub_db.created == []
+
+
+async def test_split_name_is_bounded_to_the_pair_limit_before_any_db_call(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    """collection_pairs.name is CHECKed at 200 chars and each side adds ' — PL'/' — UK'
+    on top of the 255-char collections bound; a 201-char name would otherwise create
+    and fill both collections before the pair insert fails the CHECK."""
+    resolve_calls: list[object] = []
+    monkeypatch.setattr(
+        cff,
+        "resolve_filter_ids",
+        lambda *a, **k: resolve_calls.append(a) or _split_result(2, 2),
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "n" * 201, "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422, resp.text
+    assert "200" in resp.text
+    assert resolve_calls == []
+    assert stub_db.created == [] and stub_db.get_user_collections_calls == []
+    assert stub_pairs_db.rows == []
+
+
+async def test_split_name_of_exactly_200_chars_is_accepted(
+    client, override_deps, stub_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(1, 1)
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "n" * 200, "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert [len(c["name"]) for c in stub_db.created] == [205, 205]
+
+
+async def test_split_name_is_stripped_once_and_the_stripped_value_is_persisted(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    """Validator and persistence must see the same name: a padded 200-char name
+    is accepted and the pair row / side names carry the stripped value."""
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(1, 1)
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={
+            "name": "  " + "n" * 200 + "  ",
+            "filters": {},
+            "split_by_jurisdiction": True,
+        },
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert stub_pairs_db.rows[0]["name"] == "n" * 200
+    assert [c["name"] for c in stub_db.created] == [
+        "n" * 200 + " — PL",
+        "n" * 200 + " — UK",
+    ]
+
+
+async def test_split_padded_name_over_the_bound_is_422_before_any_db_call(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    resolve_calls: list[object] = []
+    monkeypatch.setattr(
+        cff,
+        "resolve_filter_ids",
+        lambda *a, **k: resolve_calls.append(a) or _split_result(1, 1),
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={
+            "name": " " + "n" * 201 + " ",
+            "filters": {},
+            "split_by_jurisdiction": True,
+        },
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422, resp.text
+    assert resolve_calls == [] and stub_db.get_user_collections_calls == []
+    assert stub_db.created == [] and stub_pairs_db.rows == []
+
+
+async def test_whitespace_only_name_is_422(client, override_deps, stub_db):
+    for payload in (
+        {"name": "   ", "filters": {}},
+        {"name": "   ", "filters": {}, "split_by_jurisdiction": True},
+    ):
+        resp = await client.post(
+            "/collections/from-filter", json=payload, headers=_HEADERS
+        )
+        assert resp.status_code == 422, resp.text
+    assert stub_db.created == []
+
+
+async def test_unsplit_name_is_stripped_too(
+    client, override_deps, stub_db, monkeypatch
+):
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(1))
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": " " + "n" * 253 + " ", "filters": {}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert stub_db.created[0]["name"] == "n" * 253
+
+
+async def test_unsplit_name_keeps_the_255_bound(client, override_deps, monkeypatch):
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(1))
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "n" * 255, "filters": {}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+
+
+async def test_split_uk_failure_rolls_back_the_pl_collection(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(pl=2, uk=2)
+    )
+    stub_db.fail_on_create = 1  # the UK side's create_collection raises
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 500
+    assert resp.json()["detail"] == "create boom"
+    assert stub_db.deleted == [_COLLECTION_ID]
+    assert stub_pairs_db.rows == []
+
+
+async def test_split_uk_bulk_add_failure_rolls_back_both_collections(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    """create_collection_from_ids deletes its own collection; the outer rollback
+    must still remove the PL side created before it."""
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(pl=2, uk=2)
+    )
+    stub_db.fail_on_chunk = 1  # PL chunk is #0, the UK chunk #1 raises
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 500
+    assert sorted(stub_db.deleted) == [_COLLECTION_ID, _SECOND_COLLECTION_ID]
+    assert stub_pairs_db.rows == []
+
+
+async def test_split_pair_insert_failure_rolls_back_both_collections(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(pl=2, uk=2)
+    )
+    stub_pairs_db.should_fail = True
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 500
+    assert resp.json()["detail"] == "pair boom"
+    assert stub_db.deleted == [_COLLECTION_ID, _SECOND_COLLECTION_ID]
+
+
+async def test_split_rollback_failure_does_not_mask_original_error(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(pl=2, uk=2)
+    )
+    stub_pairs_db.should_fail = True
+    stub_db.delete_should_fail = True
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 500
+    assert resp.json()["detail"] == "pair boom"
+
+
+async def test_split_still_enforces_collection_ids_ownership(
+    client, override_deps, stub_db, monkeypatch
+):
+    stub_db.owned_collection_ids = [_OWNED_COLLECTION_ID]
+    resolve_calls: list[object] = []
+    monkeypatch.setattr(
+        cff,
+        "resolve_filter_ids",
+        lambda *a, **k: resolve_calls.append(a) or _split_result(2, 2),
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={
+            "name": "x",
+            "filters": {"collection_ids": [_FOREIGN_COLLECTION_ID]},
+            "split_by_jurisdiction": True,
+        },
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 404
+    assert resolve_calls == [] and stub_db.created == []
+
+
+async def test_unsplit_request_ignores_no_keys_and_has_no_pair(
+    client, override_deps, monkeypatch
+):
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(1))
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {"jurisdiction": ["PL"]}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["ignored_filter_keys"] == [] and body["pair_id"] is None

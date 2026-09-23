@@ -29,6 +29,7 @@ Design: `docs/superpowers/specs/2026-09-20-persona-flows-design.md` §2, §4.
 | 2. Statistics | `/search/extractions?view=stats` | Distributions of the pre-extracted fields over the current cohort, at 10 … all. |
 | 3. Research Collections | `/collections` | Named judgment sets — the working folder for a research question. |
 | 4. Topic Trends | `/topics` | Popular and trending search topics. |
+| 5. Compare PL / UK | `/compare` | One structured filter run against both jurisdictions side by side; saved pairs open at `/compare/[pairId]`. |
 
 ## Code — your own extraction schema
 

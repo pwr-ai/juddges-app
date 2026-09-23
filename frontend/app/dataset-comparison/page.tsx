@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import {
   ChartFigure,
@@ -200,6 +201,9 @@ export default function DatasetComparisonPage() {
               PL &middot; S&#261;d Apelacyjny, Wydzia&#322; Karny
             </span>
           </div>
+          <Link href="/compare" className="mt-6 inline-block font-mono text-xs uppercase tracking-wider text-oxblood hover:underline">
+            Live comparison on your own filter &rarr;
+          </Link>
         </header>
 
       {/* ── Overview Stats ── */}
