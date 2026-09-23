@@ -24,6 +24,11 @@ router = APIRouter(prefix="/precedents", tags=["precedents"])
 # Per-endpoint rate limit for precedent search (lighter than full analysis endpoints)
 PRECEDENTS_RATE_LIMIT = "30/hour"
 
+# Raw vector candidates exposed as the cohort (#724, spec §7.1). The ranked
+# `precedents` slice is still taken from the top `limit` of this same pool, so a
+# wider pool does not change what the LLM sees.
+COHORT_MATCH_COUNT = 100
+
 
 # ===== Request/Response Models =====
 
@@ -126,6 +131,31 @@ class PrecedentMatch(BaseModel):
     )
 
 
+class PrecedentCohortItem(BaseModel):
+    """One raw vector candidate, before the LLM ranking pass (#724).
+
+    Field names drop the `base_` prefix so the frontend can label them with the
+    same helper the statistics view uses (#708).
+    """
+
+    document_id: str = Field(description="Judgment UUID")
+    similarity_score: float = Field(description="Cosine similarity (0.0 to 1.0)")
+    case_number: str | None = Field(default=None, description="Court case number")
+    title: str | None = Field(default=None, description="Judgment title")
+    jurisdiction: str | None = Field(default=None, description="PL or UK")
+    court_name: str | None = Field(default=None, description="Court name")
+    decision_date: str | None = Field(default=None, description="ISO decision date")
+    appeal_outcome: list[str] = Field(
+        default_factory=list, description="base_appeal_outcome values"
+    )
+    sentences_received: list[str] = Field(
+        default_factory=list, description="base_sentences_received values"
+    )
+    convict_offences: list[str] = Field(
+        default_factory=list, description="base_convict_offences values"
+    )
+
+
 class FindPrecedentsResponse(BaseModel):
     """Response model for precedent search."""
 
@@ -136,6 +166,14 @@ class FindPrecedentsResponse(BaseModel):
     enhanced_query: str | None = Field(
         default=None,
         description="AI-enhanced version of the query used for search",
+    )
+    cohort: list[PrecedentCohortItem] = Field(
+        default_factory=list,
+        description=(
+            "Raw vector candidates (up to 100) with the fields the UI groups by, "
+            "collected before the AI ranking pass. Present even when the ranking "
+            "pass returns nothing."
+        ),
     )
 
 
@@ -333,6 +371,7 @@ def _empty_precedents_response(
         total_found=0,
         search_strategy="semantic_similarity",
         enhanced_query=enhanced_query,
+        cohort=[],
     )
 
 
@@ -362,7 +401,9 @@ async def _search_precedent_candidates(
     """Run vector similarity search with service-level error handling."""
     search_kwargs: dict[str, Any] = {
         "query_embedding": embedding,
-        "match_count": min(limit * 2, 50),
+        # The cohort needs the wide pool (#724); the ranked slice still comes
+        # from `similar_results[:limit]`, so ranking is unaffected.
+        "match_count": max(min(limit * 2, 50), COHORT_MATCH_COUNT),
         "match_threshold": 0.3,
     }
     try:
@@ -396,6 +437,49 @@ async def _load_candidate_documents(
         candidates_data.append(doc_data)
 
     return candidates_data
+
+
+async def _build_cohort(
+    db: Any, similar_results: list[dict[str, Any]]
+) -> list[PrecedentCohortItem]:
+    """Assemble the raw candidate cohort in one batched select (#724).
+
+    Order follows `similar_results` (already similarity-sorted by the RPC), not
+    the order PostgREST happens to return rows in.
+    """
+    ordered_ids = [
+        r.get("document_id") for r in similar_results if r.get("document_id")
+    ]
+    if not ordered_ids:
+        return []
+
+    rows = await db.get_cohort_fields_by_ids(ordered_ids)
+    rows_by_id = {row.get("id"): row for row in rows}
+    similarity_by_id = {
+        r.get("document_id"): r.get("similarity") or 0.0 for r in similar_results
+    }
+
+    cohort: list[PrecedentCohortItem] = []
+    for doc_id in ordered_ids:
+        row = rows_by_id.get(doc_id)
+        if not row:
+            continue
+        decision_date = row.get("decision_date")
+        cohort.append(
+            PrecedentCohortItem(
+                document_id=doc_id,
+                similarity_score=float(similarity_by_id.get(doc_id) or 0.0),
+                case_number=row.get("case_number"),
+                title=row.get("title"),
+                jurisdiction=row.get("jurisdiction"),
+                court_name=row.get("court_name"),
+                decision_date=str(decision_date) if decision_date else None,
+                appeal_outcome=list(row.get("base_appeal_outcome") or []),
+                sentences_received=list(row.get("base_sentences_received") or []),
+                convict_offences=list(row.get("base_convict_offences") or []),
+            )
+        )
+    return cohort
 
 
 async def _build_analysis_map(
@@ -502,6 +586,8 @@ async def find_precedents(
     if precedents_request.filters:
         similar_results = _apply_filters(similar_results, precedents_request.filters)
 
+    cohort = await _build_cohort(db, similar_results)
+
     candidates_data = await _load_candidate_documents(
         similar_results, precedents_request.limit
     )
@@ -532,6 +618,7 @@ async def find_precedents(
         total_found=len(precedents),
         search_strategy=search_strategy,
         enhanced_query=enhanced_query,
+        cohort=cohort,
     )
 
 
