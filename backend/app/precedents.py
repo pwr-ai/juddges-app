@@ -464,6 +464,7 @@ async def _load_candidate_documents(
         if not doc_data:
             continue
         doc_data["_similarity_score"] = similarity_map.get(doc_id, 0.0)
+        doc_data["document_id"] = doc_id
         candidates_data.append(doc_data)
 
     return candidates_data

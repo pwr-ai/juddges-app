@@ -25,6 +25,7 @@ from app.precedents import (
     _build_search_text,
     _empty_precedents_response,
     _format_candidate_for_analysis,
+    _load_candidate_documents,
     _rank_precedents,
 )
 
@@ -486,6 +487,44 @@ class TestRankPrecedents:
             for p in ranked
         ]
         assert scores == sorted(scores, reverse=True)
+
+
+# ===== _load_candidate_documents Tests =====
+
+
+@pytest.mark.unit
+class TestLoadCandidateDocuments:
+    """Test _load_candidate_documents helper.
+
+    Regression coverage for the seam `_build_precedent_match` depends on:
+    `_fetch_document_context` returns a raw `judgments` row keyed `id`, not
+    `document_id` — `_JUDGMENT_COLS` never selects `document_id`. Before the
+    fix, `_load_candidate_documents` passed that row through unchanged, so
+    every `PrecedentMatch.document_id` downstream was `""`.
+    """
+
+    @pytest.mark.asyncio
+    @patch("app.precedents._fetch_document_context")
+    async def test_attaches_document_id_from_judgment_shaped_row(self, mock_fetch):
+        # Judgment-shaped row as returned by `get_document_by_id` — keyed
+        # `id`, no `document_id` key anywhere.
+        mock_fetch.return_value = {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "case_number": "III CSK 245/22",
+            "title": "A v B",
+        }
+        similar_results = [
+            {
+                "document_id": "11111111-1111-1111-1111-111111111111",
+                "similarity": 0.87,
+            }
+        ]
+
+        candidates = await _load_candidate_documents(similar_results, limit=10)
+
+        assert len(candidates) == 1
+        match = _build_precedent_match(candidates[0])
+        assert match.document_id == "11111111-1111-1111-1111-111111111111"
 
 
 # ===== _build_search_text Tests =====
