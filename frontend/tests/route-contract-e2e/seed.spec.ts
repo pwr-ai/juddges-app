@@ -33,6 +33,10 @@ test.describe('route-contract seed', () => {
 
     await page.goto('/collections');
 
-    await expect(page.getByRole('heading', { name: 'Collections', level: 1 })).toBeVisible();
+    // Scoped to `main`: the navbar also renders an `<h1>Collections</h1>` on
+    // this route, so an unscoped heading lookup is a strict-mode violation.
+    await expect(
+      page.getByRole('main').getByRole('heading', { name: 'Collections', level: 1 }),
+    ).toBeVisible();
   });
 });

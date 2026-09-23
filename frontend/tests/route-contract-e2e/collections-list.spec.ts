@@ -12,15 +12,21 @@ import {
  * unattended; see the PR body for what was and wasn't run.
  *
  * `/collections` (list view, not the detail page already covered by
- * route-status.spec.ts) renders straight from `GET /collections`. The stub
- * always answers `documents: []` for both fixture rows
- * (`stub-services.mjs` `collectionListResponse`), while `CollectionsPage`
- * computes each card's document count from `collection.documents.length`
- * rather than the `document_count` field the stub also sends — so both
- * cards render "0 documents" regardless of the real count. That mismatch is
- * exactly the kind of drift a UI-level assertion catches and a wire-only
- * check (route-status.spec.ts only checks `/collections` isn't asserted
- * there at all) would miss.
+ * route-status.spec.ts) renders straight from `GET /collections`.
+ * `CollectionsPage` computes each card's document count from
+ * `collection.documents.length` (not the `document_count` field the payload
+ * also carries — see #697 for whether the live endpoint's `documents` is
+ * ever a mismatched shape), so this spec asserts against `documents`, the
+ * field the UI actually reads.
+ *
+ * Counts mirror `stub-services.mjs`'s `collectionListResponse`:
+ * - the extraction collection's `documents` is `EXTRACTABLE_DOCUMENT_IDS`
+ *   (2 entries), a fixed fixture.
+ * - the flow collection's `documents` is `flowDocumentIds`, a module-level
+ *   array only `collection-extraction-flow.spec.ts` mutates; this file's own
+ *   `POST /__route-contract/reset` (below, in `beforeEach`) clears it back
+ *   to `[]` regardless of what ran before, so it is 0 by the time this test
+ *   loads `/collections`.
  */
 
 async function resetAdapter(request: APIRequestContext): Promise<void> {
@@ -46,15 +52,21 @@ test.describe('collections list contract', () => {
 
     await page.goto('/collections');
 
-    await expect(page.getByRole('heading', { name: 'Collections', level: 1 })).toBeVisible();
+    // Scoped to `main`: the navbar (components/navbar.tsx `NavbarHeading`)
+    // also renders an `<h1>Collections</h1>` on this route, so an unscoped
+    // `page.getByRole('heading', …)` is a strict-mode violation.
+    const main = page.getByRole('main');
+    await expect(main.getByRole('heading', { name: 'Collections', level: 1 })).toBeVisible();
 
+    // 2 documents: EXTRACTABLE_DOCUMENT_IDS in stub-services.mjs.
     await expect(
-      page.getByRole('button', {
-        name: 'Collection: Route contract extraction collection. 0 documents. Click to open.',
+      main.getByRole('button', {
+        name: 'Collection: Route contract extraction collection. 2 documents. Click to open.',
       }),
     ).toBeVisible();
+    // 0 documents: flowDocumentIds, cleared by this test's own reset above.
     await expect(
-      page.getByRole('button', {
+      main.getByRole('button', {
         name: 'Collection: Route contract flow collection. 0 documents. Click to open.',
       }),
     ).toBeVisible();
