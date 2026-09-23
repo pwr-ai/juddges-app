@@ -29,6 +29,7 @@ describe("precedents translations", () => {
       expect(locale.precedents.cohortHeadline).toContain("{{value}}");
       expect(locale.precedents.cohortFilterActive).toContain("{{value}}");
       expect(locale.precedents.cohortFilterActive).toContain("{{count}}");
+      expect(locale.precedents.cohortFilterActive).toContain("{{total}}");
       expect(locale.precedents.resolvedCase).toContain("{{caseNumber}}");
     }
   });

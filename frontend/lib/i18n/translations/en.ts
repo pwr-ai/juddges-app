@@ -613,7 +613,7 @@ export const en: Translations = {
     cohortTitle: 'In similar cases…',
     cohortHeadline: 'In {{count}} of {{total}} similar cases: {{value}}',
     cohortGroupBy: 'Group by',
-    cohortFilterActive: 'Filtered to {{value}} · {{count}} of the ranked results',
+    cohortFilterActive: 'Filtered to {{value}} · {{count}} of {{total}} ranked results',
     cohortClearFilter: 'Clear filter',
     cohortNoRanked: 'No ranked precedent carries this value — it appears elsewhere in the similar-case cohort.',
     cohortEmpty: 'No similar cases carry a value for this field.',

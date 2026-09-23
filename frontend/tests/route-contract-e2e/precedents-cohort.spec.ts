@@ -42,8 +42,10 @@ test.describe('precedents cohort contract', () => {
 
     // 3 of the 4 cohort members were dismissed — the headline names that
     // bucket (default grouping is `appeal_outcome`, the first of
-    // COHORT_GROUP_FIELDS).
-    await expect(block).toContainText('In 3 of 4 similar cases: dismissed');
+    // COHORT_GROUP_FIELDS). The stub's `dismissed` isn't a real
+    // appeal_outcome enum token, so it only round-trips through
+    // formatEnumOptionLabel's capitalization fallback, not prefix-stripping.
+    await expect(block).toContainText('In 3 of 4 similar cases: Dismissed');
 
     await expect(page.getByText('R v Dismissed')).toBeVisible();
     await expect(page.getByText('R v Allowed')).toBeVisible();
@@ -54,16 +56,24 @@ test.describe('precedents cohort contract', () => {
     // point group carrying the outside count label "3") is inside that layer
     // and does register. Located by its count text rather than index, since
     // sort order is a groupCohort implementation detail, not spec.
+    //
+    // This locator reaches into Plotly's internal DOM (`g.point`,
+    // `data-unformatted`) and clicks with `force: true`, skipping the
+    // actionability check — the only spec in this gate that does either.
+    // `frontend/package.json` pins `"plotly.js-dist": "^4.1.0"`, a caret
+    // range, so a lockfile refresh can move Plotly's internals without any
+    // app-code change. If this spec starts failing after a dependency bump
+    // with no app change, check here first.
     const dismissedBar = block
       .locator('g.point', { has: page.locator('text[data-unformatted="3"]') })
       .locator('path');
+    await expect(dismissedBar).toHaveCount(1);
     await dismissedBar.click({ force: true });
 
-    // The filter chip names the active value and how many ranked results
-    // survive it — only `p-dismissed` carries `dismissed` among the two
-    // ranked precedents.
-    await expect(block).toContainText('Filtered to dismissed');
-    await expect(block).toContainText('1 of the ranked results');
+    // The filter chip names the active value and how many of the 2 ranked
+    // results survive it — only `p-dismissed` carries `dismissed`.
+    await expect(block).toContainText('Filtered to Dismissed');
+    await expect(block).toContainText('1 of 2 ranked results');
 
     await expect(page.getByText('R v Allowed')).toHaveCount(0);
     await expect(page.getByText('R v Dismissed')).toBeVisible();

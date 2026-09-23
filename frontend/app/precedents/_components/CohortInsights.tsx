@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useTranslation } from "@/contexts/LanguageContext";
 import { aggregateFieldLabel } from "@/lib/extractions/aggregate-fields";
+import { formatEnumOptionLabel } from "@/lib/extractions/base-schema-filter-config";
 import type { PrecedentCohortItem } from "@/lib/api/advanced";
 import {
   COHORT_GROUP_FIELDS,
@@ -23,6 +24,8 @@ export interface CohortInsightsProps {
   filter: CohortFilter | null;
   /** How many of the ranked precedents survive the active filter. */
   filteredRankedCount: number;
+  /** How many ranked precedents there are before any cohort filter applies. */
+  totalRankedCount: number;
   onFilterChange: (filter: CohortFilter | null) => void;
 }
 
@@ -35,6 +38,7 @@ export function CohortInsights({
   cohort,
   filter,
   filteredRankedCount,
+  totalRankedCount,
   onFilterChange,
 }: CohortInsightsProps) {
   const { t } = useTranslation();
@@ -76,11 +80,11 @@ export function CohortInsights({
       </header>
 
       {headline ? (
-        <p className="mb-3 font-serif text-base text-[color:var(--ink)]">
+        <p className="mb-3 font-serif text-base text-[color:var(--ink)]" aria-live="polite">
           {t("precedents.cohortHeadline", {
             count: headline.count,
             total: cohort.length,
-            value: headline.value,
+            value: formatEnumOptionLabel(field, headline.value),
           })}
         </p>
       ) : (
@@ -101,8 +105,9 @@ export function CohortInsights({
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="font-mono text-[11px] text-[color:var(--ink-soft)]">
             {t("precedents.cohortFilterActive", {
-              value: filter.value,
+              value: formatEnumOptionLabel(filter.field, filter.value),
               count: filteredRankedCount,
+              total: totalRankedCount,
             })}
           </span>
           <button

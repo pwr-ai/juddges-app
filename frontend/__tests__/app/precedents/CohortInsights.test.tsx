@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
+import type { PrecedentCohortItem } from "@/lib/api/advanced";
+
 jest.mock("@/contexts/LanguageContext", () => ({
   useTranslation: () => ({
     t: (key: string, values?: Record<string, string | number>) =>
@@ -38,12 +40,40 @@ describe("CohortInsights", () => {
         cohort={makeCohort()}
         filter={null}
         filteredRankedCount={0}
+        totalRankedCount={5}
+        onFilterChange={() => {}}
+      />,
+    );
+
+    // "dismissed" isn't a real appeal_outcome enum token (the fixture's
+    // shorthand), so it only round-trips through formatEnumLabel's
+    // capitalization, not the enum-prefix stripping — see the real-token
+    // test below for that path.
+    expect(
+      screen.getByText("precedents.cohortHeadline:count=3,total=5,value=Dismissed"),
+    ).toBeInTheDocument();
+  });
+
+  it("strips the shared enum prefix for a real appeal_outcome token", () => {
+    render(
+      <CohortInsights
+        cohort={makeCohort().map((item: PrecedentCohortItem) => ({
+          ...item,
+          appeal_outcome: item.appeal_outcome.includes("dismissed")
+            ? ["outcome_dismissed_or_refused"]
+            : item.appeal_outcome,
+        }))}
+        filter={null}
+        filteredRankedCount={0}
+        totalRankedCount={5}
         onFilterChange={() => {}}
       />,
     );
 
     expect(
-      screen.getByText("precedents.cohortHeadline:count=3,total=5,value=dismissed"),
+      screen.getByText(
+        "precedents.cohortHeadline:count=3,total=5,value=Dismissed or refused",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -53,6 +83,7 @@ describe("CohortInsights", () => {
         cohort={makeCohort()}
         filter={null}
         filteredRankedCount={0}
+        totalRankedCount={5}
         onFilterChange={() => {}}
       />,
     );
@@ -71,6 +102,7 @@ describe("CohortInsights", () => {
         cohort={makeCohort()}
         filter={null}
         filteredRankedCount={0}
+        totalRankedCount={5}
         onFilterChange={onFilterChange}
       />,
     );
@@ -90,12 +122,13 @@ describe("CohortInsights", () => {
         cohort={makeCohort()}
         filter={{ field: "appeal_outcome", value: "dismissed" }}
         filteredRankedCount={2}
+        totalRankedCount={5}
         onFilterChange={onFilterChange}
       />,
     );
 
     expect(
-      screen.getByText("precedents.cohortFilterActive:value=dismissed,count=2"),
+      screen.getByText("precedents.cohortFilterActive:value=Dismissed,count=2,total=5"),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "precedents.cohortClearFilter" }));
@@ -108,6 +141,7 @@ describe("CohortInsights", () => {
         cohort={makeCohort()}
         filter={{ field: "appeal_outcome", value: "dismissed" }}
         filteredRankedCount={0}
+        totalRankedCount={5}
         onFilterChange={() => {}}
       />,
     );
@@ -117,7 +151,13 @@ describe("CohortInsights", () => {
 
   it("renders nothing for an empty cohort", () => {
     const { container } = render(
-      <CohortInsights cohort={[]} filter={null} filteredRankedCount={0} onFilterChange={() => {}} />,
+      <CohortInsights
+        cohort={[]}
+        filter={null}
+        filteredRankedCount={0}
+        totalRankedCount={0}
+        onFilterChange={() => {}}
+      />,
     );
 
     expect(container).toBeEmptyDOMElement();
