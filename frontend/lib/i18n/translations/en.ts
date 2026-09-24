@@ -608,4 +608,15 @@ export const en: Translations = {
     relatedError: 'Related reasoning lines could not be loaded. Reload the page to try again.',
     relatedEmpty: 'No related reasoning lines found. Relatedness is based on shared legal bases and keywords — links appear as the catalogue grows.',
   },
+
+  precedents: {
+    cohortTitle: 'In similar cases…',
+    cohortHeadline: 'In {{count}} of {{total}} similar cases: {{value}}',
+    cohortGroupBy: 'Group by',
+    cohortFilterActive: 'Filtered to {{value}} · {{count}} of {{total}} ranked results',
+    cohortClearFilter: 'Clear filter',
+    cohortNoRanked: 'No ranked precedent carries this value — it appears elsewhere in the similar-case cohort.',
+    cohortEmpty: 'No similar cases carry a value for this field.',
+    resolvedCase: 'Matched case {{caseNumber}} — showing judgments similar to it.',
+  },
 };

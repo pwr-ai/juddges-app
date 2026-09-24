@@ -608,4 +608,15 @@ export const pl: Translations = {
     relatedError: 'Nie udało się wczytać powiązanych linii orzeczniczych. Odśwież stronę, aby spróbować ponownie.',
     relatedEmpty: 'Nie znaleziono powiązanych linii orzeczniczych. Powiązania opierają się na wspólnych podstawach prawnych i słowach kluczowych — pojawią się w miarę rozrostu katalogu.',
   },
+
+  precedents: {
+    cohortTitle: 'W podobnych sprawach…',
+    cohortHeadline: 'W {{count}} z {{total}} podobnych spraw: {{value}}',
+    cohortGroupBy: 'Grupuj według',
+    cohortFilterActive: 'Filtr: {{value}} · {{count}} z {{total}} wyników rankingu',
+    cohortClearFilter: 'Wyczyść filtr',
+    cohortNoRanked: 'Żadne z orzeczeń w rankingu nie ma tej wartości — występuje w pozostałej części kohorty podobnych spraw.',
+    cohortEmpty: 'Żadna z podobnych spraw nie ma wartości dla tego pola.',
+    resolvedCase: 'Dopasowano sprawę {{caseNumber}} — pokazuję orzeczenia podobne do niej.',
+  },
 };

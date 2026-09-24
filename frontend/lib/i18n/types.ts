@@ -673,6 +673,22 @@ export interface ReasoningLinesTranslations {
 }
 
 /**
+ * Translation namespace for the cohort block on /precedents
+ * (spec §7.2 - “In similar cases…”)
+ */
+export interface PrecedentsTranslations {
+  /** Heading of the grouped cohort block (spec §7.2). */
+  cohortTitle: string;
+  cohortHeadline: string;
+  cohortGroupBy: string;
+  cohortFilterActive: string;
+  cohortClearFilter: string;
+  cohortNoRanked: string;
+  cohortEmpty: string;
+  resolvedCase: string;
+}
+
+/**
  * Translation namespace for legal terminology
  */
 export interface LegalTranslations {
@@ -719,6 +735,7 @@ export interface Translations {
   dashboard: DashboardTranslations;
   judgeFingerprint: JudgeFingerprintTranslations;
   reasoningLines: ReasoningLinesTranslations;
+  precedents: PrecedentsTranslations;
 }
 
 /**
@@ -737,7 +754,8 @@ export type TranslationKey =
   | `legal.${keyof LegalTranslations}`
   | `dashboard.${keyof DashboardTranslations}`
   | `judgeFingerprint.${keyof JudgeFingerprintTranslations}`
-  | `reasoningLines.${keyof ReasoningLinesTranslations}`;
+  | `reasoningLines.${keyof ReasoningLinesTranslations}`
+  | `precedents.${keyof PrecedentsTranslations}`;
 
 /**
  * Interpolation values for dynamic translations
