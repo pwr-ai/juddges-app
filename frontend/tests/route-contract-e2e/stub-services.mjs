@@ -327,7 +327,7 @@ function collectionListResponse(response) {
       description: 'Collection the extraction-path contract submits against',
       created_at: '2026-08-06T00:00:00.000Z',
       updated_at: '2026-08-06T00:00:00.000Z',
-      documents: [],
+      documents: EXTRACTABLE_DOCUMENT_IDS,
       document_count: EXTRACTABLE_DOCUMENT_IDS.length,
     },
     {
