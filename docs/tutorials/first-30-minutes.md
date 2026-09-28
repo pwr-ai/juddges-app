@@ -130,9 +130,11 @@ date.
 
 - **Per-question.** One collection per research question. Add anything
   potentially relevant during exploration; trim down at the end.
-- **Comparative.** One collection per jurisdiction for the same fact
-  pattern. Run identical searches under each filter, save to the
-  matching collection.
+- **Comparative.** Use [`/compare`](https://juddges.com/compare) instead of
+  running identical searches by hand: one filter runs against both
+  jurisdictions at once, with coverage shown per field, and **Save as pair**
+  creates the matching PL/UK collections for you. See
+  [`docs/how-to/compare-pl-uk.md`](../how-to/compare-pl-uk.md).
 - **Pre-extraction.** Build the collection first, then point an
   extraction job (see Step 04 on the base schema) at it. Collections
   are the canonical input unit for extraction pipelines.

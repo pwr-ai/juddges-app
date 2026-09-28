@@ -65,7 +65,7 @@ describe('FlowStepper', () => {
   it('places /search/extractions on the list step and links next to the statistics view', () => {
     mockPathname = '/search/extractions';
     render(<FlowStepper />);
-    expect(screen.getByRole('navigation')).toHaveTextContent('Step 1 of 4');
+    expect(screen.getByRole('navigation')).toHaveTextContent('Step 1 of 5');
     expect(screen.getByRole('link', { name: /common\.next/ })).toHaveAttribute('href', '/search/extractions?view=stats');
   });
 
@@ -73,7 +73,7 @@ describe('FlowStepper', () => {
     mockPathname = '/search/extractions';
     mockSearch = 'view=stats';
     render(<FlowStepper />);
-    expect(screen.getByRole('navigation')).toHaveTextContent('Step 2 of 4');
+    expect(screen.getByRole('navigation')).toHaveTextContent('Step 2 of 5');
     expect(screen.getByRole('link', { name: /common\.previous/ })).toHaveAttribute('href', '/search/extractions');
     expect(screen.getByRole('link', { name: /common\.next/ })).toHaveAttribute('href', '/collections');
   });

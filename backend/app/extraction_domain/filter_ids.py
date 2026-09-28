@@ -19,6 +19,11 @@ from app.config import settings
 from app.models import JURISDICTIONS
 
 FILTER_IDS_RPC = "list_extracted_filter_matches"
+
+# Filter keys the by-jurisdiction callers (PL/UK compare, pair creation) never
+# forward: they split the result by jurisdiction themselves, so honouring a
+# caller's `jurisdiction` filter would silently blank one side.
+IGNORED_FILTER_KEYS: tuple[str, ...] = ("jurisdiction",)
 # Alias kept importable from here (historical name; env var and default are
 # declared once, in app.config.settings) so existing callers/tests don't break.
 SAVE_FROM_FILTER_MAX_DOCUMENTS: int = settings.SAVE_FROM_FILTER_MAX_DOCUMENTS
@@ -43,6 +48,17 @@ class FilterIdsResult:
     @property
     def total(self) -> int:
         return len(self.ids)
+
+
+def strip_ignored(filters: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Drop `IGNORED_FILTER_KEYS` from a copy of `filters`; report which were present.
+
+    Returns (clean_filters, ignored_keys). `ignored_keys` keeps the order of
+    `IGNORED_FILTER_KEYS` so responses can echo it back deterministically.
+    """
+    ignored = [k for k in IGNORED_FILTER_KEYS if k in filters]
+    clean = {k: v for k, v in filters.items() if k not in IGNORED_FILTER_KEYS}
+    return clean, ignored
 
 
 def resolve_filter_ids(
