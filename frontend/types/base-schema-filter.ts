@@ -106,6 +106,13 @@ export interface BaseSchemaFilters {
   jurisdiction?: Jurisdiction[];
   decision_date?: string | DateRange;
 
+  // Membership filter recognised by `check_collection_ids_ownership`
+  // (backend/app/collections_from_filter.py) and `/compare/pairs/{id}`
+  // (backend/app/compare/router.py), which builds `{"collection_ids": [pl, uk]}`
+  // server-side for a saved pair's `PairCompareResponse.filters`. Not set by
+  // any filter-drawer UI; the frontend only ever reads it back off a response.
+  collection_ids?: string[];
+
   // scalar enums (IN-list)
   appellant?: Appellant[];
   plea_point?: PleaPoint[];
@@ -226,6 +233,9 @@ export interface CreateCollectionFromFilterRequest {
   description?: string;
   filters: BaseSchemaFilters;
   text_query?: string | null;
+  // Spec C (PL/UK compare): create one PL + one UK collection linked as a
+  // pair instead of a single collection. See backend/app/collections_from_filter.py.
+  split_by_jurisdiction?: boolean;
 }
 
 export interface CreatedCollection {

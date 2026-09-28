@@ -11,6 +11,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from juddges_search.db.supabase_db import get_collections_db
 
+from app.collection_pairs import get_collection_pairs_db
 from app.core.auth_jwt import AuthenticatedUser
 from app.core.auth_jwt import get_current_user as jwt_get_current_user
 from app.server import app
@@ -49,6 +50,13 @@ class _StubCollectionsDb:
         return []
 
 
+class _StubPairsDb:
+    """No pairs — this suite only exercises the auth layer on /collections."""
+
+    async def pairs_by_collection(self, _user_id: str) -> dict:
+        return {}
+
+
 @pytest.fixture
 def override_jwt_user(fake_user: AuthenticatedUser):
     """Override the JWT dependency to return a stable test user."""
@@ -59,13 +67,18 @@ def override_jwt_user(fake_user: AuthenticatedUser):
     async def _db_resolver() -> _StubCollectionsDb:
         return _StubCollectionsDb()
 
+    async def _pairs_db_resolver() -> _StubPairsDb:
+        return _StubPairsDb()
+
     app.dependency_overrides[jwt_get_current_user] = _resolver
     app.dependency_overrides[get_collections_db] = _db_resolver
+    app.dependency_overrides[get_collection_pairs_db] = _pairs_db_resolver
     try:
         yield fake_user
     finally:
         app.dependency_overrides.pop(jwt_get_current_user, None)
         app.dependency_overrides.pop(get_collections_db, None)
+        app.dependency_overrides.pop(get_collection_pairs_db, None)
 
 
 async def test_collections_rejects_x_user_id_without_bearer(

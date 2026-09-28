@@ -121,6 +121,7 @@ export interface NavigationTranslations {
   // Analysis section
   analysis: string;
   documentRelationships: string;
+  compare: string;
 
   // Advanced tools
   advancedTools: string;
@@ -673,6 +674,22 @@ export interface ReasoningLinesTranslations {
 }
 
 /**
+ * Translation namespace for the cohort block on /precedents
+ * (spec §7.2 - “In similar cases…”)
+ */
+export interface PrecedentsTranslations {
+  /** Heading of the grouped cohort block (spec §7.2). */
+  cohortTitle: string;
+  cohortHeadline: string;
+  cohortGroupBy: string;
+  cohortFilterActive: string;
+  cohortClearFilter: string;
+  cohortNoRanked: string;
+  cohortEmpty: string;
+  resolvedCase: string;
+}
+
+/**
  * Translation namespace for legal terminology
  */
 export interface LegalTranslations {
@@ -704,6 +721,62 @@ export interface LegalTranslations {
 }
 
 /**
+ * Translation namespace for the PL/UK comparison page (`/compare`)
+ */
+export interface CompareTranslations {
+  pageTitle: string;
+  pageSubtitle: string;
+  emptyTitle: string;
+  emptyBody: string;
+  askQuestion: string;
+  matching: string;
+  matchingPl: string;
+  matchingUk: string;
+  shareAxis: string;
+  coverageBadge: string;
+  sectionPrimary: string;
+  sectionPartial: string;
+  sectionUnavailable: string;
+  unavailableOne: string;
+  unavailableBoth: string;
+  noMatchesTitle: string;
+  noMatchesBody: string;
+  jurisdictionIgnored: string;
+  filterKeysIgnored: string;
+  savePair: string;
+  savePairTitle: string;
+  savePairName: string;
+  savePairHint: string;
+  savePairTooLarge: string;
+  savePairSaving: string;
+  savePairGenericError: string;
+  baseSchemaEyebrow: string;
+  extendedSchemaEyebrow: string;
+  saved: string;
+  openCollections: string;
+  exportCsv: string;
+  copyLink: string;
+  linkCopied: string;
+  pairEyebrow: string;
+  pairSchemaSection: string;
+  pairNoSchema: string;
+  pairSchemaEmpty: string;
+  pairExtensionNoJobPl: string;
+  pairExtensionNoJobUk: string;
+  pairExtensionSchemaMismatch: string;
+  pairExtensionSchemaNotFound: string;
+  pairExtensionFailed: string;
+  pairNotFound: string;
+  backToCompare: string;
+  extractOnBoth: string;
+  dataNote: string;
+  loadError: string;
+  filtersToggle: string;
+  textPlaceholder: string;
+  loading: string;
+}
+
+/**
  * Complete translations structure
  */
 export interface Translations {
@@ -719,6 +792,8 @@ export interface Translations {
   dashboard: DashboardTranslations;
   judgeFingerprint: JudgeFingerprintTranslations;
   reasoningLines: ReasoningLinesTranslations;
+  compare: CompareTranslations;
+  precedents: PrecedentsTranslations;
 }
 
 /**
@@ -737,7 +812,9 @@ export type TranslationKey =
   | `legal.${keyof LegalTranslations}`
   | `dashboard.${keyof DashboardTranslations}`
   | `judgeFingerprint.${keyof JudgeFingerprintTranslations}`
-  | `reasoningLines.${keyof ReasoningLinesTranslations}`;
+  | `reasoningLines.${keyof ReasoningLinesTranslations}`
+  | `compare.${keyof CompareTranslations}`
+  | `precedents.${keyof PrecedentsTranslations}`;
 
 /**
  * Interpolation values for dynamic translations

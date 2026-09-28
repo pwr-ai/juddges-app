@@ -45,6 +45,7 @@ jest.mock('@/contexts/LanguageContext', () => ({
         'navigation.precedentSearch': 'Precedent Search',
         'navigation.argumentationAnalysis': 'Argumentation Analysis',
         'navigation.judgeFingerprint': 'Judge Fingerprint',
+        'navigation.compare': 'Compare PL / UK',
         'navigation.administration': 'Administration',
         'navigation.adminPanel': 'Admin Panel',
         'navigation.homeLinkLabel': 'JuDDGES — go to the home page',
@@ -93,6 +94,7 @@ describe('AppSidebar public navigation', () => {
     expect(container.querySelector('a[href="/extractions"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/collections"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/dataset-comparison"]')).not.toBeInTheDocument();
+    expect(container.querySelector('a[href="/compare"]')).not.toBeInTheDocument();
   });
 
   it('shows the Dashboard link as the first item for authenticated users', () => {
@@ -135,6 +137,7 @@ describe('AppSidebar public navigation', () => {
       '/reasoning-lines',
       '/schemas',
       '/topics',
+      '/compare',
     ]) {
       expect(container.querySelector(`a[href="${href}"]`)).toBeInTheDocument();
     }
