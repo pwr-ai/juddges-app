@@ -117,7 +117,7 @@ export function showSuccessToast({
  icon: DisplayIcon ? <DisplayIcon className={iconClassName} /> : undefined,
  duration,
  onDismiss: wrappedOnDismiss,
- // Use primary action if available, otherwise secondary
+ // Use primary action if available, otherwise fall back to secondary
  action: primaryAction ? {
  label: primaryAction.label,
  onClick: () => {
@@ -128,6 +128,20 @@ export function showSuccessToast({
  primaryAction.onClick();
  },
  } : secondaryAction ? {
+ label: secondaryAction.label,
+ onClick: () => {
+ dismissState.dismissedByAction = true;
+ if (dismissTimeout) {
+ clearTimeout(dismissTimeout);
+ }
+ secondaryAction.onClick();
+ },
+ } : undefined,
+ // Render secondaryAction via sonner's cancel slot when both actions are
+ // given, so it renders alongside the primary action instead of being
+ // dropped. When secondaryAction is the only action, it already occupies
+ // the action slot above.
+ cancel: primaryAction && secondaryAction ? {
  label: secondaryAction.label,
  onClick: () => {
  dismissState.dismissedByAction = true;

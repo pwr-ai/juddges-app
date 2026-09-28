@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/verify-frontend-evidence.sh --check",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -662,4 +662,15 @@ export const en: Translations = {
     textPlaceholder: 'Free text — case names, charges, courts… (Enter to apply)',
     loading: 'Comparing…',
   },
+
+  precedents: {
+    cohortTitle: 'In similar cases…',
+    cohortHeadline: 'In {{count}} of {{total}} similar cases: {{value}}',
+    cohortGroupBy: 'Group by',
+    cohortFilterActive: 'Filtered to {{value}} · {{count}} of {{total}} ranked results',
+    cohortClearFilter: 'Clear filter',
+    cohortNoRanked: 'No ranked precedent carries this value — it appears elsewhere in the similar-case cohort.',
+    cohortEmpty: 'No similar cases carry a value for this field.',
+    resolvedCase: 'Matched case {{caseNumber}} — showing judgments similar to it.',
+  },
 };

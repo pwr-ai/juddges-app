@@ -662,4 +662,15 @@ export const pl: Translations = {
     textPlaceholder: 'Tekst — nazwy spraw, zarzuty, sądy… (Enter, aby zastosować)',
     loading: 'Porównywanie…',
   },
+
+  precedents: {
+    cohortTitle: 'W podobnych sprawach…',
+    cohortHeadline: 'W {{count}} z {{total}} podobnych spraw: {{value}}',
+    cohortGroupBy: 'Grupuj według',
+    cohortFilterActive: 'Filtr: {{value}} · {{count}} z {{total}} wyników rankingu',
+    cohortClearFilter: 'Wyczyść filtr',
+    cohortNoRanked: 'Żadne z orzeczeń w rankingu nie ma tej wartości — występuje w pozostałej części kohorty podobnych spraw.',
+    cohortEmpty: 'Żadna z podobnych spraw nie ma wartości dla tego pola.',
+    resolvedCase: 'Dopasowano sprawę {{caseNumber}} — pokazuję orzeczenia podobne do niej.',
+  },
 };

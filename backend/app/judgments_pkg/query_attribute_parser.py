@@ -94,11 +94,12 @@ _UK_CITATION_RE = re.compile(
     r"(?:\s+[A-Za-z]+)?\s+\d+",
 )
 
-# Polish docket, e.g. ``III CSK 245/22``: a roman-numeral chamber, a 1-4 letter
-# division code, then ``number/year``.
-_PL_CASE_RE = re.compile(r"\b([IVXLCDM]{1,4})\s+([A-Z]{1,4})\s+(\d+/\d{2,4})\b")
+# Polish docket, e.g. ``III CSK 245/22`` or the mixed-case appellate form
+# ``II AKa 47/23``: a roman-numeral chamber, a 1-4 letter division code
+# (leading uppercase, mixed case allowed), then ``number/year``.
+_PL_CASE_RE = re.compile(r"\b([IVXLCDM]{1,4})\s+([A-Z][A-Za-z]{0,3})\s+(\d+/\d{2,4})\b")
 # Polish docket *prefix* only (chamber + division, no number/year yet).
-_PL_CASE_PREFIX_RE = re.compile(r"\b([IVXLCDM]{1,4})\s+([A-Z]{2,4})\b")
+_PL_CASE_PREFIX_RE = re.compile(r"\b([IVXLCDM]{1,4})\s+([A-Z][A-Za-z]{1,3})\b")
 
 # ── judge ─────────────────────────────────────────────────────────────────
 #
