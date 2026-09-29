@@ -205,7 +205,8 @@
     },
     "docx": {
       "nanoid": "^5.1.16"
-    }
+    },
+    "lodash-es": "^4.18.1"
   },
   "optionalDependencies": {
     "lightningcss-linux-arm64-musl": "^1.33.0",
