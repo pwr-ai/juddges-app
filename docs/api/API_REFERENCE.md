@@ -579,12 +579,19 @@ List all document collections for the authenticated user.
       "description": "Important contract law decisions",
       "document_count": 15,
       "created_at": "2024-02-01T10:00:00Z",
-      "updated_at": "2024-02-13T15:30:00Z"
+      "updated_at": "2024-02-13T15:30:00Z",
+      "pair": null
     }
   ],
   "total": 5
 }
 ```
+
+`pair` is `null` unless the collection is one side of a PL/UK pair (see
+[Collection Pairs](#collection-pairs) below), in which case it is
+`{ "id": "uuid", "name": "Fraud", "role": "PL", "partner_collection_id": "uuid" }`
+— best-effort (`null` on a transient lookup failure rather than a failed
+request).
 
 #### Create Collection
 
@@ -700,6 +707,135 @@ references a collection the caller does not own), `400 FILTER_EMPTY` (filter
 matches nothing), `413 FILTER_TOO_LARGE` (above
 `SAVE_FROM_FILTER_MAX_DOCUMENTS`, default 5000), `503
 DATABASE_UNAVAILABLE`.
+
+**PL/UK pair:** add `"split_by_jurisdiction": true` to create `"<name> — PL"`
+and `"<name> — UK"` from the same filter and link them as a pair. The
+response then has two `collections` entries (`jurisdiction` set), a non-null
+`pair_id`, and `ignored_filter_keys: ["jurisdiction"]` when the request
+carried a jurisdiction filter (it is dropped — the split replaces it). The
+cap and `FILTER_EMPTY` apply per side (`detail.jurisdiction` names it); if
+either side or the pair insert fails, every collection created in the call is
+rolled back. `name` is whitespace-stripped before validation and storage; in
+split mode it is limited to 200 characters (`422` otherwise) because the pair
+row is `CHECK`ed at 200 and each side's collection name gets a 5-char suffix.
+
+#### Collection Pairs
+
+```http
+GET /collections/pairs
+GET /collections/pairs/{pair_id}
+DELETE /collections/pairs/{pair_id}
+```
+
+Read back or unlink PL/UK pairs created by `POST /collections/from-filter`
+with `split_by_jurisdiction: true`. `DELETE` removes the pair row only — both
+collections are kept. Full model in
+[Base-schema filter API](../reference/base-schema-filter-api.md).
+
+**Example Response (200):**
+
+```json
+{
+  "id": "aa0e8400-e29b-41d4-a716-446655440010",
+  "user_id": "770e8400-e29b-41d4-a716-446655440001",
+  "name": "Fraud, suspended sentence",
+  "filters": { "appellant": ["offender"] },
+  "text_query": "fraud",
+  "created_at": "2026-09-21T10:00:00Z",
+  "updated_at": "2026-09-21T10:00:00Z",
+  "sides": [
+    { "jurisdiction": "PL", "collection_id": "990e8400-e29b-41d4-a716-446655440004" },
+    { "jurisdiction": "UK", "collection_id": "990e8400-e29b-41d4-a716-446655440005" }
+  ]
+}
+```
+
+**Errors:** `404` when the pair does not exist or is not the caller's.
+
+#### Compare (PL/UK)
+
+```http
+POST /compare/facets
+POST /compare/export
+GET /compare/pairs/{pair_id}
+```
+
+Side-by-side PL/UK value distributions for base-schema fields. Requires
+`Authorization: Bearer <JWT>`. Full field-registry, tier and coverage
+semantics, and the CSV column dictionary are documented in [Base-schema
+filter API](../reference/base-schema-filter-api.md).
+
+**`POST /compare/facets` — Request Body:**
+
+```json
+{
+  "filters": { "sentence_serve": ["custody"] },
+  "text_query": "fraud",
+  "fields": ["appeal_outcome", "sentence_serve"]
+}
+```
+
+`filters`/`text_query` are the same `BaseSchemaFilters` shape as `POST
+/extractions/base-schema/filter`; `fields` is optional (defaults to every
+comparable base field, up to `MAX_FIELDS` = the registry size — a longer
+list fails request validation with `422` before any other check runs). A
+`jurisdiction` key in `filters` (e.g. carried in from a
+`/search/extractions` permalink) is stripped server-side and reported in
+`ignored_filter_keys`; `collection_ids` is not stripped, it is
+ownership-checked instead (see errors below).
+
+**Example Response (200):**
+
+```json
+{
+  "jurisdictions": ["PL", "UK"],
+  "totals": { "PL": 153, "UK": 200 },
+  "fields": [
+    {
+      "field": "sentence_serve",
+      "label": "Sentence served",
+      "source": "base",
+      "kind": "enum_array",
+      "coverage": {
+        "PL": { "covered": 118, "total": 153, "ratio": 0.7712 },
+        "UK": { "covered": 179, "total": 200, "ratio": 0.895 }
+      },
+      "tier": "partial",
+      "missing_in": [],
+      "values": [
+        { "value": "custody", "counts": { "PL": 40, "UK": 60 }, "shares": { "PL": 0.339, "UK": 0.3352 } }
+      ]
+    }
+  ],
+  "ignored_filter_keys": [],
+  "filters": { "sentence_serve": ["custody"] },
+  "text_query": "fraud",
+  "pair": null
+}
+```
+
+**Errors:** `422` (`fields` longer than `MAX_FIELDS`), `400 UNKNOWN_FIELD`
+(`fields` names a non-comparable field), `400 INVALID_COLLECTION_ID` / `404
+COLLECTION_NOT_FOUND` (`filters.collection_ids` malformed or not owned),
+`500 COMPARE_FAILED`, `503 DATABASE_UNAVAILABLE`.
+
+**`POST /compare/export`** — same request body as `/compare/facets`; returns
+a long-format CSV (`Content-Type: text/csv; charset=utf-8`, UTF-8 BOM,
+`Content-Disposition: attachment`, `X-Rows-Count` header). One row per
+(field, value, jurisdiction): `field, value, jurisdiction, count, share,
+coverage, covered, total`.
+
+**`GET /compare/pairs/{pair_id}`** — no request body; the comparison runs
+over the pair's own two collections. Response is `POST /compare/facets`'s
+shape plus `pair` (`{id, name, pl_collection_id, uk_collection_id}`) and,
+when both collections' newest successful extraction job ran the same
+schema, `extension` (`{schema_id, schema_name, source, jobs, totals,
+fields}`); otherwise `extension_reason` explains why (`no_jobs`,
+`no_job_pl`, `no_job_uk`, `schema_mismatch`, `schema_not_found`,
+`extension_failed`). `filters` in the response is
+`{"collection_ids": [pl_id, uk_id]}`, which `POST /compare/export` accepts
+to get a CSV of the same numbers. **Errors:** `404` (pair not found/not the
+caller's), `500 COMPARE_FAILED`, `503 DATABASE_UNAVAILABLE`.
 
 #### Natural-Language Filter
 

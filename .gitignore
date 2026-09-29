@@ -159,7 +159,12 @@ cython_debug/
 # directory, hence `.claude/*` rather than `.claude/`.
 .claude/*
 !.claude/settings.json
+# Project skills are shared one by one: `!.claude/skills/` alone would also
+# un-ignore each developer's personal skill symlinks (plugin caches linked into
+# this directory), which then show up as untracked in every `git status`.
 !.claude/skills/
+.claude/skills/*
+!.claude/skills/frontend-verify/
 !.claude/agents/
 .claude/settings.local.json
 .context/
