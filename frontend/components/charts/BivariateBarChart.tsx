@@ -37,6 +37,10 @@ export interface BivariateBarChartProps {
   dtick?: number | string;
   /** Show value labels above each bar (mono outside text). */
   showCounts?: boolean;
+  /** Suffix for Y tick labels, e.g. "%" for share charts. */
+  yTickSuffix?: string;
+  /** Plotly hovertemplate applied to both traces. */
+  hoverTemplate?: string;
 }
 
 /**
@@ -57,6 +61,8 @@ export function BivariateBarChart({
   tickAngle,
   dtick,
   showCounts = false,
+  yTickSuffix,
+  hoverTemplate,
 }: BivariateBarChartProps) {
   const ukTrace: Record<string, unknown> = {
     x: categories,
@@ -64,6 +70,7 @@ export function BivariateBarChart({
     type: 'bar',
     name: ukName,
     marker: { color: editorialSeries.uk },
+    ...(hoverTemplate ? { hovertemplate: hoverTemplate } : {}),
   };
   const plTrace: Record<string, unknown> = {
     x: categories,
@@ -71,6 +78,7 @@ export function BivariateBarChart({
     type: 'bar',
     name: plName,
     marker: { color: editorialSeries.pl },
+    ...(hoverTemplate ? { hovertemplate: hoverTemplate } : {}),
   };
 
   if (showCounts) {
@@ -78,10 +86,11 @@ export function BivariateBarChart({
       family: 'Geist Mono, ui-monospace, monospace',
       size: 11,
     };
-    ukTrace.text = ukData.map(v => v.toLocaleString());
+    const suffix = yTickSuffix ?? '';
+    ukTrace.text = ukData.map(v => `${v.toLocaleString()}${suffix}`);
     ukTrace.textposition = 'outside';
     ukTrace.textfont = { ...baseFont, color: editorialSeries.uk };
-    plTrace.text = plData.map(v => v.toLocaleString());
+    plTrace.text = plData.map(v => `${v.toLocaleString()}${suffix}`);
     plTrace.textposition = 'outside';
     plTrace.textfont = { ...baseFont, color: editorialSeries.pl };
   }
@@ -98,7 +107,11 @@ export function BivariateBarChart({
         ...editorialPlotLayout,
         barmode: 'group',
         xaxis,
-        yaxis: { ...editorialPlotLayout.yaxis, title: { text: yAxisTitle } },
+        yaxis: {
+          ...editorialPlotLayout.yaxis,
+          title: { text: yAxisTitle },
+          ...(yTickSuffix ? { ticksuffix: yTickSuffix } : {}),
+        },
         height,
       }}
       config={editorialPlotConfig}

@@ -17,6 +17,7 @@ import { EmptyState, DeleteConfirmationDialog, PageContainer } from "@/lib/style
 import { EditorialCard, EditorialCardSkeleton, EditorialPagination, Eyebrow, Headline } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { CollectionPairBadge } from "./_components/CollectionPairBadge";
 
 // Helper function to format date compactly
 function formatDateCompact(dateString: string): string {
@@ -475,6 +476,7 @@ export default function CollectionsPage() {
                         <FileText className="h-3 w-3" />
                         {docCount} document{docCount !== 1 ? 's' : ''}
                       </span>
+                      {collection.pair && <CollectionPairBadge pair={collection.pair} />}
                     </div>
                   </div>
 
