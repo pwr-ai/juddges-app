@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import DOMPurify from "dompurify";
+import { sanitizeMermaidSvg } from "@/lib/ecosystem/sanitize-mermaid-svg";
 
 type Props = {
   chart: string;
@@ -38,11 +38,7 @@ export function MermaidDiagram({ chart, className, ariaLabel }: Props) {
         });
         const id = `mermaid-${baseId}`;
         const { svg: rendered } = await mermaid.render(id, chart);
-        const sanitized = DOMPurify.sanitize(rendered, {
-          USE_PROFILES: { svg: true, svgFilters: true },
-          ADD_TAGS: ["foreignObject"],
-          ADD_ATTR: ["target", "xmlns"],
-        });
+        const sanitized = sanitizeMermaidSvg(rendered);
         if (!cancelled) setSvg(sanitized);
       } catch (e) {
         if (!cancelled) {
