@@ -256,6 +256,7 @@ services:
   # ============================================================================
 
   backend-worker:
+    init: true  # reap orphaned child processes (avoid zombies under PID 1)
     image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./backend
@@ -336,6 +337,7 @@ services:
   # rolls, suggestion rebuilds. Separated from backend-worker so these never
   # queue behind a long extraction batch.
   backend-worker-maintenance:
+    init: true  # reap orphaned child processes (avoid zombies under PID 1)
     image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./backend
