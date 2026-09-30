@@ -9,7 +9,8 @@
  * visitors, so it is safe to mount once in AppLayoutWrapper.
  */
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -17,14 +18,28 @@ import { findFlowStep, visibleSteps } from "@/lib/navigation/flows";
 
 import { Eyebrow } from "./Eyebrow";
 
-export function FlowStepper(): React.JSX.Element | null {
+/**
+ * `useSearchParams` needs a Suspense boundary above it (same pattern as the
+ * navbar in AppLayoutWrapper); the inner component does the reading so the
+ * outer one can provide the boundary.
+ */
+export function FlowStepper(): React.JSX.Element {
+  return (
+    <Suspense fallback={null}>
+      <FlowStepperInner />
+    </Suspense>
+  );
+}
+
+function FlowStepperInner(): React.JSX.Element | null {
   const pathname = usePathname();
+  const search = useSearchParams().toString();
   const { user } = useAuth();
   const { t } = useTranslation();
 
   if (!user) return null;
   const isAdmin = user.app_metadata?.is_admin === true;
-  const hit = findFlowStep(pathname ?? "", isAdmin);
+  const hit = findFlowStep(pathname ?? "", isAdmin, search ? `?${search}` : "");
   if (!hit) return null;
 
   const steps = visibleSteps(hit.flow, isAdmin);

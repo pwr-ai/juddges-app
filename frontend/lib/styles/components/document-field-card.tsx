@@ -82,48 +82,47 @@ export const DocumentFieldCard = memo(function DocumentFieldCard({
  onClick?.();
  }
  } : undefined}
- className={cn(
- // Base container - modern background with subtle tint
-"bg-slate-50/50",
- // Modern border - subtle and refined
- showBorder &&"border border-slate-200/60",
- // Modern rounded corners
-"rounded-lg",
- // Subtle elevation with soft shadow
-"shadow-sm",
- // Padding - generous and modern
- paddingClasses[padding],
- // Smooth transitions
-"transition-all duration-200",
- // Interactive states (only if clickable)
- isClickable && [
-"cursor-pointer",
-"hover:bg-slate-100/50",
-"hover:shadow-md",
-"hover:border-slate-300/60",
- ],
- // Focus state for accessibility
- isClickable &&"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2",
- className
- )}
- >
- {/* Content */}
- <div className="flex flex-col h-full relative">
- {title && (
- typeof title === 'string' ? (
- <h3 className="text-sm font-semibold text-slate-700 mb-3 leading-tight">
- {title}
- </h3>
- ) : (
- <div className="text-sm font-semibold text-slate-700 mb-3 leading-tight">
- {title}
- </div>
- )
- )}
- <div className="text-slate-900">
- {children}
- </div>
- </div>
- </div>
+      className={cn(
+        // Base container
+        "bg-parchment",
+        // Border
+        showBorder && "border border-rule",
+        // Rounded corners
+        "rounded-none",
+        // Shadow
+        "shadow-none",
+        // Padding
+        paddingClasses[padding],
+        // Transitions
+        "transition-colors duration-150",
+        // Interactive states (only if clickable)
+        isClickable && [
+          "cursor-pointer",
+          "hover:bg-parchment-deep",
+          "hover:border-ink",
+        ],
+        // Focus state for accessibility
+        isClickable && "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+        className
+      )}
+    >
+      {/* Content */}
+      <div className="flex flex-col h-full relative">
+        {title && (
+          typeof title === 'string' ? (
+            <h3 className="text-sm font-medium text-ink mb-3 leading-tight">
+              {title}
+            </h3>
+          ) : (
+            <div className="text-sm font-medium text-ink mb-3 leading-tight">
+              {title}
+            </div>
+          )
+        )}
+        <div className="text-ink text-sm">
+          {children}
+        </div>
+      </div>
+    </div>
  );
 });

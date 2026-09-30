@@ -15,6 +15,8 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type {
+  AggregateRequest,
+  AggregateResponse,
   BaseSchemaFilterRequest,
   BaseSchemaFilterResponse,
   FacetCount,
@@ -24,6 +26,7 @@ import type {
 const FILTER_URL = "/api/extractions/base-schema/filter";
 const FACETS_URL = "/api/extractions/base-schema/facets";
 const HISTOGRAM_URL = "/api/extractions/base-schema/histogram";
+const AGGREGATE_URL = "/api/extractions/base-schema/aggregate";
 
 async function postFilter(
   request: BaseSchemaFilterRequest,
@@ -113,5 +116,33 @@ export function useNumericHistogram(
     queryFn: ({ signal }) => fetchHistogram(field as string, buckets, signal),
     enabled: enabled && Boolean(field),
     staleTime: 3_600_000,
+  });
+}
+
+async function postAggregate(
+  request: AggregateRequest,
+  signal?: AbortSignal,
+): Promise<AggregateResponse> {
+  const response = await fetch(AGGREGATE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+    signal,
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Aggregate request failed (${response.status}): ${detail}`);
+  }
+  return (await response.json()) as AggregateResponse;
+}
+
+/** Statistics over the cohort defined by `request.filters` (#708). */
+export function useExtractionAggregate(request: AggregateRequest, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["base-schema-aggregate", request],
+    queryFn: ({ signal }) => postAggregate(request, signal),
+    enabled,
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 }

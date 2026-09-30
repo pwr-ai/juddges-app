@@ -1,12 +1,14 @@
 /**
- * Pure-function tests for the URL <-> filter-state codec.
- *
- * The hook itself depends on next/navigation and is exercised in the E2E test;
- * here we lock down the behaviour of the encoder/decoder/pruner so that
- * round-trips through the URL never lose or mangle a filter.
+ * Pure-function tests for the URL <-> filter-state codec, plus a thin
+ * hook-level slice for the `?nl=` (nlQuestion) wiring — the rest of the hook
+ * (next/navigation-heavy) is exercised in the E2E test; here we lock down the
+ * behaviour of the encoder/decoder/pruner so that round-trips through the URL
+ * never lose or mangle a filter.
  *
  * @jest-environment jsdom
  */
+
+import { act, renderHook } from "@testing-library/react";
 
 import {
   buildFilterHref,
@@ -15,8 +17,18 @@ import {
   decodeFilters,
   encodeFilters,
   pruneEmpty,
+  useExtractedDataFilters,
 } from "@/lib/extractions/use-extracted-data-filters";
 import type { BaseSchemaFilters } from "@/types/base-schema-filter";
+
+const mockReplace = jest.fn();
+let mockSearchParams = new URLSearchParams();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: mockReplace, push: jest.fn(), prefetch: jest.fn() }),
+  usePathname: () => "/search/extractions",
+  useSearchParams: () => mockSearchParams,
+}));
 
 describe("encodeFilters / decodeFilters", () => {
   it("round-trips an empty filter to empty string and back", () => {
@@ -135,5 +147,60 @@ describe("buildFilterSearchParams / buildFilterHref (one codec for every filter-
       .toBe(`https://juddges.com/compare?f=${encodeFilters(filters)}&q=fraud`);
     expect(buildFilterHref("/compare", { filters: {} }, "https://juddges.com")).toBe("https://juddges.com/compare");
     expect(buildFilterHref("/documents/a%20b", { filters })).toBe(`/documents/a%20b?f=${encodeFilters(filters)}`);
+  });
+});
+
+describe("useExtractedDataFilters — nlQuestion in the URL (?nl=)", () => {
+  beforeEach(() => {
+    mockReplace.mockClear();
+    mockSearchParams = new URLSearchParams();
+  });
+
+  it("reads ?nl= into nlQuestion on mount", () => {
+    mockSearchParams = new URLSearchParams("nl=kobiety+skazane");
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.nlQuestion).toBe("kobiety skazane");
+  });
+
+  it("defaults nlQuestion to undefined when ?nl= is absent", () => {
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.nlQuestion).toBeUndefined();
+  });
+
+  it("setNlQuestion updates state and round-trips it into the URL", () => {
+    const { result } = renderHook(() => useExtractedDataFilters());
+
+    act(() => {
+      result.current.setNlQuestion("fraud cases 2020");
+    });
+
+    expect(result.current.nlQuestion).toBe("fraud cases 2020");
+    const lastUrl = mockReplace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).toBe("?nl=fraud+cases+2020");
+  });
+
+  it("clearAll drops nlQuestion from state and from the URL", () => {
+    mockSearchParams = new URLSearchParams("nl=fraud");
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.nlQuestion).toBe("fraud");
+
+    act(() => {
+      result.current.clearAll();
+    });
+
+    expect(result.current.nlQuestion).toBeUndefined();
+    const lastUrl = mockReplace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).not.toContain("nl=");
+  });
+
+  it("writeUrl output is unchanged for states without nlQuestion", () => {
+    const { result } = renderHook(() => useExtractedDataFilters());
+
+    act(() => {
+      result.current.setTextQuery("fraud");
+    });
+
+    const lastUrl = mockReplace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).toBe("?q=fraud");
   });
 });

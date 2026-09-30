@@ -3,15 +3,15 @@
  *
  * The gate counts pre-Editorial "AI slop" tells (glass blur, gradients,
  * Tailwind default hues, transition-all, big radii, scale hovers, decorative
- * AI glyphs) and fails when any count rises above the committed baseline, so
- * the migration in #637 cannot regress while it is in progress.
+ * AI glyphs). It was a ratchet against a committed baseline while #637 was in
+ * progress; since #642 every family is at zero and any hit is a hard failure.
  */
 
 // Plain CommonJS so `npm run validate` can run it with no build step.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const gate = require('../../scripts/assert-no-banned-classes');
 
-const { countBannedPatterns, compareToBaseline, isAllowlisted, PATTERNS } = gate;
+const { countBannedPatterns, findOffenders, isAllowlisted, PATTERNS } = gate;
 
 type Counts = Record<string, number>;
 
@@ -59,6 +59,44 @@ describe('countBannedPatterns', () => {
   });
 });
 
+describe('pattern targeting: class usage, not token definitions', () => {
+  // globals.css caps the oversized shadows by aliasing the tokens down:
+  //   --shadow-xl: var(--shadow-lg);
+  // That line is the countermeasure, not a violation. Counting it made the
+  // gate score its own fix and put a literal zero out of reach (#642).
+  it('ignores --shadow-xl / --shadow-2xl custom-property definitions', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'app/globals.css',
+        content: [
+          '  --shadow-xl: var(--shadow-lg);',
+          '  --shadow-2xl: var(--shadow-lg);',
+          '  --shadow-xl: var(--shadow-xl);',
+          '  --shadow-2xl: var(--shadow-2xl);',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts['hover-fx']).toBe(0);
+  });
+
+  it('still counts shadow-xl and shadow-2xl used as utility classes', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'components/x.tsx',
+        content: '<div className="shadow-xl hover:shadow-2xl md:shadow-xl" />',
+      },
+    ]);
+    expect(counts['hover-fx']).toBe(3);
+  });
+
+  it('still counts hover:scale-', () => {
+    const counts = countBannedPatterns([
+      { path: 'components/x.tsx', content: '<div className="hover:scale-105" />' },
+    ]);
+    expect(counts['hover-fx']).toBe(1);
+  });
+});
+
 describe('isAllowlisted', () => {
   it('skips the editorial primitives and the neutral skeleton', () => {
     expect(isAllowlisted('components/editorial/EditorialCard.tsx')).toBe(true);
@@ -68,24 +106,111 @@ describe('isAllowlisted', () => {
   });
 });
 
-describe('compareToBaseline', () => {
-  it('flags a pattern whose count rose above the baseline', () => {
-    const result = compareToBaseline({ ...zeroCounts(), glass: 5 }, { ...zeroCounts(), glass: 4 });
-
-    expect(result.regressions).toEqual([{ name: 'glass', baseline: 4, actual: 5 }]);
-    expect(result.improvements).toEqual([]);
+describe('raw CSS, not just Tailwind class names (#713)', () => {
+  // Every pattern was shaped like a utility class, so a rule written in plain
+  // CSS walked straight past the gate. components.css hid a live
+  // `backdrop-filter` blur on every toast and a dead purple gradient.
+  it('counts backdrop-filter, not only the backdrop-blur utility', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'lib/styles/x.css',
+        content: [
+          '  backdrop-filter: blur(20px) saturate(180%) !important;',
+          '  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.glass).toBe(2);
   });
 
-  it('reports a pattern whose count dropped so the baseline can be lowered', () => {
-    const result = compareToBaseline({ ...zeroCounts(), hue: 2 }, { ...zeroCounts(), hue: 9 });
-
-    expect(result.regressions).toEqual([]);
-    expect(result.improvements).toEqual([{ name: 'hue', baseline: 9, actual: 2 }]);
+  it('counts CSS gradient functions, not only bg-gradient-to-', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'lib/styles/x.css',
+        content: [
+          '  background-image: linear-gradient(to bottom right, #a, #b);',
+          '  background: radial-gradient(circle, #a, #b);',
+          '  background: conic-gradient(#a, #b);',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.gradient).toBe(3);
   });
 
-  it('treats a pattern missing from the baseline as zero', () => {
-    const result = compareToBaseline({ ...zeroCounts(), motion: 1 }, {});
+  it('counts a shimmer animation declared in CSS', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'lib/styles/x.css',
+        content: [
+          '@keyframes ai-badge-shimmer {',
+          '  animation: ai-badge-shimmer 3s ease-in-out infinite;',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.motion).toBe(2);
+  });
 
-    expect(result.regressions).toEqual([{ name: 'motion', baseline: 0, actual: 1 }]);
+  // `infinite` on its own is not the tell. A blinking text caret and a
+  // skeleton pulse both loop forever and are both permitted (DESIGN.md
+  // §4a, §6), so the pattern targets the sweep, not the repeat count.
+  it('leaves the permitted perpetual animations alone', () => {
+    const counts = countBannedPatterns([
+      {
+        path: 'app/globals.css',
+        content: [
+          '  animation: caret-blink 1.06s steps(1, end) infinite;',
+          '  animation: fadeInSlide 500ms ease-out forwards, pulse 2s ease-in-out infinite;',
+          '  // Prevent infinite loops when the chat is missing',
+          '  /** Pagination metadata for progressive loading (infinite scroll) */',
+        ].join('\n'),
+      },
+    ]);
+    expect(counts.motion).toBe(0);
+  });
+
+  it('does not let the shimmer match run past a rule boundary', () => {
+    // A declaration with no trailing semicolon is legal CSS, so `[^;{]*` would
+    // have run past the closing brace into the next rule and matched there.
+    const counts = countBannedPatterns([
+      {
+        path: 'app/globals.css',
+        content: ['.x { animation: caret-blink 1s infinite }', '.y::after { content: "shimmer" }'].join('\n'),
+      },
+    ]);
+    expect(counts.motion).toBe(0);
+  });
+
+  it('counts an arbitrary radius that ends a string literal', () => {
+    // `rounded-(...)\b` never matched here: between `]` and `"` there are two
+    // non-word characters, so there is no boundary to anchor against.
+    const counts = countBannedPatterns([
+      { path: 'components/x.tsx', content: 'className={cn("rounded-[24px]")}' },
+    ]);
+    expect(counts.radius).toBe(1);
+  });
+
+  it('still does not count a radius utility that merely starts the same way', () => {
+    const counts = countBannedPatterns([
+      { path: 'components/x.tsx', content: '<div className="rounded-xlarge rounded-none" />' },
+    ]);
+    expect(counts.radius).toBe(0);
+  });
+});
+
+describe('findOffenders', () => {
+  it('reports nothing for a clean set of files', () => {
+    expect(
+      findOffenders([{ path: 'components/x.tsx', content: '<div className="bg-parchment text-ink" />' }])
+    ).toEqual([]);
+  });
+
+  it('names the family, the total count and the files it came from', () => {
+    const offenders = findOffenders([
+      { path: 'components/a.tsx', content: '<div className="backdrop-blur-sm" />' },
+      { path: 'components/b.tsx', content: '<div className="backdrop-blur-md glass-panel" />' },
+      { path: 'components/c.tsx', content: '<div className="bg-parchment" />' },
+    ]);
+
+    expect(offenders).toEqual([{ name: 'glass', count: 3, files: ['components/a.tsx', 'components/b.tsx'] }]);
   });
 });

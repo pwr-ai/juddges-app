@@ -1,7 +1,7 @@
 /**
  * View Mode Toggle Component
  * Liquid glass pill design for switching between list and grid views
- * Matches GlassTabs styling
+ * Matches EditorialTabs styling
  */
 
 "use client";
@@ -24,7 +24,7 @@ export interface ViewModeToggleProps {
  * View Mode Toggle Component
  *
  * A liquid glass pill toggle for switching between list and grid views.
- * Uses the same styling as GlassTabs for consistency.
+ * Uses the same styling as EditorialTabs for consistency.
  */
 export function ViewModeToggle({
   viewMode,

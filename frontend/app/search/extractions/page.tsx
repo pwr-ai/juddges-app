@@ -7,6 +7,8 @@ import { ActiveFilterChips } from "@/components/filters/extracted-search-filters
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { NlFilterDialog } from "@/components/search/NlFilterDialog";
 import { QuickFilters } from "@/components/search/QuickFilters";
+import { SaveAsCollectionDialog } from "@/components/search/SaveAsCollectionDialog";
+import { ScopeFilters } from "@/components/search/ScopeFilters";
 import { Eyebrow, Headline } from "@/components/editorial";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,8 @@ import {
   useExtractionResults,
 } from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
+import type { FilterUrlState } from "@/lib/extractions/use-extracted-data-filters";
+import { buildDocumentHref } from "@/lib/extractions/document-href";
 import { applyDrawerChange, toDrawerFilters } from "@/lib/extractions/drawer-adapter";
 import { isCoreFilterField } from "@/lib/extractions/base-schema-filter-config";
 import type {
@@ -28,6 +32,9 @@ import type {
   BaseSchemaFilters,
 } from "@/types/base-schema-filter";
 import type { BaseFilterValue } from "@/lib/store/searchStore";
+
+import { StatisticsView } from "./_components/StatisticsView";
+import { ViewToggle } from "./_components/ViewToggle";
 
 const pageLogger = logger.child("ExtractionSearchPage");
 
@@ -94,11 +101,17 @@ function SubstringInputs({
   );
 }
 
-function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
+function ResultRow({
+  row,
+  urlState,
+}: {
+  row: BaseSchemaFilterResultRow;
+  urlState: FilterUrlState;
+}) {
   const date = row.decision_date ? new Date(row.decision_date) : null;
   return (
     <Link
-      href={`/documents/${row.id}`}
+      href={buildDocumentHref(row.id, urlState)}
       className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment-deep)]"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -134,11 +147,13 @@ export function ResultList({
   isLoading,
   hasActiveFilters,
   onClearAll,
+  urlState,
 }: {
   rows: BaseSchemaFilterResultRow[];
   isLoading: boolean;
   hasActiveFilters: boolean;
   onClearAll: () => void;
+  urlState: FilterUrlState;
 }) {
   if (isLoading && rows.length === 0) {
     return (
@@ -172,7 +187,7 @@ export function ResultList({
   return (
     <div className="space-y-3">
       {rows.map((row) => (
-        <ResultRow key={row.id} row={row} />
+        <ResultRow key={row.id} row={row} urlState={urlState} />
       ))}
     </div>
   );
@@ -187,9 +202,19 @@ function ExtractionSearchPage() {
     setFilters,
     setTextQuery,
     setPage,
+    setNlQuestion,
     removeFilter,
     clearAll,
     activeCount,
+    nlQuestion,
+    view,
+    sampleSize,
+    seed,
+    statsFields,
+    setView,
+    setSampling,
+    reshuffle,
+    setStatsFields,
   } = useExtractedDataFilters();
 
   const request = useMemo<BaseSchemaFilterRequest>(
@@ -202,7 +227,12 @@ function ExtractionSearchPage() {
     [filters, textQuery, page, pageSize],
   );
 
-  const { data, isLoading, isFetching, error, refetch } = useExtractionResults(request);
+  // The list query only runs behind the list view; the statistics view owns
+  // its own aggregate query (#708).
+  const { data, isLoading, isFetching, error, refetch } = useExtractionResults(
+    request,
+    view === "list",
+  );
 
   // Never render the raw exception: it leaks internals and gives the reader
   // nothing to act on. Keep it in the console instead.
@@ -254,9 +284,11 @@ function ExtractionSearchPage() {
   const applyNlFilters = (
     nextFilters: BaseSchemaFilters,
     nextTextQuery: string,
+    question: string,
   ) => {
     setFilters(nextFilters);
     setTextQuery(nextTextQuery);
+    setNlQuestion(question);
   };
 
   const resetDrawerFilters = () => {
@@ -304,6 +336,8 @@ function ExtractionSearchPage() {
           onChange={setSubstringFilter}
         />
 
+        <ScopeFilters filters={filters} onChange={setFilters} />
+
         <QuickFilters
           filters={drawerFilters}
           onChange={setDrawerFilter}
@@ -328,19 +362,36 @@ function ExtractionSearchPage() {
       */}
       <div className="sticky top-0 z-10 border-b border-[color:var(--rule)] bg-[color:var(--parchment)] py-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-[color:var(--ink-soft)]">
-            {isLoading
-              ? "Searching…"
-              : total === 0
-                ? "No results"
-                : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
-            {isFetching && !isLoading && " (updating…)"}
-          </p>
-          {error && (
-            <Button variant="ghost" size="sm" onClick={() => clearAll()}>
-              Reset
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            <ViewToggle view={view} onChange={setView} />
+            {/* In the statistics view the cohort line replaces this count. */}
+            {view === "list" && (
+              <p className="text-sm text-[color:var(--ink-soft)]">
+                {isLoading
+                  ? "Searching…"
+                  : total === 0
+                    ? "No results"
+                    : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
+                {isFetching && !isLoading && " (updating…)"}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {view === "list" && (
+              <SaveAsCollectionDialog
+                filters={filters}
+                textQuery={textQuery}
+                total={total}
+                defaultName={nlQuestion ?? ""}
+                disabled={isLoading || Boolean(error)}
+              />
+            )}
+            {view === "list" && error && (
+              <Button variant="ghost" size="sm" onClick={() => clearAll()}>
+                Reset
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -352,7 +403,12 @@ function ExtractionSearchPage() {
         onClearAll={clearAll}
       />
 
-      {error && (
+      {/*
+        The list query is disabled behind the statistics view but React Query
+        keeps its last error, so every list-only surface below is gated on the
+        view, not on `error` alone.
+      */}
+      {view === "list" && error && (
         <div role="alert">
         <ErrorCard
           title="Results could not be loaded"
@@ -364,16 +420,34 @@ function ExtractionSearchPage() {
         </div>
       )}
 
-      {!error && (
+      {view === "stats" && (
+        <StatisticsView
+          filters={filters}
+          textQuery={textQuery}
+          sampleSize={sampleSize}
+          seed={seed}
+          fields={statsFields}
+          onSampling={(n) => setSampling(n)}
+          onReshuffle={reshuffle}
+          onFields={setStatsFields}
+          onDrillBack={(patch) => {
+            if (patch) setFilters({ ...filters, ...patch });
+            setView("list");
+          }}
+        />
+      )}
+
+      {view === "list" && !error && (
         <ResultList
           rows={rows}
           isLoading={isLoading}
           hasActiveFilters={activeCount > 0 || textQuery.trim().length > 0}
           onClearAll={clearAll}
+          urlState={{ filters, textQuery, page, nlQuestion }}
         />
       )}
 
-      {total > pageSize && (
+      {view === "list" && total > pageSize && (
         <Pagination
           currentPage={page}
           totalPages={totalPages}

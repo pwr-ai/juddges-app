@@ -25,6 +25,7 @@ describe("extraction search result rows", () => {
         isLoading={false}
         hasActiveFilters={false}
         onClearAll={() => {}}
+        urlState={{ filters: {} }}
       />
     );
 

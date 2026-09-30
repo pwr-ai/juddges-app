@@ -562,15 +562,6 @@
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 @keyframes fade-out-down {
   from {
     opacity: 1;
@@ -620,25 +611,8 @@
   animation: scale-in 0.4s ease-out;
 }
 
-.animate-shimmer {
-  animation: shimmer 2s infinite linear;
-  background: color-mix(in oklab, var(--muted) 45%, transparent);
-  background-size: 1000px 100%;
-}
-
 .animate-fade-out-down {
   animation: fade-out-down 300ms ease-in forwards;
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .animate-shimmer::after {
-    animation: none;
-  }
-
-  .animate-shimmer {
-    opacity: 0.7;
-  }
 }
 
 /* Premium link transitions */
@@ -709,63 +683,6 @@ html {
   body,
   * {
     scroll-behavior: auto !important;
-  }
-}
-
-/* Professional visual cleanup: flatten decorative gradients across the app */
-@layer base {
-  :where(
-    [class*="bg-gradient"],
-    [class*="bg-[linear-gradient"],
-    [class*="bg-[radial-gradient"],
-    [class*="bg-[conic-gradient"]
-  ) {
-    background-image: none !important;
-    background-color: color-mix(in oklab, var(--muted) 30%, transparent);
-  }
-
-  :where(button, [role="button"], a):where(
-    [class*="bg-gradient"],
-    [class*="bg-[linear-gradient"],
-    [class*="bg-[radial-gradient"],
-    [class*="bg-[conic-gradient"]
-  ) {
-    background-image: none !important;
-    background-color: var(--primary);
-    border-color: color-mix(in oklab, var(--primary) 40%, transparent);
-    color: var(--primary-foreground) !important;
-    box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 15%, transparent);
-  }
-
-  :where([class*="bg-clip-text"][class*="text-transparent"]) {
-    background-image: none !important;
-    -webkit-text-fill-color: currentColor !important;
-    color: var(--foreground) !important;
-  }
-
-  :where([style*="gradient("]) {
-    background-image: none !important;
-    background-color: color-mix(in oklab, var(--muted) 28%, transparent) !important;
-  }
-
-  :where(
-    [class*="before:bg-gradient"],
-    [class*="before:bg-[linear-gradient"],
-    [class*="before:bg-[radial-gradient"],
-    [class*="before:bg-[conic-gradient"]
-  )::before {
-    background-image: none !important;
-    background-color: color-mix(in oklab, var(--muted) 25%, transparent) !important;
-  }
-
-  :where(
-    [class*="after:bg-gradient"],
-    [class*="after:bg-[linear-gradient"],
-    [class*="after:bg-[radial-gradient"],
-    [class*="after:bg-[conic-gradient"]
-  )::after {
-    background-image: none !important;
-    background-color: color-mix(in oklab, var(--muted) 25%, transparent) !important;
   }
 }
 

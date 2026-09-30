@@ -4,6 +4,8 @@ Converts a user's plain-English (or Polish) question into the JSON `p_filters`
 shape accepted by the Postgres RPC `filter_documents_by_extracted_data` (defined
 in supabase/migrations/20260226000001_create_judgment_base_extractions_table.sql
 and extended by 20260505000001_extend_base_schema_filterable_searchable.sql).
+Besides the `base_*` extraction fields, two core `judgments` columns are also
+exposed: `jurisdiction` and `decision_date`.
 
 The output is validated by Pydantic; every enum-constrained field uses
 `Literal[...]` mirroring the CHECK constraints in the migration, so an LLM
@@ -33,6 +35,8 @@ from typing import TYPE_CHECKING, Any, Literal
 from juddges_search.llms import get_default_llm
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.models import Jurisdiction  # noqa: TC001 - pydantic field, needed at runtime
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
@@ -88,6 +92,12 @@ AppealOutcome = Literal[
     "outcome_unknown",
 ]
 
+# Core columns deliberately NOT exposed to the NL translator until the data is
+# fixed (docs/reference/APP_STATUS_2026-08-21.md §4: case_type='Civil' on UK
+# criminal appeals, court_level='Crown Court' wrong). Tested in
+# tests/app/test_nl_filter_generator.py and test_nl_filter_prompt_contract.py.
+NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type", "court_level"})
+
 
 # ---------------------------------------------------------------------------
 # Range helpers (mirror the {"min": ..., "max": ...} / {"from":, "to":} shapes
@@ -128,6 +138,19 @@ class BaseSchemaFilter(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    # --- core judgment columns (not base_*; filtered on judgments.*) ---------
+    jurisdiction: list[Jurisdiction] | None = Field(
+        default=None,
+        description="Country of the court: PL (Poland) and/or UK (United Kingdom).",
+    )
+    decision_date: DateRange | str | None = Field(
+        default=None,
+        description=(
+            "Date the judgment was handed down (judgments.decision_date). Use for "
+            "'from 2015 to 2024', 'w latach 2015–2024', 'since 2020', 'po 2020 r.'."
+        ),
+    )
 
     # --- scalar enums (IN-list) ------------------------------------------------
     appellant: list[Appellant] | None = None
@@ -211,7 +234,7 @@ class BaseSchemaFilter(BaseModel):
 # Prompt
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You translate a user's natural-language question about UK
+SYSTEM_PROMPT = """You translate a user's natural-language question (English or Polish) about UK
 and Polish criminal-court judgments into a structured filter for the
 `filter_documents_by_extracted_data` Postgres RPC.
 
@@ -224,8 +247,14 @@ You MUST follow these rules:
 3. For numeric fields, prefer ranges over equality. "at least N" → {"min": N};
    "no more than N" → {"max": N}; "between N and M" → {"min": N, "max": M};
    "exactly N" → equality (just a number).
-4. For dates, use ISO format YYYY-MM-DD. "in 2024" → from 2024-01-01 to
-   2024-12-31. "since 2023" → from 2023-01-01.
+4. Dates: use ISO YYYY-MM-DD. "in 2024" / "w 2024 r." → from 2024-01-01 to
+   2024-12-31. "since 2020" / "od 2020" → from 2020-01-01 (inclusive of 2020).
+   "after 2020" / "po 2020" → from 2021-01-01 (strictly after 2020, exclusive).
+   "before 2010" / "przed 2010" → to 2009-12-31 (strictly before 2010,
+   exclusive). "between 2015 and 2024" / "2015–2024" / "w latach 2015–2024" →
+   from 2015-01-01 to 2024-12-31.
+   When the user talks about *when the judgment was given*, default to `decision_date`
+   — it exists for every PL and UK judgment. Use `date_of_appeal_court_judgment` only when the user explicitly names the appeal court judgment date.
 5. `text_query` is for free-text search across case name, judges, charges,
    courts, keywords. Use it only when the user is asking for content
    *mentioning* something. If the user is filtering by a structured field,
@@ -238,9 +267,21 @@ You MUST follow these rules:
    `mit_fact_sent`, …) are not enum-constrained; you may add reasonable
    short tokens but err toward leaving them null when the user hasn't been
    specific.
+8. `jurisdiction` is the country of the court. Set it only when the user names
+   a country or legal system:
+   - "UK", "United Kingdom", "England", "English", "British", "brytyjskie",
+     "angielskie", "w Anglii", "w Wielkiej Brytanii" → ["UK"]
+   - "Poland", "Polish", "polskie", "polski sąd", "w Polsce" → ["PL"]
+   - "PL i UK", "both countries", "Polish and English courts", "porównaj PL z
+     UK" → ["PL", "UK"]
+   A question written in Polish is NOT by itself a reason to set ["PL"].
+9. Case type (civil / criminal / "karne" / "cywilne") and court level are NOT
+   available as filters. Do not try to express them through other fields;
+   leave them out.
 
 Enum reference (mirror these exactly):
 
+- jurisdiction: PL | UK
 - appellant: offender | attorney_general | other
 - plea_point: police_presence | first_court_appearance | before_trial |
   first_day_of_trial | after_first_day_of_trial | dont_know
@@ -270,7 +311,7 @@ user: "list cases with at least 2 co-defendants where the offender confessed"
 
 user: "successful appeals where the conviction was quashed in 2025"
 → appeal_outcome: ["outcome_conviction_quashed"],
-  date_of_appeal_court_judgment: {"from": "2025-01-01", "to": "2025-12-31"}
+  decision_date: {"from": "2025-01-01", "to": "2025-12-31"}
 
 user: "robbery cases involving a knife"
 → text_query: "robbery knife"
@@ -287,6 +328,18 @@ user: "homeless offender, unemployed, with a guilty plea mitigating factor"
 → offender_home_offence: ["homeless"],
   offender_job_offence: ["unemployed"],
   mit_fact_sent: ["guilty_plea"]
+
+user: "kobiety skazane za oszustwo z wyrokiem w zawieszeniu, PL i UK, 2015–2024"
+→ offender_gender: ["gender_female"],
+  convict_offences: ["fraud"],
+  sentences_received: ["suspended sentence"],
+  jurisdiction: ["PL", "UK"],
+  decision_date: {"from": "2015-01-01", "to": "2024-12-31"}
+
+user: "English cases since 2020 where the offender was remanded in custody"
+→ jurisdiction: ["UK"],
+  remand_decision: ["remanded_in_custody"],
+  decision_date: {"from": "2020-01-01"}
 
 Return JSON matching the schema exactly. Set unused fields to null.
 """

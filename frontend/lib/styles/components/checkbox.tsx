@@ -43,10 +43,10 @@ export function Checkbox({
  // Design system base styles
 "cursor-pointer rounded-lg",
 "bg-white/50",
-"border border-slate-400",
+"border border-rule-strong",
 "data-[state=checked]:bg-primary data-[state=checked]:border-primary",
 "hover:border-primary",
-"transition-all duration-200",
+"transition-colors duration-150",
  // Focus state for accessibility
 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
  className

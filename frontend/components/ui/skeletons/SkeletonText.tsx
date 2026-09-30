@@ -45,7 +45,7 @@ export function SkeletonText({
         return (
           <div
             key={i}
-            className="h-4 rounded bg-muted animate-shimmer"
+            className="h-4 rounded bg-muted animate-pulse"
             style={{ width }}
             aria-hidden="true"
           />

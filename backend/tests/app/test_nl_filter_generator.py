@@ -108,6 +108,40 @@ class TestBaseSchemaFilterValidation:
             "date_of_appeal_court_judgment": {"from": "2024-01-01"},
         }
 
+    def test_jurisdiction_and_decision_date_round_trip(self):
+        f = BaseSchemaFilter(
+            jurisdiction=["PL", "UK"],
+            decision_date=DateRange.model_validate(
+                {"from": "2015-01-01", "to": "2024-12-31"}
+            ),
+        )
+        assert f.to_rpc_payload()["filters"] == {
+            "jurisdiction": ["PL", "UK"],
+            "decision_date": {"from": "2015-01-01", "to": "2024-12-31"},
+        }
+
+    def test_jurisdiction_rejects_unknown_country(self):
+        with pytest.raises(ValidationError):
+            BaseSchemaFilter(jurisdiction=["DE"])
+
+    def test_jurisdiction_rejects_lowercase(self):
+        # The CHECK constraint is exact-case ('PL','UK'); the LLM must not
+        # be allowed to emit 'pl' and silently match nothing.
+        with pytest.raises(ValidationError):
+            BaseSchemaFilter.model_validate({"jurisdiction": ["pl"]})
+
+    def test_case_type_is_not_a_filter_field(self):
+        # APP_STATUS_2026-08-21 §4: case_type='Civil' on UK criminal appeals.
+        from app.extraction_domain.nl_filter_generator import (
+            NL_EXCLUDED_CORE_FIELDS,
+        )
+
+        assert {"case_type", "court_level"} <= NL_EXCLUDED_CORE_FIELDS
+        for field in NL_EXCLUDED_CORE_FIELDS:
+            assert field not in BaseSchemaFilter.model_fields
+        with pytest.raises(ValidationError):
+            BaseSchemaFilter.model_validate({"case_type": ["Criminal"]})
+
 
 # ---------------------------------------------------------------------------
 # NumericRange / DateRange

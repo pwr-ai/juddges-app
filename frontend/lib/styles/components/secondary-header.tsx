@@ -59,23 +59,18 @@ export function SecondaryHeader({
  return (
  <div
  className={cn(
- showBorder &&"pt-3 border-t border-slate-200/30",
+ showBorder &&"pt-3 border-t border-rule",
  className
  )}
  style={style}
  >
  <div className="flex items-center gap-2.5">
  {Icon && (
- <div className="relative">
- <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-indigo-400/15 to-purple-400/15 rounded-full blur-md"/>
- <Icon className="relative h-4 w-4 text-primary/80"/>
+ <div className="shrink-0 flex items-center justify-center">
+ <Icon className="h-4 w-4 text-oxblood"/>
  </div>
  )}
- <h2 className={cn(
-"text-xl font-semibold leading-tight tracking-wide",
- // Black text in light theme
-"text-black"
- )}>
+ <h2 className="text-xl font-serif font-medium leading-tight text-ink">
  {title}
  </h2>
  </div>

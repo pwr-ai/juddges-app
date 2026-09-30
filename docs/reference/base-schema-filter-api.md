@@ -1,8 +1,9 @@
 # Base-schema filter API (reference)
 
-Shared filter contract used by `/search/extractions` and "save filter as
-collection", designed to also support the planned NL-question-to-filter flow
-and PL/UK comparison.
+Shared filter contract used by `/search/extractions`, "save filter as
+collection", the NL-question-to-filter flow (`POST
+/extractions/base-schema/nl-filter`), and the PL/UK comparison (`/compare`,
+`backend/app/compare/`).
 
 ## RPC `public.list_extracted_filter_matches(p_filters JSONB, p_text_query TEXT)`
 
@@ -59,6 +60,149 @@ PostgREST matches by argument names, and a second overload answers HTTP 300.
 Pinned by `backend/tests/db/test_migration_chain.py`
 (`EXPECTED_RPC_ARGS`, `test_rpc_has_exactly_one_overload`).
 
+## RPC `public.get_extracted_facet_counts_by_jurisdiction(p_filters, field_path, p_text_query)`
+
+Sibling of `get_extracted_facet_counts(field_path)` (which stays untouched):
+per-jurisdiction value counts **with coverage**, for the PL/UK comparison
+(`backend/app/compare/service.py::CompareService`, one call per compared
+field). Introduced in migration
+`20260921000001_facet_counts_by_jurisdiction.sql`.
+
+```
+(p_filters JSONB DEFAULT '{}', field_path TEXT DEFAULT NULL, p_text_query TEXT DEFAULT NULL)
+  -> TABLE(jurisdiction TEXT, value TEXT, count BIGINT, total BIGINT, covered BIGINT, coverage NUMERIC)
+```
+
+- `p_filters`/`p_text_query` are the same `BaseSchemaFilters` shape as
+  `list_extracted_filter_matches` (which this RPC calls internally to build
+  `matched`); `field_path` is resolved to a `judgments` column via the
+  existing `_base_field_to_column` helper (unknown field → `RAISE EXCEPTION`,
+  surfaced by the service as `FieldNotComparableError`).
+- `total` = matched judgments in that jurisdiction **with completed base
+  extraction** (`list_extracted_filter_matches` already restricts to
+  `base_extraction_status = 'completed'`), not every judgment matched by the
+  raw filter.
+- `covered` = matched judgments whose column is "filled": `text[]` → at least
+  one element that is not `NULL`/`''`; `text` → `NULLIF(BTRIM(col), '')` is
+  not null; anything else → `col IS NOT NULL`. This is the SQL-side
+  definition referenced (as "planned" before this migration landed) by
+  `backend/app/extraction_domain/completeness.py`'s docstring — it only
+  treats SQL `NULL`/`''` as empty, unlike the Python-side `is_empty_value`
+  used for free-text extraction results.
+- `coverage` = `covered / total`, rounded to 4 decimals, `NULL` when
+  `total = 0`.
+- A jurisdiction with `total > 0` and `covered = 0` still yields exactly one
+  row (`value IS NULL`, `count IS NULL`, via a `LEFT JOIN` from the per-jurisdiction
+  totals to the value counts) so callers learn `total` even when nothing is
+  codeable — this is what lets `app.compare.layout.tier_for` distinguish
+  "unavailable" (zero coverage in one jurisdiction) from "empty" (zero
+  matches in both).
+- Rows are ordered `jurisdiction, count DESC NULLS LAST, value` — stable, but
+  callers that need cross-jurisdiction value alignment (the comparison UI)
+  re-sort in Python (`app.compare.layout.build_field`), not in SQL.
+
+## RPC `public.aggregate_extracted_data(p_filters, p_text_query, p_fields, p_sample_size, p_seed, p_top_n)`
+
+```sql
+aggregate_extracted_data(
+  p_filters      jsonb   default '{}',   -- same shape as list_extracted_filter_matches
+  p_text_query   text    default null,
+  p_fields       text[]  default null,   -- null = the default 7-field set; 1..50 entries
+  p_sample_size  int     default null,   -- null = whole cohort
+  p_seed         int     default null,   -- required when p_sample_size is set
+  p_top_n        int     default 20      -- values kept per categorical field, 1..100
+) returns jsonb
+```
+
+Per-field distributions over the cohort returned by
+`list_extracted_filter_matches(p_filters, p_text_query)` — no predicate is
+re-implemented here. `SECURITY INVOKER`, defined in migration
+`20260921000003_aggregate_extracted_data.sql`, next to the private helper
+`public._aggregate_column_for_field(p_field)` (field name → column name).
+Sampling is deterministic and exact-n: the cohort ids are ordered by
+`md5(id::text || p_seed::text), id` inside a CTE and the first
+`p_sample_size` are kept, so the same cohort and seed always produce the same
+sample. `p_fields` is capped to 1–50 entries and `p_top_n` to 1–100; both are
+enforced before the cohort query runs.
+
+Return shape:
+
+```json
+{
+  "total": 4312,
+  "sample_n": 1000,
+  "seed": 42,
+  "fields": {
+    "convict_offences":     {"kind": "categorical", "multi": true, "values": [{"value": "possession", "count": 812}, ...], "other": 44, "null": 0, "covered": 1000},
+    "victim_age_offence":   {"kind": "numeric", "buckets": [{"lo": 10, "hi": 15, "count": 12}, ...], "min": 0, "max": 90, "null": 3, "covered": 997},
+    "decision_date":        {"kind": "year", "values": [{"value": "2019", "count": 301}, ...], "null": 0, "covered": 1000}
+  }
+}
+```
+
+`kind` dispatches on the column's `information_schema.udt_name`: `text[]`
+(`multi: true`, `unnest`ed so a judgment can appear under several values) and
+scalar `text`/`bool`/`varchar` (`multi: false`) are `categorical`, integer and
+numeric/float columns are `numeric` (a `width_bucket` histogram, `buckets: []`
+when the field is all-`NULL` over the cohort), and `date`/`timestamp`/
+`timestamptz` columns are `year`. An empty cohort or an all-`NULL` field
+yields the same shape with zeroed counts, never an error. Field names not in
+the allowlist raise `field % is not aggregable`.
+
+Grants follow the same pattern as the other RPCs in this file: Supabase
+grants `EXECUTE` to `anon` by default, so the migration runs
+`REVOKE ALL ON FUNCTION aggregate_extracted_data(...) FROM PUBLIC, anon;`
+before `GRANT EXECUTE ON FUNCTION aggregate_extracted_data(...) TO
+authenticated, service_role;`. `_aggregate_column_for_field` carries the same
+revoke/grant pair.
+
+## `POST /extractions/base-schema/aggregate`
+
+Implemented in `backend/app/extraction_domain/results_router.py`. Request
+model `AggregateRequest`, response model `AggregateResponse`
+(`backend/app/models.py`).
+
+Request body:
+
+```json
+{
+  "filters": { "...": "BaseSchemaFilters" },
+  "text_query": "string, optional",
+  "fields": ["offender_gender", "..."],
+  "sample_size": 1000,
+  "seed": 42,
+  "top_n": 20
+}
+```
+
+- `fields` — optional; `null`/omitted means the default 7-field set
+  (`offender_gender`, `convict_offences`, `sentences_received`,
+  `appeal_outcome`, `did_offender_confess`, `court_name`, `decision_date`).
+  Validated by `validate_fields()` (`app/extraction_domain/aggregate_fields.py`)
+  against the same allowlist as the SQL side; an unknown field is `422`
+  naming it (`code: FIELD_NOT_AGGREGABLE`).
+- `sample_size` — optional, `1..20000`; requires `seed`, enforced by a
+  `model_validator` (`422` naming `seed` when it's missing).
+- `seed` — optional, bounded to Postgres `int4` (`-2^31..2^31-1`) so it fits
+  the RPC's `INT` parameter without an overflow at the database.
+- `top_n` — `1..100`, default `20`.
+
+Response mirrors the RPC's JSONB return shape (`{total, sample_n, seed,
+fields}`) unchanged.
+
+**`collection_ids` is rejected exactly like `/base-schema/filter`**
+(`400 COLLECTION_IDS_NOT_ALLOWED`), for the same reason: the RPC is
+`SECURITY INVOKER` but the backend calls it with the service-role client, so
+honouring `collection_ids` would let any signed-in caller probe any
+collection's membership. Unlike `/base-schema/filter`, this endpoint does
+require a bearer user (`get_current_user`) — the gate is login, not
+collection ownership, since the cohort itself stays corpus-wide.
+
+Errors: `422 FIELD_NOT_AGGREGABLE` (bad `fields` entry, or `seed` missing
+with `sample_size` set), `400 COLLECTION_IDS_NOT_ALLOWED`,
+`503 DATABASE_UNAVAILABLE`, `500 AGGREGATE_FAILED` (RPC call raised, or
+returned something that isn't the expected dict).
+
 ## `POST /collections/from-filter`
 
 Implemented in `backend/app/collections_from_filter.py`.
@@ -70,7 +214,8 @@ Request body:
   "name": "string, 1–255 chars",
   "description": "string, ≤1000 chars, optional",
   "filters": { "...": "BaseSchemaFilters" },
-  "text_query": "string, ≤1000 chars, optional"
+  "text_query": "string, ≤1000 chars, optional",
+  "split_by_jurisdiction": false
 }
 ```
 
@@ -82,15 +227,62 @@ Success — `201 Created`:
     { "jurisdiction": null, "collection": { "...": "Collection" }, "added_count": 42 }
   ],
   "total_matched": 42,
-  "pair_id": null
+  "pair_id": null,
+  "ignored_filter_keys": []
 }
 ```
 
-The response is list-shaped (`collections: []`, not a single `collection`) on
-purpose: the PL/UK comparison feature is expected to extend the same request
-with `split_by_jurisdiction` to create two collections in one call
-(`collections: [PL, UK]` + a non-null `pair_id`). Today `collections` always
-has exactly one entry with `jurisdiction: null`.
+The response is list-shaped (`collections: []`, not a single `collection`)
+because the same request serves both shapes. With the default
+`split_by_jurisdiction: false`, `collections` has exactly one entry with
+`jurisdiction: null` and `pair_id` is `null`.
+
+### `split_by_jurisdiction: true` — a PL/UK pair
+
+Creates two collections from one filter — `"<name> — PL"` and `"<name> — UK"`
+(both with the request's `description`) — and links them in
+`public.collection_pairs` (migration `20260921000002`). There is no separate
+"create pair" endpoint. Differences from the single-collection path:
+
+- `filters.jurisdiction` is dropped by `strip_ignored()` before the RPC runs
+  (honouring it would blank one side) and echoed back as
+  `ignored_filter_keys: ["jurisdiction"]`. The pair row stores the cleaned
+  filter.
+- The cap applies **per side** (`check_cap(..., per_jurisdiction=True)`), so
+  `413 FILTER_TOO_LARGE` names the offending side in `detail.jurisdiction`.
+- A side with zero matches is `400 FILTER_EMPTY` with `detail.jurisdiction`
+  set to that side (`null` when neither side matches anything).
+- All-or-nothing: `create_pair_from_ids()` creates PL, then UK, then the pair
+  row inside one `try`; if any step fails every collection created so far is
+  deleted (best-effort, logged) before the original error propagates — the
+  user never ends up with half a pair.
+- `collection_ids` ownership is checked exactly as for the single path.
+- `name` is stripped of surrounding whitespace once, in the request's
+  `model_validator` (blank after strip → `422`), and that stripped value is
+  what both side names and the pair row receive. In split mode it is limited
+  to **200 characters** (`PAIR_NAME_MAX_LENGTH` → `422`): `collection_pairs.name`
+  is `CHECK`ed at 1–200 and each side's collection name adds `" — PL"`/`" — UK"`
+  under the 255-char `collections.name` bound. Checked before any query, so a
+  too-long name never creates and fills two collections only to fail the pair
+  insert.
+- Audit: `collection_created` + `collection_document_added` per side plus one
+  `collection_pair_created` (`resource_type: collection_pair`).
+- Not transactional across processes: a crash between the PL and UK writes
+  (or before the pair insert) can leave an ordinary orphan collection
+  `"<name> — PL"` with no pair row; it shows up in `GET /collections` and is
+  deletable like any other collection.
+
+```json
+{
+  "collections": [
+    { "jurisdiction": "PL", "collection": { "name": "Fraud — PL", "...": "" }, "added_count": 312 },
+    { "jurisdiction": "UK", "collection": { "name": "Fraud — UK", "...": "" }, "added_count": 87 }
+  ],
+  "total_matched": 399,
+  "pair_id": "uuid",
+  "ignored_filter_keys": ["jurisdiction"]
+}
+```
 
 Errors:
 
@@ -98,15 +290,57 @@ Errors:
 |---|---|---|
 | `400` | `INVALID_COLLECTION_ID` | `filters.collection_ids` contains a non-string or non-UUID entry — checked before `resolve_filter_ids` runs |
 | `404` | `COLLECTION_NOT_FOUND` | `filters.collection_ids` contains an id the caller does not own; which one is never revealed |
-| `400` | `FILTER_EMPTY` | `resolve_filter_ids` returns zero ids |
-| `413` | `FILTER_TOO_LARGE` | match count exceeds the cap; body also carries `total`, `cap`, `jurisdiction` (`null` when not split) |
+| `400` | `FILTER_EMPTY` | `resolve_filter_ids` returns zero ids (split: zero ids on one side — `detail.jurisdiction` names it, `null` when both are empty) |
+| `413` | `FILTER_TOO_LARGE` | match count exceeds the cap (split: per side); body also carries `total`, `cap`, `jurisdiction` (`null` when not split) |
 | `503` | `DATABASE_UNAVAILABLE` | `supabase_client` is not configured |
+
+## `GET /collections/pairs`, `GET /collections/pairs/{pair_id}`, `DELETE /collections/pairs/{pair_id}`
+
+Implemented in `backend/app/collection_pairs.py` (router registered before
+`collections_router` so `/collections/{collection_id}` does not swallow the
+literal `pairs` segment). DB layer:
+`backend/packages/juddges_search/juddges_search/db/collection_pairs_db.py::CollectionPairsDB`
+(`create_pair`, `list_pairs`, `find_pair`, `delete_pair`,
+`pairs_by_collection`) — service-role client, so every query filters by
+`user_id` itself.
+
+`CollectionPair`:
+
+```json
+{
+  "id": "uuid", "user_id": "uuid", "name": "Fraud",
+  "filters": { "appellant": ["offender"] }, "text_query": "fraud",
+  "created_at": "…", "updated_at": "…",
+  "sides": [
+    { "jurisdiction": "PL", "collection_id": "uuid" },
+    { "jurisdiction": "UK", "collection_id": "uuid" }
+  ]
+}
+```
+
+`sides` carries no `document_count` — the read path cannot compute it cheaply;
+`GET /collections` already returns per-collection counts. `GET /collections`
+also carries the pair the other way round: each `CollectionWithDocuments` has
+a `pair: {id, name, role, partner_collection_id} | null`
+(`backend/app/collections.py::CollectionPairRef`/`transform_collection`),
+resolved best-effort from `pairs_db.pairs_by_collection(user.id)` — a
+transient failure there logs a warning and every collection gets `pair:
+null` rather than breaking the whole list.
+
+- `GET /collections/pairs` → `200 [CollectionPair]`, newest first, caller's own.
+- `GET /collections/pairs/{pair_id}` → `200 CollectionPair`; `404` when the id
+  is not a UUID, does not exist, or belongs to someone else (indistinguishable).
+- `DELETE /collections/pairs/{pair_id}` → `204`; **unlinks only** — the pair
+  row is deleted, both collections survive as ordinary collections. Deleting
+  either collection via `DELETE /collections/{id}` cascades the pair row
+  instead (`ON DELETE CASCADE`). `404` as for `GET`.
 
 The `413` uses `starlette.status.HTTP_413_CONTENT_TOO_LARGE` directly (verified
 present in the installed Starlette version — no fallback needed).
 
 **`collection_ids` ownership check:** before `resolve_filter_ids` runs,
-`_check_collection_ids_ownership()` (`backend/app/collections_from_filter.py`)
+`check_collection_ids_ownership()` (`backend/app/collections_from_filter.py`, also
+used by the `/compare/*` endpoints in `backend/app/compare/router.py`)
 validates `filters.collection_ids` (a no-op when the key is absent or an
 empty list, matching the RPC's own "no filter" semantics): every entry must
 be a UUID string (else `400 INVALID_COLLECTION_ID`), and every id must
@@ -147,7 +381,7 @@ loop, whereas `/collections/from-filter` runs the loop server-side.
 - `SAVE_FROM_FILTER_MAX_DOCUMENTS: int` — alias of `app.config.settings.SAVE_FROM_FILTER_MAX_DOCUMENTS` (env var `SAVE_FROM_FILTER_MAX_DOCUMENTS`, default `5000`); kept importable from here so existing callers/tests don't break.
 - `class FilterTooLargeError(Exception)` — carries `.total`, `.cap`, `.jurisdiction` (`None` unless raised per-jurisdiction).
 - `class FilterIdsResult` (frozen dataclass) — `ids: list[str]`, `by_jurisdiction: dict[str, list[str]]`, plus a `.total` property.
-- `resolve_filter_ids(client, filters, text_query) -> FilterIdsResult` — calls the RPC once and buckets ids by `jurisdiction` in the same pass (used for the future PL/UK split).
+- `resolve_filter_ids(client, filters, text_query) -> FilterIdsResult` — calls the RPC once and buckets ids by `jurisdiction` in the same pass (used by `split_by_jurisdiction` below and, indirectly, by `CompareService` via the facet RPC).
 - `check_cap(result, cap=SAVE_FROM_FILTER_MAX_DOCUMENTS, *, per_jurisdiction=False) -> None` — raises `FilterTooLargeError` if `result.total > cap` (or, with `per_jurisdiction=True`, if either side's count exceeds `cap`).
 
 ### BFF proxy
@@ -156,6 +390,268 @@ loop, whereas `/collections/from-filter` runs the loop server-side.
 - `frontend/app/api/utils/backend-proxy.ts::proxyToBackend()` — shared authenticated BFF → FastAPI forwarder. Requires a Supabase session (401 otherwise); passes the upstream response's status and body through unchanged, including FastAPI's `{"detail": {...}}` error envelope, so error unwrapping happens in exactly one frontend place. Supports `passthroughHeaders` (for binary/streamed responses that return `2xx`) and a `timeoutMs` (default `30_000`).
 - `frontend/lib/api/collections.ts::createCollectionFromFilter(request)` — POSTs to `/api/collections/from-filter`, and on a non-OK response unwraps either the FastAPI `{detail: {...}}` shape or the BFF's flat `{error}` shape into one `CollectionFromFilterError` (has `.code`, `.status`, and optionally `.total`/`.cap`/`.jurisdiction`). On success it fires a `collection_created` analytics event per created collection and returns the parsed `CollectionFromFilterResponse`.
 
+## `POST /compare/facets`, `POST /compare/export`, `GET /compare/pairs/{pair_id}`
+
+Implemented in `backend/app/compare/router.py`
+(`APIRouter(prefix="/compare")`). Every endpoint requires `Authorization:
+Bearer <JWT>` (`get_current_user`) on top of the router-level API key — they
+read collection membership, so there is no anonymous mode. `503
+DATABASE_UNAVAILABLE` when `supabase_client` is not configured.
+
+**Comparable fields** — the registry
+(`backend/app/compare/fields.py::base_compare_fields()`) is every
+enum/`enum` array item/boolean property of the base extraction schema
+(`juddges_search.info_extraction.BaseSchemaExtractor().schema`), in
+`x-ui-order` then name order, with `appeal_outcome`, `offender_gender`,
+`sentence_serve`, `plea_point` pinned first (`DEFAULT_FIRST`). Free-text
+array fields (`keywords`, `convict_offences`, …) are excluded on purpose —
+high-cardinality and effectively PL-only.
+
+### `POST /compare/facets`
+
+Request body (`CompareRequest`):
+
+```json
+{
+  "filters": { "...": "BaseSchemaFilters, same shape as /extractions/base-schema/filter" },
+  "text_query": "string, ≤1000 chars, optional",
+  "fields": ["appeal_outcome", "sentence_serve"]
+}
+```
+
+`fields` (optional) is bounded to the registry size (`MAX_FIELDS = len(base_compare_fields())`)
+and de-duplicated in request order by `select_base_fields()`; omitted →
+every comparable field, in registry order. So one request never costs more
+than one facet RPC call per registered field.
+
+Success — `200 CompareResponse`:
+
+```json
+{
+  "jurisdictions": ["PL", "UK"],
+  "totals": { "PL": 153, "UK": 200 },
+  "fields": [
+    {
+      "field": "sentence_serve",
+      "label": "Sentence served",
+      "source": "base",
+      "kind": "enum_array",
+      "coverage": {
+        "PL": { "covered": 118, "total": 153, "ratio": 0.7712 },
+        "UK": { "covered": 179, "total": 200, "ratio": 0.895 }
+      },
+      "tier": "partial",
+      "missing_in": [],
+      "values": [
+        { "value": "custody", "counts": { "PL": 40, "UK": 60 }, "shares": { "PL": 0.339, "UK": 0.3352 } }
+      ]
+    }
+  ],
+  "ignored_filter_keys": [],
+  "filters": { "...": "echoed back" },
+  "text_query": null,
+  "pair": null
+}
+```
+
+- `coverage[j].total` counts only matched judgments **with completed base
+  extraction** in jurisdiction `j` (see the facet RPC above); `covered`
+  counts those with a non-empty value; `ratio = covered/total`, `null` when
+  `total = 0`.
+- `values[].shares[j] = counts[j] / coverage[j].covered`, `null` when
+  `covered = 0`. Values are ordered by summed count across jurisdictions,
+  then alphabetically, so PL and UK bars line up in the same order.
+- `tier` (`backend/app/compare/layout.py`): `"empty"` (no judgment matched in
+  either jurisdiction — the frontend hides these fields entirely), `"unavailable"`
+  (at least one jurisdiction has `covered = 0` — listed as a sentence, never
+  charted; `missing_in` names which), `"partial"` (every jurisdiction
+  covered, but at least one below 80 %, `LOW_COVERAGE_THRESHOLD` — charted
+  with a coverage badge), `"primary"` (every jurisdiction at or above 80 %).
+- `ignored_filter_keys`: `CompareService.compare()` runs `filters` through
+  the same `strip_ignored()` as `/collections/from-filter`
+  (`IGNORED_FILTER_KEYS = ("jurisdiction",)`, shared from
+  `app.extraction_domain.filter_ids`) before calling the facet RPC, so a
+  `jurisdiction` key present in `filters` — e.g. one carried in from a
+  `/search/extractions` permalink pasted into `/compare` — is dropped and
+  named in `ignored_filter_keys`; the response's own `filters` is the
+  stripped copy. The frontend shows `compare.jurisdictionIgnored` ("The
+  jurisdiction condition was ignored — this page always shows PL and UK.")
+  when that happens. `collection_ids` is **not** stripped — it goes through
+  `check_collection_ids_ownership()` instead (below), because it selects a
+  membership rather than a jurisdiction.
+
+Errors: `422` (FastAPI/Pydantic request validation — `fields` has more than
+`MAX_FIELDS` entries, i.e. more than the registry size; this happens before
+any of the checks below run), `400 UNKNOWN_FIELD` (a requested field passed
+validation but is not in the registry; `detail.fields` names the offending
+ones — either `select_base_fields()`'s own check or the service's
+`FieldNotComparableError` are both surfaced this way), `400
+INVALID_COLLECTION_ID` / `404 COLLECTION_NOT_FOUND`
+(`filters.collection_ids` malformed or not owned — same
+`check_collection_ids_ownership()` as `/collections/from-filter`), `500
+COMPARE_FAILED` (any other failure computing the comparison), `503
+DATABASE_UNAVAILABLE`.
+
+### `POST /compare/export`
+
+Same `CompareRequest` body as `/compare/facets`. Runs the identical
+comparison and streams it as a long-format CSV — one row per (field, value,
+jurisdiction) — built from
+`backend/app/compare/csv_export.py::to_csv_rows`/`csv_bytes`, so the file can
+never disagree with what `/compare/facets` would show for the same request.
+UTF-8 with a BOM (Excel renders Polish labels correctly), headers
+`Content-Disposition: attachment; filename="compare_<YYYY-MM-DD>.csv"` and
+`X-Rows-Count: <n>`. Columns, in order:
+
+| Column | Meaning |
+|---|---|
+| `field` | base-schema field name |
+| `value` | one coded value of that field |
+| `jurisdiction` | `PL` or `UK` |
+| `count` | matched judgments with this value, in this jurisdiction |
+| `share` | `count / covered`; empty cell when `covered = 0` |
+| `coverage` | `covered / total`; empty cell when `total = 0` |
+| `covered` | judgments in this jurisdiction with the field coded |
+| `total` | judgments in this jurisdiction matched by the filter, with completed base extraction |
+
+A field with tier `"unavailable"`/`"empty"` contributes no rows — its
+coverage is already visible in the app; there is nothing to compare. Same
+error codes as `/compare/facets`.
+
+### `GET /compare/pairs/{pair_id}`
+
+No request body or filters. The pair row is looked up with
+`find_pair(pair_id, user.id)` — `404` if it does not exist or belongs to
+someone else (indistinguishable) — and the base fields are computed over
+`{"collection_ids": [pl_collection_id, uk_collection_id]}` built server-side
+from that row; the lookup itself is the ownership check.
+
+Success — `200 PairCompareResponse` (all of `CompareResponse` plus):
+
+```json
+{
+  "...": "CompareResponse fields, filters = {\"collection_ids\": [pl_id, uk_id]}",
+  "pair": { "id": "uuid", "name": "Fraud, suspended sentence", "pl_collection_id": "uuid", "uk_collection_id": "uuid" },
+  "extension": {
+    "schema_id": "uuid",
+    "schema_name": "Sentencing extension v2",
+    "source": "schema:<extraction_schema_id>",
+    "jobs": {
+      "PL": { "job_id": "celery-task-id", "completed_at": "2026-09-20T10:00:00Z" },
+      "UK": { "job_id": "celery-task-id", "completed_at": "2026-09-19T08:00:00Z" }
+    },
+    "totals": { "PL": 118, "UK": 92 },
+    "fields": [ "...same CompareField shape as the base fields, source = 'schema:<id>'" ]
+  },
+  "extension_reason": null
+}
+```
+
+- The response's own `filters` is `{"collection_ids": [pl_id, uk_id]}` — the
+  exact body `POST /compare/export` accepts to get a CSV of the same numbers
+  (there is no separate pair-export endpoint).
+- Exactly one of `extension` / `extension_reason` is set. The extension tally
+  (`backend/app/compare/schema_tally.py`) picks each collection's **newest
+  `SUCCESS`** extraction job that has a schema, requires both sides to have
+  run the **same** `schema_id`, and derives comparable fields from that
+  schema the same way as the base registry (enum/enum-array/boolean
+  properties). Coverage denominators there are each job's completed
+  documents, not the collection size, so `extension.totals` can differ from
+  the base `totals`.
+- `extension_reason` values (`ExtensionReason` in
+  `backend/app/compare/models.py`): `no_jobs` (neither side has a usable
+  job), `no_job_pl` / `no_job_uk` (only one side does), `schema_mismatch`
+  (both have a job, but different `schema_id`), `schema_not_found` (the
+  shared `schema_id` no longer resolves in `extraction_schemas`),
+  `extension_failed` (reading jobs/schema raised — the base comparison is
+  still returned; logged as an exception server-side).
+
+Errors: `404` (pair not found/not owned), `500 COMPARE_FAILED` (base
+comparison itself failed — the extension tally failing does not fail the
+request; it degrades to `extension_reason: "extension_failed"`), `503
+DATABASE_UNAVAILABLE`.
+
+### Frontend
+
+`/compare` and `/compare/[pairId]` (`frontend/app/compare/`) share the
+`?f=`/`?q=`/`?nl=` URL codec with `/search/extractions`
+(`buildComparePermalink` in `frontend/lib/compare/permalink.ts`, built on the
+same `buildFilterHref`), so a link is portable between the two pages. A
+saved pair opens at `/compare/{pairId}` with no filter blob needed. BFF
+proxy routes live under `frontend/app/api/compare/` and
+`frontend/app/api/collections/pairs/`.
+
+## `POST /extractions/base-schema/nl-filter`
+
+Implemented in `backend/app/extraction_domain/results_router.py::nl_to_filter`,
+translator in `backend/app/extraction_domain/nl_filter_generator.py`.
+Authenticated (`get_current_user`). Body `{"query": "<NL question>"}` →
+`{"filters": {...}, "text_query": "..." | null}` (an `NLFilterResponse`, the
+same shape `BaseSchemaFilter.to_rpc_payload()` returns). It is an opt-in
+"paste your question" shortcut that pre-fills the `/search/extractions` form
+— it never runs a search itself. Every request is logged (fire-and-forget)
+via `record_search_query` in `search_analytics` so NL→filter usage can be
+compared against form usage later.
+
+Errors: `422 NL_FILTER_INVALID` when the LLM's output fails Pydantic
+validation (an unknown/hallucinated enum value — surfaced as a 422 so the
+caller can ask the user to rephrase rather than run a poisoned query); `502
+NL_FILTER_FAILED` on any other translation failure.
+
+### `BaseSchemaFilter` (`nl_filter_generator.py`)
+
+A Pydantic model (`extra="forbid"`) mirroring every key
+`filter_documents_by_extracted_data` accepts, structured-output-decoded from
+an LLM (`llm.with_structured_output(BaseSchemaFilter)`, `use_mini_model=True`
+by default) driven by a versioned system prompt (`SYSTEM_PROMPT`,
+`NL_FILTER_PROMPT`). Field groups: core judgment columns (`jurisdiction:
+list[Jurisdiction] | None`, `decision_date: DateRange | str | None`), scalar
+and multi-value enums (one `Literal[...]` type per CHECK constraint in the
+base-extraction migrations, so a hallucinated value raises a
+`ValidationError` instead of reaching the database), free-text array
+fields, booleans, numerics (`NumericRange | float | None`), a second date
+field (`date_of_appeal_court_judgment`), ILIKE substring fields, and a
+sibling `text_query: str | None` carried outside `p_filters`.
+`to_rpc_payload()` calls `model_dump(exclude_none=True, by_alias=True)`,
+pops `text_query` out of the dump, and returns `{"filters": ..., "text_query":
+...}` — the exact body `POST /extractions/base-schema/filter` and
+`/collections/from-filter` expect.
+
+`NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type",
+"court_level"})` — these two `judgments` columns are deliberately **not**
+modeled on `BaseSchemaFilter` at all (not merely hidden) because the data is
+wrong (`case_type='Civil'` on UK criminal appeals, `court_level='Crown
+Court'` on Court of Appeal; see `docs/reference/APP_STATUS_2026-08-21.md`
+§4). `tests/app/test_nl_filter_prompt_contract.py` pins that neither field
+name appears in the system prompt text or in the model's JSON Schema, so a
+future prompt edit can't reintroduce them silently.
+
+**Date semantics** (`SYSTEM_PROMPT` rule 4 — Polish and English phrasings
+both map to the same ISO range):
+
+| Phrase | Range |
+|---|---|
+| "in 2024" / "w 2024 r." | `{"from": "2024-01-01", "to": "2024-12-31"}` |
+| "since 2020" / "od 2020" | `{"from": "2020-01-01"}` — **inclusive** of 2020 |
+| "after 2020" / "po 2020" | `{"from": "2021-01-01"}` — **strictly next year**, exclusive of 2020 |
+| "before 2010" / "przed 2010" | `{"to": "2009-12-31"}` — previous year-end, exclusive of 2010 |
+| "between 2015 and 2024" / "2015–2024" / "w latach 2015–2024" | `{"from": "2015-01-01", "to": "2024-12-31"}` |
+
+`decision_date` (judgment date, populated for every PL and UK row) is the
+prompt's default date field; `date_of_appeal_court_judgment` is used only
+when the user names the appeal-court judgment date explicitly — the two
+fields are easy to conflate (an earlier prompt revision defaulted to the
+latter) and users relying on the old default now get `decision_date`
+instead.
+
+`jurisdiction` (rule 8) is set only when the user names a country or legal
+system — "UK" / "England" / "brytyjskie" / "w Anglii" → `["UK"]`; "Poland" /
+"polskie" / "w Polsce" → `["PL"]`; "PL i UK" / "both countries" → `["PL",
+"UK"]`. Writing the question in Polish is **not** by itself a reason to set
+`["PL"]` — this deliberately does not reuse the diacritics-based PL/EN
+heuristic in `backend/app/query_analysis.py`, which serves a different
+(free-text search) heuristic where that inference is appropriate.
+
 ## Frontend URL state
 
 `?f=<base64url JSON of BaseSchemaFilters>` · `?q=<text_query>` · `?page=<n>` ·
@@ -163,7 +659,7 @@ loop, whereas `/collections/from-filter` runs the loop server-side.
 
 One codec, both in `frontend/lib/extractions/use-extracted-data-filters.ts`:
 
-- `buildFilterSearchParams(state: FilterUrlState): URLSearchParams` — the single place that writes `f`/`q`/`page`/`nl`. `FilterUrlState` already has an optional `nlQuestion` field and the function already serialises it to `?nl=`; the `useExtractedDataFilters()` hook itself does not yet read/write `nlQuestion` in its own state (`FilterState` has no `nlQuestion` field, and `initial` only reads `f`/`q`/`page`) — wiring the hook up to `?nl=` is planned follow-up work (NL-filter-to-collection spec), not part of this Foundation change. Callers that already have a question string (e.g. a future NL dialog) can pass it straight into `buildFilterSearchParams`/`buildFilterHref` today.
+- `buildFilterSearchParams(state: FilterUrlState): URLSearchParams` — the single place that writes `f`/`q`/`page`/`nl`. `FilterUrlState` has an optional `nlQuestion` field and the function serialises it to `?nl=`. `useExtractedDataFilters()` reads/writes `nlQuestion` too: `FilterState.nlQuestion` is populated from `?nl=` on mount, `setNlQuestion(next: string | undefined)` updates it (round-tripping through `writeUrl`/`buildFilterSearchParams`), and `clearAll()` resets it to `undefined`. `NlFilterDialog.onApply(filters, textQuery, question)` passes the trimmed question through, and `/search/extractions`'s `applyNlFilters` calls `setNlQuestion(question)` alongside `setFilters`/`setTextQuery` so a shared link or reload keeps the originating question (used later to default a "Save as collection" name).
 - `buildFilterHref(pathname, state, origin = ""): string` — `pathname` + the query string from `buildFilterSearchParams`, optionally prefixed by an absolute `origin`.
 
 Core fields `jurisdiction`/`decision_date` are registered in
@@ -199,17 +695,69 @@ this adapter converts both ways through the epoch helpers instead. It also
 accepts `{min,max}` with ISO-string values for date ranges (reachable only via
 a hand-edited URL) by treating `min`/`max` as `from`/`to` before converting.
 
+### `frontend/components/search/ScopeFilters.tsx`
+
+`<ScopeFilters filters onChange disabled? />` — a "Scope" strip rendered on
+`/search/extractions` above `BaseFiltersDrawer`, one `EnumMultiControl` for
+`jurisdiction` and one `DateRangeControl` for `decision_date`, both driven by
+`CORE_FILTER_FIELD_BY_NAME` and `coreToDrawerValue`/`applyCoreChange` from
+`drawer-adapter.ts` above. It renders unconditionally (no feature flag) and
+is deliberately outside `BaseFiltersDrawer` — the two core columns never
+touch `FILTER_FIELDS`/`FIELDS_BY_GROUP`, so the drawer and its facet counts
+are provably unchanged by this feature.
+
+### Result rows and document highlighting
+
+`frontend/lib/extractions/document-href.ts::buildDocumentHref(id, filters):
+string` builds each `/search/extractions` result row's link via
+`buildFilterHref` — `/documents/{id}?f=<same filters blob>`, plus a
+`#base-fields` anchor (`BASE_FIELDS_ANCHOR`) appended whenever the filter
+blob is non-empty (the presence of a query string is itself "the filter
+carried something", so there's no second `encodeFilters` call to decide the
+anchor).
+
+`app/documents/[id]/_components/DocumentPageClient.tsx` reads `?f=` back
+with `decodeFilters()`, fetches the document's metadata, and calls
+`frontend/lib/extractions/filter-match.ts::matchedMetadataKeys(filters,
+metadata): Set<string>` to compute which metadata keys satisfied the filter.
+`matchedMetadataKeys` mirrors the RPC's per-control-kind matching semantics
+(`= ANY` / array overlap / range / ILIKE) against a small
+`CORE_FIELD_TO_METADATA_KEY` map (`jurisdiction` → `country`, `decision_date`
+→ `date_issued`; everything else is `base_<field>`), so a highlighted cell is
+exactly one the query actually matched on — not merely a field the filter
+mentioned.
+
+The result feeds `KeyInformation` (`frontend/lib/styles/components/key-information.tsx`)
+via three props: `id={BASE_FIELDS_ANCHOR}` (the scroll target for the row
+link above), `highlightKeys` (the matched-key set, rendered with emphasis),
+and `highlightCaption` (e.g. "3 fields matched your filter"), plus a
+screen-reader-only "Matched filter" marker on each highlighted cell.
+
+### `SaveAsCollectionDialog` (`frontend/components/search/SaveAsCollectionDialog.tsx`)
+
+Rendered in the `/search/extractions` results bar. `defaultName` is the `?nl=`
+question when one is present, else a `Filtered judgments — <date>` fallback;
+the field is editable up to 255 chars before saving. The trigger button is
+disabled only when `total === 0` (via a `title` tooltip) or while the parent
+page is loading/erroring — **there is no client-side row-count cap**. On
+submit it calls `createCollectionFromFilter` and on success routes to
+`/collections/{collections[0].collection.id}`; on a `CollectionFromFilterError`
+with `total`/`cap` set (the `413` case) it renders the backend's message
+plus `"(<total> matched, limit <cap>.)"` inline in the dialog rather than
+guessing a limit client-side.
+
 ## Completeness helpers (backend)
 
-`backend/app/extraction_domain/completeness.py` exists today, with its own
-test coverage (`tests/app/test_completeness.py`), but has no consumers in
-this repo yet. Its docstring names four **intended consumers that do not
-exist yet** — they belong to planned work, not this Foundation change:
+`backend/app/extraction_domain/completeness.py`, with its own test coverage
+(`tests/app/test_completeness.py`). Its docstring originally named four
+**intended consumers that did not exist yet**; two have since landed —
+`compare/layout.py` (`coverage_ratio`) and `compare/schema_tally.py`
+(`completed_rows`, `is_empty_value`), both part of the PL/UK compare (#684).
+The other two are still ahead of this module's consumers:
 `extraction_domain/summary.py` and `extraction_domain/dataset_export.py`
-(research-flow, #685), and `compare/layout.py` and `compare/schema_tally.py`
-(PL/UK compare, #684). The module was written now, ahead of those
-consumers, so the sample review, the dataset export and the PL/UK
-comparison won't disagree later about what counts as "empty" or "done".
+(research-flow, #685). The module was written ahead of all four so the
+sample review, the dataset export and the PL/UK comparison won't disagree
+later about what counts as "empty" or "done".
 
 - `COMPLETED_STATUSES: frozenset[str]` — `{"completed", "success", "partially_completed"}`.
 - `EMPTY_MARKERS: frozenset[str]` — lowercase, stripped marker strings (`""`, `"n/a"`, `"na"`, `"not available"`, `"none"`, `"null"`, `"unknown"`, `"brak"`, `"brak danych"`, `"nie dotyczy"`, `"not applicable"`).
@@ -220,10 +768,11 @@ comparison won't disagree later about what counts as "empty" or "done".
 
 **Two definitions of "empty" are intended to coexist, not to converge:**
 Python-side `is_empty_value` (above) is for free-text LLM output in
-`extraction_jobs.results` and includes LLM markers such as `"n/a"` /
-`"brak danych"`. The module's docstring records a contract for the SQL side
-that **planned** facet-count RPCs (e.g. `get_extracted_facet_counts_by_jurisdiction`,
-part of #684 — not present in this repo yet) must follow: treat only SQL
+`extraction_jobs.results` (used by `compare/schema_tally.py` for the
+extension-schema tally) and includes LLM markers such as `"n/a"` /
+`"brak danych"`. The SQL-side facet RPC
+(`get_extracted_facet_counts_by_jurisdiction`, documented above) follows the
+contract this module's docstring anticipated: it treats only SQL
 `NULL`/`''` as empty, because the `base_*` columns are enum-coded and cannot
 contain an LLM marker string. The two scopes aren't expected to overlap —
 one reads JSON results, the other reads typed columns — but a caller mixing

@@ -7,11 +7,13 @@ import pytest
 from app.config import settings
 from app.extraction_domain.filter_ids import (
     FILTER_IDS_RPC,
+    IGNORED_FILTER_KEYS,
     SAVE_FROM_FILTER_MAX_DOCUMENTS,
     FilterIdsResult,
     FilterTooLargeError,
     check_cap,
     resolve_filter_ids,
+    strip_ignored,
 )
 from app.models import JURISDICTIONS
 from tests.app._fakes import FakeRpcClient
@@ -97,3 +99,22 @@ def test_filter_ids_rpc_name_matches_a_declared_migration_function():
     pass that guard silently. This test closes that gap directly.
     """
     assert FILTER_IDS_RPC in _declared_functions(_migration_sql())
+
+
+def test_strip_ignored_removes_jurisdiction_and_reports_it():
+    """/compare (and pair creation) split by jurisdiction themselves, so a
+    caller-supplied `jurisdiction` filter is dropped and reported, not honoured.
+    """
+    filters, ignored = strip_ignored(
+        {"jurisdiction": ["PL"], "plea_point": ["before_trial"]}
+    )
+    assert filters == {"plea_point": ["before_trial"]}
+    assert ignored == ["jurisdiction"]
+
+
+def test_strip_ignored_is_a_no_op_without_ignored_keys_and_does_not_mutate():
+    original = {"a": 1}
+    filters, ignored = strip_ignored(original)
+    assert (filters, ignored) == ({"a": 1}, [])
+    assert filters is not original
+    assert IGNORED_FILTER_KEYS == ("jurisdiction",)

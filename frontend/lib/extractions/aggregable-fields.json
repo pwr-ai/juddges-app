@@ -1,0 +1,25 @@
+{
+  "fields": [
+    "appeal_against", "appeal_outcome", "appellant", "offender_gender", "offender_home_offence",
+    "offender_intox_offence", "offender_job_offence", "offender_victim_relationship", "plea_point",
+    "pre_sent_report", "remand_decision", "sentence_serve", "victim_gender", "victim_intox_offence",
+    "victim_type",
+    "did_offender_confess", "vic_impact_statement",
+    "acquit_offences", "agg_fact_sent", "appeal_ground", "conv_court_names", "convict_offences",
+    "def_evid_type_trial", "keywords", "mit_fact_sent", "pros_evid_type_trial", "reason_dismiss",
+    "reason_quash_conv", "reason_sent_excessive", "reason_sent_lenient", "sent_court_name",
+    "sentences_received", "sent_guide_which", "victim_home_offence", "victim_job_offence",
+    "what_ancilliary_orders",
+    "co_def_acc_num", "num_victims", "victim_age_offence",
+    "offender_age_offence",
+    "date_of_appeal_court_judgment",
+    "jurisdiction", "decision_date", "court_name",
+    "deep_complexity_score", "deep_reasoning_quality_score", "deep_legal_domains",
+    "deep_reasoning_patterns", "deep_judicial_tone", "deep_precedential_value"
+  ],
+  "default": [
+    "offender_gender", "convict_offences", "sentences_received",
+    "appeal_outcome", "did_offender_confess", "court_name", "decision_date"
+  ],
+  "core": ["jurisdiction", "decision_date", "court_name"]
+}

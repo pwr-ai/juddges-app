@@ -11,10 +11,13 @@ from loguru import logger
 from pydantic import ValidationError
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
+from app.extraction_domain.aggregate_fields import validate_fields
 from app.extraction_domain.base_schema_promote import promote_to_typed_columns
 from app.extraction_domain.nl_filter_generator import generate_base_schema_filter
 from app.extraction_domain.shared import supabase
 from app.models import (
+    AggregateRequest,
+    AggregateResponse,
     BaseSchemaDefinitionResponse,
     BaseSchemaExtractionRequest,
     BaseSchemaExtractionResponse,
@@ -536,6 +539,96 @@ async def filter_by_extracted_data(
                 "code": "FILTER_FAILED",
             },
         )
+
+
+@router.post(
+    "/base-schema/aggregate",
+    response_model=AggregateResponse,
+    summary="Aggregate extracted data over a cohort",
+    description=(
+        "Per-field distributions (categorical / numeric / year) over the judgments "
+        "matching the filters, optionally over a seeded random sample. Login required."
+    ),
+)
+async def aggregate_extracted_data(
+    request: AggregateRequest,
+    user: AuthenticatedUser = Depends(
+        get_current_user
+    ),  # gate only; the cohort is corpus-wide
+):
+    # Same rationale as filter_by_extracted_data: the RPC is SECURITY INVOKER and
+    # we call it with the service-role client, so `collection_ids` would let any
+    # signed-in caller probe any collection's membership. #685 owns lifting this.
+    if "collection_ids" in request.filters:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Filter Not Allowed",
+                "message": (
+                    "The 'collection_ids' filter is not allowed on this endpoint. "
+                    "Use POST /collections/from-filter, which authenticates the "
+                    "caller and verifies collection ownership."
+                ),
+                "code": "COLLECTION_IDS_NOT_ALLOWED",
+            },
+        )
+    try:
+        fields = validate_fields(request.fields)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Invalid Fields",
+                "message": str(exc),
+                "code": "FIELD_NOT_AGGREGABLE",
+            },
+        ) from exc
+    if not supabase:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Database Unavailable",
+                "message": "Database connection not available.",
+                "code": "DATABASE_UNAVAILABLE",
+            },
+        )
+    try:
+        response = supabase.rpc(
+            "aggregate_extracted_data",
+            {
+                "p_filters": request.filters,
+                "p_text_query": request.text_query,
+                "p_fields": fields,
+                "p_sample_size": request.sample_size,
+                "p_seed": request.seed,
+                "p_top_n": request.top_n,
+            },
+        ).execute()
+    except Exception as exc:  # supabase-py raises APIError on RPC failure
+        logger.exception("aggregate_extracted_data failed")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Aggregation Failed",
+                "message": "The statistics could not be computed.",
+                "code": "AGGREGATE_FAILED",
+            },
+        ) from exc
+    payload = response.data
+    # A JSONB-returning function comes back as the value itself; some client
+    # versions wrap scalar results in a one-element list.
+    if isinstance(payload, list):
+        payload = payload[0] if payload else None
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Aggregation Failed",
+                "message": "Unexpected response from the database.",
+                "code": "AGGREGATE_FAILED",
+            },
+        )
+    return AggregateResponse(**payload)
 
 
 @router.post(

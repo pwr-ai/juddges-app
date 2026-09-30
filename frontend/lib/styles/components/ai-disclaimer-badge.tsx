@@ -71,38 +71,29 @@ export function AIDisclaimerBadge({
  className
  )}>
  <div className={cn(
- 'flex items-center gap-2.5 px-3 py-2.5 rounded-lg',
- // Background gradient (using semantic tokens)
- 'bg-gradient-to-br from-background/80 via-background/50 to-background/80',
- 'backdrop-blur-sm',
- // Border (using semantic tokens)
- 'border border-border/50',
- // Shadow (from badgeColors - using static classes for Tailwind JIT)
- 'shadow-sm hover:shadow-md hover:shadow-primary/10',
- 'transition-all duration-300',
+ 'flex items-center gap-2.5 px-3 py-2.5',
+ // Advisory notice: gold rule marks AI provenance, not an error state
+ 'border-l-2 border-l-gold bg-parchment-deep',
+ 'transition-colors duration-150',
  badgeClassName
  )}>
  <AlertTriangle className={cn(
  'h-4 w-4 flex-shrink-0',
- // Icon color (from badgeColors - using static classes for Tailwind JIT)
- 'text-amber-600'
+ 'text-gold'
  )} />
  <span className={cn(
  'text-xs font-medium',
- // Text color (using semantic tokens)
- 'text-muted-foreground'
+ 'text-ink-soft'
  )}>
  {message}
  </span>
  <Link
  href={disclaimerUrl}
  className={cn(
- 'text-xs font-semibold ml-auto transition-all duration-200',
- // Link color (from badgeColors - using static classes for Tailwind JIT)
- 'text-primary hover:text-primary/80',
- 'hover:scale-105 inline-block',
+ 'text-xs font-semibold ml-auto inline-block transition-colors duration-150',
+ 'text-oxblood hover:text-oxblood-deep',
  // Focus state for accessibility
- 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded'
+ 'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink'
  )}
  >
  {linkText}

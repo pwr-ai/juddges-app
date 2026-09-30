@@ -1,10 +1,6 @@
 /**
  * Data Table Component
- * Modern table component following 2024/2025 design standards
- * Features glass-morphism, subtle gradients, and enhanced accessibility
- *
- * @version 1.0
- * @date 2025-01-XX
+ * Editorial table: ruled header, hairline row dividers, ink-on-parchment text.
  */
 
 "use client";
@@ -81,8 +77,7 @@ export interface DataTableProps<T = any> {
 /**
  * Data Table Component
  *
- * Modern table with glass-morphism design, following 2024/2025 standards.
- * Features subtle gradients, smooth hover effects, and full accessibility support.
+ * Editorial table with ruled header and hairline row dividers.
  *
  * @example
  * <DataTable
@@ -114,15 +109,15 @@ export const DataTable = memo(function DataTable<T = any>({
  <div className={cn("p-6", className)}>
  {title && (
  <div className="mb-4">
- <h3 className="text-lg font-semibold text-slate-900 mb-1">{title}</h3>
+ <h3 className="text-lg font-semibold text-ink mb-1">{title}</h3>
  {description && (
- <p className="text-sm text-slate-600">{description}</p>
+ <p className="text-sm text-ink-soft">{description}</p>
  )}
  </div>
  )}
  <div className="flex flex-col items-center justify-center py-12 text-center">
- {emptyIcon && <div className="mb-4 text-slate-400">{emptyIcon}</div>}
- <p className="text-sm text-slate-600">{emptyMessage}</p>
+ {emptyIcon && <div className="mb-4 text-rule-strong">{emptyIcon}</div>}
+ <p className="text-sm text-ink-soft">{emptyMessage}</p>
  </div>
  </div>
  );
@@ -135,10 +130,10 @@ export const DataTable = memo(function DataTable<T = any>({
  {(title || description) && (
  <div className="mb-6 px-6 pt-6">
  {title && (
- <h3 className="text-lg font-semibold text-slate-900 mb-1">{title}</h3>
+ <h3 className="text-lg font-semibold text-ink mb-1">{title}</h3>
  )}
  {description && (
- <p className="text-sm text-slate-600">{description}</p>
+ <p className="text-sm text-ink-soft">{description}</p>
  )}
  </div>
  )}
@@ -147,7 +142,7 @@ export const DataTable = memo(function DataTable<T = any>({
  <div className="inline-block min-w-full align-middle">
  <table className="w-full border-collapse">
  <thead>
- <tr className="border-b border-slate-200 bg-slate-100/50">
+ <tr className="border-b border-rule bg-parchment-deep">
  {columns.map((column) => {
  const isIdColumn = column.width?.includes('w-16') || /^id$|_id$|_number$|question_number/i.test(column.key);
 
@@ -157,7 +152,7 @@ export const DataTable = memo(function DataTable<T = any>({
  className={cn(
  isIdColumn ? "px-2 py-3": "px-4 py-3",
 "text-left text-xs font-semibold uppercase tracking-wider",
-"text-slate-700",
+"text-ink-soft",
  isIdColumn &&"w-16 text-center",
  column.width
  )}
@@ -169,7 +164,7 @@ export const DataTable = memo(function DataTable<T = any>({
  })}
  </tr>
  </thead>
- <tbody className="divide-y divide-slate-200/60">
+ <tbody className="divide-y divide-rule">
  {data.map((row, rowIndex) => {
  const rowKey = getKey(row, rowIndex);
  const handleRowClick = onRowClick ? () => onRowClick(row, rowIndex) : undefined;
@@ -182,9 +177,9 @@ export const DataTable = memo(function DataTable<T = any>({
 "transition-colors duration-150",
  isInteractive && [
 "cursor-pointer",
-"hover:bg-slate-50",
-"focus-within:bg-slate-50",
-"focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/30 focus-within:ring-inset",
+"hover:bg-parchment-deep",
+"focus-within:bg-parchment-deep",
+"focus-within:outline-none focus-within:ring-1 focus-within:ring-ink focus-within:ring-inset",
  ]
  )}
  role={isInteractive ? "button": undefined}
@@ -208,7 +203,7 @@ export const DataTable = memo(function DataTable<T = any>({
  className={cn(
  isIdColumn ? "px-2 py-3": isArrayColumn ? "px-3 py-2": "px-4 py-3",
 "text-sm",
-"text-slate-900",
+"text-ink",
 "whitespace-normal break-words",
  isIdColumn ? "w-16 text-center": isArrayColumn ? "max-w-xs": "max-w-md",
  column.width

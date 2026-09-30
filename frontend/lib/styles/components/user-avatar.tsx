@@ -60,35 +60,23 @@ export function UserAvatar({
  <Avatar
  className={cn(
  sizeClasses[size],
- // Base styling with gradient background
-"bg-gradient-to-br from-background via-background/95 to-muted/50",
- // Border with semantic tokens
-"border border-border/50",
- // Shadow effects
-"shadow-sm",
- // Smooth transitions
-"transition-all duration-300 ease-in-out",
- // Hover effects when clickable
+ "bg-parchment",
+ "border border-rule",
+ "shadow-none",
+ "transition-colors duration-150",
  clickable && [
-"hover:shadow-md",
-"hover:scale-[1.02]",
-"hover:border-primary/30",
-"active:scale-[0.98]",
- // Focus state for accessibility
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+ "hover:border-ink",
+ "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
  ],
- // Cursor when clickable
- clickable &&"cursor-pointer",
+ clickable && "cursor-pointer",
  className
  )}
  >
  {profileImage && <AvatarImage src={profileImage} alt={initials} />}
  <AvatarFallback
  className={cn(
-"bg-gradient-to-br from-primary/20 via-indigo-500/20 to-purple-500/20",
-"",
-"text-primary font-medium text-xs",
-"border-0"
+ "bg-parchment-deep text-ink font-mono font-medium text-xs",
+ "border-0"
  )}
  >
  {initials}

@@ -162,30 +162,15 @@ export function TooltipContent({
  sideOffset={sideOffset}
  className={cn(
 "relative overflow-hidden",
- // Legal Glass 2.0: Match Sidebar Glass Material
- // Light mode: Crystal - rgba(255, 255, 255, 0.65) with 50px blur
- // Dark mode: Stealth - rgba(2, 6, 23, 0.80) with 40px blur
-"bg-[rgba(255,255,255,0.65)]",
-"backdrop-blur-[50px]",
- // Border - 1px Solid Line matching sidebar
- // Light mode: #FFFFFF (Solid White)
- // Dark mode: rgba(255, 255, 255, 0.08)
-"border border-[#FFFFFF]",
- // Text styling - using Midnight Navy for contrast
-"text-[#0F172A] font-medium text-xs text-balance",
- // Shadow - soft, colored shadow matching design system
-"shadow-lg shadow-blue-200/30",
- // Rounded corners
-"rounded-xl px-4 py-3",
- // Smooth animations
-"animate-in fade-in-0 zoom-in-95 duration-200",
-"data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:duration-150",
- // Slide animations based on side
-"data-[side=bottom]:slide-in-from-top-2",
-"data-[side=left]:slide-in-from-right-2",
-"data-[side=right]:slide-in-from-left-2",
-"data-[side=top]:slide-in-from-bottom-2",
- // Z-index and sizing
+"bg-parchment text-ink font-mono text-xs",
+"border border-rule shadow-sm",
+"rounded-none px-2.5 py-1.5",
+"animate-in fade-in-0 duration-150",
+"data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:duration-150",
+"data-[side=bottom]:slide-in-from-top-1",
+"data-[side=left]:slide-in-from-right-1",
+"data-[side=right]:slide-in-from-left-1",
+"data-[side=top]:slide-in-from-bottom-1",
 "z-50 w-fit",
 "origin-(--radix-tooltip-content-transform-origin)",
  className
@@ -197,16 +182,12 @@ export function TooltipContent({
  {/* Content */}
  <span>{children}</span>
 
- {/* Arrow matching glass material */}
+ {/* Arrow */}
  <TooltipPrimitive.Arrow
  className={cn(
-"z-50 size-3",
- // Match the glass background color
-"fill-[rgba(255,255,255,0.65)]",
- // Border to match tooltip border
-"stroke-[#FFFFFF]",
-"stroke-[1]",
-"translate-y-[calc(-50%_-_2px)]"
+"z-50 size-2.5",
+"fill-parchment stroke-rule stroke-[1]",
+"translate-y-[calc(-50%_-_1px)]"
  )}
  />
  </TooltipPrimitive.Content>

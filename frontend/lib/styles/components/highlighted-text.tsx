@@ -16,6 +16,33 @@ export interface HighlightedTextProps {
  chunks: SearchChunk[];
 }
 
+// ReactMarkdown trims the leading and trailing whitespace off a paragraph. The
+// highlighted chunk next to it is emitted as a raw string, so without this the
+// two fuse: "the appellant had" + "no standing" (#722). Interior whitespace
+// survives parsing, so only the segment edges need peeling off and re-emitting
+// as literal text either side of the parsed middle.
+const INLINE_COMPONENTS = {
+ p: ({ children }: { children?: React.ReactNode }) => <span className="leading-relaxed">{children}</span>,
+ strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-bold">{children}</strong>,
+ em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
+};
+
+const renderSegment = (segment: string, key: string): React.ReactElement => {
+ const [, leading, middle, trailing] = /^(\s*)([\s\S]*?)(\s*)$/.exec(segment) as RegExpExecArray;
+
+ return (
+ <React.Fragment key={key}>
+ {leading}
+ {middle && (
+ <span className="prose max-w-none inline">
+ <ReactMarkdown components={INLINE_COMPONENTS}>{middle}</ReactMarkdown>
+ </span>
+ )}
+ {trailing}
+ </React.Fragment>
+ );
+};
+
 export const HighlightedText = ({ text, chunks }: HighlightedTextProps): React.JSX.Element | null => {
  if (!text) return null;
 
@@ -51,20 +78,7 @@ export const HighlightedText = ({ text, chunks }: HighlightedTextProps): React.J
  if (index === -1) continue;
 
  if (index > lastIndex) {
- const beforeText = processedText.substring(lastIndex, index);
- elements.push(
- <span key={`text-${lastIndex}`} className="prose max-w-none inline">
- <ReactMarkdown
- components={{
- p: ({ children }) => <span className="leading-relaxed">{children}</span>,
- strong: ({ children }) => <strong className="font-bold">{children}</strong>,
- em: ({ children }) => <em className="italic">{children}</em>,
- }}
- >
- {beforeText}
- </ReactMarkdown>
- </span>
- );
+ elements.push(renderSegment(processedText.substring(lastIndex, index), `text-${lastIndex}`));
  }
  elements.push(
  <span key={`highlight-${index}`} className="bg-gold-soft font-medium">
@@ -75,20 +89,7 @@ export const HighlightedText = ({ text, chunks }: HighlightedTextProps): React.J
  }
 
  if (lastIndex < processedText.length) {
- const endText = processedText.substring(lastIndex);
- elements.push(
- <span key={`text-end`} className="prose max-w-none inline">
- <ReactMarkdown
- components={{
- p: ({ children }) => <span className="leading-relaxed">{children}</span>,
- strong: ({ children }) => <strong className="font-bold">{children}</strong>,
- em: ({ children }) => <em className="italic">{children}</em>,
- }}
- >
- {endText}
- </ReactMarkdown>
- </span>
- );
+ elements.push(renderSegment(processedText.substring(lastIndex), 'text-end'));
  }
 
  return <>{elements}</>;

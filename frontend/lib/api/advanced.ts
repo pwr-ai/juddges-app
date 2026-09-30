@@ -147,12 +147,35 @@ export interface PrecedentMatch {
   relevance_explanation: string | null;
 }
 
+/** One raw vector candidate returned before the AI ranking pass (#724). */
+export interface PrecedentCohortItem {
+  document_id: string;
+  similarity_score: number;
+  case_number: string | null;
+  title: string | null;
+  jurisdiction: string | null;
+  court_name: string | null;
+  decision_date: string | null;
+  appeal_outcome: string[];
+  sentences_received: string[];
+  convict_offences: string[];
+}
+
+/** A case number typed into the query box, resolved to a judgment (#724). */
+export interface ResolvedCase {
+  case_number: string;
+  document_id: string;
+  title: string | null;
+}
+
 export interface FindPrecedentsResponse {
   query: string;
   precedents: PrecedentMatch[];
   total_found: number;
   search_strategy: string;
   enhanced_query: string | null;
+  cohort: PrecedentCohortItem[];
+  resolved_case: ResolvedCase | null;
 }
 
 export async function findPrecedents(

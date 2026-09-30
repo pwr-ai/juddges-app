@@ -70,25 +70,23 @@ export function UserCard({
     onClose?.();
   };
 
-  // Menu item base classes following dropdown-button pattern
+  // Menu item base classes following Editorial pattern
   const menuItemClasses = cn(
-    "group relative flex items-center gap-2.5 px-3 py-2 rounded-md",
-    "text-sm text-muted-foreground",
-    "transition-all duration-200",
+    "group relative flex items-center gap-2.5 px-3 py-2 rounded-none",
+    "text-xs font-mono text-ink-soft hover:text-ink hover:bg-parchment-deep",
+    "transition-colors duration-150",
     "cursor-pointer",
     "overflow-hidden",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
   );
 
   return (
     <div
       className={cn(
         "w-56 p-1",
-        // Modern background styling following dropdown-button pattern
-        "bg-gradient-to-br from-background via-background/80 to-background",
-        "backdrop-blur-sm",
-        "border border-border/50 rounded-lg",
-        "shadow-lg shadow-primary/10",
+        "bg-parchment",
+        "border border-rule rounded-none",
+        "shadow-md",
         className
       )}
     >
@@ -97,14 +95,14 @@ export function UserCard({
         <div className="flex items-center gap-2.5">
           <UserAvatar size="sm" clickable={false} />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-foreground truncate">
+            <div className="text-xs font-mono font-medium text-ink truncate">
               {userName || "User"}
             </div>
           </div>
         </div>
       </div>
 
-      <Separator className="my-1" />
+      <Separator className="my-1 border-rule" />
 
       {/* Settings Link */}
       <Link
@@ -112,18 +110,17 @@ export function UserCard({
         onClick={handleLinkClick}
         className={menuItemClasses}
       >
-        <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none bg-primary/10" />
         <div className="relative z-10 flex items-center gap-2.5">
-          <Settings className="h-4 w-4 transition-transform duration-200 group-hover:rotate-90" />
-          <span className="group-hover:text-foreground transition-colors">Settings</span>
+          <Settings className="h-4 w-4 text-ink-soft group-hover:text-ink transition-transform duration-150 group-hover:rotate-90" />
+          <span>Settings</span>
         </div>
       </Link>
 
-      <Separator className="my-1" />
+      <Separator className="my-1 border-rule" />
 
       {/* Help Section */}
       <div className="px-3 py-1.5">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-ink-soft">
           Help
         </div>
       </div>
@@ -133,10 +130,9 @@ export function UserCard({
         onClick={handleLinkClick}
         className={menuItemClasses}
       >
-        <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none bg-primary/10" />
         <div className="relative z-10 flex items-center gap-2.5">
-          <HelpCircle className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
-          <span className="group-hover:text-foreground transition-colors">Help Center</span>
+          <HelpCircle className="h-4 w-4 text-ink-soft group-hover:text-ink transition-colors" />
+          <span>Help Center</span>
         </div>
       </Link>
 
@@ -145,10 +141,9 @@ export function UserCard({
         onClick={handleLinkClick}
         className={menuItemClasses}
       >
-        <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none bg-primary/10" />
         <div className="relative z-10 flex items-center gap-2.5">
-          <Mail className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
-          <span className="group-hover:text-foreground transition-colors">Contact</span>
+          <Mail className="h-4 w-4 text-ink-soft group-hover:text-ink transition-colors" />
+          <span>Contact</span>
         </div>
       </Link>
 
@@ -157,25 +152,23 @@ export function UserCard({
         onClick={handleLinkClick}
         className={menuItemClasses}
       >
-        <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none bg-primary/10" />
         <div className="relative z-10 flex items-center gap-2.5">
-          <FileCheck className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
-          <span className="group-hover:text-foreground transition-colors">Terms of Service</span>
+          <FileCheck className="h-4 w-4 text-ink-soft group-hover:text-ink transition-colors" />
+          <span>Terms of Service</span>
         </div>
       </Link>
 
-      <Separator className="my-1" />
+      <Separator className="my-1 border-rule" />
 
       {/* Logout Button */}
       <button
         onClick={handleLogout}
-        className={cn(menuItemClasses, "w-full")}
+        className={cn(menuItemClasses, "w-full text-ink-soft hover:text-oxblood")}
         aria-label="Logout"
       >
-        <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none bg-destructive/10" />
         <div className="relative z-10 flex items-center gap-2.5">
-          <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:rotate-6 group-hover:scale-110 group-hover:text-destructive" />
-          <span className="group-hover:text-destructive transition-colors">Logout</span>
+          <LogOut className="h-4 w-4 transition-colors text-ink-soft group-hover:text-oxblood" />
+          <span>Logout</span>
         </div>
       </button>
     </div>

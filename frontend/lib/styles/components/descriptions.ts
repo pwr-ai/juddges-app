@@ -18,54 +18,25 @@ import { cn } from '@/lib/utils';
  * </p>
  */
 export const getHeaderDescriptionStyle = (
- additionalClasses?: string
+  additionalClasses?: string
 ): string => {
- return cn(
- // Typography
- 'text-base md:text-lg',
- 'font-normal',
- 'leading-relaxed md:leading-loose',
- 'tracking-normal',
-
- // Gradient text effect - applied to container
- 'bg-gradient-to-br',
- 'from-slate-700 via-slate-600 to-primary',
- '',
- 'bg-clip-text',
- 'text-transparent',
-
- // Spacing - no margin (handled by parent flex gap)
-
- // Max width for readability (removed to allow full width usage)
- // Use max-w-* classes in parent container if width constraint is needed
-
- // Modern effects
- 'transition-all duration-200',
-
- // Ensure inline elements like badges render correctly
- // Note: Inline elements (like Badge) should override with their own text color
- 'inline-flex items-center gap-1.5 flex-wrap',
-
- additionalClasses
- );
+  return cn(
+    'text-sm md:text-base font-normal text-ink-soft leading-relaxed',
+    'inline-flex items-center gap-1.5 flex-wrap',
+    additionalClasses
+  );
 };
 
 /**
- * Get gradient text style for description text spans
- * Apply this to individual text spans within the description
+ * Get description text style for description text spans
  */
 export const getHeaderDescriptionGradientStyle = (
- additionalClasses?: string
+  additionalClasses?: string
 ): string => {
- return cn(
- // Gradient text effect - subtle gradient for description
- 'bg-gradient-to-br',
- 'from-slate-700 via-slate-600 to-primary',
- '',
- 'bg-clip-text',
- 'text-transparent',
- additionalClasses
- );
+  return cn(
+    'text-ink-soft',
+    additionalClasses
+  );
 };
 
 /**

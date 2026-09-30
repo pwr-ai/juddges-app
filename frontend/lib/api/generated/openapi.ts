@@ -1951,9 +1951,44 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a collection from a base-schema filter result */
+        /** Create a collection (or a PL/UK pair) from a base-schema filter result */
         post: operations["create_collection_from_filter_collections_from_filter_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collections/pairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's PL/UK collection pairs (newest first) */
+        get: operations["list_pairs_collections_pairs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collections/pairs/{pair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one PL/UK collection pair */
+        get: operations["get_pair_collections_pairs__pair_id__get"];
+        put?: never;
+        post?: never;
+        /** Unlink a PL/UK pair (both collections are kept) */
+        delete: operations["delete_pair_collections_pairs__pair_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2046,6 +2081,73 @@ export interface paths {
          * @description Remove a document from a collection (document_id in URL path).
          */
         delete: operations["remove_document_by_url_collections__collection_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/compare/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Long-format CSV of the comparison
+         * @description One row per (field, value, jurisdiction); UTF-8 with BOM for Excel.
+         *
+         *     Built from the same `CompareResponse` as `/compare/facets`, so the file
+         *     holds exactly the numbers shown on screen. Headers follow the results
+         *     export: `Content-Disposition` attachment + `X-Rows-Count`.
+         */
+        post: operations["compare_export_compare_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/compare/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Side-by-side PL/UK value distributions for base-schema fields */
+        post: operations["compare_facets_compare_facets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/compare/pairs/{pair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comparison of a saved PL/UK collection pair (base + extension schema fields)
+         * @description Base fields over the pair's two collections, plus the extension tally.
+         *
+         *     No request filters are accepted: the membership is the pair's own
+         *     `pl_collection_id`/`uk_collection_id`, and the pair must belong to the
+         *     caller (`find_pair` scopes by user; anything else is a 404). `filters` in
+         *     the response is the server-built `{"collection_ids": [pl, uk]}`, which
+         *     `POST /compare/export` accepts for the CSV of the same numbers.
+         */
+        get: operations["compare_pair_compare_pairs__pair_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3084,6 +3186,26 @@ export interface paths {
          * @description Extract structured data from legal documents using the universal base schema with jurisdiction detection.
          */
         post: operations["extract_with_base_schema_extractions_base_schema_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extractions/base-schema/aggregate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aggregate extracted data over a cohort
+         * @description Per-field distributions (categorical / numeric / year) over the judgments matching the filters, optionally over a seeded random sample. Login required.
+         */
+        post: operations["aggregate_extracted_data_extractions_base_schema_aggregate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5513,6 +5635,63 @@ export interface components {
             document_ids: string[];
         };
         /**
+         * AggregateRequest
+         * @description Request for POST /extractions/base-schema/aggregate (#707).
+         */
+        AggregateRequest: {
+            /**
+             * Fields
+             * @description Fields to aggregate; null = the default set. Must be aggregable (see aggregate_fields.py).
+             */
+            fields?: string[] | null;
+            /**
+             * Filters
+             * @description Same shape as ExtractedDataFilterRequest.filters (list_extracted_filter_matches keys)
+             */
+            filters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Sample Size
+             * @description Seeded random sample size; null = whole cohort
+             */
+            sample_size?: number | null;
+            /**
+             * Seed
+             * @description Required when sample_size is set
+             */
+            seed?: number | null;
+            /**
+             * Text Query
+             * @description Full-text query across text fields
+             */
+            text_query?: string | null;
+            /**
+             * Top N
+             * @description Values kept per categorical field; the rest fold into 'other'
+             * @default 20
+             */
+            top_n: number;
+        };
+        /**
+         * AggregateResponse
+         * @description Response for POST /extractions/base-schema/aggregate — mirrors the RPC's JSONB.
+         */
+        AggregateResponse: {
+            /** Fields */
+            fields: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /** Sample N */
+            sample_n: number;
+            /** Seed */
+            seed?: number | null;
+            /** Total */
+            total: number;
+        };
+        /**
          * AppEventIn
          * @description A single event inside the batch envelope.
          */
@@ -6452,6 +6631,8 @@ export interface components {
         CollectionFromFilterResponse: {
             /** Collections */
             collections: components["schemas"]["CreatedCollection"][];
+            /** Ignored Filter Keys */
+            ignored_filter_keys?: string[];
             /** Pair Id */
             pair_id?: string | null;
             /** Total Matched */
@@ -6465,6 +6646,44 @@ export interface components {
             created_at?: string | null;
             /** Description */
             description?: string | null;
+        };
+        /** CollectionPair */
+        CollectionPair: {
+            /** Created At */
+            created_at: string;
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Sides */
+            sides: components["schemas"]["PairSide"][];
+            /** Text Query */
+            text_query?: string | null;
+            /** Updated At */
+            updated_at: string;
+            /** User Id */
+            user_id: string;
+        };
+        /**
+         * CollectionPairRef
+         * @description The PL/UK pair a collection belongs to, as seen from that collection's side.
+         */
+        CollectionPairRef: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Partner Collection Id */
+            partner_collection_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "PL" | "UK";
         };
         /** CollectionWithDocuments */
         CollectionWithDocuments: {
@@ -6486,10 +6705,106 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            pair?: components["schemas"]["CollectionPairRef"] | null;
             /** Updated At */
             updated_at: string;
             /** User Id */
             user_id: string;
+        };
+        /** CompareField */
+        CompareField: {
+            /** Coverage */
+            coverage: {
+                [key: string]: components["schemas"]["CoverageStat"];
+            };
+            /** Field */
+            field: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "enum" | "enum_array" | "boolean";
+            /** Label */
+            label: string;
+            /**
+             * Missing In
+             * @default []
+             */
+            missing_in: string[];
+            /**
+             * Source
+             * @description 'base' or 'schema:<extraction_schema_id>'
+             */
+            source: string;
+            /**
+             * Tier
+             * @enum {string}
+             */
+            tier: "primary" | "partial" | "unavailable" | "empty";
+            /** Values */
+            values: components["schemas"]["CompareValue"][];
+        };
+        /**
+         * CompareRequest
+         * @description Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.
+         */
+        CompareRequest: {
+            /**
+             * Fields
+             * @description Base-schema field names to compare, in this order (duplicates collapse to the first occurrence); defaults to every comparable field in registry order
+             */
+            fields?: string[] | null;
+            /** Filters */
+            filters?: {
+                [key: string]: unknown;
+            };
+            /** Text Query */
+            text_query?: string | null;
+        };
+        /** CompareResponse */
+        CompareResponse: {
+            /** Fields */
+            fields: components["schemas"]["CompareField"][];
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /**
+             * Ignored Filter Keys
+             * @default []
+             */
+            ignored_filter_keys: string[];
+            /**
+             * Jurisdictions
+             * @default [
+             *       "PL",
+             *       "UK"
+             *     ]
+             */
+            jurisdictions: string[];
+            pair?: components["schemas"]["PairSummary"] | null;
+            /** Text Query */
+            text_query?: string | null;
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+        };
+        /** CompareValue */
+        CompareValue: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /**
+             * Shares
+             * @description count / covered per jurisdiction; null where covered is 0
+             */
+            shares: {
+                [key: string]: number | null;
+            };
+            /** Value */
+            value: string;
         };
         /**
          * ConsentHistoryEntry
@@ -6716,6 +7031,21 @@ export interface components {
             user_id: string;
         };
         /**
+         * CoverageStat
+         * @description How many matched judgments have the field filled, per jurisdiction.
+         */
+        CoverageStat: {
+            /** Covered */
+            covered: number;
+            /**
+             * Ratio
+             * @description covered / total; null when total is 0
+             */
+            ratio: number | null;
+            /** Total */
+            total: number;
+        };
+        /**
          * CreateCollectionFromFilterRequest
          * @description Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.
          */
@@ -6728,6 +7058,12 @@ export interface components {
             };
             /** Name */
             name: string;
+            /**
+             * Split By Jurisdiction
+             * @description Create one collection per jurisdiction ("<name> — PL", "<name> — UK") linked as a pair. `filters.jurisdiction` is ignored (echoed in `ignored_filter_keys`); the size cap applies per side; `name` is limited to 200 characters.
+             * @default false
+             */
+            split_by_jurisdiction: boolean;
             /** Text Query */
             text_query?: string | null;
         };
@@ -8156,6 +8492,49 @@ export interface components {
             questions: string[];
         };
         /**
+         * ExtensionCompare
+         * @description Side-by-side counts for the extension schema both sides were extracted with.
+         *
+         *     Present only when the newest SUCCESS job of each collection ran the same
+         *     `schema_id`; `fields` may be empty when that schema has no enum/boolean
+         *     field. Coverage denominators are the job's completed documents, not the
+         *     collection size, so `totals` here can differ from the base `totals`.
+         */
+        ExtensionCompare: {
+            /** Fields */
+            fields: components["schemas"]["CompareField"][];
+            /** Jobs */
+            jobs: {
+                [key: string]: components["schemas"]["ExtensionJobRef"];
+            };
+            /** Schema Id */
+            schema_id: string;
+            /** Schema Name */
+            schema_name?: string | null;
+            /**
+             * Source
+             * @description 'schema:<extraction_schema_id>', as on each field
+             */
+            source: string;
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * ExtensionJobRef
+         * @description The extraction job whose `results` fed one side of the extension tally.
+         */
+        ExtensionJobRef: {
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Job Id
+             * @description Celery task id, as used by /extractions/jobs/{job_id}
+             */
+            job_id: string;
+        };
+        /**
          * ExtractedDataFilterRequest
          * @description Request for filtering documents by extracted_data fields.
          */
@@ -8502,6 +8881,11 @@ export interface components {
          */
         FindPrecedentsResponse: {
             /**
+             * Cohort
+             * @description Raw vector candidates (up to 40) with the fields the UI groups by, collected before the AI ranking pass. Present even when the ranking pass returns nothing.
+             */
+            cohort: components["schemas"]["PrecedentCohortItem"][];
+            /**
              * Enhanced Query
              * @description AI-enhanced version of the query used for search
              */
@@ -8516,6 +8900,8 @@ export interface components {
              * @description The original query
              */
             query: string;
+            /** @description Set when the query text contained a case number that matched a judgment; that judgment was used as the source document. */
+            resolved_case?: components["schemas"]["ResolvedCase"] | null;
             /**
              * Search Strategy
              * @description Description of the search strategy used
@@ -9501,6 +9887,70 @@ export interface components {
             offset: number;
         };
         /**
+         * PairCompareResponse
+         * @description `CompareResponse` over a saved pair's membership, plus the extension tally.
+         *
+         *     `fields` holds the base-schema fields only; extension-schema fields live in
+         *     `extension.fields` (each with `source = 'schema:<id>'`). Exactly one of
+         *     `extension` / `extension_reason` is set.
+         */
+        PairCompareResponse: {
+            extension?: components["schemas"]["ExtensionCompare"] | null;
+            /** Extension Reason */
+            extension_reason?: ("no_jobs" | "no_job_pl" | "no_job_uk" | "schema_mismatch" | "schema_not_found" | "extension_failed") | null;
+            /** Fields */
+            fields: components["schemas"]["CompareField"][];
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /**
+             * Ignored Filter Keys
+             * @default []
+             */
+            ignored_filter_keys: string[];
+            /**
+             * Jurisdictions
+             * @default [
+             *       "PL",
+             *       "UK"
+             *     ]
+             */
+            jurisdictions: string[];
+            pair: components["schemas"]["PairSummary"];
+            /** Text Query */
+            text_query?: string | null;
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * PairSide
+         * @description One side of a pair. No document_count: the read path cannot compute it
+         *     cheaply -- ``GET /collections`` already carries per-collection counts.
+         */
+        PairSide: {
+            /** Collection Id */
+            collection_id: string;
+            /**
+             * Jurisdiction
+             * @enum {string}
+             */
+            jurisdiction: "PL" | "UK";
+        };
+        /** PairSummary */
+        PairSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Pl Collection Id */
+            pl_collection_id: string;
+            /** Uk Collection Id */
+            uk_collection_id: string;
+        };
+        /**
          * PlatformStats
          * @description Platform-wide overview statistics.
          */
@@ -9541,6 +9991,65 @@ export interface components {
             query: string;
             /** Search Count */
             search_count: number;
+        };
+        /**
+         * PrecedentCohortItem
+         * @description One raw vector candidate, before the LLM ranking pass (#724).
+         *
+         *     Field names drop the `base_` prefix so the frontend can label them with the
+         *     same helper the statistics view uses (#708).
+         */
+        PrecedentCohortItem: {
+            /**
+             * Appeal Outcome
+             * @description base_appeal_outcome values
+             */
+            appeal_outcome?: string[];
+            /**
+             * Case Number
+             * @description Court case number
+             */
+            case_number?: string | null;
+            /**
+             * Convict Offences
+             * @description base_convict_offences values
+             */
+            convict_offences?: string[];
+            /**
+             * Court Name
+             * @description Court name
+             */
+            court_name?: string | null;
+            /**
+             * Decision Date
+             * @description ISO decision date
+             */
+            decision_date?: string | null;
+            /**
+             * Document Id
+             * @description Judgment UUID
+             */
+            document_id: string;
+            /**
+             * Jurisdiction
+             * @description PL or UK
+             */
+            jurisdiction?: string | null;
+            /**
+             * Sentences Received
+             * @description base_sentences_received values
+             */
+            sentences_received?: string[];
+            /**
+             * Similarity Score
+             * @description Cosine similarity (0.0 to 1.0)
+             */
+            similarity_score: number;
+            /**
+             * Title
+             * @description Judgment title
+             */
+            title?: string | null;
         };
         /**
          * PrecedentFilters
@@ -10171,6 +10680,27 @@ export interface components {
              * @description ID of the document to remove
              */
             document_id: string;
+        };
+        /**
+         * ResolvedCase
+         * @description A docket typed into the query box, resolved to a judgment (#724).
+         */
+        ResolvedCase: {
+            /**
+             * Case Number
+             * @description The case number detected in the query
+             */
+            case_number: string;
+            /**
+             * Document Id
+             * @description Judgment UUID it resolved to
+             */
+            document_id: string;
+            /**
+             * Title
+             * @description Judgment title
+             */
+            title?: string | null;
         };
         /** Response */
         Response: {
@@ -15341,6 +15871,86 @@ export interface operations {
             };
         };
     };
+    list_pairs_collections_pairs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionPair"][];
+                };
+            };
+        };
+    };
+    get_pair_collections_pairs__pair_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionPair"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_pair_collections_pairs__pair_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_collection_collections__collection_id__get: {
         parameters: {
             query?: {
@@ -15605,6 +16215,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_export_compare_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_facets_compare_facets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_pair_compare_pairs__pair_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairCompareResponse"];
                 };
             };
             /** @description Validation Error */
@@ -17116,6 +17823,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BaseSchemaExtractionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    aggregate_extracted_data_extractions_base_schema_aggregate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AggregateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AggregateResponse"];
                 };
             };
             /** @description Validation Error */

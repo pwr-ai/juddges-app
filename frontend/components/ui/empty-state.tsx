@@ -24,15 +24,12 @@ export function EmptyState({
   return (
     <Card className={cn("border-dashed bg-muted/20", className)}>
       <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        {/* Icon with gradient background */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 blur-2xl" />
-          <div className="relative p-6 rounded-2xl bg-muted/50 backdrop-blur-sm">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {React.cloneElement(icon as React.ReactElement<any>, {
-              className: "size-12 text-muted-foreground"
-            })}
-          </div>
+        {/* Icon in a ruled frame */}
+        <div className="mb-6 border border-rule bg-parchment-deep p-6">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {React.cloneElement(icon as React.ReactElement<any>, {
+            className: "size-12 text-ink-soft"
+          })}
         </div>
 
         {/* Title */}
@@ -47,7 +44,7 @@ export function EmptyState({
 
         {/* Action */}
         {action && (
-          <Button onClick={action.onClick} size="lg" className="shadow-lg hover:shadow-xl transition-all">
+          <Button onClick={action.onClick} size="lg">
             {action.label}
           </Button>
         )}

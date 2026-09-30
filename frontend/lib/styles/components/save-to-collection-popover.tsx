@@ -263,14 +263,10 @@ export function SaveToCollectionPopover({
   return (
     <div
       className={cn(
-        // I. The Glass Pane - Compact width, 24px corner radius
-        "w-[360px] rounded-3xl",
-        // High Opacity Porcelain with 24px blur
-        "bg-[rgba(255,255,255,0.90)] backdrop-blur-[24px]",
-        // Border and Shadow
-        "border border-white",
-        "shadow-[0_20px_60px_-10px_rgba(0,0,0,0.2)]",
-        // Padding - More compact
+        "w-[360px] rounded-none",
+        "bg-parchment",
+        "border border-rule",
+        "shadow-md",
         "p-4",
         className
       )}
@@ -279,17 +275,17 @@ export function SaveToCollectionPopover({
     >
       {/* II. The Header */}
       <div className="relative flex items-center justify-between mb-4">
-        <h3 className="text-[18px] font-semibold text-[#0F172A]">
+        <h3 className="text-base font-serif font-medium text-ink">
           {isAllResults ? `Save ${documents.length} documents to Registry` : "Save to Registry"}
         </h3>
-        {/* Close Button - Glass Circle */}
+        {/* Close Button */}
         <button
           onClick={onClose}
           className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center",
-            "transition-all duration-200",
-            "bg-transparent text-[#64748B]",
-            "hover:bg-slate-100 hover:text-red-500"
+            "w-7 h-7 rounded-none flex items-center justify-center",
+            "transition-colors duration-150",
+            "bg-transparent text-ink-soft",
+            "hover:bg-parchment-deep hover:text-ink"
           )}
           aria-label="Close"
         >
@@ -299,35 +295,35 @@ export function SaveToCollectionPopover({
 
       {loading ? (
         <div className="flex justify-center py-8" aria-busy="true" aria-label="Loading collections">
-          <Loader2 className="h-5 w-5 animate-spin text-[#2563EB]" />
+          <Loader2 className="h-5 w-5 animate-spin text-ink-soft" />
         </div>
       ) : collections.length === 0 ? (
-        <p className="text-sm text-[#64748B] mb-3">
+        <p className="text-xs font-mono text-ink-soft mb-3">
           No collections available. Create one in the Collections section.
         </p>
       ) : (
         <>
-          {/* III. The Search Input - Inset Console */}
+          {/* III. The Search Input */}
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8] pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-soft pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search collections..."
               className={cn(
-                "w-full h-10 pl-10 pr-4 rounded-[10px]",
-                "bg-[rgba(0,0,0,0.04)]",
-                "border border-[rgba(0,0,0,0.05)]",
-                "text-sm text-[#475569]",
-                "transition-all duration-200",
-                "focus:outline-none focus:border-[#3B82F6] focus:bg-white",
-                "placeholder:text-[#94A3B8]"
+                "w-full h-9 pl-9 pr-3 rounded-none",
+                "bg-parchment",
+                "border border-rule",
+                "text-xs font-mono text-ink",
+                "transition-colors duration-150",
+                "focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink",
+                "placeholder:text-ink-soft"
               )}
             />
           </div>
 
-          {/* IV. The Collection List - Interactive Rows */}
+          {/* IV. The Collection List */}
           <div className="space-y-1 mb-4 max-h-[280px] overflow-y-auto">
             {/* Existing Collections */}
             {filteredCollections.map((collection) => {
@@ -337,43 +333,40 @@ export function SaveToCollectionPopover({
                   key={collection.id}
                   onClick={() => setSelectedCollection(collection.id)}
                   className={cn(
-                    "w-full h-11 px-4 rounded-lg flex items-center justify-between",
-                    "transition-all duration-200",
-                    // Idle state
-                    !isSelected && "text-[#475569] hover:bg-[rgba(0,0,0,0.02)]",
-                    // Selected state - Blue Tint
-                    isSelected && "bg-[rgba(37,99,235,0.08)] text-[#1E40AF]"
+                    "w-full h-9 px-3 rounded-none flex items-center justify-between text-left text-xs font-mono",
+                    "transition-colors duration-150",
+                    !isSelected && "text-ink hover:bg-parchment-deep",
+                    isSelected && "bg-parchment-deep border-l-2 border-l-oxblood border-rule text-ink font-semibold"
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <Folder className="h-4 w-4 text-[#94A3B8]" />
-                    <span className="text-sm font-medium">{collection.name}</span>
+                  <div className="flex items-center gap-2.5">
+                    <Folder className="h-3.5 w-3.5 text-ink-soft" />
+                    <span className="truncate">{collection.name}</span>
                   </div>
                   {isSelected && (
-                    <Check className="h-4 w-4 text-[#1E40AF]" />
+                    <Check className="h-4 w-4 text-oxblood stroke-[2]" />
                   )}
                 </button>
               );
             })}
 
-            {/* Create New Row - Inline Form (Moved to Bottom) */}
+            {/* Create New Row */}
             {!isCreatingNew ? (
               <button
                 onClick={() => setIsCreatingNew(true)}
                 className={cn(
-                  "w-full h-11 px-4 rounded-lg flex items-center gap-3",
-                  "border border-dashed border-[#CBD5E1]",
-                  "bg-transparent text-[#2563EB]",
-                  "transition-all duration-200",
-                  "hover:bg-[rgba(37,99,235,0.05)] hover:border-[#3B82F6] hover:border-solid"
+                  "w-full h-9 px-3 rounded-none flex items-center gap-2 text-xs font-mono",
+                  "border border-dashed border-rule",
+                  "bg-transparent text-ink-soft",
+                  "transition-colors duration-150",
+                  "hover:bg-parchment-deep hover:text-ink hover:border-ink"
                 )}
               >
-                <Plus className="h-4 w-4" />
-                <span className="text-sm font-medium">Create New Collection</span>
+                <Plus className="h-3.5 w-3.5" />
+                <span>Create New Collection</span>
               </button>
             ) : (
               <div className="w-full">
-                {/* Inset Console Input - Carved into glass */}
                 <div className="relative flex items-center gap-2">
                   <input
                     type="text"
@@ -391,37 +384,32 @@ export function SaveToCollectionPopover({
                     placeholder="Collection name..."
                     autoFocus
                     className={cn(
-                      "flex-1 h-11 px-4",
-                      "bg-[rgba(0,0,0,0.04)]",
-                      "border border-[rgba(0,0,0,0.05)]",
-                      "text-sm text-[#0F172A]",
-                      "placeholder:text-[#94A3B8]",
-                      "transition-all duration-200",
-                      "focus:outline-none focus:bg-white focus:border-[#3B82F6]",
-                      "focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.05),0_0_0_3px_rgba(59,130,246,0.15)]",
-                      "rounded-xl"
+                      "flex-1 h-9 px-3 rounded-none",
+                      "bg-parchment",
+                      "border border-rule",
+                      "text-xs font-mono text-ink",
+                      "placeholder:text-ink-soft",
+                      "transition-colors duration-150",
+                      "focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink"
                     )}
-                    style={{
-                      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.06)',
-                    }}
                   />
                   <button
                     onClick={handleCreateNewCollection}
                     disabled={!newCollectionName.trim() || isCreating}
                     className={cn(
-                      "h-11 px-4 rounded-xl",
-                      "bg-[#3B82F6] text-white text-sm font-semibold",
+                      "h-9 px-3 rounded-none",
+                      "bg-oxblood text-parchment text-xs font-mono uppercase tracking-wider font-semibold",
                       "border-none cursor-pointer",
-                      "hover:bg-[#2563EB]",
+                      "hover:bg-oxblood-deep",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
-                      "transition-colors",
+                      "transition-colors duration-150",
                       "flex items-center justify-center gap-1.5",
                       "whitespace-nowrap"
                     )}
                   >
                     {isCreating ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         <span>Adding...</span>
                       </>
                     ) : (
@@ -436,10 +424,10 @@ export function SaveToCollectionPopover({
                       setNewCollectionName("");
                     }}
                     className={cn(
-                      "px-3 py-1.5 text-xs font-medium rounded-lg",
-                      "text-[#64748B] hover:text-[#475569]",
-                      "hover:bg-[rgba(0,0,0,0.02)]",
-                      "transition-colors"
+                      "px-2.5 py-1 text-xs font-mono rounded-none",
+                      "text-ink-soft hover:text-ink",
+                      "hover:bg-parchment-deep",
+                      "transition-colors duration-150"
                     )}
                   >
                     Cancel
@@ -450,7 +438,7 @@ export function SaveToCollectionPopover({
           </div>
 
           {/* V. The Footer - Primary Action */}
-          <div className="flex justify-end gap-2 pt-3 border-t border-[rgba(0,0,0,0.05)]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-rule">
             <VariantButton intent="secondary"
               size="sm"
               onClick={onClose}

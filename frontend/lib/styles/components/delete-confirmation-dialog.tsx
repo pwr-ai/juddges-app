@@ -141,15 +141,13 @@ export function DeleteConfirmationDialog({
  <DialogPrimitive.Content
  className={cn(
  // Base styles
-"bg-background",
+ "bg-background",
  // Animations
-"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+ "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
  // Layout
-"fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl p-6 duration-200 sm:max-w-[425px]",
- // Border - following design system: slate-200/50 (light), slate-800/50 (dark, standard opacity /50)
-"border border-slate-200/50",
- // Shadow - following design system: shadow-2xl with primary accent for dialogs
-"shadow-2xl shadow-primary/10",
+ "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-none p-6 duration-200 sm:max-w-[425px]",
+ // Border and shadow
+ "border border-rule shadow-md",
  className
  )}
  onInteractOutside={(e) => {
@@ -183,20 +181,19 @@ export function DeleteConfirmationDialog({
  </DialogPrimitive.Close>
  <DialogHeader className="space-y-4">
  <div className="flex items-center gap-3">
- {/* Warning icon container - following design system: red-50 (special case), red-900/50 (dark, standard opacity) */}
- <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-red-50 border border-red-200/50">
- {/* Icon color - following design system: red-600 (light), red-400 (dark - 400 shade) */}
- <AlertTriangle className="h-5 w-5 text-red-600"/>
+ {/* Warning icon container */}
+ <div className="flex-shrink-0 w-9 h-9 rounded-none flex items-center justify-center bg-parchment-deep border border-rule">
+ <AlertTriangle className="h-4 w-4 text-oxblood" />
  </div>
- <DialogTitle className="text-left text-lg font-semibold">{title}</DialogTitle>
+ <DialogTitle className="text-left text-lg font-serif font-medium text-ink">{title}</DialogTitle>
  </div>
- <DialogDescription className="text-left space-y-2 text-foreground/80 text-sm leading-relaxed break-words [overflow-wrap:anywhere]">
+ <DialogDescription className="text-left space-y-2 text-ink-soft text-sm leading-relaxed break-words [overflow-wrap:anywhere]">
  {itemTitle ? (
  <>
  Are you sure you want to{' '}
- <span className="font-semibold">delete</span>
+ <span className="font-semibold text-ink">delete</span>
  {' '}the {itemName || 'item'}{' '}
- <span className="font-semibold text-black">
+ <span className="font-semibold text-ink">
  &quot;{itemTitle}&quot;
  </span>
  ?

@@ -36,7 +36,8 @@ const OUTCOME_LABELS: Record<string, string> = {
   procedural_count: 'Proceduralne',
 };
 
-/** Polish labels for trend values; `color` is the text tone on a rule-bordered pill */
+/** Polish labels for the backend trend vocabulary (app/reasoning_lines/schemas.py);
+ *  `color` is the text tone on a rule-bordered pill */
 const TREND_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   emerging_consensus: {
     label: 'Ksztaltujacy sie konsensus',
@@ -48,7 +49,7 @@ const TREND_CONFIG: Record<string, { label: string; icon: React.ElementType; col
     icon: Minus,
     color: 'text-gold',
   },
-  direction_change: {
+  shifting: {
     label: 'Zmiana kierunku',
     icon: TrendingDown,
     color: 'text-oxblood',

@@ -34,6 +34,7 @@ import {
   FileSearch,
   FileJson,
   BarChart3,
+  GitCompareArrows,
 } from "lucide-react";
 
 interface CommandItem {
@@ -100,6 +101,15 @@ const navigationItems: CommandItem[] = [
     icon: <BarChart3 className="h-4 w-4" />,
     href: "/dataset-comparison",
     keywords: ["dataset", "comparison", "statistics", "analytics", "charts", "polish", "uk"],
+    category: "navigation",
+  },
+  {
+    id: "compare",
+    label: "Compare PL / UK",
+    description: "Run one structured filter for Polish and UK judgments side by side",
+    icon: <GitCompareArrows className="h-4 w-4" />,
+    href: "/compare",
+    keywords: ["compare", "comparison", "pl", "uk", "jurisdiction", "coverage", "porównaj"],
     category: "navigation",
   },
 ];
