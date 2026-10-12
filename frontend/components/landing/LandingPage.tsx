@@ -29,6 +29,16 @@ import {
   SectionHeader,
   Stat,
 } from "@/components/editorial";
+import {
+  huggingFaceOrgUrl,
+  outputs,
+  partnerPublications,
+  partners,
+  projectFunding,
+  publications,
+  teamMembers,
+  type Publication,
+} from "@/lib/project-content";
 
 // ─────────────────────────────────────────────
 // Types
@@ -754,6 +764,250 @@ function HowItWorksSection() {
 }
 
 // ─────────────────────────────────────────────
+// Sections 5-8: Partners, results, publications, team (#759)
+// ─────────────────────────────────────────────
+
+const externalLinkProps = {
+  target: "_blank",
+  rel: "noopener noreferrer",
+} as const;
+
+const textLinkClass =
+  "text-[color:var(--oxblood)] underline underline-offset-4 hover:text-[color:var(--oxblood-deep)]";
+
+function PartnersSection() {
+  return (
+    <Section id="partners">
+      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        <SectionHeader
+          eyebrow="Consortium"
+          numeral="05"
+          title={
+            <>
+              Built by an <em>international</em> consortium
+            </>
+          }
+          description={
+            <>
+              Funded by {projectFunding.funder}, call {projectFunding.call}.
+              Project coordinator: {projectFunding.coordinator}.{" "}
+              <a
+                href={projectFunding.siteUrl}
+                className={textLinkClass}
+                {...externalLinkProps}
+              >
+                Project site
+              </a>
+            </>
+          }
+          className="mb-16"
+        />
+
+        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--rule)]">
+          {partners.map((partner) => (
+            <li
+              key={partner.name}
+              className="bg-[color:var(--parchment)] p-8"
+            >
+              <Eyebrow as="p" tone="default" noRule>
+                {partner.country}
+                {partner.consortium ? "" : " · Collaborating institution"}
+              </Eyebrow>
+              <h3 className="mt-3 font-serif text-xl text-[color:var(--ink)]">
+                {partner.name}
+              </h3>
+              <p className="mt-3 text-[15px] leading-[1.65] text-[color:var(--ink-soft)]">
+                {partner.description}
+              </p>
+              {partner.url && (
+                <a
+                  href={partner.url}
+                  className={cn("mt-3 inline-block text-sm", textLinkClass)}
+                  {...externalLinkProps}
+                >
+                  Grant page
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Section>
+  );
+}
+
+function ResultsSection() {
+  return (
+    <Section id="results">
+      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        <SectionHeader
+          eyebrow="Outputs"
+          numeral="06"
+          title={
+            <>
+              What we <em>delivered</em>
+            </>
+          }
+          description={
+            <>
+              Open datasets, software and code released by the project.{" "}
+              <a
+                href={huggingFaceOrgUrl}
+                className={textLinkClass}
+                {...externalLinkProps}
+              >
+                All datasets on Hugging Face
+              </a>
+            </>
+          }
+          className="mb-16"
+        />
+
+        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--rule)]">
+          {outputs.map((output) => (
+            <li
+              key={output.title}
+              className="bg-[color:var(--parchment)] p-6 sm:p-7"
+            >
+              <h3 className="font-mono text-sm text-[color:var(--ink)] break-words">
+                {output.url ? (
+                  <a
+                    href={output.url}
+                    className={textLinkClass}
+                    {...externalLinkProps}
+                  >
+                    {output.title}
+                  </a>
+                ) : (
+                  output.title
+                )}
+              </h3>
+              <p className="mt-2 text-[15px] leading-[1.65] text-[color:var(--ink-soft)]">
+                {output.description}
+              </p>
+              {output.doi && (
+                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+                  DOI{" "}
+                  <a
+                    href={`https://doi.org/${output.doi}`}
+                    className={cn("normal-case tracking-normal", textLinkClass)}
+                    {...externalLinkProps}
+                  >
+                    {output.doi}
+                  </a>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Section>
+  );
+}
+
+function PublicationItem({ publication }: { publication: Publication }) {
+  return (
+    <li className="py-5 border-b border-[color:var(--rule)]">
+      <a
+        href={publication.url}
+        className={cn("font-serif text-lg", textLinkClass)}
+        {...externalLinkProps}
+      >
+        {publication.title}
+      </a>
+      <p className="mt-1 text-[15px] text-[color:var(--ink-soft)]">
+        {publication.authors}
+      </p>
+      <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+        {publication.venue} · {publication.year}
+      </p>
+    </li>
+  );
+}
+
+function PublicationsSection() {
+  return (
+    <Section id="publications">
+      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        <SectionHeader
+          eyebrow="Research"
+          numeral="07"
+          title={
+            <>
+              <em>Publications</em>
+            </>
+          }
+          action={
+            <EditorialButton href="/publications" variant="ghost" size="sm" arrow>
+              All publications
+            </EditorialButton>
+          }
+          className="mb-12"
+        />
+
+        <ul>
+          {publications.map((publication) => (
+            <PublicationItem key={publication.url} publication={publication} />
+          ))}
+        </ul>
+
+        <h3 className="mt-12 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+          Partner publications
+        </h3>
+        <ul>
+          {partnerPublications.map((publication) => (
+            <PublicationItem key={publication.url} publication={publication} />
+          ))}
+        </ul>
+      </div>
+    </Section>
+  );
+}
+
+function TeamSection() {
+  return (
+    <Section id="team">
+      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        <SectionHeader
+          eyebrow="People"
+          numeral="08"
+          title={
+            <>
+              The <em>team</em>
+            </>
+          }
+          action={
+            <EditorialButton href="/team" variant="ghost" size="sm" arrow>
+              Meet the team
+            </EditorialButton>
+          }
+          className="mb-16"
+        />
+
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[color:var(--rule)]">
+          {teamMembers.map((member) => (
+            <li
+              key={member.name}
+              className="bg-[color:var(--parchment)] p-6 sm:p-7"
+            >
+              <h3 className="font-serif text-lg text-[color:var(--ink)]">
+                {member.name}
+              </h3>
+              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--oxblood)]">
+                {member.role}
+              </p>
+              <p className="mt-2 text-sm text-[color:var(--ink-soft)]">
+                {member.affiliation}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Section 6: Trust & CTA
 // ─────────────────────────────────────────────
 
@@ -836,6 +1090,10 @@ export function LandingPage({
         statsError={statsError}
       />
       <HowItWorksSection />
+      <PartnersSection />
+      <ResultsSection />
+      <PublicationsSection />
+      <TeamSection />
       <TrustCTASection />
     </PaperBackground>
   );
