@@ -34,6 +34,9 @@ test.describe('landing sections', () => {
     await expect(page.locator('#publications')).toBeVisible();
     await expect(page.locator('#team')).toBeVisible();
 
+    await expect(page.locator('#team')).toContainText('Kamil Tagowski');
+    await expect(page.locator('#publications')).toContainText('Schematize');
+
     await expect(page.getByRole('link', { name: 'Sign In' }).first()).toHaveAttribute(
       'href',
       '/auth/login',

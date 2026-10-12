@@ -4,17 +4,12 @@ import { useState } from "react";
 import Image from "next/image";
 import { Mail, Users, ArrowRight } from "lucide-react";
 import { LinkedinIcon } from "@/components/icons/brand";
-import { teamMembers, type TeamMember } from "@/lib/project-content";
+import { getInitials, teamMembers, type TeamMember } from "@/lib/project-content";
 import { Header, Badge, LightCard, VariantButton, PageContainer, SecondaryHeader } from "@/lib/styles/components";
 
 function TeamMemberCard({ member }: { member: TeamMember }) {
  const [imageError, setImageError] = useState(false);
- const initials = member.name
- .split(" ")
- .map((word) => word[0])
- .join("")
- .toUpperCase()
- .slice(0, 2);
+ const initials = getInitials(member.name);
 
  return (
  <LightCard padding="lg"className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">

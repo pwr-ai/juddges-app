@@ -61,23 +61,37 @@ export const teamMembers: TeamMember[] = [
     role: "Researcher",
     affiliation: "Wrocław University of Science and Technology",
     description:
-      "Researcher at Wrocław University of Science and Technology working on the JuDDGES data and extraction pipeline. Co-author of Schematize and the Juddges App software release.",
+      "Researcher at Wrocław University of Science and Technology. Co-author of Schematize and the Juddges App software release.",
+    image: "/team/kamil-tagowski.jpg",
   },
   {
     name: "Prof. Michał Bernaczyk",
-    role: "Legal Expert",
-    affiliation: "University of Wrocław, Faculty of Law",
+    role: "Professor of Constitutional Law",
+    affiliation: "University of Wrocław",
     description:
-      "Professor in the Department of Constitutional Law at the University of Wrocław. Provides legal-domain expertise for the project's annotation schemas and evaluation.",
+      "Professor in the Department of Constitutional Law at the University of Wrocław.",
   },
   {
     name: "Krzysztof Kamiński",
-    role: "Judiciary Partner",
+    role: "Judiciary Collaborator",
     affiliation: "Court of Appeal in Wrocław",
     description:
-      "Brings the perspective of the Polish judiciary to the project, grounding the platform in how courts actually produce and use judgments.",
+      "Collaborator from the Court of Appeal in Wrocław.",
   },
 ];
+
+const TITLE_TOKEN = /^(prof|dr|mgr|inż)\.?$/i;
+
+/** First letters of the first two name words, ignoring academic titles. */
+export function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((word) => word && !TITLE_TOKEN.test(word))
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
 
 export const projectFunding = {
   funder: "CHIST-ERA",
@@ -107,14 +121,14 @@ export const partners: Partner[] = [
     name: "Middlesex University London",
     country: "United Kingdom",
     description:
-      "Decision psychology and data science (Prof. Mandeep K. Dhami, Prof. David Windridge).",
+      "Consortium partner (Prof. Mandeep K. Dhami, Prof. David Windridge).",
     consortium: true,
   },
   {
     name: "Université Claude Bernard Lyon 1",
     country: "France",
     description:
-      "ELICO lab, open science and research data (Prof. Cherifa Boukacem-Zeghmouri). ANR grant ANR-23-CHRO-0001.",
+      "ELICO lab (Prof. Cherifa Boukacem-Zeghmouri). ANR grant ANR-23-CHRO-0001.",
     consortium: true,
     url: "https://anr.fr/Projet-ANR-23-CHRO-0001",
   },
@@ -147,7 +161,7 @@ export const outputs: ProjectOutput[] = [
     title: "JuDDGES/pl-court-raw",
     description: "Open dataset on Hugging Face.",
     url: "https://huggingface.co/datasets/JuDDGES/pl-court-raw",
-    doi: "10.57967/hf/4700",
+    doi: "10.57967/hf/4698",
   },
   {
     title: "JuDDGES/pl-court-instruct",

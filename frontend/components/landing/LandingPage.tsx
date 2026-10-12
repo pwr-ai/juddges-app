@@ -764,7 +764,7 @@ function HowItWorksSection() {
 }
 
 // ─────────────────────────────────────────────
-// Sections 5-8: Partners, results, publications, team (#759)
+// Sections 6-9: Partners, results, publications, team (#759)
 // ─────────────────────────────────────────────
 
 const externalLinkProps = {
@@ -796,18 +796,18 @@ function PartnersSection() {
                 className={textLinkClass}
                 {...externalLinkProps}
               >
-                Project site
+                juddges-project.eu
               </a>
             </>
           }
           className="mb-16"
         />
 
-        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--rule)]">
+        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l border-[color:var(--rule)]">
           {partners.map((partner) => (
             <li
               key={partner.name}
-              className="bg-[color:var(--parchment)] p-8"
+              className="border-r border-b border-[color:var(--rule)] p-8"
             >
               <Eyebrow as="p" tone="default" noRule>
                 {partner.country}
@@ -825,7 +825,7 @@ function PartnersSection() {
                   className={cn("mt-3 inline-block text-sm", textLinkClass)}
                   {...externalLinkProps}
                 >
-                  Grant page
+                  ANR-23-CHRO-0001 grant page
                 </a>
               )}
             </li>
@@ -863,11 +863,11 @@ function ResultsSection() {
           className="mb-16"
         />
 
-        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--rule)]">
+        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l border-[color:var(--rule)]">
           {outputs.map((output) => (
             <li
               key={output.title}
-              className="bg-[color:var(--parchment)] p-6 sm:p-7"
+              className="border-r border-b border-[color:var(--rule)] p-6 sm:p-7"
             >
               <h3 className="font-mono text-sm text-[color:var(--ink)] break-words">
                 {output.url ? (
@@ -984,11 +984,11 @@ function TeamSection() {
           className="mb-16"
         />
 
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[color:var(--rule)]">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-l border-[color:var(--rule)]">
           {teamMembers.map((member) => (
             <li
               key={member.name}
-              className="bg-[color:var(--parchment)] p-6 sm:p-7"
+              className="border-r border-b border-[color:var(--rule)] p-6 sm:p-7"
             >
               <h3 className="font-serif text-lg text-[color:var(--ink)]">
                 {member.name}
@@ -1008,7 +1008,7 @@ function TeamSection() {
 }
 
 // ─────────────────────────────────────────────
-// Section 6: Trust & CTA
+// Section 10: Trust & CTA
 // ─────────────────────────────────────────────
 
 function TrustCTASection() {
