@@ -11,6 +11,7 @@ Tests cover:
 - _build_search_text helper
 """
 
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -21,6 +22,7 @@ from app.precedents import (
     PrecedentFilters,
     PrecedentMatch,
     _apply_filters,
+    _build_analysis_map,
     _build_precedent_match,
     _build_search_text,
     _empty_precedents_response,
@@ -357,6 +359,61 @@ class TestEmptyPrecedentsResponse:
 class TestBuildPrecedentMatch:
     """Test _build_precedent_match helper."""
 
+    @pytest.mark.parametrize("decision_date", ["2024-01-15", date(2024, 1, 15)])
+    def test_judgment_metadata(self, decision_date):
+        doc = {
+            "id": "doc-1",
+            "decision_date": decision_date,
+            "case_type": "Criminal",
+            "cited_legislation": ["Art. 123"],
+            "_similarity_score": 0.75,
+        }
+        match = _build_precedent_match(doc)
+        assert match.document_id == "doc-1"
+        assert match.date_issued == "2024-01-15"
+        assert match.document_type == "Criminal"
+        assert match.legal_bases == ["Art. 123"]
+        assert match.similarity_score == 0.75
+        assert "document_id" not in doc
+
+    def test_decision_type_preferred_to_case_type(self):
+        match = _build_precedent_match(
+            {"id": "doc-1", "decision_type": "Order", "case_type": "Criminal"}
+        )
+        assert match.document_type == "Order"
+
+    def test_legacy_metadata_preserved(self):
+        match = _build_precedent_match(
+            {
+                "document_id": "legacy-id",
+                "id": "doc-1",
+                "date_issued": "2023-01-01",
+                "decision_date": "2024-01-15",
+                "document_type": "judgment",
+                "decision_type": "Order",
+                "legal_bases": [],
+                "cited_legislation": ["Art. 123"],
+            }
+        )
+        assert match.document_id == "legacy-id"
+        assert match.date_issued == "2023-01-01"
+        assert match.document_type == "judgment"
+        assert match.legal_bases == []
+
+    def test_judgment_metadata_used_for_analysis(self):
+        result = _format_candidate_for_analysis(
+            {
+                "id": "doc-1",
+                "decision_date": "2024-01-15",
+                "case_type": "Criminal",
+                "cited_legislation": ["Art. 123"],
+            }
+        )
+        assert "--- Document ID: doc-1 ---" in result
+        assert "Date: 2024-01-15" in result
+        assert "Type: Criminal" in result
+        assert "Legal Bases: Art. 123" in result
+
     def test_without_analysis(self):
         doc = {
             "document_id": "doc-1",
@@ -512,6 +569,9 @@ class TestLoadCandidateDocuments:
             "id": "11111111-1111-1111-1111-111111111111",
             "case_number": "III CSK 245/22",
             "title": "A v B",
+            "decision_date": "2024-01-15",
+            "case_type": "Civil",
+            "cited_legislation": ["Art. 123"],
         }
         similar_results = [
             {
@@ -525,6 +585,38 @@ class TestLoadCandidateDocuments:
         assert len(candidates) == 1
         match = _build_precedent_match(candidates[0])
         assert match.document_id == "11111111-1111-1111-1111-111111111111"
+        assert match.date_issued == "2024-01-15"
+        assert match.document_type == "Civil"
+        assert match.legal_bases == ["Art. 123"]
+
+    @pytest.mark.asyncio
+    @patch("app.precedents._analyze_precedents")
+    @patch("app.precedents._fetch_document_context")
+    async def test_analysis_matches_loaded_judgment(self, mock_fetch, mock_analyze):
+        doc_id = "11111111-1111-1111-1111-111111111111"
+        mock_fetch.return_value = {"id": doc_id, "decision_date": "2024-01-15"}
+        candidates = await _load_candidate_documents(
+            [{"document_id": doc_id, "similarity": 0.87}], limit=10
+        )
+        assert f"--- Document ID: {doc_id} ---" in _format_candidate_for_analysis(
+            candidates[0]
+        )
+        mock_analyze.return_value = {
+            "analyses": [{"document_id": doc_id, "relevance_score": 0.92}],
+            "enhanced_query": None,
+        }
+        analysis_map, _ = await _build_analysis_map(
+            FindPrecedentsRequest(
+                query="civil appeal precedent", include_analysis=True
+            ),
+            candidates,
+        )
+        match = _build_precedent_match(
+            candidates[0], analysis_map.get(candidates[0]["document_id"])
+        )
+        mock_analyze.assert_awaited_once_with("civil appeal precedent", candidates)
+        assert match.relevance_score == 0.92
+        assert match.date_issued == "2024-01-15"
 
 
 # ===== _build_search_text Tests =====
