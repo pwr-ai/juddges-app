@@ -1,3 +1,12 @@
+/**
+ * @jest-environment node
+ *
+ * msw 3 no longer short-circuits `fetch` in its interceptor: the patched
+ * `fetch` tags the request and lets undici run, intercepting at the socket
+ * layer. Under jsdom, undici dies before reaching the socket (jsdom timers
+ * have no `unref`, `performance.markResourceTiming` is missing), so the MSW
+ * block below only works in the node environment. `apiClient` needs no DOM.
+ */
 import { http, HttpResponse } from 'msw'
 
 import { apiClient, ApiError } from '@/lib/api/client'

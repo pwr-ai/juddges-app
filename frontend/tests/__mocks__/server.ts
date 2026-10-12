@@ -32,7 +32,7 @@ export function setupMsw() {
 
   beforeAll(() => {
     savedFetch = global.fetch
-    server.listen({ onUnhandledRequest: 'bypass' })
+    server.listen({ onUnhandledFrame: 'bypass' })
   })
 
   afterEach(() => {
