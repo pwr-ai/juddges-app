@@ -1,16 +1,21 @@
-"""Unit tests for app.core.auth_mcp: key material helpers and key resolution."""
+"""Unit tests for app.core.auth_mcp: key material, key resolution, and the dual-credential dependency."""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import BackgroundTasks, HTTPException
 
 from app.core.auth_mcp import (
     MCP_KEY_PREFIX,
+    THROTTLE_SECONDS,
     generate_mcp_key,
+    get_current_user_or_mcp_key,
     hash_mcp_key,
     key_prefix,
     resolve_mcp_principal,
+    should_record_use,
+    touch_key,
 )
 
 
@@ -84,6 +89,14 @@ class TestResolveMcpPrincipal:
         assert user.mcp_scopes == ["search:read"]
         assert user.mcp_key_id == "key-1"
 
+    def test_lookup_is_keyed_on_the_hash_not_the_raw_token(self):
+        token = "jdg_mcp_under_test"  # noqa: S105
+        admin = _admin_returning([_row()])
+        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=admin):
+            resolve_mcp_principal(token)
+        eq = admin.table.return_value.select.return_value.eq
+        eq.assert_called_once_with("token_hash", hash_mcp_key(token))
+
     def test_wrong_prefix_never_touches_the_database(self):
         admin = _admin_returning([_row()])
         with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=admin):
@@ -151,3 +164,137 @@ class TestResolveMcpPrincipal:
         broken.table.side_effect = RuntimeError("supabase down")
         with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=broken):
             assert resolve_mcp_principal("jdg_mcp_whatever") is None
+
+    def test_database_failure_is_logged_with_traceback(self):
+        # Deferred finding: a programming error must be distinguishable from an
+        # outage, so the failure is logged via logger.exception (traceback included).
+        broken = MagicMock()
+        broken.table.side_effect = RuntimeError("supabase down")
+        with (
+            patch("app.core.auth_mcp.get_admin_supabase_client", return_value=broken),
+            patch("app.core.auth_mcp.logger") as log,
+        ):
+            assert resolve_mcp_principal("jdg_mcp_whatever") is None
+        log.exception.assert_called_once()
+
+
+@pytest.mark.unit
+class TestLastUsedThrottle:
+    def test_never_used_key_is_recorded(self):
+        assert should_record_use(None) is True
+
+    def test_recently_used_key_is_not_recorded(self):
+        recent = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
+        assert should_record_use(recent) is False
+
+    def test_key_used_outside_the_window_is_recorded(self):
+        old = (datetime.now(UTC) - timedelta(seconds=THROTTLE_SECONDS + 1)).isoformat()
+        assert should_record_use(old) is True
+
+    def test_unparseable_last_used_is_recorded(self):
+        assert should_record_use("not-a-timestamp") is True
+
+    def test_naive_last_used_is_recorded_rather_than_raising(self):
+        # A naive timestamp cannot be compared with an aware clock; treat it as unusable.
+        assert should_record_use(datetime.now().isoformat()) is True
+
+
+def _touch_client(last_used_at):
+    """A Supabase admin client stub whose select().eq().execute() yields one row."""
+    client = MagicMock()
+    execute = MagicMock()
+    execute.data = [{"last_used_at": last_used_at}]
+    client.table.return_value.select.return_value.eq.return_value.execute.return_value = execute
+    return client
+
+
+@pytest.mark.unit
+class TestTouchKey:
+    def test_recent_use_writes_nothing(self):
+        recent = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
+        client = _touch_client(recent)
+        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=client):
+            touch_key("key-1")
+        client.table.return_value.update.assert_not_called()
+
+    def test_stale_use_writes_last_used_at(self):
+        old = (datetime.now(UTC) - timedelta(seconds=THROTTLE_SECONDS + 1)).isoformat()
+        client = _touch_client(old)
+        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=client):
+            touch_key("key-1")
+        update = client.table.return_value.update
+        update.assert_called_once()
+        assert "last_used_at" in update.call_args.args[0]
+        update.return_value.eq.assert_called_once_with("id", "key-1")
+
+    def test_failure_is_swallowed(self):
+        # touch_key runs as a background task; it must never raise into the request.
+        broken = MagicMock()
+        broken.table.side_effect = RuntimeError("supabase down")
+        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=broken):
+            touch_key("key-1")
+
+
+def _request_with(authorization: str | None):
+    request = MagicMock()
+    request.headers = {} if authorization is None else {"Authorization": authorization}
+    return request
+
+
+@pytest.mark.unit
+class TestDualCredentialDependency:
+    async def test_mcp_key_takes_the_key_path(self):
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        tasks = BackgroundTasks()
+        with patch(
+            "app.core.auth_mcp.resolve_mcp_principal", return_value=principal
+        ) as resolve:
+            user = await get_current_user_or_mcp_key(
+                _request_with("Bearer jdg_mcp_abc"), tasks
+            )
+        resolve.assert_called_once_with("jdg_mcp_abc")
+        assert user is principal
+        assert len(tasks.tasks) == 1  # the throttled touch_key
+        assert tasks.tasks[0].func is touch_key
+        assert tasks.tasks[0].args == ("key-1",)
+
+    async def test_invalid_mcp_key_is_rejected_with_401(self):
+        with (
+            patch("app.core.auth_mcp.resolve_mcp_principal", return_value=None),
+            pytest.raises(HTTPException) as exc,
+        ):
+            await get_current_user_or_mcp_key(
+                _request_with("Bearer jdg_mcp_revoked"), BackgroundTasks()
+            )
+        assert exc.value.status_code == 401
+
+    async def test_jwt_falls_through_to_the_existing_path(self):
+        jwt_user = MagicMock(id="user-456")
+        with patch(
+            "app.core.auth_mcp.get_current_user", return_value=jwt_user
+        ) as jwt_path:
+            user = await get_current_user_or_mcp_key(
+                _request_with("Bearer eyJhbGciOi.header.sig"), BackgroundTasks()
+            )
+        jwt_path.assert_awaited_once()
+        assert user is jwt_user
+
+    async def test_missing_header_is_rejected_with_401(self):
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user_or_mcp_key(_request_with(None), BackgroundTasks())
+        assert exc.value.status_code == 401
+
+    async def test_non_bearer_scheme_is_rejected_with_401(self):
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user_or_mcp_key(
+                _request_with("Basic dXNlcjpwYXNz"), BackgroundTasks()
+            )
+        assert exc.value.status_code == 401
+
+    async def test_bearer_with_no_value_is_rejected_with_401(self):
+        # Review Focus 1: must not IndexError on an empty credential.
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user_or_mcp_key(
+                _request_with("Bearer"), BackgroundTasks()
+            )
+        assert exc.value.status_code == 401

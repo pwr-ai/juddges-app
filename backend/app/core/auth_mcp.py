@@ -1,4 +1,4 @@
-"""Long-lived MCP API keys: key material helpers and key resolution.
+"""Long-lived MCP API keys: key material helpers, key resolution, and the dual-credential dependency.
 
 A key is a bearer credential with no expiry by default, so only its sha256
 hash is ever stored (see
@@ -12,13 +12,20 @@ user identity.
 
 import hashlib
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
+from fastapi import BackgroundTasks, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials
 from loguru import logger
 
-from app.core.auth_jwt import AuthenticatedUser, get_admin_supabase_client
+from app.core.auth_jwt import (
+    AuthenticatedUser,
+    get_admin_supabase_client,
+    get_current_user,
+)
 
 MCP_KEY_PREFIX = "jdg_mcp_"
+THROTTLE_SECONDS = 300
 _KEY_BYTES = 32
 _DISPLAY_PREFIX_LENGTH = 8
 _TABLE = "mcp_api_keys"
@@ -91,6 +98,85 @@ def resolve_mcp_principal(token: str) -> AuthenticatedUser | None:
         user.mcp_scopes = list(row.get("scopes") or [])
         user.mcp_key_id = row["id"]
         return user
-    except Exception as e:
-        logger.warning(f"MCP key resolution failed: {e}")
+    except Exception:
+        logger.exception("MCP key resolution failed; rejecting")
         return None
+
+
+def should_record_use(last_used_at: str | None, now: datetime | None = None) -> bool:
+    """True when `last_used_at` is old enough to be worth another write."""
+    if not last_used_at:
+        return True
+    try:
+        previous = datetime.fromisoformat(last_used_at)
+    except ValueError:
+        return True
+    if previous.tzinfo is None:
+        # A naive timestamp cannot be compared with the aware clock; treat as unusable.
+        return True
+    reference = now or datetime.now(UTC)
+    return reference - previous >= timedelta(seconds=THROTTLE_SECONDS)
+
+
+def touch_key(key_id: str) -> None:
+    """Record a use of `key_id`, at most once per THROTTLE_SECONDS.
+
+    Runs in a background task: a tool call must not wait on this write, and a
+    failure here must never fail the call.
+    """
+    try:
+        client = get_admin_supabase_client()
+        current = client.table(_TABLE).select("last_used_at").eq("id", key_id).execute()
+        rows = current.data or []
+        if rows and not should_record_use(rows[0].get("last_used_at")):
+            return
+        client.table(_TABLE).update({"last_used_at": datetime.now(UTC).isoformat()}).eq(
+            "id", key_id
+        ).execute()
+    except Exception as e:
+        logger.warning(
+            f"Could not record MCP key use for {key_id}: {type(e).__name__}: {e}"
+        )
+
+
+def _unauthorized() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _bearer_value(request: Request) -> str | None:
+    """Return the Bearer credential, or None when absent, non-Bearer, or empty."""
+    header = request.headers.get("Authorization") or ""
+    scheme, _, credential = header.partition(" ")
+    if scheme.lower() != "bearer":
+        return None
+    return credential.strip() or None
+
+
+async def get_current_user_or_mcp_key(
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> AuthenticatedUser:
+    """Authenticate either a Supabase JWT or a long-lived MCP key.
+
+    A Bearer value carrying the MCP prefix takes the key path; anything else
+    falls through to the existing JWT dependency. Both yield the same
+    AuthenticatedUser class, so no endpoint learns a second identity model.
+    """
+    credential = _bearer_value(request)
+    if credential is None:
+        raise _unauthorized()
+
+    if credential.startswith(MCP_KEY_PREFIX):
+        principal = resolve_mcp_principal(credential)
+        if principal is None:
+            raise _unauthorized()
+        background_tasks.add_task(touch_key, principal.mcp_key_id)
+        return principal
+
+    return await get_current_user(
+        HTTPAuthorizationCredentials(scheme="Bearer", credentials=credential)
+    )
