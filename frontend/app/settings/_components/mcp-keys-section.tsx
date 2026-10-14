@@ -203,6 +203,7 @@ export function McpKeysSection() {
             <Button
               variant="destructive"
               onClick={() => confirming && revokeKey(confirming)}
+              disabled={revoking !== null}
             >
               Confirm revoke
             </Button>
