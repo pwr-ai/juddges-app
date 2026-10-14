@@ -43,6 +43,7 @@ import { Header } from "@/lib/styles/components";
 import { useEmailAlertStore } from "@/lib/store/emailAlertStore";
 import type { EmailAlertSubscription, CreateEmailAlertInput, UpdateEmailAlertInput } from "@/types/email-alert";
 import { EmbeddingModelsSection } from "./_components/embedding-models-section";
+import { McpKeysSection } from "./_components/mcp-keys-section";
 
 /** Channel display config for badges and icons */
 const CHANNEL_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -456,6 +457,12 @@ export default function SettingsPage() {
  Change Password
  </Button>
  </div>
+ </CardContent>
+ </Card>
+
+ <Card>
+ <CardContent className="pt-6">
+ <McpKeysSection />
  </CardContent>
  </Card>
  </TabsContent>
