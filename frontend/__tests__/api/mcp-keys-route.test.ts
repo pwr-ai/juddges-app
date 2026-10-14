@@ -95,6 +95,27 @@ describe('/api/mcp-keys', () => {
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ key: 'jdg_mcp_secret' });
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe('http://backend.test/mcp/keys');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>)['Authorization']).toBe('Bearer user-jwt');
+    expect((init.headers as Record<string, string>)['X-API-Key']).toBe('test-api-key');
+    expect(JSON.parse(init.body)).toEqual({ name: 'laptop' });
+  });
+
+  it('POST rejects a signed-out caller without calling the backend', async () => {
+    signedOut();
+    global.fetch = jest.fn() as typeof global.fetch;
+
+    const response = await POST(
+      new Request('http://localhost/api/mcp-keys', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'laptop' }),
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('POST surfaces the backend status on failure', async () => {
