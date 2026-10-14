@@ -6,6 +6,7 @@ MCP key; that is the single mitigation that bounds a leaked key.
 """
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, status
 from loguru import logger
@@ -88,7 +89,7 @@ async def create_key(
         name=record["name"],
         prefix=record["prefix"],
         scopes=record["scopes"],
-        created_at=now,
+        created_at=rows[0].get("created_at") or now,
         last_used_at=None,
         expires_at=record["expires_at"],
         revoked_at=None,
@@ -123,7 +124,7 @@ async def list_keys(
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_key(
     background_tasks: BackgroundTasks,
-    key_id: str = Path(..., description="Key id to revoke"),
+    key_id: UUID = Path(..., description="Key id to revoke"),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> None:
     """Revoke one of the caller's keys. The row is kept for the audit trail."""
@@ -132,8 +133,9 @@ async def revoke_key(
             get_admin_supabase_client()
             .table(_TABLE)
             .update({"revoked_at": datetime.now(UTC).isoformat()})
-            .eq("id", key_id)
+            .eq("id", str(key_id))
             .eq("user_id", user.id)
+            .is_("revoked_at", "null")
             .execute()
         )
     except Exception as e:
@@ -147,5 +149,5 @@ async def revoke_key(
         background_tasks,
         user_id=user.id,
         action_type="mcp_key_revoked",
-        input_data={"key_id": key_id},
+        input_data={"key_id": str(key_id)},
     )

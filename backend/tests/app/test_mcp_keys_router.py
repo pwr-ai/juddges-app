@@ -7,7 +7,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.auth_jwt import get_current_user
+from app.core.auth_mcp import MCP_KEY_PREFIX
 from app.mcp_keys import router
+
+KEY_ID = "11111111-1111-4111-8111-111111111111"
 
 
 class _FakeUser:
@@ -39,14 +42,27 @@ def _admin_stub(select_rows=None, inserted=None):
 
     update_exec = MagicMock()
     update_exec.data = [{"id": "key-1"}]
-    table.update.return_value.eq.return_value.eq.return_value.execute.return_value = (
-        update_exec
-    )
+    table.update.return_value.eq.return_value.eq.return_value.is_.return_value.execute.return_value = update_exec
     return admin
 
 
 @pytest.mark.unit
 class TestCreateKey:
+    def test_audit_payload_never_contains_the_plaintext(self, client):
+        with (
+            patch("app.mcp_keys.get_admin_supabase_client", return_value=_admin_stub()),
+            patch("app.mcp_keys.log_audit_background") as audit,
+        ):
+            response = client.post("/mcp/keys", json={"name": "laptop"})
+        assert response.json()["key"] not in str(audit.call_args)
+
+    def test_created_at_prefers_the_stored_value(self, client):
+        stored = "2026-01-01T00:00:00+00:00"
+        admin = _admin_stub(inserted={"id": "key-1", "created_at": stored})
+        with patch("app.mcp_keys.get_admin_supabase_client", return_value=admin):
+            response = client.post("/mcp/keys", json={"name": "laptop"})
+        assert response.json()["created_at"] == stored
+
     def test_returns_the_plaintext_key_exactly_once(self, client):
         with patch(
             "app.mcp_keys.get_admin_supabase_client", return_value=_admin_stub()
@@ -55,7 +71,9 @@ class TestCreateKey:
         assert response.status_code == 201
         body = response.json()
         assert body["key"].startswith("jdg_mcp_")
-        assert body["prefix"] == "jdg_mcp_"
+        assert body["prefix"].startswith(MCP_KEY_PREFIX)
+        assert len(body["prefix"]) == 16
+        assert body["key"].startswith(body["prefix"])
         assert "token_hash" not in body
 
     def test_stores_only_the_hash(self, client):
@@ -80,12 +98,20 @@ class TestCreateKey:
 
 @pytest.mark.unit
 class TestListKeys:
+    def test_is_scoped_to_the_caller(self, client):
+        admin = _admin_stub()
+        with patch("app.mcp_keys.get_admin_supabase_client", return_value=admin):
+            client.get("/mcp/keys")
+        admin.table.return_value.select.return_value.eq.assert_called_once_with(
+            "user_id", "user-123"
+        )
+
     def test_never_returns_hashes_or_plaintext(self, client):
         rows = [
             {
                 "id": "key-1",
                 "name": "laptop",
-                "prefix": "jdg_mcp_",
+                "prefix": "jdg_mcp_AbCd1234",
                 "scopes": ["search:read"],
                 "created_at": "2026-10-14T10:00:00+00:00",
                 "last_used_at": None,
@@ -100,7 +126,7 @@ class TestListKeys:
             response = client.get("/mcp/keys")
         assert response.status_code == 200
         [key] = response.json()
-        assert key["prefix"] == "jdg_mcp_"
+        assert key["prefix"] == "jdg_mcp_AbCd1234"
         assert "token_hash" not in key
         assert "key" not in key
 
@@ -110,30 +136,58 @@ class TestRevokeKey:
     def test_sets_revoked_at_scoped_to_the_caller(self, client):
         admin = _admin_stub()
         with patch("app.mcp_keys.get_admin_supabase_client", return_value=admin):
-            response = client.delete("/mcp/keys/key-1")
+            response = client.delete(f"/mcp/keys/{KEY_ID}")
         assert response.status_code == 204
         payload = admin.table.return_value.update.call_args[0][0]
         assert payload["revoked_at"] is not None
         # Scoped by both id and user_id so one user cannot revoke another's key.
         first = admin.table.return_value.update.return_value.eq
-        first.assert_called_once_with("id", "key-1")
+        first.assert_called_once_with("id", KEY_ID)
         first.return_value.eq.assert_called_once_with("user_id", "user-123")
 
     def test_unknown_key_is_404(self, client):
         admin = _admin_stub()
         empty = MagicMock()
         empty.data = []
-        admin.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value = empty
+        admin.table.return_value.update.return_value.eq.return_value.eq.return_value.is_.return_value.execute.return_value = empty
+        with patch("app.mcp_keys.get_admin_supabase_client", return_value=admin):
+            response = client.delete(f"/mcp/keys/{KEY_ID}")
+        assert response.status_code == 404
+
+    def test_only_live_keys_are_revoked(self, client):
+        admin = _admin_stub()
+        with patch("app.mcp_keys.get_admin_supabase_client", return_value=admin):
+            client.delete(f"/mcp/keys/{KEY_ID}")
+        live = admin.table.return_value.update.return_value.eq.return_value.eq
+        live.return_value.is_.assert_called_once_with("revoked_at", "null")
+
+    def test_already_revoked_key_is_404_and_not_audited(self, client):
+        admin = _admin_stub()
+        empty = MagicMock()
+        empty.data = []
+        chain = admin.table.return_value.update.return_value.eq.return_value.eq
+        chain.return_value.is_.return_value.execute.return_value = empty
+        with (
+            patch("app.mcp_keys.get_admin_supabase_client", return_value=admin),
+            patch("app.mcp_keys.log_audit_background") as audit,
+        ):
+            response = client.delete(f"/mcp/keys/{KEY_ID}")
+        assert response.status_code == 404
+        audit.assert_not_called()
+
+    def test_non_uuid_id_is_rejected_before_the_database(self, client):
+        admin = _admin_stub()
         with patch("app.mcp_keys.get_admin_supabase_client", return_value=admin):
             response = client.delete("/mcp/keys/nope")
-        assert response.status_code == 404
+        assert response.status_code == 422
+        admin.table.assert_not_called()
 
     def test_writes_an_audit_record(self, client):
         with (
             patch("app.mcp_keys.get_admin_supabase_client", return_value=_admin_stub()),
             patch("app.mcp_keys.log_audit_background") as audit,
         ):
-            client.delete("/mcp/keys/key-1")
+            client.delete(f"/mcp/keys/{KEY_ID}")
         assert audit.call_args.kwargs["action_type"] == "mcp_key_revoked"
 
 

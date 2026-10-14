@@ -25700,6 +25700,7 @@
             "required": true,
             "schema": {
               "description": "Key id to revoke",
+              "format": "uuid",
               "title": "Key Id",
               "type": "string"
             }

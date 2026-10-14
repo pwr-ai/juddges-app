@@ -46,12 +46,15 @@ class TestKeyMaterial:
         shared = MCP_KEY_PREFIX + "A" * 40
         assert hash_mcp_key(shared + "B") != hash_mcp_key(shared + "C")
 
-    def test_key_prefix_is_the_first_eight_characters(self):
+    def test_key_prefix_is_the_first_sixteen_characters(self):
         # Not a real key: the expected value must come from slicing this
         # input, so an implementation returning a constant fails here.
-        token = "ABCDEFGHIJKL"  # noqa: S105
-        assert key_prefix(token) == "ABCDEFGH"
-        assert len(key_prefix(token)) == 8
+        token = "ABCDEFGHIJKLMNOPQRSTUVWX"  # noqa: S105
+        assert key_prefix(token) == "ABCDEFGHIJKLMNOP"
+        assert len(key_prefix(token)) == 16
+
+    def test_key_prefix_distinguishes_generated_keys(self):
+        assert key_prefix(generate_mcp_key()) != key_prefix(generate_mcp_key())
 
 
 def _row(**overrides):

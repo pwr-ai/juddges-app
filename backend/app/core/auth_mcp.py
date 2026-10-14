@@ -27,7 +27,7 @@ from app.core.auth_jwt import (
 MCP_KEY_PREFIX = "jdg_mcp_"
 THROTTLE_SECONDS = 300
 _KEY_BYTES = 32
-_DISPLAY_PREFIX_LENGTH = 8
+_DISPLAY_PREFIX_LENGTH = 16
 _TABLE = "mcp_api_keys"
 _LOOKUP_COLUMNS = "id, user_id, scopes, expires_at, revoked_at"
 
