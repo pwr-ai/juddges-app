@@ -16,7 +16,18 @@ export function createClient() {
     return createBrowserClient('https://placeholder.supabase.co', 'placeholder-key');
   }
 
-  // Use centralized environment variable access
-  // This will throw a clear error if variables are missing or invalid
+  const missing = [
+    ...(env.NEXT_PUBLIC_SUPABASE_URL ? [] : ["NEXT_PUBLIC_SUPABASE_URL"]),
+    ...(env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? [] : ["NEXT_PUBLIC_SUPABASE_ANON_KEY"]),
+  ];
+  if (missing.length > 0) {
+    // Named error instead of the generic @supabase/ssr message: the values
+    // come from window.__env, filled by the root layout and /runtime-env.js.
+    throw new Error(
+      `Supabase browser configuration is missing: ${missing.join(", ")}. ` +
+        "Check GET /runtime-env.js on this host and the frontend container's environment."
+    );
+  }
+
   return createBrowserClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }

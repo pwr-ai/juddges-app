@@ -83,6 +83,41 @@ services:
 
 If `.env` doesn't exist, Docker Compose will fail with an error. You must create it from `.env.example`.
 
+## Frontend runtime configuration (`NEXT_PUBLIC_*`)
+
+Next.js inlines every static `process.env.NEXT_PUBLIC_*` reference at build
+time, and statically prerendered pages ship that value inside their HTML. For
+a Docker image that would mean the Supabase URL and anon key are frozen at
+`docker build` and cannot be changed by `docker compose` without a rebuild.
+
+The frontend therefore treats `NEXT_PUBLIC_API_BASE_URL`,
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` as **runtime**
+configuration:
+
+| Piece | Role |
+|---|---|
+| `frontend/lib/env/server.ts` | Server-side reader. Uses computed lookups (`process.env[name]`), which Next.js never inlines, so the running container's env wins. Falls back to `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `BACKEND_URL`. |
+| `GET /runtime-env.js` (`frontend/app/runtime-env.js/route.ts`) | `force-dynamic`, `Cache-Control: no-store`. Serves the same values as a script that merges into `window.__env`. |
+| `frontend/app/layout.tsx` | Inlines a baseline `window.__env` and then loads `/runtime-env.js` synchronously in `<head>`, before any React code. |
+| `frontend/lib/env/client.ts` | Browser reader: `window.__env` first, `process.env` fallback. |
+| `frontend/docker-entrypoint.sh` | Exports the three variables (`SUPABASE_URL` / `SUPABASE_ANON_KEY` accepted as aliases) and **exits 1** when the Supabase pair is missing, so a misconfigured container fails at start instead of serving a broken UI. Nothing in `.next` is patched. |
+| `frontend/lib/supabase/client.ts` | Throws a named `Supabase browser configuration is missing: …` error pointing at `/runtime-env.js` instead of the generic `@supabase/ssr` message. |
+
+Rules when touching this code:
+
+- Never read `process.env.NEXT_PUBLIC_SUPABASE_URL` directly in server code.
+  Go through `getSupabasePublicConfig()` / `readPublicEnv()` from
+  `@/lib/env/server`.
+- `/runtime-env.js` must stay reachable before login. The middleware matcher
+  skips `*.js` paths and the service worker refuses to cache `no-store`
+  responses; keep both invariants.
+- The build args in `frontend/Dockerfile` and `scripts/build_and_push_prod.sh`
+  only seed the inline baseline. An image built without them still works once
+  the container has the variables.
+- `/runtime-env.js` omits unset keys, so it never overwrites a baseline value
+  with an empty string. The service worker bypasses the path explicitly
+  (`RUNTIME_ENV_PATH` in `frontend/public/sw.js`).
+
 ## Best Practices
 
 ### DO
