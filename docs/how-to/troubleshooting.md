@@ -260,8 +260,20 @@ npx tsc --noEmit
 echo $NEXT_PUBLIC_SUPABASE_URL
 echo $NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Add to .env.secrets with NEXT_PUBLIC_ prefix
+# Add them to .env (NEXT_PUBLIC_ prefix)
 ```
+
+In a running container the browser gets these values from `/runtime-env.js`,
+not from the build. If the UI shows `@supabase/ssr: Your project's URL and API
+key are required`, check that endpoint first:
+
+```bash
+curl -s http://localhost:3006/runtime-env.js
+```
+
+Empty values mean the container env is missing them; fix `.env` and restart the
+frontend service. See
+[environment-configuration.md](../reference/environment-configuration.md#frontend-runtime-configuration-next_public).
 
 3. **Memory issues:**
 ```bash

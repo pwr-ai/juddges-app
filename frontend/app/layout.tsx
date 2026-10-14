@@ -16,6 +16,7 @@ import { siteMetadataBase } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteStructuredData } from "@/lib/structured-data";
 import { CollectionDetailProvider } from "@/contexts/CollectionDetailContext";
+import { getPublicRuntimeEnv, serializeForInlineScript } from "@/lib/env/server";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -40,19 +41,14 @@ const tenorSans = Tenor_Sans({
 const currentBrand = getCurrentBrand();
 const brandConfig = getBrandConfig();
 
+// Baseline for window.__env. Read through computed lookups (lib/env/server)
+// so nothing here is frozen at build time; for statically prerendered pages
+// this still reflects the build machine, which is why /runtime-env.js below
+// re-applies the running container's values on top.
 const runtimeConfigValues = {
-  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "",
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+  ...getPublicRuntimeEnv(),
   NEXT_PUBLIC_BRAND: currentBrand,
 };
-
-const serializeForInlineScript = (value: Record<string, string>) =>
-  JSON.stringify(value)
-    .replace(/</g, "\\u003C")
-    .replace(/>/g, "\\u003E")
-    .replace(/&/g, "\\u0026")
-    .replace(/'/g, "\\u0027");
 
 // No maximumScale / userScalable here on purpose: locking the scale breaks
 // pinch-zoom app-wide and violates WCAG 2.1 SC 1.4.4 (Resize Text). iOS
@@ -170,17 +166,22 @@ export default function RootLayout({
         <script src="/chunk-error-handler.js" />
 
         {/*
-          Runtime Environment Configuration
+          Runtime Environment Configuration (two layers, both before React)
 
-          Strategy: Inline script injection for immediate availability
-
-          - Server-side: process.env.NEXT_PUBLIC_* values are injected at render time
-          - Client-side: window.__env is available before React hydration
-          - Benefit: No external file loading, no timing issues
+          1. Inline baseline: values known when this HTML was rendered. For a
+             dynamic page that is the live server env; for a statically
+             prerendered page it is whatever the *build* had, possibly empty.
+          2. /runtime-env.js: a force-dynamic route handler that serves the
+             running container's env and merges it into window.__env. Loaded
+             synchronously so lib/env/client.ts sees final values at module
+             evaluation. This is what makes the Docker image reconfigurable
+             without a rebuild.
         */}
         <script
           dangerouslySetInnerHTML={{ __html: runtimeConfig }}
         />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/runtime-env.js" />
       </head>
       <body className="font-sans antialiased">
         <JsonLd data={getSiteStructuredData()} />

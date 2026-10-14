@@ -1,8 +1,10 @@
 /**
  * Centralized client-side environment variable access.
  *
- * Reads from window.__env (injected at runtime by docker-entrypoint.sh)
- * with fallback to process.env (inlined at build time by Next.js).
+ * Reads from window.__env, which the root layout fills in two steps before
+ * any React code runs: an inline baseline, then /runtime-env.js with the
+ * running server's values (see lib/env/server.ts). Falls back to process.env
+ * for the non-browser code paths.
  */
 
 declare global {
