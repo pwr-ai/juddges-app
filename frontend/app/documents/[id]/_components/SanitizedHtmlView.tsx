@@ -12,6 +12,12 @@ export function SanitizedHtmlView({
 }: Props): React.JSX.Element {
   const { purified, extractedStyles } = useMemo(() => {
     if (!htmlString) return { purified: '', extractedStyles: '' };
+    // DOMPurify has no `sanitize` without a DOM. The body HTML is fetched on
+    // the client, so this branch is only a guard against a future SSR path
+    // handing us content before hydration.
+    if (typeof window === 'undefined' || !DOMPurify.isSupported) {
+      return { purified: '', extractedStyles: '' };
+    }
 
     // Check if it's a full HTML document
     const isFullDocument = /<!doctype\s+html|<\s*html[\s>]/i.test(htmlString);
