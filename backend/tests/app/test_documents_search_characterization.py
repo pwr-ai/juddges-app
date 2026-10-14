@@ -18,6 +18,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from app.judgments_pkg import search_documents, search_documents_legacy
+from app.judgments_pkg.search import _validate_search_query as REAL_VALIDATE
 from app.models import (
     DocumentRetrievalRequest,
     PaginationMetadata,
@@ -29,7 +30,7 @@ from app.services.search import SearchServiceError
 # Task 7 moves the pipeline body into app/judgments_pkg/search.py. When it
 # does, this constant is the ONLY line in this file that may change — every
 # assertion below must still hold, or the move changed behavior.
-SEARCH_MODULE = "app.judgments_pkg"
+SEARCH_MODULE = "app.judgments_pkg.search"
 # The source-module patches below (app.search_cache.*, app.services.search_cache.*,
 # app.sentry.capture_exception, app.search_telemetry.record_search,
 # app.services.search.MeiliSearchService) are move-proof ONLY while Task 7 keeps
@@ -244,7 +245,7 @@ async def test_blank_query_never_reaches_pipeline_helpers(
     h: Harness, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Real validator restored; everything after it is a recording stub.
-    from app.judgments_pkg.search import _validate_search_query
+    _validate_search_query = REAL_VALIDATE
 
     monkeypatch.setattr(
         f"{SEARCH_MODULE}._validate_search_query", _validate_search_query
@@ -746,3 +747,23 @@ async def test_telemetry_is_recorded_only_when_there_are_no_chunks(
     assert kw["hits"] == 0
     assert kw["query_type"] == "keyword"
     assert kw["thinking_mode"] is False
+
+
+@pytest.mark.unit
+async def test_route_delegates_to_run_document_search(monkeypatch):
+    """The HTTP route is a thin delegate, so MCP and HTTP cannot drift."""
+    sentinel = object()
+    seen: dict[str, Any] = {}
+
+    async def fake_run(request):
+        seen["request"] = request
+        return sentinel
+
+    # The route resolves the name in the package namespace it is defined in.
+    monkeypatch.setattr("app.judgments_pkg.run_document_search", fake_run)
+
+    request = make_request()
+    result = await search_documents(request)
+
+    assert result is sentinel
+    assert seen["request"] is request
