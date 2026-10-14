@@ -3687,6 +3687,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/mcp/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Keys
+         * @description List the caller's keys. Never returns a hash or a plaintext.
+         */
+        get: operations["list_keys_mcp_keys_get"];
+        put?: never;
+        /**
+         * Create Key
+         * @description Mint a key for the caller and return its plaintext exactly once.
+         */
+        post: operations["create_key_mcp_keys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mcp/keys/{key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Key
+         * @description Revoke one of the caller's keys. The row is kept for the audit trail.
+         */
+        delete: operations["revoke_key_mcp_keys__key_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/precedents/find": {
         parameters: {
             query?: never;
@@ -7074,6 +7118,13 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** CreateKeyRequest */
+        CreateKeyRequest: {
+            /** Expires At */
+            expires_at?: string | null;
+            /** Name */
+            name?: string | null;
+        };
         /** CreatePromptRequest */
         CreatePromptRequest: {
             /**
@@ -9725,6 +9776,49 @@ export interface components {
              * @description Total number of jobs matching the query
              */
             total: number;
+        };
+        /** McpKeyCreated */
+        McpKeyCreated: {
+            /** Created At */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Id */
+            id: string;
+            /**
+             * Key
+             * @description The plaintext key. Shown once; not recoverable afterwards.
+             */
+            key: string;
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Name */
+            name: string | null;
+            /** Prefix */
+            prefix: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Scopes */
+            scopes: string[];
+        };
+        /** McpKeySummary */
+        McpKeySummary: {
+            /** Created At */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Id */
+            id: string;
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Name */
+            name: string | null;
+            /** Prefix */
+            prefix: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Scopes */
+            scopes: string[];
         };
         /**
          * NLFilterRequest
@@ -18648,6 +18742,89 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["JudgeSearchResult"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_keys_mcp_keys_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpKeySummary"][];
+                };
+            };
+        };
+    };
+    create_key_mcp_keys_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpKeyCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_key_mcp_keys__key_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Key id to revoke */
+                key_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

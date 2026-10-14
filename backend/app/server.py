@@ -60,6 +60,7 @@ from app.judgments_pkg import router as documents_router
 # Import LangChain cache setup
 from app.langchain_cache import setup_langchain_cache
 from app.llm_rate_limit import enforce_llm_rate_limit
+from app.mcp_keys import router as mcp_keys_router
 from app.precedents import router as precedents_router
 from app.publications import router as publications_router
 from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
@@ -692,6 +693,7 @@ API_KEY_PROTECTED_ROUTERS = [
     collections_from_filter_router,
     collection_pairs_router,
     collections_router,
+    mcp_keys_router,
     compare_router,
     publications_router,
     extraction_router,
