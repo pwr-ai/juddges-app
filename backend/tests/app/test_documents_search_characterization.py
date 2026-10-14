@@ -30,8 +30,14 @@ from app.services.search import SearchServiceError
 # does, this constant is the ONLY line in this file that may change — every
 # assertion below must still hold, or the move changed behavior.
 SEARCH_MODULE = "app.judgments_pkg"
+# The source-module patches below (app.search_cache.*, app.services.search_cache.*,
+# app.sentry.capture_exception, app.search_telemetry.record_search,
+# app.services.search.MeiliSearchService) are move-proof ONLY while Task 7 keeps
+# those imports inside the function body. If they are hoisted to module level the
+# real functions would run, and negative assertions such as
+# `not called("set_cached_results")` could then pass vacuously.
 
-# The 13 helpers the body calls, in the order they are listed in the module.
+# The 14 helpers the body calls, in the order they are listed in the module.
 HELPERS = (
     "_validate_search_query",
     "_prepare_search_queries",
@@ -374,7 +380,11 @@ async def test_happy_path_helper_order(h: Harness) -> None:
         "_get_estimated_total",
         "_build_search_timing_breakdown",
         "_build_search_pagination",
-        "_detect_search_language",  # called again for telemetry
+        # Called a second time only because of the telemetry bug pinned in
+        # test_telemetry_is_recorded_only_when_there_are_no_chunks: the telemetry
+        # block calls this to compute `language=` and then raises AttributeError on
+        # dict chunks (swallowed). Fixing that bug changes this list; update both.
+        "_detect_search_language",
     ]
     # cache read bookends the pipeline, cache write follows it
     assert h.calls.index("get_cached_search") < h.calls.index("_prepare_search_queries")
@@ -384,7 +394,26 @@ async def test_happy_path_helper_order(h: Harness) -> None:
 @pytest.mark.unit
 async def test_happy_path_passes_values_between_helpers(h: Harness) -> None:
     req = make_request(limit_docs=7, offset=3, alpha=0.9, result_view="full")
-    await search_documents(req)
+    resp = await search_documents(req)
+
+    # full-response cache: request-only key, user_id passed as keyword None
+    ((a, kw),) = h.args["get_cached_search"]
+    assert a == (req,) and kw == {"user_id": None}
+    ((a, kw),) = h.args["set_cached_search"]
+    assert len(a) == 2 and a[0] is req and a[1] is resp
+    assert kw == {"user_id": None}
+    # results cache: keyed on the keyword query, effective filters, alpha, paging
+    ((_, kw),) = h.args["get_cached_results"]
+    assert kw == {
+        "query": "keyword q",
+        "filters": EFFECTIVE_FILTERS,
+        "alpha": 0.4,
+        "limit": 7,
+        "offset": 3,
+    }
+    ((_, kw),) = h.args["set_cached_results"]
+    assert kw["filters"] == EFFECTIVE_FILTERS
+    assert kw["limit"] == 7 and kw["offset"] == 3
 
     ((a, _),) = h.args["_prepare_search_queries"]
     assert a == (req, req.query)
@@ -400,6 +429,11 @@ async def test_happy_path_passes_values_between_helpers(h: Harness) -> None:
     assert kw["offset"] == 3
     assert kw["query_type"] == "keyword"
     assert kw["ef_search"] == 60  # offset > 0
+    # effective filters and search language reach the RPC builder by keyword
+    assert kw["effective_filters"] == EFFECTIVE_FILTERS
+    assert kw["search_language"] == "pl"
+    ((a, _), _second) = h.args["_detect_search_language"]  # 2nd call: telemetry
+    assert a == ("keyword q", req.languages, EFFECTIVE_FILTERS["jurisdictions"])
     ((a, _),) = h.args["_run_hybrid_search"]
     assert a == (SUPABASE, {"rpc": "params"})
     ((a, kw),) = h.args["_rerank_if_enabled"]
@@ -440,6 +474,7 @@ async def test_estimated_total_only_on_first_page_with_include_count(
 async def test_estimated_total_failure_is_swallowed(h: Harness) -> None:
     h.raise_in["_get_estimated_total"] = RuntimeError("count blew up")
     resp = await search_documents(make_request())
+    assert h.called("_get_estimated_total")  # the raising stub was reached
     assert resp.total_chunks == 1
     ((_, kw),) = h.args["_build_search_pagination"]
     assert kw == {"estimated_total": None}
@@ -490,6 +525,7 @@ async def test_cache_lookup_failure_is_swallowed_and_pipeline_runs(
     h.cached_search_error = ConnectionError("redis down")
     resp = await search_documents(make_request())
 
+    assert h.called("get_cached_search")  # the raising stub was reached
     assert h.called("_run_hybrid_search")
     assert resp.total_chunks == 1
 
@@ -499,10 +535,12 @@ async def test_cache_write_failure_is_swallowed(
     h: Harness, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async def boom(*a: Any, **kw: Any) -> None:
+        h.record("set_cached_search", *a, **kw)
         raise ConnectionError("redis down")
 
     monkeypatch.setattr("app.search_cache.set_cached_search", boom)
     resp = await search_documents(make_request())
+    assert h.called("set_cached_search")  # the raising stub was reached
     assert resp.total_chunks == 1
 
 
@@ -603,12 +641,31 @@ async def test_rerank_output_not_search_output_reaches_payload_builder(
     assert tkw["rerank_time_ms"] == 3.0
 
 
+# Raise sites spanning the pipeline, all inside the handler's ``try``.
+RAISE_SITES = (
+    "_prepare_search_queries",
+    "_route_effective_alpha",
+    "_generate_search_embedding",
+    "_detect_search_language",
+    "_build_search_rpc_params",
+    "get_cached_results",
+    "_get_search_client",
+    "_run_hybrid_search",
+    "set_cached_results",
+    "_rerank_if_enabled",
+    "_build_search_result_payload",
+    "_build_search_timing_breakdown",
+    "_build_search_pagination",
+)
+
+
 # 10 ─────────────────────────────────────────────────────────────────────────
 @pytest.mark.unit
+@pytest.mark.parametrize("site", RAISE_SITES)
 async def test_unexpected_error_becomes_500_and_is_reported_to_sentry(
-    h: Harness,
+    h: Harness, site: str
 ) -> None:
-    h.raise_in["_run_hybrid_search"] = RuntimeError("boom")
+    h.raise_in[site] = RuntimeError("boom")
     with pytest.raises(HTTPException) as exc:
         await search_documents(make_request(limit_docs=4))
 
@@ -623,10 +680,11 @@ async def test_unexpected_error_becomes_500_and_is_reported_to_sentry(
 
 # 11 ─────────────────────────────────────────────────────────────────────────
 @pytest.mark.unit
+@pytest.mark.parametrize("site", RAISE_SITES)
 async def test_http_exception_from_a_helper_propagates_unwrapped(
-    h: Harness,
+    h: Harness, site: str
 ) -> None:
-    h.raise_in["_run_hybrid_search"] = HTTPException(status_code=404, detail="nope")
+    h.raise_in[site] = HTTPException(status_code=404, detail="nope")
     with pytest.raises(HTTPException) as exc:
         await search_documents(make_request())
 
