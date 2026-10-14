@@ -192,7 +192,7 @@ async def detailed_status():
         if cached.status == SystemStatus.UNHEALTHY:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=cached.model_dump(),
+                detail=cached.model_dump(mode="json"),
             )
         return cached
 
@@ -228,7 +228,7 @@ async def detailed_status():
     if system_status == SystemStatus.UNHEALTHY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=response.model_dump(),
+            detail=response.model_dump(mode="json"),
         )
 
     return response
