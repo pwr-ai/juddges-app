@@ -1,4 +1,11 @@
 import '@testing-library/jest-dom'
+
+// Public Supabase config for tests. lib/env/server.ts reads it at request
+// time and throws a named error when it is missing; the suites that exercise
+// middleware/route handlers mock @supabase/ssr and only need the values to
+// exist. CI has no .env, so provide inert defaults when nothing is set.
+process.env.NEXT_PUBLIC_SUPABASE_URL ||= 'https://test.supabase.local'
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= 'test-anon-key'
 import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from 'util'
 
 // Polyfill for TextEncoder/TextDecoder (MSW + undici need these too)
