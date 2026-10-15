@@ -7,6 +7,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import RedirectResponse
+from juddges_mcp.http import mcp_mount
 from juddges_search.chains.chat import chat_chain
 from juddges_search.chains.enhance_query import enhance_query_chain
 from juddges_search.chains.qa import chain
@@ -172,6 +173,18 @@ def validate_environment_variables():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Run the MCP session manager around the application lifespan.
+
+    FastAPI does not propagate a mounted sub-app's lifespan, and the MCP
+    streamable-HTTP transport fails every request until its session manager
+    is running, so the parent has to own it.
+    """
+    async with mcp_mount.lifespan(), _app_lifespan(app):
+        yield
+
+
+@asynccontextmanager
+async def _app_lifespan(app: FastAPI):
     """
     Manage application lifespan - startup and shutdown events.
 
@@ -758,6 +771,15 @@ app.include_router(
     tags=["graphql"],
     dependencies=[Depends(verify_api_key)],
 )
+
+# MCP server (juddges-mcp). Mounted as a sub-app, deliberately NOT in
+# API_KEY_PROTECTED_ROUTERS: external AI clients do not hold the shared
+# BACKEND_API_KEY, their credential is the per-user MCP key that
+# McpAuthMiddleware resolves. A mounted sub-app also stays out of
+# /openapi.json, so tool changes cannot trip the OpenAPI Type Drift check.
+# Mounted after the router loop above: a Mount at /mcp matches every /mcp/...
+# path, so registered earlier it would swallow /mcp/keys.
+app.mount("/mcp", mcp_mount)
 
 if __name__ == "__main__":
     import uvicorn
