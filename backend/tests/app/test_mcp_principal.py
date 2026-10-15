@@ -36,11 +36,15 @@ class TestPrincipalContext:
     def test_nested_principals_unwind_in_order(self):
         outer, inner = MagicMock(id="outer"), MagicMock(id="inner")
         outer_token = set_principal(outer)
-        inner_token = set_principal(inner)
-        assert get_principal() is inner
-        reset_principal(inner_token)
-        assert get_principal() is outer
-        reset_principal(outer_token)
+        try:
+            inner_token = set_principal(inner)
+            try:
+                assert get_principal() is inner
+            finally:
+                reset_principal(inner_token)
+            assert get_principal() is outer
+        finally:
+            reset_principal(outer_token)
 
     def test_concurrent_tasks_do_not_see_each_others_principal(self):
         """Two interleaved asyncio tasks each read back their own principal."""
