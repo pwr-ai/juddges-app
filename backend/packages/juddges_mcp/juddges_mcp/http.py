@@ -5,6 +5,7 @@ header is resolved to a principal and bound to the call's context. Tools
 never see a credential, so a model cannot pass one.
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -12,9 +13,32 @@ from loguru import logger
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.core.auth_mcp import MCP_KEY_PREFIX, resolve_mcp_principal
+from app.core.auth_mcp import MCP_KEY_PREFIX, resolve_mcp_principal, touch_key
 from juddges_mcp.principal import reset_principal, set_principal
 from juddges_mcp.server import build_server
+
+# Strong references: asyncio keeps only a weak reference to a task, so one
+# created and dropped can be garbage-collected before it runs.
+_key_use_tasks: set[asyncio.Task] = set()
+
+
+def _key_use_finished(task: asyncio.Task) -> None:
+    _key_use_tasks.discard(task)
+    # Reading the outcome marks a failure as handled; otherwise asyncio logs
+    # "exception was never retrieved" at garbage-collection time instead.
+    if not task.cancelled() and task.exception() is not None:
+        logger.warning(f"Recording MCP key use failed: {task.exception()!r}")
+
+
+def _record_key_use(key_id: str) -> None:
+    # touch_key is a sync Supabase call, so it goes to a thread rather than
+    # stalling the event loop. It is deliberately not awaited, unlike the
+    # compliance write in the tools: a dropped audit entry is a compliance
+    # failure, whereas a dropped last_used_at is a cosmetic timestamp, and
+    # should_record_use already makes most calls a single cheap select.
+    task = asyncio.create_task(asyncio.to_thread(touch_key, key_id))
+    _key_use_tasks.add(task)
+    task.add_done_callback(_key_use_finished)
 
 
 def _unauthorized() -> JSONResponse:
@@ -66,6 +90,12 @@ class McpAuthMiddleware:
             logger.warning("Rejected an unresolvable MCP key")
             await _unauthorized()(scope, receive, send)
             return
+
+        # Guarded: a principal without a key id must never turn a working
+        # request into a 500 over a cosmetic timestamp.
+        key_id = getattr(principal, "mcp_key_id", None)
+        if key_id:
+            _record_key_use(key_id)
 
         # try/finally so a failing tool cannot leave this caller's principal
         # bound for whoever the context serves next.

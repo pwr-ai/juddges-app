@@ -6,14 +6,17 @@ the part that does: it drives the production `app` object, with its real
 lifespan wrapper and its real mount, through to a JSON-RPC answer.
 """
 
+import asyncio
 import json
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from juddges_mcp import http as mcp_http
 from juddges_mcp.http import McpAuthMiddleware, McpMount
 from juddges_mcp.principal import MissingPrincipalError, get_principal, set_principal
 from juddges_mcp.server import build_server
@@ -60,6 +63,14 @@ def _fresh_sse_exit_event():
     AppStatus.should_exit_event = None
     yield
     AppStatus.should_exit_event = None
+
+
+@pytest.fixture(autouse=True)
+def _no_real_key_writes():
+    """Requests that clear auth now schedule a key-use write; never let one
+    reach Supabase from a test that is about something else."""
+    with patch("juddges_mcp.http.touch_key"):
+        yield
 
 
 def _app_with(mount: McpMount) -> FastAPI:
@@ -326,6 +337,94 @@ class TestPrincipalLifetime:
 
         with pytest.raises(MissingPrincipalError):
             get_principal()
+
+
+async def _drain_key_use_tasks() -> None:
+    """Wait for every in-flight key-use write; no timer involved."""
+    # Only this loop's tasks: the set is process-wide, and tasks left by
+    # TestClient requests belong to loops that are already closed.
+    loop = asyncio.get_running_loop()
+    pending = [t for t in mcp_http._key_use_tasks if t.get_loop() is loop]
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+
+
+async def _ok_inner(scope, receive, send):
+    await PlainTextResponse("ok")(scope, receive, send)
+
+
+@pytest.mark.unit
+class TestKeyUseRecording:
+    """last_used_at is only filled in if the /mcp transport records the use."""
+
+    async def _post(self, headers, principal=None, resolves=True):
+        resolved = principal if resolves else None
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", return_value=resolved),
+            patch("juddges_mcp.http.touch_key") as touch,
+        ):
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                response = await c.post("/", headers=headers)
+            await _drain_key_use_tasks()
+        return response, touch
+
+    async def test_successful_request_records_the_key_use_once(self):
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        response, touch = await self._post(
+            {"Authorization": "Bearer jdg_mcp_good"}, principal
+        )
+        assert response.status_code == 200
+        touch.assert_called_once_with("key-1")
+
+    @pytest.mark.parametrize(
+        ("headers", "resolves"),
+        [
+            ({}, True),
+            ({"Authorization": "Basic dXNlcjpwYXNz"}, True),
+            ({"Authorization": "Bearer jdg_mcp_revoked"}, False),
+        ],
+        ids=["no-credential", "non-bearer-scheme", "unresolvable-key"],
+    )
+    async def test_rejected_request_records_nothing(self, headers, resolves):
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        response, touch = await self._post(headers, principal, resolves)
+        assert response.status_code == 401
+        touch.assert_not_called()
+
+    async def test_principal_without_key_id_is_served_and_records_nothing(self):
+        principal = SimpleNamespace(id="user-123")
+        response, touch = await self._post(
+            {"Authorization": "Bearer jdg_mcp_good"}, principal
+        )
+        assert response.status_code == 200
+        touch.assert_not_called()
+
+    async def test_a_failing_write_does_not_fail_the_request(self):
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", return_value=principal),
+            patch("juddges_mcp.http.touch_key", side_effect=RuntimeError("db down")),
+            patch("juddges_mcp.http.logger") as log,
+        ):
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                response = await c.post(
+                    "/", headers={"Authorization": "Bearer jdg_mcp_good"}
+                )
+            await _drain_key_use_tasks()
+            # The done-callback runs on the loop after the task finishes.
+            await asyncio.sleep(0)
+        assert response.status_code == 200
+        assert response.text == "ok"
+        # The failure was consumed and logged, not left to surface at GC time.
+        log.warning.assert_called_once()
+        assert "db down" in log.warning.call_args.args[0]
+
+    async def test_finished_tasks_release_their_strong_reference(self):
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        await self._post({"Authorization": "Bearer jdg_mcp_good"}, principal)
+        await asyncio.sleep(0)
+        loop = asyncio.get_running_loop()
+        assert not [t for t in mcp_http._key_use_tasks if t.get_loop() is loop]
 
 
 def _asgi_client(asgi_app):
