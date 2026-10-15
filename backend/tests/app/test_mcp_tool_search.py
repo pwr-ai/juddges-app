@@ -37,16 +37,32 @@ def principal():
         reset_principal(token)
 
 
+# Distinct per-document dates, so a wrong chunk-to-document join shows up in
+# judgment_date as well as in the id-derived fields below.
+_DATES = {
+    "doc-1": datetime(2020, 3, 1, 12, 30),
+    "a": datetime(2021, 1, 1, 12, 30),
+    "b": datetime(2022, 2, 2, 12, 30),
+    "c": datetime(2023, 3, 3, 12, 30),
+    "known": datetime(2019, 9, 9, 12, 30),
+}
+
+
 def _doc(document_id="doc-1", **overrides) -> LegalDocument:
+    """A document whose metadata is derived from its id.
+
+    Every citation field differs per document, so any join other than the
+    id-keyed one yields visibly wrong values.
+    """
     fields = {
         "document_id": document_id,
         "document_type": DocumentType.JUDGMENT,
         "country": "PL",
         "full_text": "A" * 50_000,
-        "court_name": "Sąd Najwyższy",
-        "document_number": "II CSK 1/20",
-        "date_issued": datetime(2020, 3, 1, 12, 30),
-        "source_url": "https://example.test/doc-1",
+        "court_name": f"Court {document_id}",
+        "document_number": f"No {document_id}",
+        "date_issued": _DATES.get(document_id, datetime(2018, 1, 1, 12, 30)),
+        "source_url": f"https://example.test/{document_id}",
     }
     fields.update(overrides)
     return LegalDocument(**fields)
@@ -83,8 +99,8 @@ class TestSearchJudgments:
         with _patched(_response([_chunk()], [_doc()])):
             [hit] = await search_judgments(query="zachowek")
         assert hit.id == "doc-1"
-        assert hit.court == "Sąd Najwyższy"
-        assert hit.case_number == "II CSK 1/20"
+        assert hit.court == "Court doc-1"
+        assert hit.case_number == "No doc-1"
         assert hit.judgment_date == "2020-03-01"
         assert hit.jurisdiction == "PL"
         assert hit.url == "https://example.test/doc-1"
@@ -116,6 +132,20 @@ class TestSearchJudgments:
             hits = await search_judgments(query="zachowek")
         # Deliberately not score-sorted: the tool must not re-rank.
         assert [h.id for h in hits] == ["c", "a", "b"]
+        # Documents were supplied as [a, b, c] against chunks [c, a, b]: the
+        # join must be by document_id, so a positional join fails here.
+        assert [h.court for h in hits] == ["Court c", "Court a", "Court b"]
+        assert [h.case_number for h in hits] == ["No c", "No a", "No b"]
+        assert [h.url for h in hits] == [
+            "https://example.test/c",
+            "https://example.test/a",
+            "https://example.test/b",
+        ]
+        assert [h.judgment_date for h in hits] == [
+            "2023-03-03",
+            "2021-01-01",
+            "2022-02-02",
+        ]
 
     async def test_chunk_without_matching_document_is_kept(self, principal):
         chunks = [_chunk("known"), _chunk("orphan", chunk_text="orphan snippet")]
@@ -177,20 +207,31 @@ class TestSearchJudgments:
         assert sent.date_from is None
         assert sent.date_to is None
 
+    async def test_dates_are_sent_normalised(self, principal):
+        # date.fromisoformat accepts compact forms; what is sent must be the
+        # value that was validated, in canonical form.
+        mock = AsyncMock(return_value=_response([], []))
+        with patch(PATCH_TARGET, new=mock):
+            await search_judgments(
+                query="zachowek", date_from="20240101", date_to="20241231"
+            )
+        sent = mock.call_args[0][0]
+        assert sent.date_from == "2024-01-01"
+        assert sent.date_to == "2024-12-31"
+
     async def test_default_limit_is_applied(self, principal):
         mock = AsyncMock(return_value=_response([], []))
         with patch(PATCH_TARGET, new=mock):
-            await search_judgments(query="zachowek")
+            result = await search_judgments(query="zachowek")
+        assert result == []
         assert mock.call_args[0][0].limit_docs == DEFAULT_LIMIT
 
-    # Review Focus 4
     @pytest.mark.parametrize("bad_limit", [0, -1, MAX_LIMIT + 1, 10_000])
     async def test_out_of_range_limit_is_rejected(self, principal, bad_limit):
         with pytest.raises(ToolInputError) as exc:
             await search_judgments(query="zachowek", limit=bad_limit)
         assert "limit" in str(exc.value)
 
-    # Review Focus 3
     async def test_reversed_date_range_is_rejected(self, principal):
         with pytest.raises(ToolInputError) as exc:
             await search_judgments(
@@ -203,6 +244,11 @@ class TestSearchJudgments:
         with pytest.raises(ToolInputError) as exc:
             await search_judgments(query="zachowek", date_from=bad_date)
         assert "date_from" in str(exc.value)
+
+    @pytest.mark.parametrize("bad_query", [123, None, ["zachowek"]])
+    async def test_non_string_query_is_rejected(self, principal, bad_query):
+        with pytest.raises(ToolInputError):
+            await search_judgments(query=bad_query)
 
     async def test_blank_query_is_rejected(self, principal):
         with pytest.raises(ToolInputError):

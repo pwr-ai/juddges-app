@@ -103,7 +103,9 @@ async def search_judgments(
     """
     principal = get_principal()
 
-    if not query or not query.strip():
+    if not isinstance(query, str):
+        raise ToolInputError("query must be a string")
+    if not query.strip():
         raise ToolInputError("query must not be empty")
 
     limit = _validate_limit(limit)
@@ -117,8 +119,8 @@ async def search_judgments(
         limit_docs=limit,
         jurisdictions=[jurisdiction] if jurisdiction else None,
         court_names=[court] if court else None,
-        date_from=date_from,
-        date_to=date_to,
+        date_from=parsed_from.isoformat() if parsed_from else None,
+        date_to=parsed_to.isoformat() if parsed_to else None,
     )
 
     logger.info(f"MCP search_judgments for {principal.id}: {query[:80]!r}")
