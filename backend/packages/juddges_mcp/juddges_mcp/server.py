@@ -11,7 +11,9 @@ INSTRUCTIONS = (
     "Use search_judgments to find candidates — it returns citations and "
     "snippets. Call get_judgment for the full text of one judgment, and "
     "get_extracted_fields for its structured base-schema values. Always "
-    "quote the court, case number and date when citing a judgment."
+    "quote the court, case number and date when citing a judgment. Snippets "
+    "are search excerpts, often derived from a summary: never present one as "
+    "the court's words; only get_judgment's full_text is verbatim."
 )
 
 

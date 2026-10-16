@@ -19,8 +19,8 @@ Search Polish and UK judgments by meaning and keyword. Returns citations and sni
 | Argument | Type | Default | Notes |
 |---|---|---|---|
 | `query` | string | required | Polish or English. Must be a non-empty string after trimming; at most 2000 characters. |
-| `jurisdiction` | string | none | Restrict to one jurisdiction. The value is trimmed and upper-cased, so `pl` and `PL` both work, and a blank value means no filter. The stored values are `PL` and `UK` and the match is exact, so any other value returns no hits. |
-| `court` | string | none | Restrict to one court name (exact match on the stored name). |
+| `jurisdiction` | string | none | Restrict to one jurisdiction. **When omitted, the search may infer one from the language of the query** (Polish diacritics or stopwords restrict it to `PL`) and silently leave the other jurisdiction out; to cover both, make one call per jurisdiction. The value is trimmed and upper-cased, so `pl` and `PL` both work, and a blank value means no filter. The stored values are `PL` and `UK` and the match is exact, so any other value returns no hits. |
+| `court` | string | none | Restrict to one court name. Pass it exactly as a hit returned it: the match is exact and case-sensitive, and the value is not altered. A non-string is rejected (`court must be a string`); a blank value means no filter. |
 | `date_from` | string | none | Earliest judgment date, ISO `YYYY-MM-DD`. |
 | `date_to` | string | none | Latest judgment date, ISO `YYYY-MM-DD`. |
 | `limit` | integer | `10` | Number of judgments, `1` to `25` inclusive. |
@@ -35,8 +35,20 @@ Search Polish and UK judgments by meaning and keyword. Returns citations and sni
 | `judgment_date` | string or null | ISO date. |
 | `jurisdiction` | string or null | |
 | `url` | string or null | Source URL. |
-| `snippet` | string | The best-matching passage, at most 600 characters. |
+| `snippet` | string | A search excerpt, at most 600 characters, with the search highlighting markup removed. **Not a quotation**: see below. |
+| `snippet_source` | string | Where the snippet's words come from: `judgment_text`, `summary`, `title` or `unknown`. See below. |
 | `score` | number or null | Rank score; only comparable within one result list. |
+
+**What a snippet is.** A snippet is the passage the search ranked, not a verbatim quotation. When the match came from a publisher summary, it can be two non-contiguous fragments of that summary joined by `" ... "`. `snippet_source` says which case applies:
+
+| `snippet_source` | Meaning |
+|---|---|
+| `judgment_text` | A passage cut from the judgment's own text. It can still be truncated or elided with `" ... "`. |
+| `summary` | Derived from the publisher's summary. These are not the court's words. |
+| `title` | The judgment's title. |
+| `unknown` | Provenance not reported or not recognised; treat as not the court's words. |
+
+Whatever the value, do not quote a snippet as the court's words. `get_judgment` with `section="full_text"` is the only verbatim source.
 
 **Errors**
 
@@ -45,6 +57,7 @@ Search Polish and UK judgments by meaning and keyword. Returns citations and sni
 | `query` not a string | `query must be a string` |
 | `query` empty or blank | `query must not be empty` |
 | `query` longer than 2000 characters | rejected by the shared search code with an HTTP 400 "too long" error |
+| `court` not a string | `court must be a string` |
 | `limit` not an integer (booleans count as non-integers) | `limit must be an integer` |
 | `limit` outside 1 to 25 | `limit must be between 1 and 25; got <n>` |
 | `date_from` / `date_to` not an ISO date | `<field> must be an ISO date (YYYY-MM-DD); got '<value>'` |

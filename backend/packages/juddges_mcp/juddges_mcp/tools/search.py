@@ -5,7 +5,9 @@ fills the client's context window and is useless in practice; full text is
 reachable through get_judgment on an id the caller chose.
 """
 
+import re
 from datetime import date
+from typing import Literal
 
 from juddges_search.models import DocumentChunk, LegalDocument
 from loguru import logger
@@ -18,6 +20,28 @@ from juddges_mcp.principal import get_principal
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 25
 SNIPPET_CHARS = 600
+
+SnippetSource = Literal["judgment_text", "summary", "title", "unknown"]
+
+# The search RPC's `chunk_type` is the database's vocabulary; what an agent
+# needs is whether the words are the court's. Anything not listed here maps to
+# "unknown", never to "judgment_text": unknown provenance must not read as the
+# court's own wording.
+_SNIPPET_SOURCES: dict[str, SnippetSource] = {
+    # Passages cut from the judgment's own text (document_chunks, or the
+    # leading characters of full_text when a judgment has no summary).
+    "section": "judgment_text",
+    "paragraph_block": "judgment_text",
+    "chunk": "judgment_text",
+    "excerpt": "judgment_text",
+    # The publisher-supplied summary, whole or run through ts_headline.
+    "summary": "summary",
+    "highlight": "summary",
+    "title": "title",
+}
+
+# ts_headline markup meant for the web UI; noise for a model.
+_HIGHLIGHT_TAGS = re.compile(r"</?mark>", re.IGNORECASE)
 
 
 class ToolInputError(ValueError):
@@ -34,6 +58,16 @@ class JudgmentHit(BaseModel):
     jurisdiction: str | None = None
     url: str | None = None
     snippet: str = Field(default="", max_length=SNIPPET_CHARS)
+    snippet_source: SnippetSource = Field(
+        default="unknown",
+        description=(
+            "Where the snippet's words come from: 'judgment_text' (a passage of "
+            "the judgment itself), 'summary' (a publisher summary, not the "
+            "court's words), 'title', or 'unknown'. Never quote a snippet as the "
+            "court's words whatever this says; only get_judgment(section="
+            "'full_text') is verbatim."
+        ),
+    )
     score: float | None = None
 
 
@@ -78,6 +112,30 @@ def _score(chunk: DocumentChunk) -> float | None:
     return chunk.similarity
 
 
+def _snippet(chunk: DocumentChunk) -> str:
+    # Strip before slicing, so the budget holds text and a tag is never cut
+    # in half ("<ma").
+    return _HIGHLIGHT_TAGS.sub("", chunk.chunk_text)[:SNIPPET_CHARS]
+
+
+def _snippet_source(chunk: DocumentChunk) -> SnippetSource:
+    return _SNIPPET_SOURCES.get(chunk.chunk_type or "", "unknown")
+
+
+def _normalise_court(value: str | None) -> str | None:
+    """Return the caller's court name untouched; absent or blank becomes None.
+
+    Neither case nor whitespace is altered: the SQL compares court_name exactly
+    and case-sensitively against free text. A blank value must become None, or
+    it would be sent as a filter that matches nothing.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ToolInputError("court must be a string")
+    return value if value.strip() else None
+
+
 def _to_hit(chunk: DocumentChunk, doc: LegalDocument | None) -> JudgmentHit:
     """Build a hit from the ranked chunk, enriched by its document if present."""
     return JudgmentHit(
@@ -89,7 +147,8 @@ def _to_hit(chunk: DocumentChunk, doc: LegalDocument | None) -> JudgmentHit:
         ),
         jurisdiction=doc.country if doc else None,
         url=doc.source_url if doc else None,
-        snippet=chunk.chunk_text[:SNIPPET_CHARS],
+        snippet=_snippet(chunk),
+        snippet_source=_snippet_source(chunk),
         score=_score(chunk),
     )
 
@@ -104,16 +163,28 @@ async def search_judgments(
 ) -> list[JudgmentHit]:
     """Search Polish and UK judgments by meaning and keyword.
 
+    If `jurisdiction` is omitted the search may infer one from the language of
+    the query (for example Polish diacritics or stopwords restrict it to PL)
+    and silently leave the other jurisdiction out. To cover both, make one
+    call per jurisdiction.
+
+    A snippet is a search excerpt, not a quotation. It is often derived from a
+    publisher summary rather than the court's text (see `snippet_source`) and
+    can join two fragments with " ... ". Never quote a snippet as the court's
+    words: `get_judgment(section="full_text")` is the only verbatim source.
+
     Args:
         query: What to look for, in Polish or English.
         jurisdiction: Restrict to one jurisdiction: "PL" or "UK".
-        court: Restrict to one court name.
+        court: Restrict to one court name, exactly as a hit returned it
+            (matching is exact and case-sensitive).
         date_from: Earliest judgment date, ISO `YYYY-MM-DD`.
         date_to: Latest judgment date, ISO `YYYY-MM-DD`.
         limit: How many judgments to return (1-25).
 
     Returns:
-        Hits with a citation and a snippet. Call `get_judgment` for full text.
+        Hits with a citation, a snippet and its `snippet_source`. Call
+        `get_judgment` for full text.
     """
     principal = get_principal()
 
@@ -129,6 +200,7 @@ async def search_judgments(
         raise ToolInputError("date_from must not be later than date_to")
 
     jurisdiction = _normalise_jurisdiction(jurisdiction)
+    court = _normalise_court(court)
 
     request = SearchChunksRequest(
         query=query.strip(),

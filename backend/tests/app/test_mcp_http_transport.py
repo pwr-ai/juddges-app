@@ -275,19 +275,110 @@ class TestMcpOverHttp:
         names = {tool["name"] for tool in _sse_payload(response)["result"]["tools"]}
         assert names == {"search_judgments", "get_judgment", "get_extracted_fields"}
 
-    def test_mount_does_not_shadow_the_mcp_keys_router(self):
-        """/mcp/keys must stay served by the keys router.
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [("GET", "/mcp/keys"), ("POST", "/mcp/keys"), ("DELETE", "/mcp/keys/abc")],
+    )
+    def test_mount_does_not_shadow_the_mcp_keys_router(self, method, path):
+        """The keys router must keep serving the verbs it defines.
 
         A shadowing mount still answers 200 on this path with the MCP app's
         response, so "not 404" would pass while the endpoint is broken. The
         keys router rejects an unauthenticated call itself: 401 with its own
         error body. The MCP middleware's 401 body is {"error": ...}.
         """
-        response = TestClient(real_app).get("/mcp/keys")
+        response = TestClient(real_app).request(method, path)
 
         assert response.status_code == 401
         assert "detail" in response.json()
         assert "error" not in response.json()
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            ("PUT", "/mcp/keys"),
+            ("PATCH", "/mcp/keys"),
+            ("DELETE", "/mcp/keys"),
+            ("GET", "/mcp/keys/abc"),
+            ("POST", "/mcp/keys/abc"),
+            ("PUT", "/mcp/keys/abc"),
+        ],
+    )
+    def test_unrouted_verbs_on_keys_paths_answer_401_not_405(self, method, path):
+        """Pins a known quirk: a verb the keys router does not define, sent to
+        a /mcp/keys path, answers 401 rather than 405.
+
+        Starlette records a path match with the wrong method as a partial match
+        and keeps scanning; the /mcp Mount matches every method, so it wins and
+        McpAuthMiddleware rejects the call (body {"error": ...}). Nothing is
+        executed: an unauthenticated caller is turned away, and the keys router
+        never sees the request. This is deliberately not "fixed" by
+        restructuring the mount.
+        """
+        response = TestClient(real_app).request(method, path)
+
+        assert response.status_code == 401
+        assert response.json() == {"error": "Invalid or missing MCP key"}
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [("PUT", "/mcp/keys"), ("DELETE", "/mcp/keys"), ("GET", "/mcp/keys/abc")],
+    )
+    def test_a_valid_mcp_key_cannot_reach_key_management_through_the_mount(
+        self, live_client, method, path
+    ):
+        """An MCP key clears the mount's middleware on these paths, then lands
+        in the MCP app, which has no such route. The keys router is never
+        involved, so a key cannot mint or revoke keys this way."""
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        with patch("juddges_mcp.http.resolve_mcp_principal", return_value=principal):
+            response = live_client.request(method, path, headers=MCP_HEADERS)
+
+        # The MCP app's own 404, not the keys router's JSON {"detail": ...}.
+        assert response.status_code == 404
+        assert response.text == "Not Found"
+
+    def test_tools_call_reaches_the_tool_body_with_the_bound_principal(
+        self, live_client
+    ):
+        """No other test runs a tool body through the real transport.
+
+        initialize and tools/list touch no tool, and the principal tests use a
+        hand-written inner app. This drives tools/call through the production
+        app, mount and lifespan, and reads get_principal() from inside the
+        tool: a regression that made the principal unreachable there would
+        break every tool call. Asserting identity with the bound object, not
+        just a 200, is what proves the middleware's binding is the one seen.
+        """
+        from app.models import SearchChunksResponse
+
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        seen = {}
+
+        async def fake_search(request):
+            seen["principal"] = get_principal()
+            seen["query"] = request.query
+            return SearchChunksResponse(
+                chunks=[], documents=[], total_chunks=0, unique_documents=0
+            )
+
+        call = {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {"name": "search_judgments", "arguments": {"query": "zachowek"}},
+        }
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", return_value=principal),
+            patch("juddges_mcp.tools.search.run_document_search", new=fake_search),
+        ):
+            response = live_client.post("/mcp", json=call, headers=MCP_HEADERS)
+
+        assert response.status_code == 200, response.text
+        result = _sse_payload(response)["result"]
+        assert not result.get("isError"), result
+        assert seen["query"] == "zachowek"
+        assert seen["principal"] is principal
 
 
 @pytest.mark.unit

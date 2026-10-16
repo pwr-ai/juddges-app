@@ -107,6 +107,44 @@ class TestSearchJudgments:
         assert hit.snippet == "Zachowek należy się zstępnym…"
         assert hit.score == pytest.approx(0.91)
 
+    @pytest.mark.parametrize(
+        ("chunk_type", "expected"),
+        [
+            ("section", "judgment_text"),
+            ("paragraph_block", "judgment_text"),
+            ("chunk", "judgment_text"),
+            ("excerpt", "judgment_text"),
+            ("summary", "summary"),
+            ("highlight", "summary"),
+            ("title", "title"),
+            (None, "unknown"),
+            ("", "unknown"),
+            ("full_text", "unknown"),
+            ("something_new", "unknown"),
+        ],
+    )
+    async def test_snippet_source_translates_chunk_type(
+        self, principal, chunk_type, expected
+    ):
+        with _patched(_response([_chunk(chunk_type=chunk_type)], [_doc()])):
+            [hit] = await search_judgments(query="zachowek")
+        assert hit.snippet_source == expected
+
+    async def test_mark_tags_are_stripped_from_the_snippet(self, principal):
+        text = "the <mark>duty</mark> of care ... a <MARK>breach</MARK>"
+        with _patched(_response([_chunk(chunk_text=text)], [_doc()])):
+            [hit] = await search_judgments(query="duty")
+        assert hit.snippet == "the duty of care ... a breach"
+
+    async def test_tags_are_stripped_before_the_snippet_is_sliced(self, principal):
+        # 590 plain characters, then a tag straddling the 600 boundary: slicing
+        # first would leave a snippet ending in "<ma" and spend budget on tags.
+        text = "x" * 590 + "<mark>" + "y" * 40 + "</mark>"
+        with _patched(_response([_chunk(chunk_text=text)], [_doc()])):
+            [hit] = await search_judgments(query="x")
+        assert "<" not in hit.snippet
+        assert hit.snippet == "x" * 590 + "y" * 10
+
     async def test_score_falls_back_to_similarity(self, principal):
         chunk = _chunk(combined_score=None, similarity=0.4)
         with _patched(_response([chunk], [_doc()])):
@@ -230,6 +268,18 @@ class TestSearchJudgments:
         with patch(PATCH_TARGET, new=mock):
             await search_judgments(query="fraud", court=" Sąd Najwyższy")
         assert mock.call_args[0][0].court_names == [" Sąd Najwyższy"]
+
+    @pytest.mark.parametrize("bad_court", [42, ["Sąd"], True, {}])
+    async def test_non_string_court_is_rejected(self, principal, bad_court):
+        with pytest.raises(ToolInputError, match="court must be a string"):
+            await search_judgments(query="fraud", court=bad_court)
+
+    @pytest.mark.parametrize("blank", ["", "   ", "\t\n"])
+    async def test_blank_court_is_treated_as_absent(self, principal, blank):
+        mock = AsyncMock(return_value=_response([], []))
+        with patch(PATCH_TARGET, new=mock):
+            await search_judgments(query="fraud", court=blank)
+        assert mock.call_args[0][0].court_names is None
 
     async def test_unset_filters_are_not_sent(self, principal):
         mock = AsyncMock(return_value=_response([], []))
