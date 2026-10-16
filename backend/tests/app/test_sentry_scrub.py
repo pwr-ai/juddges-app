@@ -6,6 +6,8 @@ headers survive, cookies/query strings are filtered, user PII is dropped, and
 emails are redacted from messages and exception values.
 """
 
+import json
+
 import pytest
 
 from app.sentry import _scrub_event
@@ -89,3 +91,72 @@ class TestTagging:
         tags = _scrub_event(event, {})["tags"]
         assert tags["foo"] == "bar"
         assert tags["service"] == "backend"
+
+
+_KEY = "jmcp_live_0123456789abcdefSECRETKEYMATERIAL"
+
+
+def _frame(**extra):
+    return {
+        "function": "__call__",
+        "vars": {"credential": _KEY, "token": _KEY},
+        **extra,
+    }
+
+
+class TestFrameVarStripping:
+    def test_strips_vars_from_exception_frames(self):
+        event = {
+            "exception": {
+                "values": [
+                    {
+                        "type": "RuntimeError",
+                        "stacktrace": {"frames": [_frame(), _frame()]},
+                    }
+                ]
+            }
+        }
+        scrubbed = _scrub_event(event, {})
+        frames = scrubbed["exception"]["values"][0]["stacktrace"]["frames"]
+        assert all("vars" not in f for f in frames)
+        assert frames[0]["function"] == "__call__"
+        assert _KEY not in json.dumps(scrubbed)
+
+    def test_strips_vars_from_thread_frames(self):
+        event = {"threads": {"values": [{"stacktrace": {"frames": [_frame()]}}]}}
+        scrubbed = _scrub_event(event, {})
+        assert "vars" not in scrubbed["threads"]["values"][0]["stacktrace"]["frames"][0]
+        assert _KEY not in json.dumps(scrubbed)
+
+    def test_strips_vars_from_bare_list_sections(self):
+        event = {
+            "exception": [{"stacktrace": {"frames": [_frame()]}}],
+            "threads": [{"stacktrace": {"frames": [_frame()]}}],
+        }
+        assert _KEY not in json.dumps(_scrub_event(event, {}))
+
+    def test_frames_without_vars_pass_through(self):
+        event = {
+            "exception": {"values": [{"stacktrace": {"frames": [{"function": "f"}]}}]}
+        }
+        frames = _scrub_event(event, {})["exception"]["values"][0]["stacktrace"][
+            "frames"
+        ]
+        assert frames == [{"function": "f"}]
+
+    @pytest.mark.parametrize(
+        "event",
+        [
+            {},
+            {"exception": None},
+            {"exception": "boom"},
+            {"exception": {"values": "not-a-list"}},
+            {"exception": {"values": [None, "x", {"stacktrace": None}]}},
+            {"exception": {"values": [{"stacktrace": {"frames": "nope"}}]}},
+            {"exception": {"values": [{"stacktrace": {"frames": [None, "x", 3]}}]}},
+            {"threads": {"values": None}},
+            {"threads": 5},
+        ],
+    )
+    def test_unexpected_shapes_do_not_raise(self, event):
+        assert _scrub_event(event, {})["tags"]["service"] == "backend"
