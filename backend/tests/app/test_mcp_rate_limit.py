@@ -70,8 +70,19 @@ class TestMcpRateLimit:
         assert exc.value.retry_after == 60
 
 
+@pytest.fixture
+def _reset_gate_warning(monkeypatch):
+    monkeypatch.setattr("app.mcp_rate_limit._ip_gate_skip_warned", False)
+
+
 @pytest.mark.unit
 class TestAuthFailureBudget:
+    """The gate only works behind a trusted proxy; these run in that mode."""
+
+    @pytest.fixture(autouse=True)
+    def _trusted_proxy(self, monkeypatch):
+        monkeypatch.setenv("TRUSTED_PROXY", "true")
+
     def test_failure_bucket_is_distinct_from_the_per_key_bucket(self):
         with patch("app.mcp_rate_limit.hit_with_fallback", return_value=True) as hit:
             enforce_mcp_rate_limit("1.2.3.4")
@@ -124,3 +135,56 @@ class TestAuthFailureBudget:
         assert mcp_auth_failure_retry_after() == 60
         monkeypatch.setenv("MCP_IP_RATE_LIMIT", "3/hour")
         assert mcp_auth_failure_retry_after() == 3600
+
+
+@pytest.mark.unit
+class TestAuthFailureBudgetUntrustedProxy:
+    """Without TRUSTED_PROXY the IP is the proxy's: the budget must be inert."""
+
+    @pytest.fixture(autouse=True)
+    def _untrusted(self, monkeypatch, _reset_gate_warning):
+        monkeypatch.delenv("TRUSTED_PROXY", raising=False)
+
+    @pytest.mark.parametrize("value", [None, "false", "0", ""])
+    def test_never_exhausted_even_when_the_budget_is_spent(self, monkeypatch, value):
+        if value is not None:
+            monkeypatch.setenv("TRUSTED_PROXY", value)
+        with patch("app.mcp_rate_limit.test_with_fallback", return_value=False):
+            assert mcp_auth_failures_exhausted("1.2.3.4") is False
+
+    def test_recording_a_failure_does_not_charge(self):
+        with patch("app.mcp_rate_limit.hit_with_fallback") as hit:
+            record_mcp_auth_failure("1.2.3.4")
+        hit.assert_not_called()
+
+    def test_real_limiter_stays_open_after_many_failures(self, monkeypatch):
+        monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
+        ip = "198.51.100.90"
+        for _ in range(5):
+            record_mcp_auth_failure(ip)
+        assert mcp_auth_failures_exhausted(ip) is False
+
+    def test_trust_is_read_per_call(self, monkeypatch):
+        monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
+        ip = "198.51.100.91"
+        record_mcp_auth_failure(ip)  # untrusted: not charged
+        monkeypatch.setenv("TRUSTED_PROXY", "true")
+        assert mcp_auth_failures_exhausted(ip) is False
+        record_mcp_auth_failure(ip)
+        assert mcp_auth_failures_exhausted(ip) is True
+
+    def test_skip_is_warned_once_per_process(self):
+        with patch("app.mcp_rate_limit.logger") as log:
+            for _ in range(3):
+                mcp_auth_failures_exhausted("1.2.3.4")
+                record_mcp_auth_failure("1.2.3.4")
+        log.warning.assert_called_once()
+        message = log.warning.call_args[0][0]
+        assert "MCP_IP_RATE_LIMIT" in message
+        assert "TRUSTED_PROXY" in message
+
+    def test_no_warning_when_trusted(self, monkeypatch):
+        monkeypatch.setenv("TRUSTED_PROXY", "true")
+        with patch("app.mcp_rate_limit.logger") as log:
+            mcp_auth_failures_exhausted("1.2.3.4")
+        log.warning.assert_not_called()

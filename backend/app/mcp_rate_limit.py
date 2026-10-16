@@ -16,6 +16,19 @@ charging every request, while legitimate traffic is never throttled by it. For
 the same reason the default is tight rather than generous: nothing legitimate
 touches the bucket, and 20 a minute is ample for a developer mistyping a key.
 
+The IP budget is enforced only when ``TRUSTED_PROXY`` is truthy. It is keyed on
+the address ``get_client_ip`` returns, and that address identifies a client only
+when the proxy's ``X-Forwarded-For`` is trusted. Behind a reverse proxy with
+``TRUSTED_PROXY`` unset (the default, and the state of docker-compose.yml, where
+every request arrives through Caddy) the address is the proxy's own, so every
+caller shares one bucket. A limit on a key that is the same for everyone is not
+a rate limit but a kill switch: twenty rejected keys from anyone would lock out
+every MCP user. The gate is therefore inert unless ``TRUSTED_PROXY=true``, which
+leaves rejected-key database load unbounded in that state (a known, logged
+gap) rather than letting one caller deny the service to all. The flag is read
+per call, never inferred from a request header: a client could send
+``X-Forwarded-For`` itself to switch its own gating on or off.
+
 The budget is *tested* before resolution (no database work if it is spent) and
 *charged* only after a resolution failure.
 
@@ -29,9 +42,11 @@ import os
 from limits import RateLimitItem, parse
 from limits.storage import storage_from_string
 from limits.strategies import MovingWindowRateLimiter
+from loguru import logger
 
 from app.rate_limiter import (
     RATE_LIMIT_STORAGE_URI,
+    _is_trusted_proxy,
     hit_with_fallback,
     test_with_fallback,
 )
@@ -45,6 +60,9 @@ _KEY_BUCKET = "mcp"
 _AUTH_FAIL_BUCKET = "mcp-auth-fail"
 
 _limiter = MovingWindowRateLimiter(storage_from_string(RATE_LIMIT_STORAGE_URI))
+
+# The skip is logged once per process, not once per request.
+_ip_gate_skip_warned = False
 
 
 class McpRateLimitExceeded(RuntimeError):
@@ -80,18 +98,42 @@ def enforce_mcp_rate_limit(key_id: str) -> None:
         )
 
 
+def _ip_gate_enabled() -> bool:
+    """True when the client IP identifies a client, so the budget may be enforced."""
+    global _ip_gate_skip_warned
+    if _is_trusted_proxy():
+        return True
+    if not _ip_gate_skip_warned:
+        _ip_gate_skip_warned = True
+        logger.warning(
+            "MCP_IP_RATE_LIMIT is not being enforced because TRUSTED_PROXY is "
+            "not set: the client IP is the proxy's, so one shared budget would "
+            "lock every MCP user out. Set TRUSTED_PROXY=true behind a trusted "
+            "reverse proxy to enable it."
+        )
+    return False
+
+
 def mcp_auth_failures_exhausted(client_ip: str) -> bool:
     """True when `client_ip` has already spent its rejected-key budget.
 
-    Does not consume budget, so it can run before key resolution.
+    Does not consume budget, so it can run before key resolution. Always False
+    when the proxy is not trusted (see the module docstring).
     """
+    if not _ip_gate_enabled():
+        return False
     return not test_with_fallback(
         _limiter, _current_ip_limit(), _AUTH_FAIL_BUCKET, client_ip
     )
 
 
 def record_mcp_auth_failure(client_ip: str) -> None:
-    """Charge one rejected key against `client_ip`'s budget."""
+    """Charge one rejected key against `client_ip`'s budget.
+
+    A no-op when the proxy is not trusted: nothing would read the bucket.
+    """
+    if not _ip_gate_enabled():
+        return
     hit_with_fallback(_limiter, _current_ip_limit(), _AUTH_FAIL_BUCKET, client_ip)
 
 

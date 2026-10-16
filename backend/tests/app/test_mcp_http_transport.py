@@ -547,6 +547,7 @@ class TestMcpRateLimiting:
     ):
         """No mocked budget: the third request is refused by the real counter,
         and resolution (the database) ran only for the two that were charged."""
+        monkeypatch.setenv("TRUSTED_PROXY", "true")
         monkeypatch.setenv("MCP_IP_RATE_LIMIT", "2/minute")
         responses, resolve, _ = await self._call(resolves=False, n=4)
         assert [r.status_code for r in responses] == [401, 401, 429, 429]
@@ -586,10 +587,56 @@ class TestMcpRateLimiting:
     ):
         """Legitimate traffic is not throttled by the IP budget however many
         requests it makes."""
+        monkeypatch.setenv("TRUSTED_PROXY", "true")
         monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
         principal = MagicMock(id="user-123", mcp_key_id="key-1")
         responses, _, _ = await self._call(principal=principal, n=5)
         assert [r.status_code for r in responses] == [200] * 5
+
+    @pytest.mark.parametrize("forwarded", [None, "203.0.113.9"], ids=["no-xff", "xff"])
+    async def test_valid_key_is_served_when_the_proxy_is_untrusted_and_budget_spent(
+        self, monkeypatch, forwarded
+    ):
+        """Regression: behind Caddy with TRUSTED_PROXY unset every caller shares
+        the proxy's IP, so rejected keys must not lock out a valid one. Sending
+        X-Forwarded-For must change nothing."""
+        monkeypatch.delenv("TRUSTED_PROXY", raising=False)
+        monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
+        headers = dict(BEARER)
+        if forwarded:
+            headers["X-Forwarded-For"] = forwarded
+        # Rejected keys first: each would be charged if the gate were live.
+        rejected, _, _ = await self._call(headers=headers, resolves=False, n=5)
+        assert [r.status_code for r in rejected] == [401] * 5
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        responses, _, _ = await self._call(headers=headers, principal=principal, n=2)
+        assert [r.status_code for r in responses] == [200, 200]
+
+    async def test_valid_key_is_served_when_untrusted_and_the_counter_says_spent(
+        self, monkeypatch
+    ):
+        """The budget is spent at the counter itself, not via recorded failures,
+        so this holds even if recording were charged: only the gate's check
+        keeps the request out of the 429."""
+        monkeypatch.delenv("TRUSTED_PROXY", raising=False)
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        with patch("app.mcp_rate_limit.test_with_fallback", return_value=False):
+            responses, resolve, _ = await self._call(principal=principal, n=2)
+        assert [r.status_code for r in responses] == [200, 200]
+        assert resolve.call_count == 2
+
+    async def test_trusted_proxy_enforces_per_forwarded_client(self, monkeypatch):
+        """With TRUSTED_PROXY=true the budget is per real client: one client's
+        rejected keys lock out that client only."""
+        monkeypatch.setenv("TRUSTED_PROXY", "true")
+        monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
+        bad = {**BEARER, "X-Forwarded-For": "203.0.113.9"}
+        other = {**BEARER, "X-Forwarded-For": "203.0.113.10"}
+        rejected, _, _ = await self._call(headers=bad, resolves=False, n=3)
+        assert [r.status_code for r in rejected] == [401, 429, 429]
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        responses, _, _ = await self._call(headers=other, principal=principal)
+        assert responses[0].status_code == 200
 
     async def test_principal_without_key_id_is_served_uncharged(self):
         principal = SimpleNamespace(id="user-123")
@@ -601,6 +648,7 @@ class TestMcpRateLimiting:
     def test_repeated_429s_through_the_real_app_stay_decodable(self, monkeypatch):
         """429s are built per request, like the 401: GZip edits a shared
         response's headers in place."""
+        monkeypatch.setenv("TRUSTED_PROXY", "true")
         monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
         http_client = TestClient(real_app)
         with patch("juddges_mcp.http.resolve_mcp_principal", return_value=None):
