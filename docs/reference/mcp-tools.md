@@ -19,7 +19,7 @@ Search Polish and UK judgments by meaning and keyword. Returns citations and sni
 | Argument | Type | Default | Notes |
 |---|---|---|---|
 | `query` | string | required | Polish or English. Must be a non-empty string after trimming; at most 2000 characters. |
-| `jurisdiction` | string | none | Restrict to one jurisdiction. The stored values are `PL` and `UK`, and the filter is an exact match with no case normalisation in the code path. |
+| `jurisdiction` | string | none | Restrict to one jurisdiction. The value is trimmed and upper-cased, so `pl` and `PL` both work, and a blank value means no filter. The stored values are `PL` and `UK` and the match is exact, so any other value returns no hits. |
 | `court` | string | none | Restrict to one court name (exact match on the stored name). |
 | `date_from` | string | none | Earliest judgment date, ISO `YYYY-MM-DD`. |
 | `date_to` | string | none | Latest judgment date, ISO `YYYY-MM-DD`. |
