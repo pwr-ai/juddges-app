@@ -97,6 +97,9 @@ ci = ["lint", "format-check"]
 # Search benchmark (live backend required — see scripts/search_benchmark.py)
 bench-search = "python scripts/search_benchmark.py"
 
+# Local MCP server over stdio; needs JUDDGES_MCP_KEY and service-role credentials
+mcp-stdio = "python -m juddges_mcp.stdio"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
