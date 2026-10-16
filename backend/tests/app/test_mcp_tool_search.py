@@ -191,10 +191,45 @@ class TestSearchJudgments:
         sent = mock.call_args[0][0]
         assert sent.query == "fraud"
         assert sent.limit_docs == 5
-        assert sent.jurisdictions == ["uk"]
+        assert sent.jurisdictions == ["UK"]
         assert sent.court_names == ["Court of Appeal"]
         assert sent.date_from == "2015-01-01"
         assert sent.date_to == "2024-12-31"
+
+    async def _sent_jurisdictions(self, **kwargs):
+        mock = AsyncMock(return_value=_response([], []))
+        with patch(PATCH_TARGET, new=mock):
+            await search_judgments(query="fraud", **kwargs)
+        return mock.call_args[0][0].jurisdictions
+
+    async def test_lowercase_jurisdiction_is_uppercased(self, principal):
+        # The column is CHECK (jurisdiction IN ('PL','UK')); "pl" matches no row.
+        assert await self._sent_jurisdictions(jurisdiction="pl") == ["PL"]
+
+    async def test_padded_mixed_case_jurisdiction_is_normalised(self, principal):
+        assert await self._sent_jurisdictions(jurisdiction=" uk ") == ["UK"]
+
+    async def test_uppercase_jurisdiction_is_unchanged(self, principal):
+        assert await self._sent_jurisdictions(jurisdiction="PL") == ["PL"]
+
+    async def test_absent_jurisdiction_stays_none(self, principal):
+        # A present-but-empty filter would suppress the default inference.
+        assert await self._sent_jurisdictions(jurisdiction=None) is None
+        assert await self._sent_jurisdictions() is None
+
+    async def test_blank_jurisdiction_is_treated_as_absent(self, principal):
+        assert await self._sent_jurisdictions(jurisdiction="  ") is None
+
+    async def test_non_string_jurisdiction_is_rejected(self, principal):
+        with pytest.raises(ToolInputError):
+            await search_judgments(query="fraud", jurisdiction=5)
+
+    async def test_court_name_is_not_case_folded(self, principal):
+        # court_name is matched with `=` against free text: folding breaks it.
+        mock = AsyncMock(return_value=_response([], []))
+        with patch(PATCH_TARGET, new=mock):
+            await search_judgments(query="fraud", court=" Sąd Najwyższy")
+        assert mock.call_args[0][0].court_names == [" Sąd Najwyższy"]
 
     async def test_unset_filters_are_not_sent(self, principal):
         mock = AsyncMock(return_value=_response([], []))

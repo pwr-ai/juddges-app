@@ -56,6 +56,20 @@ def _validate_limit(limit: int) -> int:
     return limit
 
 
+def _normalise_jurisdiction(value: str | None) -> str | None:
+    """Upper-case the caller's jurisdiction; absent stays absent.
+
+    The column is constrained to 'PL' / 'UK' and nothing downstream folds
+    case, so "pl" would match no row. None must stay None: a present filter
+    suppresses the search's default jurisdiction inference.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ToolInputError("jurisdiction must be a string")
+    return value.strip().upper() or None
+
+
 def _score(chunk: DocumentChunk) -> float | None:
     # combined_score is the hybrid-search rank score; similarity is the
     # fallback. Compare to None so a legitimate 0.0 is not skipped.
@@ -92,7 +106,7 @@ async def search_judgments(
 
     Args:
         query: What to look for, in Polish or English.
-        jurisdiction: Restrict to one jurisdiction, e.g. "pl" or "uk".
+        jurisdiction: Restrict to one jurisdiction: "PL" or "UK".
         court: Restrict to one court name.
         date_from: Earliest judgment date, ISO `YYYY-MM-DD`.
         date_to: Latest judgment date, ISO `YYYY-MM-DD`.
@@ -113,6 +127,8 @@ async def search_judgments(
     parsed_to = _parse_date(date_to, "date_to")
     if parsed_from and parsed_to and parsed_from > parsed_to:
         raise ToolInputError("date_from must not be later than date_to")
+
+    jurisdiction = _normalise_jurisdiction(jurisdiction)
 
     request = SearchChunksRequest(
         query=query.strip(),

@@ -90,7 +90,7 @@ def enforce_mcp_rate_limit(key_id: str) -> None:
     if not hit_with_fallback(_limiter, item, _KEY_BUCKET, key_id):
         raise McpRateLimitExceeded(
             f"MCP rate limit exceeded for this key (limit: {configured}). "
-            "Wait for the window to roll over, or generate a second key.",
+            "Wait for the window to roll over and try again.",
             # The whole window: a deliberate conservative over-estimate. The
             # exact remainder (get_window_stats) is a storage call, and an
             # error path must not make a call that can throw.
