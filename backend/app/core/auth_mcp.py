@@ -98,8 +98,14 @@ def resolve_mcp_principal(token: str) -> AuthenticatedUser | None:
         user.mcp_scopes = list(row.get("scopes") or [])
         user.mcp_key_id = row["id"]
         return user
-    except Exception:
-        logger.exception("MCP key resolution failed; rejecting")
+    except Exception as e:
+        # Deliberately NOT logger.exception / opt(exception=...): loguru's
+        # default handler runs with diagnose=True, which prints the value of
+        # every name on each traceback line. `token` here and `credential` in
+        # the caller's frame hold the full plaintext key, which has no expiry,
+        # so a traceback would write a working credential to the log. Type and
+        # message are enough to tell a misconfiguration from an outage.
+        logger.error(f"MCP key resolution failed; rejecting: {type(e).__name__}: {e}")
         return None
 
 

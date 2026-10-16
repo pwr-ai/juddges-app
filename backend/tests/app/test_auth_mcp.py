@@ -57,6 +57,66 @@ class TestKeyMaterial:
         assert key_prefix(generate_mcp_key()) != key_prefix(generate_mcp_key())
 
 
+@pytest.mark.unit
+class TestResolutionFailureDoesNotLogTheKey:
+    """A traceback annotated with frame locals would write the plaintext key to the log."""
+
+    def _capture(self):
+        from loguru import logger
+
+        captured: list[str] = []
+        # Same settings as loguru's default stderr handler.
+        sink_id = logger.add(
+            captured.append,
+            level="DEBUG",
+            backtrace=True,
+            diagnose=True,
+            format="{message}",
+        )
+        return logger, captured, sink_id
+
+    def test_key_never_reaches_the_log_when_the_backend_is_unconfigured(self):
+        key = f"{MCP_KEY_PREFIX}SUPERSECRETPLAINTEXT1234567890abcdef"
+        logger, captured, sink_id = self._capture()
+        try:
+            with patch(
+                "app.core.auth_mcp.get_admin_supabase_client",
+                side_effect=ValueError("SUPABASE_URL is not set"),
+            ):
+                assert resolve_mcp_principal(key) is None
+        finally:
+            logger.remove(sink_id)
+
+        output = "".join(captured)
+        assert "MCP key resolution failed" in output
+        assert "ValueError" in output
+        assert key not in output
+        assert "SUPERSECRET" not in output
+        assert MCP_KEY_PREFIX not in output
+        assert hash_mcp_key(key) not in output
+
+    def test_key_never_reaches_the_log_when_the_query_fails_midway(self):
+        key = f"{MCP_KEY_PREFIX}SUPERSECRETPLAINTEXT1234567890abcdef"
+        logger, captured, sink_id = self._capture()
+        client = MagicMock()
+        client.table.return_value.select.return_value.eq.return_value.execute.side_effect = RuntimeError(
+            "connection reset"
+        )
+        try:
+            with patch(
+                "app.core.auth_mcp.get_admin_supabase_client", return_value=client
+            ):
+                assert resolve_mcp_principal(key) is None
+        finally:
+            logger.remove(sink_id)
+
+        output = "".join(captured)
+        assert "RuntimeError" in output
+        assert key not in output
+        assert MCP_KEY_PREFIX not in output
+        assert hash_mcp_key(key) not in output
+
+
 def _row(**overrides):
     base = {
         "id": "key-1",
@@ -168,9 +228,10 @@ class TestResolveMcpPrincipal:
         with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=broken):
             assert resolve_mcp_principal("jdg_mcp_whatever") is None
 
-    def test_database_failure_is_logged_with_traceback(self):
-        # Deferred finding: a programming error must be distinguishable from an
-        # outage, so the failure is logged via logger.exception (traceback included).
+    def test_database_failure_is_logged_by_type_and_message_without_traceback(self):
+        # A failure must stay distinguishable from a revoked key, but must not
+        # use logger.exception: the traceback would carry the plaintext key
+        # (see TestResolutionFailureDoesNotLogTheKey).
         broken = MagicMock()
         broken.table.side_effect = RuntimeError("supabase down")
         with (
@@ -178,7 +239,11 @@ class TestResolveMcpPrincipal:
             patch("app.core.auth_mcp.logger") as log,
         ):
             assert resolve_mcp_principal("jdg_mcp_whatever") is None
-        log.exception.assert_called_once()
+        log.exception.assert_not_called()
+        log.error.assert_called_once()
+        message = log.error.call_args.args[0]
+        assert "RuntimeError" in message
+        assert "supabase down" in message
 
 
 @pytest.mark.unit
