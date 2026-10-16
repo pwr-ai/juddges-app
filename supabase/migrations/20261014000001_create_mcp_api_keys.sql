@@ -29,6 +29,13 @@ COMMENT ON TABLE public.mcp_api_keys IS
 COMMENT ON COLUMN public.mcp_api_keys.token_hash IS
     'sha256 hex of the full plaintext key. The plaintext is never stored.';
 
+COMMENT ON COLUMN public.mcp_api_keys.prefix IS
+    'First 16 characters of the plaintext key: the 8-character jdg_mcp_ '
+    'marker plus 8 characters of the secret itself. This is a deliberate '
+    'partial disclosure of the secret, kept so the UI can show a '
+    'recognisable stub. Treat it as sensitive: do not log it or widen who '
+    'can read it.';
+
 ALTER TABLE public.mcp_api_keys ENABLE ROW LEVEL SECURITY;
 
 -- RLS with zero policies denies anon and authenticated. The explicit REVOKE
