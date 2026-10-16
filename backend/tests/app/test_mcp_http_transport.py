@@ -73,6 +73,24 @@ def _no_real_key_writes():
         yield
 
 
+@pytest.fixture(autouse=True)
+def _fresh_rate_limit_state():
+    """The MCP limiters are process-wide; without fresh storage per test, the
+    rejected-key budget for the shared test client IP would fill up across
+    tests and start answering 429 to tests about something else."""
+    from limits.storage import MemoryStorage
+    from limits.strategies import MovingWindowRateLimiter
+
+    with (
+        patch("app.mcp_rate_limit._limiter", MovingWindowRateLimiter(MemoryStorage())),
+        patch(
+            "app.rate_limiter._fallback_limiter",
+            MovingWindowRateLimiter(MemoryStorage()),
+        ),
+    ):
+        yield
+
+
 def _app_with(mount: McpMount) -> FastAPI:
     """A FastAPI app that mounts `mount` and owns its lifespan, as production does."""
 
@@ -431,3 +449,169 @@ def _asgi_client(asgi_app):
     return httpx.AsyncClient(
         transport=httpx.ASGITransport(app=asgi_app), base_url="http://test"
     )
+
+
+BEARER = {"Authorization": "Bearer jdg_mcp_good"}
+
+
+@pytest.mark.unit
+class TestMcpRateLimiting:
+    """The per-key budget and the rejected-key budget per IP."""
+
+    async def _call(self, *, headers=BEARER, principal=None, resolves=True, n=1):
+        resolved = principal if resolves else None
+        responses = []
+        with (
+            patch(
+                "juddges_mcp.http.resolve_mcp_principal", return_value=resolved
+            ) as resolve,
+            patch("juddges_mcp.http.touch_key") as touch,
+        ):
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                for _ in range(n):
+                    responses.append(await c.post("/", headers=headers))
+            await _drain_key_use_tasks()
+        return responses, resolve, touch
+
+    def test_over_budget_key_is_429(self, client):
+        from app.mcp_rate_limit import McpRateLimitExceeded
+
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", return_value=principal),
+            patch(
+                "juddges_mcp.http.enforce_mcp_rate_limit",
+                side_effect=McpRateLimitExceeded("limit: 120/hour", retry_after=3600),
+            ),
+        ):
+            response = client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "method": "ping", "id": 1},
+                headers=BEARER,
+            )
+        assert response.status_code == 429
+        assert "120/hour" in response.text
+        assert response.headers["Retry-After"] == "3600"
+        assert int(response.headers["Retry-After"]) > 0
+
+    async def test_real_per_key_budget_throttles_and_sets_retry_after(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("MCP_RATE_LIMIT", "2/minute")
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        responses, _, _ = await self._call(principal=principal, n=3)
+        assert [r.status_code for r in responses] == [200, 200, 429]
+        assert responses[2].headers["Retry-After"] == "60"
+
+    async def test_throttled_key_does_not_reach_the_key_use_write(self, monkeypatch):
+        monkeypatch.setenv("MCP_RATE_LIMIT", "1/minute")
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        responses, _, touch = await self._call(principal=principal, n=3)
+        assert [r.status_code for r in responses] == [200, 429, 429]
+        # Only the one served request recorded a use.
+        touch.assert_called_once_with("key-1")
+
+    async def test_throttled_key_never_calls_record_key_use(self):
+        from app.mcp_rate_limit import McpRateLimitExceeded
+
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", return_value=principal),
+            patch(
+                "juddges_mcp.http.enforce_mcp_rate_limit",
+                side_effect=McpRateLimitExceeded("limit", retry_after=60),
+            ),
+            patch("juddges_mcp.http._record_key_use") as record,
+        ):
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                response = await c.post("/", headers=BEARER)
+        assert response.status_code == 429
+        record.assert_not_called()
+
+    async def test_exhausted_ip_is_429_and_never_resolves_the_key(self):
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        with (
+            patch("juddges_mcp.http.mcp_auth_failures_exhausted", return_value=True),
+            patch(
+                "juddges_mcp.http.resolve_mcp_principal", return_value=principal
+            ) as resolve,
+        ):
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                response = await c.post("/", headers=BEARER)
+        assert response.status_code == 429
+        assert int(response.headers["Retry-After"]) > 0
+        resolve.assert_not_called()
+
+    async def test_real_rejected_keys_exhaust_the_ip_and_spare_the_database(
+        self, monkeypatch
+    ):
+        """No mocked budget: the third request is refused by the real counter,
+        and resolution (the database) ran only for the two that were charged."""
+        monkeypatch.setenv("MCP_IP_RATE_LIMIT", "2/minute")
+        responses, resolve, _ = await self._call(resolves=False, n=4)
+        assert [r.status_code for r in responses] == [401, 401, 429, 429]
+        assert resolve.call_count == 2
+        assert responses[2].headers["Retry-After"] == "60"
+
+    async def test_rejected_key_charges_the_failure_bucket_once(self):
+        with patch("juddges_mcp.http.record_mcp_auth_failure") as record:
+            responses, _, _ = await self._call(resolves=False)
+        assert responses[0].status_code == 401
+        record.assert_called_once()
+        assert isinstance(record.call_args[0][0], str)
+
+    async def test_valid_key_never_charges_the_failure_bucket(self):
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        with patch("juddges_mcp.http.record_mcp_auth_failure") as record:
+            responses, _, _ = await self._call(principal=principal, n=3)
+        assert [r.status_code for r in responses] == [200, 200, 200]
+        record.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "headers",
+        [{}, {"Authorization": "Basic dXNlcjpwYXNz"}, {"Authorization": "Bearer nope"}],
+        ids=["no-credential", "non-bearer", "wrong-prefix"],
+    )
+    async def test_credentials_that_cost_nothing_to_reject_are_not_charged(
+        self, headers
+    ):
+        with patch("juddges_mcp.http.record_mcp_auth_failure") as record:
+            responses, resolve, _ = await self._call(headers=headers, resolves=False)
+        assert responses[0].status_code == 401
+        record.assert_not_called()
+        resolve.assert_not_called()
+
+    async def test_valid_key_is_served_even_when_the_ip_has_spent_nothing_else(
+        self, monkeypatch
+    ):
+        """Legitimate traffic is not throttled by the IP budget however many
+        requests it makes."""
+        monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
+        principal = MagicMock(id="user-123", mcp_key_id="key-1")
+        responses, _, _ = await self._call(principal=principal, n=5)
+        assert [r.status_code for r in responses] == [200] * 5
+
+    async def test_principal_without_key_id_is_served_uncharged(self):
+        principal = SimpleNamespace(id="user-123")
+        with patch("juddges_mcp.http.enforce_mcp_rate_limit") as enforce:
+            responses, _, _ = await self._call(principal=principal)
+        assert responses[0].status_code == 200
+        enforce.assert_not_called()
+
+    def test_repeated_429s_through_the_real_app_stay_decodable(self, monkeypatch):
+        """429s are built per request, like the 401: GZip edits a shared
+        response's headers in place."""
+        monkeypatch.setenv("MCP_IP_RATE_LIMIT", "1/minute")
+        http_client = TestClient(real_app)
+        with patch("juddges_mcp.http.resolve_mcp_principal", return_value=None):
+            statuses = []
+            for _ in range(4):
+                response = http_client.post(
+                    "/mcp",
+                    json=INITIALIZE,
+                    headers={**BEARER, "Accept-Encoding": "gzip"},
+                )
+                statuses.append(response.status_code)
+                body = response.json()
+                assert "error" in body
+        assert statuses == [401, 429, 429, 429]

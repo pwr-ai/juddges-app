@@ -10,10 +10,19 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from loguru import logger
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.auth_mcp import MCP_KEY_PREFIX, resolve_mcp_principal, touch_key
+from app.mcp_rate_limit import (
+    McpRateLimitExceeded,
+    enforce_mcp_rate_limit,
+    mcp_auth_failure_retry_after,
+    mcp_auth_failures_exhausted,
+    record_mcp_auth_failure,
+)
+from app.rate_limiter import get_client_ip
 from juddges_mcp.principal import reset_principal, set_principal
 from juddges_mcp.server import build_server
 
@@ -52,6 +61,15 @@ def _unauthorized() -> JSONResponse:
     )
 
 
+def _too_many_requests(message: str, retry_after: int) -> JSONResponse:
+    # Per request for the same reason as _unauthorized: never share a response.
+    return JSONResponse(
+        {"error": message},
+        status_code=429,
+        headers={"Retry-After": str(max(1, retry_after))},
+    )
+
+
 def _unavailable() -> JSONResponse:
     return JSONResponse({"error": "MCP server is not running"}, status_code=503)
 
@@ -81,20 +99,45 @@ class McpAuthMiddleware:
             return
 
         credential = _credential(scope)
+        # Not charged to the failure bucket: this path costs nothing to serve,
+        # so counting it would only let an attacker lock their own IP out.
         if not credential or not credential.startswith(MCP_KEY_PREFIX):
             await _unauthorized()(scope, receive, send)
             return
 
+        client_ip = get_client_ip(Request(scope))
+
+        # Before resolution, so an IP that has spent its rejected-key budget
+        # costs no database round trip.
+        if mcp_auth_failures_exhausted(client_ip):
+            logger.warning("MCP auth-failure budget exhausted for a client IP")
+            await _too_many_requests(
+                "Too many rejected MCP keys from this address. Try again later.",
+                mcp_auth_failure_retry_after(),
+            )(scope, receive, send)
+            return
+
         principal = resolve_mcp_principal(credential)
         if principal is None:
+            record_mcp_auth_failure(client_ip)
             logger.warning("Rejected an unresolvable MCP key")
             await _unauthorized()(scope, receive, send)
             return
 
         # Guarded: a principal without a key id must never turn a working
-        # request into a 500 over a cosmetic timestamp.
+        # request into a 500. Such a principal has no per-key budget to charge
+        # and is served uncharged rather than rejected: failing closed would
+        # turn a missing cosmetic attribute into an outage, and resolution
+        # always sets a key id for a real key.
         key_id = getattr(principal, "mcp_key_id", None)
         if key_id:
+            # Before _record_key_use: a throttled caller must not also incur
+            # the last_used_at write; shedding load is the point.
+            try:
+                enforce_mcp_rate_limit(key_id)
+            except McpRateLimitExceeded as e:
+                await _too_many_requests(str(e), e.retry_after)(scope, receive, send)
+                return
             _record_key_use(key_id)
 
         # try/finally so a failing tool cannot leave this caller's principal
