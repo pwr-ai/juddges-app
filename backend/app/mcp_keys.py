@@ -1,8 +1,10 @@
 """Management endpoints for long-lived MCP API keys.
 
-Every route here depends on `get_current_user` — a Supabase JWT — and never
-on `get_current_user_or_mcp_key`. An MCP key cannot mint or revoke another
-MCP key; that is the single mitigation that bounds a leaked key.
+Every route here depends on `get_current_user` — a Supabase JWT. An MCP key
+authenticates only in the ASGI middleware in front of the mounted /mcp app, so
+it can reach no route here: it cannot mint or revoke another MCP key. That is
+the single mitigation that bounds a leaked key, and it is asserted
+structurally in tests/app/test_mcp_keys_router.py.
 """
 
 from datetime import UTC, datetime

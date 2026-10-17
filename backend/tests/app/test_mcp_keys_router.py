@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.core.auth_jwt import get_current_user
 from app.core.auth_mcp import MCP_KEY_PREFIX
-from app.mcp_keys import router
+from app.mcp_keys import create_key, router
 
 KEY_ID = "11111111-1111-4111-8111-111111111111"
 
@@ -191,27 +191,87 @@ class TestRevokeKey:
         assert audit.call_args.kwargs["action_type"] == "mcp_key_revoked"
 
 
+def _reachable_calls(dependant):
+    """Every dependency callable reachable from a route, recursively."""
+    found = []
+    for sub in dependant.dependencies:
+        found.append(sub.call)
+        found.extend(_reachable_calls(sub))
+    return found
+
+
+def _walk_routes(app_or_router):
+    """Return (dependency callables, endpoints) for every route beneath this.
+
+    fastapi >= 0.137 does not flatten `include_router`: it leaves an
+    `_IncludedRouter` wrapper in `routes` that carries the included APIRouter
+    and whatever dependencies the include added, and that wrapper has no
+    `dependant` of its own. Descending through `include_context` is therefore
+    the only way to see a domain router at all.
+    """
+    dependencies = []
+    endpoints = []
+    for route in app_or_router.routes:
+        context = getattr(route, "include_context", None)
+        if context is not None:
+            for dependency in getattr(context, "dependencies", None) or []:
+                dependencies.append(dependency.dependency)
+            sub_dependencies, sub_endpoints = _walk_routes(context.included_router)
+            dependencies.extend(sub_dependencies)
+            endpoints.extend(sub_endpoints)
+            continue
+        dependant = getattr(route, "dependant", None)
+        if dependant is not None:
+            dependencies.extend(_reachable_calls(dependant))
+        endpoint = getattr(route, "endpoint", None)
+        if endpoint is not None:
+            endpoints.append(endpoint)
+    return dependencies, endpoints
+
+
+def _key_resolving(callables):
+    """Those defined in app.core.auth_mcp, i.e. that could resolve a key.
+
+    Matched by module rather than by name so a newly added dependency is
+    caught too; the module exposes no dependency at all today.
+    """
+    return [
+        getattr(c, "__qualname__", repr(c))
+        for c in callables
+        if getattr(c, "__module__", None) == "app.core.auth_mcp"
+    ]
+
+
 @pytest.mark.unit
 class TestKeyCannotManageKeys:
     def test_router_depends_on_jwt_only(self):
         """An MCP key must not mint or revoke keys.
 
         Asserted structurally: every route on this router depends on
-        get_current_user, never get_current_user_or_mcp_key.
+        get_current_user, and nothing it reaches resolves an MCP key.
         """
-        from app.core.auth_mcp import get_current_user_or_mcp_key
-
-        def calls(dependant):
-            """Every dependency callable reachable from a route, recursively."""
-            found = []
-            for sub in dependant.dependencies:
-                found.append(sub.call)
-                found.extend(calls(sub))
-            return found
-
         routes = [r for r in router.routes if hasattr(r, "dependant")]
         assert len(routes) == 3
         for route in routes:
-            reachable = calls(route.dependant)
+            reachable = _reachable_calls(route.dependant)
             assert get_current_user in reachable, route.path
-            assert get_current_user_or_mcp_key not in reachable, route.path
+            assert not _key_resolving(reachable), route.path
+
+    def test_no_http_route_authenticates_an_mcp_key(self):
+        """No FastAPI route anywhere may accept a key as a credential.
+
+        app.core.auth_mcp deliberately exposes no dependency: a key
+        authenticates in one place only, the ASGI middleware in front of the
+        mounted /mcp app. Checked app-wide rather than on this router alone,
+        because a key accepted on any route widens what a leaked one reaches.
+        """
+        from app.server import app
+
+        dependencies, endpoints = _walk_routes(app)
+        assert not _key_resolving(dependencies), _key_resolving(dependencies)
+        # Guards the walk, not the app: without this the assertion above
+        # passes on an empty list. app.routes holds the domain routers as
+        # unflattened wrappers, so a walk that does not descend into them
+        # inspects only the LangServe chains and sees nothing.
+        assert create_key in endpoints
+        assert get_current_user in dependencies

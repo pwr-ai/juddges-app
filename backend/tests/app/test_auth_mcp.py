@@ -1,16 +1,14 @@
-"""Unit tests for app.core.auth_mcp: key material, key resolution, and the dual-credential dependency."""
+"""Unit tests for app.core.auth_mcp: key material, key resolution, and use recording."""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import BackgroundTasks, HTTPException
 
 from app.core.auth_mcp import (
     MCP_KEY_PREFIX,
     THROTTLE_SECONDS,
     generate_mcp_key,
-    get_current_user_or_mcp_key,
     hash_mcp_key,
     key_prefix,
     resolve_mcp_principal,
@@ -301,68 +299,3 @@ class TestTouchKey:
         broken.table.side_effect = RuntimeError("supabase down")
         with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=broken):
             touch_key("key-1")
-
-
-def _request_with(authorization: str | None):
-    request = MagicMock()
-    request.headers = {} if authorization is None else {"Authorization": authorization}
-    return request
-
-
-@pytest.mark.unit
-class TestDualCredentialDependency:
-    async def test_mcp_key_takes_the_key_path(self):
-        principal = MagicMock(id="user-123", mcp_key_id="key-1")
-        tasks = BackgroundTasks()
-        with patch(
-            "app.core.auth_mcp.resolve_mcp_principal", return_value=principal
-        ) as resolve:
-            user = await get_current_user_or_mcp_key(
-                _request_with("Bearer jdg_mcp_abc"), tasks
-            )
-        resolve.assert_called_once_with("jdg_mcp_abc")
-        assert user is principal
-        assert len(tasks.tasks) == 1  # the throttled touch_key
-        assert tasks.tasks[0].func is touch_key
-        assert tasks.tasks[0].args == ("key-1",)
-
-    async def test_invalid_mcp_key_is_rejected_with_401(self):
-        with (
-            patch("app.core.auth_mcp.resolve_mcp_principal", return_value=None),
-            pytest.raises(HTTPException) as exc,
-        ):
-            await get_current_user_or_mcp_key(
-                _request_with("Bearer jdg_mcp_revoked"), BackgroundTasks()
-            )
-        assert exc.value.status_code == 401
-
-    async def test_jwt_falls_through_to_the_existing_path(self):
-        jwt_user = MagicMock(id="user-456")
-        with patch(
-            "app.core.auth_mcp.get_current_user", return_value=jwt_user
-        ) as jwt_path:
-            user = await get_current_user_or_mcp_key(
-                _request_with("Bearer eyJhbGciOi.header.sig"), BackgroundTasks()
-            )
-        jwt_path.assert_awaited_once()
-        assert user is jwt_user
-
-    async def test_missing_header_is_rejected_with_401(self):
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user_or_mcp_key(_request_with(None), BackgroundTasks())
-        assert exc.value.status_code == 401
-
-    async def test_non_bearer_scheme_is_rejected_with_401(self):
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user_or_mcp_key(
-                _request_with("Basic dXNlcjpwYXNz"), BackgroundTasks()
-            )
-        assert exc.value.status_code == 401
-
-    async def test_bearer_with_no_value_is_rejected_with_401(self):
-        # Review Focus 1: must not IndexError on an empty credential.
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user_or_mcp_key(
-                _request_with("Bearer"), BackgroundTasks()
-            )
-        assert exc.value.status_code == 401

@@ -1,4 +1,4 @@
-"""Long-lived MCP API keys: key material helpers, key resolution, and the dual-credential dependency.
+"""Long-lived MCP API keys: key material helpers and key resolution.
 
 A key is a bearer credential with no expiry by default, so only its sha256
 hash is ever stored (see
@@ -8,21 +8,21 @@ is returned once, at creation, and is not recoverable afterwards.
 This module is deliberately separate from app/auth.py, which verifies the
 single shared BACKEND_API_KEY for the frontend-to-backend hop and carries no
 user identity.
+
+It deliberately exposes no FastAPI dependency. A key authenticates one place
+only: the ASGI middleware in front of the mounted /mcp app
+(juddges_mcp.http.McpAuthMiddleware). Keeping it off the HTTP routers means a
+leaked key reaches the MCP tools and nothing else -- above all not /mcp/keys,
+so it can neither mint nor revoke a key.
 """
 
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from fastapi import BackgroundTasks, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials
 from loguru import logger
 
-from app.core.auth_jwt import (
-    AuthenticatedUser,
-    get_admin_supabase_client,
-    get_current_user,
-)
+from app.core.auth_jwt import AuthenticatedUser, get_admin_supabase_client
 
 MCP_KEY_PREFIX = "jdg_mcp_"
 THROTTLE_SECONDS = 300
@@ -143,46 +143,3 @@ def touch_key(key_id: str) -> None:
         logger.warning(
             f"Could not record MCP key use for {key_id}: {type(e).__name__}: {e}"
         )
-
-
-def _unauthorized() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or missing credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-
-def _bearer_value(request: Request) -> str | None:
-    """Return the Bearer credential, or None when absent, non-Bearer, or empty."""
-    header = request.headers.get("Authorization") or ""
-    scheme, _, credential = header.partition(" ")
-    if scheme.lower() != "bearer":
-        return None
-    return credential.strip() or None
-
-
-async def get_current_user_or_mcp_key(
-    request: Request,
-    background_tasks: BackgroundTasks,
-) -> AuthenticatedUser:
-    """Authenticate either a Supabase JWT or a long-lived MCP key.
-
-    A Bearer value carrying the MCP prefix takes the key path; anything else
-    falls through to the existing JWT dependency. Both yield the same
-    AuthenticatedUser class, so no endpoint learns a second identity model.
-    """
-    credential = _bearer_value(request)
-    if credential is None:
-        raise _unauthorized()
-
-    if credential.startswith(MCP_KEY_PREFIX):
-        principal = resolve_mcp_principal(credential)
-        if principal is None:
-            raise _unauthorized()
-        background_tasks.add_task(touch_key, principal.mcp_key_id)
-        return principal
-
-    return await get_current_user(
-        HTTPAuthorizationCredentials(scheme="Bearer", credentials=credential)
-    )

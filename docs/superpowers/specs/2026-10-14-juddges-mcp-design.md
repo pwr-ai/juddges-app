@@ -2,6 +2,14 @@
 
 > **Status:** proposed · **Date:** 2026-10-14 · **Owner:** mcp-access
 
+> **Amendment, 2026-10-18.** The `get_current_user_or_mcp_key` dependency
+> described below was built and then removed: no endpoint ever used it. An
+> MCP key now authenticates in exactly one place, the ASGI middleware in
+> front of the mounted `/mcp` app, so a leaked key reaches the MCP tools
+> and nothing else. Acceptance criterion 3 and the phase-0 unit test that
+> covered the dependency are void; criterion 5 is now structural, asserted
+> app-wide in `backend/tests/app/test_mcp_keys_router.py`.
+
 Covers **phase 0 (long-lived MCP keys)** and **phase 1 (server + three
 read-only tools)**. Phases 2 (`compare_across_jurisdictions`) and 3
 (collections + export writes) are named here for context and get their own
