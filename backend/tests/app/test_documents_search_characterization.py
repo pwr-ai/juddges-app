@@ -60,7 +60,13 @@ EFFECTIVE_FILTERS = {"jurisdictions": ["PL"], "court_names": None}
 RAW_RESULTS = [{"id": "raw-1"}]
 RERANKED_RESULTS = [{"id": "reranked-1"}, {"id": "reranked-2"}]
 FALLBACK_RESULTS = [{"id": "fallback-1"}]
-CHUNK = {"document_id": "doc-1", "chunk_id": 0, "chunk_text": "text"}
+CHUNK = {
+    "document_id": "doc-1",
+    "chunk_id": 0,
+    "chunk_text": "text",
+    # Read by the telemetry preview; a chunk dict has no "score" key.
+    "combined_score": 0.75,
+}
 TIMING = {"search_ms": 12.34, "marker": "timing-stub"}
 SUPABASE = object()
 
@@ -381,10 +387,7 @@ async def test_happy_path_helper_order(h: Harness) -> None:
         "_get_estimated_total",
         "_build_search_timing_breakdown",
         "_build_search_pagination",
-        # Called a second time only because of the telemetry bug pinned in
-        # test_telemetry_is_recorded_only_when_there_are_no_chunks: the telemetry
-        # block calls this to compute `language=` and then raises AttributeError on
-        # dict chunks (swallowed). Fixing that bug changes this list; update both.
+        # Second call: the telemetry block computes `language=` of its own.
         "_detect_search_language",
     ]
     # cache read bookends the pipeline, cache write follows it
@@ -725,18 +728,30 @@ async def test_legacy_route_propagates_pipeline_errors(h: Harness) -> None:
 
 # Telemetry ──────────────────────────────────────────────────────────────────
 @pytest.mark.unit
-async def test_telemetry_is_recorded_only_when_there_are_no_chunks(
-    h: Harness, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """CHARACTERIZATION (looks like a bug): ``_build_search_result_payload``
-    returns chunks as plain ``dict`` s, but the telemetry block reads
-    ``c.document_id`` off them. That raises ``AttributeError`` for any non-empty
-    result, the surrounding ``except Exception`` swallows it, and
-    ``record_search`` is never invoked. It only fires when there are zero chunks.
+async def test_telemetry_is_recorded_for_a_non_empty_result(h: Harness) -> None:
+    """REGRESSION: a search with hits must emit a trace.
+
+    The telemetry block read ``c.document_id`` off chunks that are plain
+    ``dict`` s. The ``AttributeError`` was swallowed by the surrounding
+    ``except Exception``, so ``record_search`` fired only for a zero-chunk
+    result -- the case nobody looks at. Asserting the preview's contents, not
+    merely that the call happened, is what makes this catch a reversion: a
+    preview built the old way never reaches ``record_search`` at all.
     """
     await search_documents(make_request())
-    assert not h.called("record_search")
+    assert h.called("record_search")
+    ((_, kw),) = h.args["record_search"]
+    assert kw["hits"] == 1
+    assert kw["chunks_preview"] == [{"document_id": "doc-1", "score": 0.75}]
+    assert kw["query_type"] == "keyword"
+    assert kw["thinking_mode"] is False
 
+
+@pytest.mark.unit
+async def test_telemetry_is_recorded_for_an_empty_result(
+    h: Harness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A zero-hit search is the one telemetry most wants: it is a miss."""
     monkeypatch.setattr(
         f"{SEARCH_MODULE}._build_search_result_payload",
         lambda *a, **kw: ([], []),
@@ -745,8 +760,25 @@ async def test_telemetry_is_recorded_only_when_there_are_no_chunks(
     assert h.called("record_search")
     ((_, kw),) = h.args["record_search"]
     assert kw["hits"] == 0
-    assert kw["query_type"] == "keyword"
-    assert kw["thinking_mode"] is False
+    assert kw["chunks_preview"] == []
+
+
+@pytest.mark.unit
+async def test_telemetry_failure_never_breaks_the_search(
+    h: Harness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The swallowing except stays: a telemetry outage is not a search outage.
+
+    It is what hid the bug above, so it is pinned deliberately rather than
+    removed -- the fix is for the block not to raise, not for a raise to
+    propagate.
+    """
+    monkeypatch.setattr(
+        "app.search_telemetry.record_search",
+        lambda **kw: (_ for _ in ()).throw(RuntimeError("langfuse down")),
+    )
+    response = await search_documents(make_request())
+    assert response.total_chunks == 1
 
 
 @pytest.mark.unit

@@ -994,7 +994,16 @@ async def run_document_search(request: SearchChunksRequest) -> SearchChunksRespo
                 ),
                 hits=len(chunks),
                 chunks_preview=[
-                    {"document_id": c.document_id, "score": getattr(c, "score", None)}
+                    # Subscript, not attribute access: chunks are the plain
+                    # dicts _build_search_result_payload builds. Reading
+                    # c.document_id raised AttributeError, the except below
+                    # swallowed it, and so every search with at least one hit
+                    # emitted no trace at all. The dicts carry no "score" key
+                    # either -- combined_score is what the ranking orders by.
+                    {
+                        "document_id": c["document_id"],
+                        "score": c.get("combined_score"),
+                    }
                     for c in chunks[:5]
                 ],
                 timing_breakdown=timing_breakdown.model_dump()
