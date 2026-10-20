@@ -137,3 +137,34 @@ def hit_with_fallback(
             "Rate limit storage unreachable - falling back to in-memory limiter"
         )
         return _fallback_limiter.hit(item, *identifiers)
+
+
+def test_with_fallback(
+    limiter_instance: MovingWindowRateLimiter,
+    item: RateLimitItem,
+    *identifiers: str,
+) -> bool:
+    """Check ``item`` without consuming budget, with ``hit_with_fallback``'s fallback.
+
+    Returns True while the bucket still has room. A non-consuming check is
+    needed where the caller must know whether an identifier is already over
+    budget *before* doing expensive work, and only charges the bucket
+    afterwards if that work fails: the MCP transport asks whether an IP has
+    spent its rejected-key budget before spending a database round trip on
+    key resolution.
+
+    On a storage error this degrades to the same process-local limiter as
+    ``hit_with_fallback``, so a Redis outage neither fails open nor closed.
+    """
+    try:
+        return limiter_instance.test(item, *identifiers)
+    except Exception:
+        logger.warning(
+            "Rate limit storage unreachable - falling back to in-memory limiter"
+        )
+        return _fallback_limiter.test(item, *identifiers)
+
+
+# The name matches pytest's ``test_*`` pattern; without this, importing it into
+# a test module would make pytest collect it as a test.
+test_with_fallback.__test__ = False  # type: ignore[attr-defined]

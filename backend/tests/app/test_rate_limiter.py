@@ -249,3 +249,43 @@ class TestIsTrustedProxy:
         with patch.dict(os.environ, env, clear=True):
             result = rl_module._is_trusted_proxy()
         assert result is False
+
+
+@pytest.mark.unit
+class TestTestWithFallback:
+    """test_with_fallback must check without consuming, and degrade like
+    hit_with_fallback when storage is down."""
+
+    def _limiter(self):
+        from limits.storage import MemoryStorage
+        from limits.strategies import MovingWindowRateLimiter
+
+        return MovingWindowRateLimiter(MemoryStorage())
+
+    def test_checking_does_not_consume_budget(self):
+        from limits import parse
+
+        import app.rate_limiter as rl_module
+
+        limiter, item = self._limiter(), parse("2/minute")
+        for _ in range(5):
+            assert rl_module.test_with_fallback(limiter, item, "a") is True
+        assert limiter.hit(item, "a") is True
+        assert limiter.hit(item, "a") is True
+        assert rl_module.test_with_fallback(limiter, item, "a") is False
+
+    def test_storage_error_falls_back_and_still_enforces(self):
+        from limits import parse
+
+        import app.rate_limiter as rl_module
+
+        limiter, item = self._limiter(), parse("2/minute")
+        fallback = self._limiter()
+        with (
+            patch.object(limiter, "test", side_effect=ConnectionError("redis")),
+            patch.object(rl_module, "_fallback_limiter", fallback),
+        ):
+            assert rl_module.test_with_fallback(limiter, item, "b") is True
+            fallback.hit(item, "b")
+            fallback.hit(item, "b")
+            assert rl_module.test_with_fallback(limiter, item, "b") is False

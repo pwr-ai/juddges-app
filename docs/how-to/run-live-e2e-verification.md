@@ -12,7 +12,7 @@ production.
 
 ## What it checks
 
-22 checks across 8 features, all against the live backend:
+23 checks across 9 features, all against the live backend:
 
 | Feature | Checks |
 |---|---|
@@ -24,6 +24,7 @@ production.
 | `meili` | Meilisearch keyword and hybrid (`semantic_ratio=0.5`) search |
 | `validation` | a >2000-char query is rejected with `400` |
 | `auth` | a request missing `X-API-Key` is blocked (`401/403`) |
+| `mcp` | `search_judgments` over `POST /mcp` for `zachowek` returns hits that each carry an `id` and `case_number` and a snippet of at most 600 characters. Skipped unless `JUDDGES_MCP_KEY` is set (see Prerequisites) |
 
 The 5 `search` queries come from the same fixture file that powers
 `scripts/search_benchmark.py` and the pytest integration suite, so the three
@@ -35,6 +36,11 @@ stay in sync.
   Supabase + Meilisearch + TEI embeddings.
 - `BACKEND_API_KEY` — every `/documents/*` and `/api/search/*` endpoint is
   auth-gated. The repo-root `.env` is loaded automatically, or pass `--key`.
+- Optional: `JUDDGES_MCP_KEY` — an MCP key generated in Settings > MCP access
+  (see [Connect an AI client to the Juddges MCP server](mcp-server.md)). The
+  `mcp` check authenticates to `/mcp` with it rather than with
+  `BACKEND_API_KEY`, and is reported as skipped when it is absent. The check
+  counts against that key's `MCP_RATE_LIMIT` budget and is otherwise read-only.
 
 ## Run it
 

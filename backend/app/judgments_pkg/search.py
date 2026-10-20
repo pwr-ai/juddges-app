@@ -14,6 +14,7 @@ from app.config import settings
 from app.models import (
     PaginationMetadata,
     SearchChunksRequest,
+    SearchChunksResponse,
 )
 from app.utils import (
     validate_string_length,
@@ -741,3 +742,317 @@ def _build_search_pagination(
         has_more=has_more,
         next_offset=next_offset,
     )
+
+
+async def run_document_search(request: SearchChunksRequest) -> SearchChunksResponse:
+    """Run the hybrid document search pipeline.
+
+    Extracted from the `POST /documents/search` route handler so the MCP
+    tools call the same code path as HTTP. The route is a thin delegate;
+    keep it that way - logic added here is available to both transports,
+    logic added in the route is not.
+
+    Facets-only fast path: when ``request.facets`` is provided and the query
+    is blank, the pgvector pipeline is skipped and a thin Meilisearch
+    ``/search`` call returns ``facetDistribution`` / ``facetStats``.
+    """
+    # ── Facets-only fast path ────────────────────────────────────────────
+    # The tag-array autocomplete sends ``facets=[...]`` with an empty query
+    # and ``limit_docs=0`` to fetch per-value counts. Bypass query validation
+    # and the pgvector pipeline only when the request is *purely* asking for
+    # facets — i.e. no real query text and no docs requested. A future caller
+    # that wants both relevance-ranked docs AND facets must run the normal
+    # pipeline so chunks aren't silently dropped.
+    if request.facets and not (request.query or "").strip():
+        from app.services.search import MeiliSearchService, SearchServiceError
+
+        meili = MeiliSearchService.from_env()
+        try:
+            meili_response = await meili.search(
+                query=request.query or "",
+                limit=max(request.limit_docs, 0)
+                if request.limit_docs is not None
+                else 0,
+                offset=request.offset or 0,
+                facets=request.facets,
+                facet_query=request.facet_query,
+            )
+        except SearchServiceError as exc:
+            logger.warning(
+                "facets_proxy_meili_failure — returning empty facets: {}", str(exc)
+            )
+            return SearchChunksResponse(
+                chunks=[],
+                total_chunks=0,
+                unique_documents=0,
+                facetDistribution=None,
+                facetStats=None,
+            )
+
+        return SearchChunksResponse(
+            chunks=[],
+            total_chunks=0,
+            unique_documents=0,
+            query_time_ms=meili_response.get("processingTimeMs"),
+            facetDistribution=meili_response.get("facetDistribution"),
+            facetStats=meili_response.get("facetStats"),
+        )
+
+    start_time = time.perf_counter()
+    query = request.query
+    _validate_search_query(query)
+    limit = request.limit_docs or 20
+    offset = request.offset or 0
+
+    # Full-response Redis cache (rabbit mode only). A hit here skips embedding,
+    # RPC, rerank, payload build, estimated_total — the entire pipeline. Any
+    # cache failure is swallowed so search continues to work without Redis.
+    if request.mode != "thinking":
+        try:
+            from app.search_cache import get_cached_search
+
+            # user_id=None: RLS is currently public-read so the cache key
+            # stays request-only. Pass a stable user/role identifier here
+            # once any non-public field or per-user filter ships.
+            cached_response = await get_cached_search(request, user_id=None)
+            if cached_response is not None:
+                logger.debug(
+                    "search_cache hit: query='{}...' offset={} limit={}",
+                    query[:60],
+                    offset,
+                    limit,
+                )
+                return cached_response
+        except Exception as cache_err:
+            logger.warning("search_cache lookup failed (non-fatal): {}", cache_err)
+
+    try:
+        import sentry_sdk
+
+        sentry_sdk.add_breadcrumb(
+            category="search",
+            message="documents.search called",
+            data={"query_len": len(query), "limit": limit, "mode": request.mode},
+            level="info",
+        )
+    except Exception as e:
+        logger.warning(f"Failed to record telemetry: {e}")
+
+    logger.info(
+        f"Search request: query='{query[:100]}...', limit={limit}, "
+        f"languages={request.languages}, "
+        f"jurisdictions={request.jurisdictions}, case_types={request.case_types}"
+    )
+
+    try:
+        (
+            semantic_query,
+            keyword_query,
+            enhanced_query_text,
+            inferred_filters,
+            enhancement_time_ms,
+            query_analysis_source,
+            effective_filters,
+        ) = await _prepare_search_queries(request, query)
+
+        query_type, effective_alpha, alpha_was_routed = _route_effective_alpha(
+            query, request.alpha
+        )
+        (
+            query_embedding,
+            embedding_time_ms,
+            vector_fallback,
+        ) = await _generate_search_embedding(semantic_query, effective_alpha)
+
+        search_language = _detect_search_language(
+            keyword_query, request.languages, effective_filters["jurisdictions"]
+        )
+        ef_search = 60 if offset > 0 else 100
+        rpc_params = _build_search_rpc_params(
+            query_embedding=query_embedding,
+            keyword_query=keyword_query,
+            search_language=search_language,
+            effective_filters=effective_filters,
+            effective_alpha=effective_alpha,
+            limit=limit,
+            offset=offset,
+            query_type=query_type,
+            ef_search=ef_search,
+        )
+        from app.services.search_cache import get_cached_results, set_cached_results
+
+        # SECURITY: cache key omits user identity. Only safe while every
+        # field returned here is public-read under RLS. See the SECURITY
+        # CONTRACT in app/services/search_cache.py before adding any
+        # per-user signal to this code path.
+        cached_results = await get_cached_results(
+            query=keyword_query,
+            filters=effective_filters,
+            alpha=effective_alpha,
+            limit=limit,
+            offset=offset,
+        )
+        if cached_results is not None:
+            results = cached_results
+            search_time_ms = 0.0
+        else:
+            supabase = await _get_search_client()
+            results, search_time_ms = await _run_hybrid_search(supabase, rpc_params)
+        fallback_time_ms = 0.0
+        fallback_used = False
+        fallback_stage: str | None = None
+
+        if request.mode == "thinking" and not results:
+            (
+                results,
+                fallback_time_ms,
+                fallback_used,
+                fallback_stage,
+                fallback_query,
+                vector_fallback,
+            ) = await _run_zero_result_fallbacks(
+                request=request,
+                query=query,
+                semantic_query=semantic_query,
+                keyword_query=keyword_query,
+                search_language=search_language,
+                effective_alpha=effective_alpha,
+                initial_query_embedding=query_embedding,
+                supabase=supabase,
+                limit=limit,
+                offset=offset,
+                vector_fallback=vector_fallback,
+            )
+            search_time_ms += fallback_time_ms
+            if fallback_query:
+                enhanced_query_text = fallback_query
+
+        if cached_results is None and results:
+            await set_cached_results(
+                query=keyword_query,
+                results=results,
+                filters=effective_filters,
+                alpha=effective_alpha,
+                limit=limit,
+                offset=offset,
+            )
+
+        results, rerank_time_ms = await _rerank_if_enabled(query, results, top_k=limit)
+        chunks, documents = _build_search_result_payload(
+            results, result_view=request.result_view
+        )
+
+        # First-page estimated_total. Only paid on offset==0 + include_count, so
+        # load-more requests stay free. Errors return None and never block search.
+        estimated_total: int | None = None
+        if request.include_count and offset == 0:
+            try:
+                count_supabase = await _get_search_client()
+                estimated_total = await _get_estimated_total(
+                    count_supabase, effective_filters
+                )
+            except Exception as count_err:
+                logger.warning(
+                    "Skipping estimated_total (client/setup failed): {}", count_err
+                )
+                estimated_total = None
+
+        total_time_ms = (time.perf_counter() - start_time) * 1000
+        timing_breakdown = _build_search_timing_breakdown(
+            mode=request.mode,
+            enhancement_time_ms=enhancement_time_ms,
+            embedding_time_ms=embedding_time_ms,
+            vector_fallback=vector_fallback,
+            search_time_ms=search_time_ms,
+            rerank_time_ms=rerank_time_ms,
+            fallback_time_ms=fallback_time_ms,
+            fallback_used=fallback_used,
+            fallback_stage=fallback_stage,
+            total_time_ms=total_time_ms,
+            query_type=query_type,
+            effective_alpha=effective_alpha,
+            alpha_was_routed=alpha_was_routed,
+        )
+
+        logger.info(
+            f"Search completed: {len(results)} results in {total_time_ms:.0f}ms "
+            f"(embedding: {embedding_time_ms:.0f}ms, search: {search_time_ms:.0f}ms)"
+        )
+
+        pagination = _build_search_pagination(
+            offset, limit, len(results), estimated_total=estimated_total
+        )
+
+        try:
+            from app.search_telemetry import record_search
+
+            record_search(
+                query=query,
+                query_type=query_type,
+                language=_detect_search_language(
+                    keyword_query, request.languages, effective_filters["jurisdictions"]
+                ),
+                hits=len(chunks),
+                chunks_preview=[
+                    # Subscript, not attribute access: chunks are the plain
+                    # dicts _build_search_result_payload builds. Reading
+                    # c.document_id raised AttributeError, the except below
+                    # swallowed it, and so every search with at least one hit
+                    # emitted no trace at all. The dicts carry no "score" key
+                    # either -- combined_score is what the ranking orders by.
+                    {
+                        "document_id": c["document_id"],
+                        "score": c.get("combined_score"),
+                    }
+                    for c in chunks[:5]
+                ],
+                timing_breakdown=timing_breakdown.model_dump()
+                if hasattr(timing_breakdown, "model_dump")
+                else dict(timing_breakdown),
+                effective_alpha=effective_alpha,
+                alpha_was_routed=alpha_was_routed,
+                vector_fallback=vector_fallback,
+                fallback_used=fallback_used,
+                thinking_mode=request.mode == "thinking",
+            )
+        except Exception as telem_err:
+            logger.debug(f"Search telemetry skipped: {telem_err}")
+
+        response = SearchChunksResponse(
+            chunks=chunks,
+            documents=documents,
+            total_chunks=len(chunks),
+            unique_documents=len(documents),
+            query_time_ms=round(search_time_ms, 2),
+            timing_breakdown=timing_breakdown,
+            pagination=pagination,
+            enhanced_query=enhanced_query_text if request.mode == "thinking" else None,
+            query_enhancement_used=request.mode == "thinking",
+            semantic_query=semantic_query if request.mode == "thinking" else None,
+            keyword_query=keyword_query if request.mode == "thinking" else None,
+            inferred_filters=inferred_filters if request.mode == "thinking" else None,
+            query_analysis_source=query_analysis_source,
+        )
+
+        # Populate the full-response cache for subsequent identical requests.
+        # Skipped for thinking mode (non-deterministic) and for any error path
+        # (we never reach here on exception).
+        if request.mode != "thinking":
+            try:
+                from app.search_cache import set_cached_search
+
+                # user_id=None: see matching note on get_cached_search above.
+                await set_cached_search(request, response, user_id=None)
+            except Exception as cache_err:
+                logger.warning("search_cache write failed (non-fatal): {}", cache_err)
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.opt(exception=True).error("Search error: {}", e)
+        from app.sentry import capture_exception
+
+        capture_exception(e, query=query[:200], limit=limit)
+        raise HTTPException(status_code=500, detail=f"Search failed: {e!s}")
