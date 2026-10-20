@@ -3,6 +3,7 @@ import {
   isCanonicalSchemaId,
   normalizeExtractionSchema,
 } from "@/lib/schemas/detail-transport";
+import { readPublicEnv } from "@/lib/env/server";
 import logger from "@/lib/logger";
 
 const schemaLogger = logger.child("schema-detail");
@@ -97,8 +98,9 @@ export async function fetchSchemaDetail(
 
   const timeoutSignal = AbortSignal.timeout(timeoutMs());
   const signal = combineSignals(requestSignal, timeoutSignal);
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Runtime lookup (not build-time inlined): see lib/env/server.ts.
+  const supabaseUrl = readPublicEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const anonKey = readPublicEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   if (!supabaseUrl || !anonKey) {
     throw new SchemaDetailUpstreamError(
       "Schema service is not configured.",

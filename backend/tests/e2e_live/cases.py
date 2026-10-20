@@ -23,6 +23,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import httpx
 import yaml
 
 from .engine import Case, CaseContext, SkipCase
@@ -60,18 +61,37 @@ def _tb_get(tb: dict[str, Any], *keys: str, default: Any = None) -> Any:
 def _search(
     ctx: CaseContext, query: str, *, limit_docs: int | None = None, **extra: Any
 ) -> tuple[dict[str, Any], float]:
-    """POST /documents/search with the real request schema. Returns (data, wall_ms)."""
+    """POST /documents/search with the real request schema. Returns (data, wall_ms).
+
+    Retries ONCE on a transient 5xx (e.g. a Postgres ``statement_timeout`` when
+    the shared DB is briefly under load). The retry is intentionally narrow: a
+    4xx (contract error) or a second 5xx is NOT swallowed, and the attempt count
+    is recorded so a flaky backend is still visible in the report.
+    """
     body: dict[str, Any] = {
         "query": query,
         "limit_docs": limit_docs or ctx.limit_docs,
         "include_count": True,
     }
     body.update(extra)
-    t0 = time.perf_counter()
-    resp = ctx.post("/documents/search", json=body, timeout=90.0)
-    wall_ms = (time.perf_counter() - t0) * 1000
-    resp.raise_for_status()
-    return resp.json(), wall_ms
+
+    last_exc: httpx.HTTPStatusError | None = None
+    for attempt in (1, 2):
+        t0 = time.perf_counter()
+        resp = ctx.post("/documents/search", json=body, timeout=90.0)
+        wall_ms = (time.perf_counter() - t0) * 1000
+        if resp.status_code < 500:
+            resp.raise_for_status()
+            if attempt > 1:
+                _detail(ctx, retried_after_5xx=True)
+            return resp.json(), wall_ms
+        # Transient server error — capture and retry once.
+        last_exc = httpx.HTTPStatusError(
+            f"HTTP {resp.status_code}: {resp.text[:160]}",
+            request=resp.request,
+            response=resp,
+        )
+    raise last_exc  # type: ignore[misc]
 
 
 def _ensure_document_id(ctx: CaseContext) -> str:
@@ -126,10 +146,13 @@ def _make_search_case(fixture: dict[str, Any]) -> Case:
             ctx.state["document_id"] = chunks[0].get("document_id")
 
         # Hard correctness assertions.
+        # vector_fallback=False is the authoritative "semantic path healthy"
+        # signal. embedding_ms is NOT asserted >0: query embeddings are
+        # Redis-cached, so a warm cache legitimately reports 0ms with the
+        # vector search still running on the cached embedding.
         assert fallback is False, (
             f"vector_fallback={fallback!r} — embedding path unhealthy (no semantic search)"
         )
-        assert embedding_ms > 0, "embedding_ms=0 — query embedding did not run"
         assert hits >= min_hits, f"{hits} hits < min_hits={min_hits}"
         if expected:
             assert qtype == expected, f"query_type={qtype!r} != expected {expected!r}"

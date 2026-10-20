@@ -72,15 +72,15 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application files
 COPY . .
 
-# Accept build arguments for Next.js public environment variables
-# These are passed from docker-compose.yml and sourced from .env file
-# Note: NEXT_PUBLIC_* vars must be available at BUILD TIME for Next.js
+# Build arguments for Next.js public environment variables.
+# They only seed the inline baseline in prerendered HTML; the running
+# container's values win at request time via /runtime-env.js and the
+# computed lookups in lib/env/server.ts, so the image works without them.
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Convert build args to environment variables for Next.js build process
-# Next.js will inline these values into the client-side JavaScript bundle
+# Expose build args to the `next build` process (baseline only, see above)
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -118,10 +118,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public files
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy runtime configuration scripts
-# docker-entrypoint.sh generates public/env-config.js with runtime environment variables
-# patch-env.js replaces empty build-time NEXT_PUBLIC_* values in the JS bundle
-COPY --chown=nextjs:nodejs docker-entrypoint.sh patch-env.js ./
+# Copy the entrypoint. It exports the runtime NEXT_PUBLIC_* values (with
+# defaults) for the server process; the browser receives them from the
+# /runtime-env.js route handler, so no files in .next are patched at start.
+COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
 # Switch to non-root user for security

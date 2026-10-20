@@ -336,6 +336,7 @@ docker stats --no-stream
 | Image pull fails | `docker login` | Re-authenticate with Docker Hub |
 | Port conflict | `lsof -i :8004` | Change port in `.env` or stop conflicting process |
 | Frontend can't reach backend | Check `NEXT_PUBLIC_API_BASE_URL` | Ensure it points to the correct backend URL |
+| Browser shows `@supabase/ssr: Your project's URL and API key are required` | `curl -s https://<frontend>/runtime-env.js` is missing the Supabase values | Set `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env` and restart the frontend container; no rebuild needed (see [environment-configuration.md](../reference/environment-configuration.md#frontend-runtime-configuration-next_public)) |
 | Celery worker not processing | `docker compose logs backend-worker` | Check Redis connection, restart worker |
 
 ### Docker cleanup
