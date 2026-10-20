@@ -41,7 +41,7 @@ Input classes the spec implies but which no task's happy path exercises. Each ha
 ### Task 1: Key generation, hashing, and the `mcp_api_keys` table
 
 **Files:**
-- Create: `supabase/migrations/20261014000001_create_mcp_api_keys.sql`
+- Create: `supabase/migrations/20261020000001_create_mcp_api_keys.sql`
 - Create: `backend/app/core/auth_mcp.py`
 - Test: `backend/tests/app/test_auth_mcp.py`
 
@@ -108,7 +108,7 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'app.core.auth_mcp'`
 
 A key is a bearer credential with no expiry by default, so only its sha256
 hash is ever stored (see
-supabase/migrations/20261014000001_create_mcp_api_keys.sql). The plaintext
+supabase/migrations/20261020000001_create_mcp_api_keys.sql). The plaintext
 is returned once, at creation, and is not recoverable afterwards.
 
 This module is deliberately separate from app/auth.py, which verifies the
@@ -207,7 +207,7 @@ Expected: PASS
 
 ```bash
 git add backend/app/core/auth_mcp.py backend/tests/app/test_auth_mcp.py \
-        supabase/migrations/20261014000001_create_mcp_api_keys.sql
+        supabase/migrations/20261020000001_create_mcp_api_keys.sql
 git commit -m "feat(mcp): add mcp_api_keys table and key material helpers"
 ```
 

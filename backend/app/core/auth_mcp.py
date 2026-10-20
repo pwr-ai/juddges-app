@@ -2,7 +2,7 @@
 
 A key is a bearer credential with no expiry by default, so only its sha256
 hash is ever stored (see
-supabase/migrations/20261014000001_create_mcp_api_keys.sql). The plaintext
+supabase/migrations/20261020000001_create_mcp_api_keys.sql). The plaintext
 is returned once, at creation, and is not recoverable afterwards.
 
 This module is deliberately separate from app/auth.py, which verifies the
