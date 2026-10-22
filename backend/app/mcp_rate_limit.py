@@ -19,15 +19,26 @@ touches the bucket, and 20 a minute is ample for a developer mistyping a key.
 The IP budget is enforced only when ``TRUSTED_PROXY`` is truthy. It is keyed on
 the address ``get_client_ip`` returns, and that address identifies a client only
 when the proxy's ``X-Forwarded-For`` is trusted. Behind a reverse proxy with
-``TRUSTED_PROXY`` unset (the default, and the state of docker-compose.yml, where
-every request arrives through Caddy) the address is the proxy's own, so every
-caller shares one bucket. A limit on a key that is the same for everyone is not
-a rate limit but a kill switch: twenty rejected keys from anyone would lock out
-every MCP user. The gate is therefore inert unless ``TRUSTED_PROXY=true``, which
-leaves rejected-key database load unbounded in that state (a known, logged
-gap) rather than letting one caller deny the service to all. The flag is read
-per call, never inferred from a request header: a client could send
-``X-Forwarded-For`` itself to switch its own gating on or off.
+``TRUSTED_PROXY`` unset (the template default) the address is the proxy's own,
+so every caller shares one bucket. A limit on a key that is the same for
+everyone is not a rate limit but a kill switch: twenty rejected keys from anyone
+would lock out every MCP user. The gate is therefore inert unless
+``TRUSTED_PROXY=true``, which leaves rejected-key database load unbounded in
+that state (a known, logged gap) rather than letting one caller deny the service
+to all. The flag is read per call, never inferred from a request header: a
+client could send ``X-Forwarded-For`` itself to switch its own gating on or off.
+
+The flag is only sound if the proxy overwrites ``X-Forwarded-For`` rather than
+appending to it, so the production deployment pairs ``TRUSTED_PROXY=true`` with
+``header_up X-Forwarded-For {remote_host}`` (and the same for ``X-Real-IP``) on
+the ``juddges-api`` site in the caddy-local gateway. Measured against that
+gateway's Caddy v2.9.1, a plain ``reverse_proxy`` already *replaces* a
+client-supplied ``X-Forwarded-For``; it appends -- which is what makes the
+leftmost entry client-controlled -- only once the immediate peer is covered by
+``trusted_proxies``. The explicit ``header_up`` wins in both cases, which is the
+point of setting it: the guarantee no longer depends on a ``trusted_proxies``
+line nobody remembers adding. See the reverse-proxy section of ``.env.example``
+for the measurements.
 
 The budget is *tested* before resolution (no database work if it is spent) and
 *charged* only after a resolution failure.
