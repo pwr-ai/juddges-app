@@ -102,9 +102,25 @@ Two limits apply. Both are configured by environment variable on the backend; se
 
 **Per IP, for rejected keys: `MCP_IP_RATE_LIMIT`, default `20/minute`.** A request carrying a `jdg_mcp_`-prefixed key that does not exist costs the server a database lookup to reject, and the per-key limit cannot see such a caller because it is charged on the key id, which only exists after a successful lookup. So each client IP also gets a budget of **rejected** keys. Valid keys never touch it, and requests with no credential, or without the `jdg_mcp_` prefix, are rejected for free and are not counted. Once an IP has spent its budget, `/mcp` answers `429` before doing any lookup, even for a valid key from that IP.
 
-!!! warning "The per-IP limit is off unless `TRUSTED_PROXY=true`"
-    The budget is keyed on the client IP that the backend sees. Behind a reverse proxy with `TRUSTED_PROXY` unset (the default, and what `docker-compose.yml` does today, where every request arrives through Caddy), that address is the proxy's, the same for everybody. A limit keyed on a value shared by all callers is not a rate limit but a kill switch: twenty rejected keys from anyone would lock out every MCP user. So with `TRUSTED_PROXY` unset the per-IP budget is **not enforced** (the module logs a one-time warning), and unauthenticated lookups of bogus `jdg_mcp_` keys are unbounded. Only the per-key limit is active.
+!!! warning "The per-IP limit needs `TRUSTED_PROXY=true` **and** a proxy that overwrites `X-Forwarded-For`"
+    The budget is keyed on the client IP that the backend sees. Behind a reverse proxy with `TRUSTED_PROXY` unset, that address is the proxy's, the same for everybody. A limit keyed on a value shared by all callers is not a rate limit but a kill switch: twenty rejected keys from anyone would lock out every MCP user. So with `TRUSTED_PROXY` unset the per-IP budget is **not enforced** (the module logs a one-time warning), and unauthenticated lookups of bogus `jdg_mcp_` keys are unbounded. Only the per-key limit is active.
 
-    Setting `TRUSTED_PROXY=true` makes the backend take the **leftmost** `X-Forwarded-For` entry as the client IP. That is only sound if the reverse proxy **overwrites** `X-Forwarded-For` with the real client address instead of appending to it. If the proxy appends (Caddy's `reverse_proxy` does by default), the leftmost entry is whatever the client chose to send, and a caller can pick a fresh "IP" per request or impersonate another. Note that `TRUSTED_PROXY` also changes the key of every other IP-based rate limit in the backend, so it is a deployment-wide decision.
+    Setting `TRUSTED_PROXY=true` makes the backend take the **leftmost** `X-Forwarded-For` entry as the client IP. That is only sound if the reverse proxy **overwrites** `X-Forwarded-For` with the real client address instead of appending to it. Measured against the gateway's Caddy v2.9.1 by sending a forged `X-Forwarded-For: 1.2.3.4` from a peer at `172.26.0.1` and reading the header back at the upstream:
+
+    | Proxy config | Upstream sees | Leftmost client-controlled? |
+    |---|---|---|
+    | `reverse_proxy`, no `trusted_proxies` | `172.26.0.1` | no |
+    | `reverse_proxy` + `trusted_proxies 0.0.0.0/0` | `1.2.3.4, 172.26.0.1` | **yes** |
+    | `header_up X-Forwarded-For {remote_host}` | `172.26.0.1` | no |
+    | `trusted_proxies` + `header_up` | `172.26.0.1` | no |
+
+    So Caddy replaces a client-supplied value by default and only appends once the immediate peer is a configured trusted proxy. The explicit `header_up` wins either way. That is why it is set: not because the flag was spoofable on this gateway as configured, but so the guarantee stops depending on a `trusted_proxies` line, a Caddy version, or the absence of a CDN. `X-Real-IP` is a separate matter -- Caddy passes it through untouched, it **was** spoofable in that measurement, and `get_client_ip` falls back to it when `X-Forwarded-For` is absent; the gateway overwrites it too.
+
+    Note that `TRUSTED_PROXY` also changes the key of every other IP-based rate limit in the backend, so it is a deployment-wide decision. In this deployment the blast radius is narrow, because the key only changes for requests that reach the backend with an `X-Forwarded-For` header, i.e. those arriving directly through the gateway at `juddges-api.augustyniak.ai`. Browser traffic goes through the frontend BFF, which forwards neither `X-Forwarded-For` nor `X-Real-IP`; signed-in BFF requests key on `X-RateLimit-Identity` and guest BFF requests still key on the frontend container's address, exactly as before.
+
+!!! success "Enabled in production since 2026-10-22"
+    Production runs with `TRUSTED_PROXY=true`, paired with `header_up X-Forwarded-For {remote_host}` and `header_up X-Real-IP {remote_host}` on the `juddges-api.augustyniak.ai` site in the caddy-local gateway (`data_stack`: `docker/infra/caddy-local/public-domains.caddyfile`). Caddy is the true edge there -- the DNS record is DNS-only, with no CDN in front -- so `{remote_host}` is the real client address. `X-Real-IP` is overwritten too, because `get_client_ip` falls back to it when `X-Forwarded-For` is absent and would otherwise trust a client-supplied value.
+
+    The per-IP budget takes effect for `/mcp` with the first production image that contains the MCP server; the image deployed when the flag was set predates it.
 
 Counters live in the storage configured by `RATE_LIMIT_STORAGE_URI`. If that storage is unreachable the limits keep being enforced, but per process in memory.
