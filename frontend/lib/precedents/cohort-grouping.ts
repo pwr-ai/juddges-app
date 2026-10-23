@@ -1,4 +1,4 @@
-import type { PrecedentCohortItem } from "@/lib/api/advanced";
+import type { PrecedentCohortItem, PrecedentMatch } from "@/lib/api/advanced";
 import type { FieldAggregate } from "@/types/base-schema-filter";
 
 /** Fields the "In similar cases…" block can group by (spec §7.2). */
@@ -9,6 +9,16 @@ export const COHORT_GROUP_FIELDS = [
 ] as const;
 
 export type CohortGroupField = (typeof COHORT_GROUP_FIELDS)[number];
+
+export interface CohortFilter {
+  field: CohortGroupField;
+  value: string;
+}
+
+export interface RankedPrecedent {
+  precedent: PrecedentMatch;
+  rank: number;
+}
 
 /** How many distinct values a card shows before the rest folds into "other". */
 const DEFAULT_TOP_N = 10;
@@ -56,7 +66,7 @@ export function groupCohort(
 }
 
 /** Document ids of every cohort member carrying `value` in `field`. */
-export function cohortIdsWithValue(
+function cohortIdsWithValue(
   cohort: PrecedentCohortItem[],
   field: CohortGroupField,
   value: string,
@@ -66,6 +76,19 @@ export function cohortIdsWithValue(
     if (valuesOf(item, field).includes(value)) ids.add(item.document_id);
   }
   return ids;
+}
+
+/** Apply a cohort selection without changing the rank assigned by the AI pass. */
+export function projectRankedPrecedents(
+  precedents: PrecedentMatch[],
+  cohort: PrecedentCohortItem[],
+  filter: CohortFilter | null,
+): RankedPrecedent[] {
+  const ranked = precedents.map((precedent, index) => ({ precedent, rank: index + 1 }));
+  if (!filter) return ranked;
+
+  const ids = cohortIdsWithValue(cohort, filter.field, filter.value);
+  return ranked.filter(({ precedent }) => ids.has(precedent.document_id));
 }
 
 /** The largest value bucket — the one the headline sentence talks about. */

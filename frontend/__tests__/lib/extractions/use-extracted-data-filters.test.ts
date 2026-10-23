@@ -167,11 +167,11 @@ describe("useExtractedDataFilters — nlQuestion in the URL (?nl=)", () => {
     expect(result.current.nlQuestion).toBeUndefined();
   });
 
-  it("setNlQuestion updates state and round-trips it into the URL", () => {
+  it("applyNlResult round-trips the natural-language question into the URL", () => {
     const { result } = renderHook(() => useExtractedDataFilters());
 
     act(() => {
-      result.current.setNlQuestion("fraud cases 2020");
+      result.current.applyNlResult({}, "", "fraud cases 2020");
     });
 
     expect(result.current.nlQuestion).toBe("fraud cases 2020");
@@ -202,5 +202,27 @@ describe("useExtractedDataFilters — nlQuestion in the URL (?nl=)", () => {
 
     const lastUrl = mockReplace.mock.calls.at(-1)?.[0] as string;
     expect(lastUrl).toBe("?q=fraud");
+  });
+
+  it("applies one natural-language result atomically while preserving statistics state", () => {
+    mockSearchParams = new URLSearchParams("view=stats&n=100&seed=3&page=4");
+    const { result } = renderHook(() => useExtractedDataFilters());
+
+    expect(typeof result.current.applyNlResult).toBe("function");
+    act(() => {
+      result.current.applyNlResult(
+        { jurisdiction: ["PL"], offender_gender: [] },
+        "fraud",
+        "Polish fraud cases",
+      );
+    });
+
+    expect(result.current.filters).toEqual({ jurisdiction: ["PL"] });
+    expect(result.current.textQuery).toBe("fraud");
+    expect(result.current.nlQuestion).toBe("Polish fraud cases");
+    expect(result.current.page).toBe(1);
+    expect(result.current.view).toBe("stats");
+    expect(result.current.sampleSize).toBe(100);
+    expect(result.current.seed).toBe(3);
   });
 });

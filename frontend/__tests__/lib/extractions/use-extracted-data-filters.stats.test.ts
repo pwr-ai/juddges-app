@@ -8,7 +8,11 @@
  */
 import { act, renderHook } from "@testing-library/react";
 
-import { buildFilterHref, buildFilterSearchParams } from "@/lib/extractions/use-extracted-data-filters";
+import {
+  buildFilterHref,
+  buildFilterSearchParams,
+  encodeFilters,
+} from "@/lib/extractions/use-extracted-data-filters";
 
 const replace = jest.fn();
 // One router object for the whole file: Next's router is referentially stable
@@ -124,6 +128,53 @@ describe("useExtractedDataFilters stats state", () => {
     expect(lastUrl).not.toContain("n=");
     expect(lastUrl).not.toContain("seed=");
     expect(lastUrl).not.toContain("fields=");
+  });
+
+  it("drills back with a filter patch in one transition and resets paging", () => {
+    const initialFilters = {
+      jurisdiction: ["PL" as const],
+      appeal_outcome: ["outcome_other" as const],
+    };
+    search = `f=${encodeFilters(initialFilters)}&q=fraud&nl=question&view=stats&n=100&seed=3&page=4`;
+    const { result } = renderHook(() => useExtractedDataFilters());
+
+    expect(typeof result.current.drillBackToList).toBe("function");
+    act(() => {
+      result.current.drillBackToList({
+        appeal_outcome: ["outcome_dismissed_or_refused"],
+      });
+    });
+
+    expect(result.current.filters).toEqual({
+      jurisdiction: ["PL"],
+      appeal_outcome: ["outcome_dismissed_or_refused"],
+    });
+    expect(result.current.textQuery).toBe("fraud");
+    expect(result.current.nlQuestion).toBe("question");
+    expect(result.current.page).toBe(1);
+    expect(result.current.view).toBe("list");
+    expect(result.current.sampleSize).toBe(100);
+    expect(result.current.seed).toBe(3);
+    const lastUrl = replace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).toContain("q=fraud");
+    expect(lastUrl).toContain("nl=question");
+    expect(lastUrl).not.toContain("page=");
+    expect(lastUrl).not.toContain("view=");
+    expect(lastUrl).not.toContain("n=");
+    expect(lastUrl).not.toContain("seed=");
+  });
+
+  it("drills back without a patch by changing only the view", () => {
+    search = "view=stats&n=100&seed=3&page=4";
+    const { result } = renderHook(() => useExtractedDataFilters());
+
+    expect(typeof result.current.drillBackToList).toBe("function");
+    act(() => result.current.drillBackToList());
+
+    expect(result.current.page).toBe(4);
+    expect(result.current.view).toBe("list");
+    expect(result.current.sampleSize).toBe(100);
+    expect(result.current.seed).toBe(3);
   });
 });
 

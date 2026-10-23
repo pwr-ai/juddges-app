@@ -202,7 +202,7 @@ function ExtractionSearchPage() {
     setFilters,
     setTextQuery,
     setPage,
-    setNlQuestion,
+    applyNlResult,
     removeFilter,
     clearAll,
     activeCount,
@@ -212,6 +212,7 @@ function ExtractionSearchPage() {
     seed,
     statsFields,
     setView,
+    drillBackToList,
     setSampling,
     reshuffle,
     setStatsFields,
@@ -279,18 +280,6 @@ function ExtractionSearchPage() {
     setFilters(next);
   };
 
-  // Issue #141: opt-in NL → filter. Pre-fills form state for review; never runs
-  // the search itself (setFilters/setTextQuery only update state + reset paging).
-  const applyNlFilters = (
-    nextFilters: BaseSchemaFilters,
-    nextTextQuery: string,
-    question: string,
-  ) => {
-    setFilters(nextFilters);
-    setTextQuery(nextTextQuery);
-    setNlQuestion(question);
-  };
-
   const resetDrawerFilters = () => {
     // Reset only non-substring, non-core fields — a drawer reset must not
     // clear jurisdiction/decision_date, which live outside the drawer.
@@ -326,7 +315,7 @@ function ExtractionSearchPage() {
             className="flex-1"
             aria-label="Full-text search"
           />
-          <NlFilterDialog onApply={applyNlFilters} />
+          <NlFilterDialog onApply={applyNlResult} />
         </div>
 
         <SubstringInputs
@@ -430,10 +419,7 @@ function ExtractionSearchPage() {
           onSampling={(n) => setSampling(n)}
           onReshuffle={reshuffle}
           onFields={setStatsFields}
-          onDrillBack={(patch) => {
-            if (patch) setFilters({ ...filters, ...patch });
-            setView("list");
-          }}
+          onDrillBack={drillBackToList}
         />
       )}
 

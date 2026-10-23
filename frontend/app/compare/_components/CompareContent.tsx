@@ -139,7 +139,7 @@ export function CompareView({ data, request, onSavePair, permalink: permalinkOve
  */
 export function CompareContent({ onSavePair }: { onSavePair?: (request: CompareRequest) => void } = {}) {
   const { t } = useTranslation();
-  const { filters, textQuery, setFilters, setTextQuery, setNlQuestion, removeFilter, clearAll } =
+  const { filters, textQuery, setFilters, setTextQuery, applyNlResult, removeFilter, clearAll } =
     useExtractedDataFilters();
 
   const active = countActive(filters) > 0 || textQuery.trim() !== "";
@@ -173,11 +173,7 @@ export function CompareContent({ onSavePair }: { onSavePair?: (request: CompareR
         <CompareFilterBar
           filters={filters}
           textQuery={textQuery}
-          onApply={(f, q, question) => {
-            setFilters(f);
-            setTextQuery(q);
-            setNlQuestion(question);
-          }}
+          onApply={applyNlResult}
           onTextQuery={setTextQuery}
           onRemove={removeFilter}
           onClearText={() => setTextQuery("")}

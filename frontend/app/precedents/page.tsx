@@ -15,8 +15,11 @@ import { Badge } from '@/components/ui/badge';
 import { findPrecedents, type FindPrecedentsResponse, type PrecedentMatch } from '@/lib/api';
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { CohortInsights, type CohortFilter } from '@/app/precedents/_components/CohortInsights';
-import { cohortIdsWithValue } from '@/lib/precedents/cohort-grouping';
+import { CohortInsights } from '@/app/precedents/_components/CohortInsights';
+import {
+  type CohortFilter,
+  projectRankedPrecedents,
+} from '@/lib/precedents/cohort-grouping';
 
 function PrecedentResultCard({
   precedent,
@@ -233,13 +236,10 @@ export default function PrecedentsPage() {
   };
 
   const cohort = useMemo(() => results?.cohort ?? [], [results]);
-  const visiblePrecedents = useMemo(() => {
-    if (!results) return [];
-    const ranked = results.precedents.map((p, i) => ({ precedent: p, rank: i + 1 }));
-    if (!cohortFilter) return ranked;
-    const ids = cohortIdsWithValue(cohort, cohortFilter.field, cohortFilter.value);
-    return ranked.filter(({ precedent }) => ids.has(precedent.document_id));
-  }, [results, cohort, cohortFilter]);
+  const visiblePrecedents = useMemo(
+    () => projectRankedPrecedents(results?.precedents ?? [], cohort, cohortFilter),
+    [results, cohort, cohortFilter],
+  );
 
   return (
     <PageContainer width="medium" fillViewport>
