@@ -4,66 +4,18 @@ import { useState } from "react";
 import Image from "next/image";
 import { Mail, Users, ArrowRight } from "lucide-react";
 import { LinkedinIcon } from "@/components/icons/brand";
+import { getInitials, teamMembers, type TeamMember } from "@/lib/project-content";
 import { Header, Badge, LightCard, VariantButton, PageContainer, SecondaryHeader } from "@/lib/styles/components";
-
-interface TeamMember {
- name: string;
- role: string;
- description: string;
- image: string;
- linkedin?: string;
- email?: string;
-}
-
-const teamMembers: TeamMember[] = [
- {
- name: "Łukasz Augustyniak",
- role: "Lead AI Architect",
- description: "Lead AI architect and lawyer by training, specializing in natural language processing, machine learning, and sentiment analysis. Combines technical AI expertise with legal knowledge to bridge cutting-edge technology with regulatory frameworks. Published researcher with expertise in transfer learning and text classification.",
- image: "/team/lukasz-augustyniak.jpg",
- linkedin: "https://www.linkedin.com/in/lukaszaugustyniak/",
- email: "lukasz.augustyniak@pwr.edu.pl"
- },
- {
- name: "Prof. Tomasz Kajdanowicz",
- role: "Supervisor & Project Leader",
- description: "Professor at Wrocław University of Science and Technology and Founder of handling.ai. Experienced researcher and practitioner in machine learning, data science, social network analysis, and collective classification. Leads research projects bridging academic excellence with real-world AI applications in legal and tax domains.",
- image: "/team/tomasz-kajdanowicz.jpg",
- linkedin: "https://www.linkedin.com/in/kajdanowicz/",
- email: "tomasz.kajdanowicz@pwr.edu.pl"
- },
- {
- name: "Albert Sawczyn",
- role: "PhD Student & Developer",
- description: "PhD student at Wrocław University of Science and Technology (2021-2025) specializing in AI and machine learning. Contributes to research on graph-level representations, knowledge graphs, and fact-checking systems for large language models. Co-author of FactSelfCheck and other innovative NLP solutions.",
- image: "/team/albert-sawczyn.jpg",
- linkedin: "https://www.linkedin.com/in/albert-sawczyn/",
- email: "albert.sawczyn@pwr.edu.pl"
- },
- {
- name: "Jakub Binkowski",
- role: "PhD Student & Developer",
- description: "PhD student in Large Language Models and Graph Representation Learning at Wrocław University of Science and Technology. Recently defended thesis on unsupervised graph representation learning. Specializes in hallucination detection in LLMs, spectral graph theory, and multiplex network embeddings. Author of LapEigvals method and contributor to PLLuM project.",
- image: "/team/jakub-binkowski.jpg",
- linkedin: "https://www.linkedin.com/in/jakub-binkowski/",
- email: "jakub.binkowski@pwr.edu.pl"
- }
-];
 
 function TeamMemberCard({ member }: { member: TeamMember }) {
  const [imageError, setImageError] = useState(false);
- const initials = member.name
- .split("")
- .map((word) => word[0])
- .join("")
- .toUpperCase()
- .slice(0, 2);
+ const initials = getInitials(member.name);
 
  return (
  <LightCard padding="lg"className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
  <div className="flex flex-col items-center text-center flex-1">
  <div className="relative w-32 h-32 mb-6">
- {!imageError ? (
+ {member.image && !imageError ? (
  <Image
  src={member.image}
  alt={`${member.name} - ${member.role}`}

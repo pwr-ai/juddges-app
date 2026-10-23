@@ -55,9 +55,10 @@ const esmPackages = [
   'date-fns',
   'nanoid',
   'zod',
-  // MSW v2 + transitive deps that ship as ESM-only.
+  // MSW v3 + transitive deps that ship as ESM-only.
   'msw',
   '@mswjs/.*',
+  '@msw/.*',
   '@open-draft/.*',
   '@bundled-es-modules/.*',
   'rettime',

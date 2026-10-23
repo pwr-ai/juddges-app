@@ -99,6 +99,41 @@ let flowDocumentIds = [];
 let flowSubmittedDocumentIds = null;
 let flowPolls = 0;
 let flowServed = [];
+let mcpKeyRevoked = false;
+let mcpKeyCreated = false;
+
+const MCP_KEY_IDS = {
+  listed: '60000000-0000-4000-8000-000000000001',
+  created: '60000000-0000-4000-8000-000000000002',
+};
+
+// Shapes mirror backend/app/mcp_keys.py: the list only ever carries the
+// 16-character display prefix, the plaintext `key` appears on creation alone.
+function mcpListedKey() {
+  return {
+    id: MCP_KEY_IDS.listed,
+    name: 'laptop',
+    prefix: 'jdg_mcp_Ab3xK9pQ',
+    scopes: ['search:read'],
+    created_at: '2026-10-14T10:00:00+00:00',
+    last_used_at: null,
+    expires_at: null,
+    revoked_at: mcpKeyRevoked ? '2026-10-14T12:00:00+00:00' : null,
+  };
+}
+
+function mcpCreatedKey() {
+  return {
+    id: MCP_KEY_IDS.created,
+    name: null,
+    prefix: 'jdg_mcp_Zq4mW7nR',
+    scopes: ['search:read'],
+    created_at: '2026-10-14T11:00:00+00:00',
+    last_used_at: null,
+    expires_at: null,
+    revoked_at: null,
+  };
+}
 
 /**
  * Resolves to the request's JSON object, or `{}` for anything that is not one
@@ -553,6 +588,8 @@ const server = createServer((request, response) => {
     flowSubmittedDocumentIds = null;
     flowPolls = 0;
     flowServed = [];
+    mcpKeyRevoked = false;
+    mcpKeyCreated = false;
     response.writeHead(204);
     response.end();
     return;
@@ -704,6 +741,42 @@ const server = createServer((request, response) => {
   if (request.method === 'GET' && url.pathname === '/collections') {
     logRequest(request, url);
     collectionListResponse(response);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/mcp/keys') {
+    logRequest(request, url);
+    sendJson(
+      response,
+      200,
+      mcpKeyCreated
+        ? [mcpListedKey(), mcpCreatedKey()]
+        : [mcpListedKey()],
+    );
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/mcp/keys') {
+    logRequest(request, url);
+    readJsonBody(request).then(() => {
+      mcpKeyCreated = true;
+      sendJson(response, 201, {
+        ...mcpCreatedKey(),
+        // 51 characters: `jdg_mcp_` + token_urlsafe(32), as generate_mcp_key().
+        key: 'jdg_mcp_Zq4mW7nRtY2xV8bN5cL1kJ6hG3fD9sA4pQ7zE0uIaBc',
+      });
+    });
+    return;
+  }
+
+  const mcpKeyMatch = url.pathname.match(/^\/mcp\/keys\/([^/]+)$/);
+  if (request.method === 'DELETE' && mcpKeyMatch) {
+    logRequest(request, url);
+    if (decodeURIComponent(mcpKeyMatch[1]) === MCP_KEY_IDS.listed) {
+      mcpKeyRevoked = true;
+    }
+    response.writeHead(204);
+    response.end();
     return;
   }
 

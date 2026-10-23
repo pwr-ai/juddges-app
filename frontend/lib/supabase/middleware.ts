@@ -1,4 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
+
+import { getSupabasePublicConfig } from "@/lib/env/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 
@@ -233,9 +235,11 @@ export async function updateSessionWithAuth(
 ): Promise<SessionUpdate> {
   const request = sanitizedRequest(incomingRequest);
   let supabaseResponse = NextResponse.next({ request });
+  // Runtime lookup (not build-time inlined): see lib/env/server.ts.
+  const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabasePublicConfig();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),

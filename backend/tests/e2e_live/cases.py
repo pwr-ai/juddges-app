@@ -17,10 +17,13 @@ All requests are read-only; nothing here mutates state.
 
 from __future__ import annotations
 
+import json
+import os
 import time
 from pathlib import Path
 from typing import Any
 
+import httpx
 import yaml
 
 from .engine import Case, CaseContext, SkipCase
@@ -30,6 +33,11 @@ FIXTURES_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "search_queri
 # A short, high-recall query used to discover a real document id from the live
 # corpus when a dependent check needs one.
 DISCOVERY_QUERY = "umowa"
+
+# The MCP check authenticates with a per-user MCP key, not BACKEND_API_KEY.
+MCP_KEY_ENV_VAR = "JUDDGES_MCP_KEY"
+MCP_QUERY = "zachowek"
+MCP_SNIPPET_MAX_CHARS = 600  # mirrors juddges_mcp.tools.search.SNIPPET_CHARS
 
 
 # --------------------------------------------------------------------------- #
@@ -53,18 +61,37 @@ def _tb_get(tb: dict[str, Any], *keys: str, default: Any = None) -> Any:
 def _search(
     ctx: CaseContext, query: str, *, limit_docs: int | None = None, **extra: Any
 ) -> tuple[dict[str, Any], float]:
-    """POST /documents/search with the real request schema. Returns (data, wall_ms)."""
+    """POST /documents/search with the real request schema. Returns (data, wall_ms).
+
+    Retries ONCE on a transient 5xx (e.g. a Postgres ``statement_timeout`` when
+    the shared DB is briefly under load). The retry is intentionally narrow: a
+    4xx (contract error) or a second 5xx is NOT swallowed, and the attempt count
+    is recorded so a flaky backend is still visible in the report.
+    """
     body: dict[str, Any] = {
         "query": query,
         "limit_docs": limit_docs or ctx.limit_docs,
         "include_count": True,
     }
     body.update(extra)
-    t0 = time.perf_counter()
-    resp = ctx.post("/documents/search", json=body, timeout=90.0)
-    wall_ms = (time.perf_counter() - t0) * 1000
-    resp.raise_for_status()
-    return resp.json(), wall_ms
+
+    last_exc: httpx.HTTPStatusError | None = None
+    for attempt in (1, 2):
+        t0 = time.perf_counter()
+        resp = ctx.post("/documents/search", json=body, timeout=90.0)
+        wall_ms = (time.perf_counter() - t0) * 1000
+        if resp.status_code < 500:
+            resp.raise_for_status()
+            if attempt > 1:
+                _detail(ctx, retried_after_5xx=True)
+            return resp.json(), wall_ms
+        # Transient server error — capture and retry once.
+        last_exc = httpx.HTTPStatusError(
+            f"HTTP {resp.status_code}: {resp.text[:160]}",
+            request=resp.request,
+            response=resp,
+        )
+    raise last_exc  # type: ignore[misc]
 
 
 def _ensure_document_id(ctx: CaseContext) -> str:
@@ -119,10 +146,13 @@ def _make_search_case(fixture: dict[str, Any]) -> Case:
             ctx.state["document_id"] = chunks[0].get("document_id")
 
         # Hard correctness assertions.
+        # vector_fallback=False is the authoritative "semantic path healthy"
+        # signal. embedding_ms is NOT asserted >0: query embeddings are
+        # Redis-cached, so a warm cache legitimately reports 0ms with the
+        # vector search still running on the cached embedding.
         assert fallback is False, (
             f"vector_fallback={fallback!r} — embedding path unhealthy (no semantic search)"
         )
-        assert embedding_ms > 0, "embedding_ms=0 — query embedding did not run"
         assert hits >= min_hits, f"{hits} hits < min_hits={min_hits}"
         if expected:
             assert qtype == expected, f"query_type={qtype!r} != expected {expected!r}"
@@ -391,6 +421,88 @@ def _c_topics_meta(ctx: CaseContext) -> str:
     return f"{total} topic concepts"
 
 
+def _mcp_call(
+    ctx: CaseContext, key: str, rpc_id: int, method: str, params: dict
+) -> dict:
+    """POST one JSON-RPC request to /mcp and return the decoded response.
+
+    /mcp is stateless and answers as Server-Sent Events, so the JSON-RPC
+    message is the last ``data:`` line of the body.
+    """
+    # ctx.client directly: ctx.post always builds its own headers, and /mcp
+    # takes the MCP key rather than X-API-Key.
+    resp = ctx.client.post(
+        "/mcp",
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        },
+        json={"jsonrpc": "2.0", "id": rpc_id, "method": method, "params": params},
+        timeout=90.0,
+    )
+    assert resp.status_code == 200, (
+        f"/mcp {method} -> {resp.status_code}: {resp.text[:200]}"
+    )
+    data_lines = [
+        line[len("data:") :].strip()
+        for line in resp.text.splitlines()
+        if line.startswith("data:")
+    ]
+    assert data_lines, f"/mcp {method} returned no data frame: {resp.text[:200]!r}"
+    message = json.loads(data_lines[-1])
+    assert "error" not in message, f"/mcp {method} JSON-RPC error: {message['error']}"
+    return message["result"]
+
+
+def _c_mcp_search_judgments(ctx: CaseContext) -> str:
+    key = os.getenv(MCP_KEY_ENV_VAR)
+    if not key:
+        raise SkipCase(
+            f"{MCP_KEY_ENV_VAR} is not set; generate a key in /settings (MCP access)"
+        )
+
+    _mcp_call(
+        ctx,
+        key,
+        1,
+        "initialize",
+        {
+            "protocolVersion": "2025-03-26",
+            "capabilities": {},
+            "clientInfo": {"name": "e2e-live", "version": "0"},
+        },
+    )
+    result = _mcp_call(
+        ctx,
+        key,
+        2,
+        "tools/call",
+        {"name": "search_judgments", "arguments": {"query": MCP_QUERY, "limit": 5}},
+    )
+    assert not result.get("isError"), f"tool reported an error: {result.get('content')}"
+
+    structured = result.get("structuredContent") or {}
+    hits = structured.get("result")
+    if hits is None:  # older servers: one JSON text block per hit
+        hits = [
+            json.loads(block["text"])
+            for block in result.get("content") or []
+            if block.get("type") == "text"
+        ]
+
+    _detail(ctx, hits=len(hits))
+    assert hits, f"search_judgments({MCP_QUERY!r}) returned no hits"
+    for hit in hits:
+        assert hit.get("id"), f"hit without id: {hit}"
+        assert hit.get("case_number"), f"hit {hit.get('id')} has no case_number"
+        snippet_len = len(hit.get("snippet") or "")
+        assert snippet_len <= MCP_SNIPPET_MAX_CHARS, (
+            f"hit {hit['id']} snippet is {snippet_len} chars > {MCP_SNIPPET_MAX_CHARS}"
+        )
+    return f"{len(hits)} hits over MCP for {MCP_QUERY!r}"
+
+
 _FEATURE_CASES: list[Case] = [
     Case("health", "liveness", "GET /health is healthy", _c_health_live),
     Case(
@@ -436,6 +548,12 @@ _FEATURE_CASES: list[Case] = [
     ),
     Case("validation", "query_too_long", ">2000-char query -> 400", _c_query_too_long),
     Case("auth", "api_key_required", "missing X-API-Key -> 401/403", _c_auth_required),
+    Case(
+        "mcp",
+        "search_judgments",
+        "POST /mcp tools/call search_judgments (needs JUDDGES_MCP_KEY)",
+        _c_mcp_search_judgments,
+    ),
 ]
 
 

@@ -99,12 +99,15 @@ allowlist does not give it a rate limit; the `@limiter.limit` decorator does.**
 
 Two known gaps remain, tracked on #565:
 
-- The search BFF (`frontend/app/api/search/documents/route.ts`) builds its own
-  header dict and forwards neither `X-Forwarded-For` nor
-  `X-RateLimit-Identity`, and `TRUSTED_PROXY` is unset in
-  `docker-compose.yml`. Every proxied request therefore keys on the frontend
-  container's address, so the limit is currently shared across all visitors
-  rather than per-visitor.
+- The search BFF (`frontend/app/api/search/documents/route.ts`) forwards no
+  `X-Forwarded-For`. It does send `X-RateLimit-Identity` for signed-in users
+  (#565), so they each get their own bucket, but **anonymous** traffic sends no
+  identity and keys on the frontend container's address, one bucket shared by
+  every signed-out visitor. Enabling `TRUSTED_PROXY=true` in production
+  (2026-10-22) does not change this: with no `X-Forwarded-For` to read,
+  `get_client_ip` still falls back to the socket address. Closing the gap for
+  guests means forwarding the visitor's address from the BFF, which then has to
+  be trusted only when it arrives with a matching `X-API-Key`.
 - Cookieless anonymous searches still mint one Redis hash each. The per-IP
   limit now bounds how fast that can happen, but the sessions are not minted
   lazily at charge time.

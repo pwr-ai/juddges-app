@@ -1,6 +1,6 @@
 {
   "name": "juddges-frontend",
-  "version": "1.5.12",
+  "version": "1.5.15",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
@@ -138,7 +138,7 @@
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "lighthouse": "^13.5.0",
-    "msw": "^2.15.0",
+    "msw": "^3.0.2",
     "openapi-typescript": "^7.13.0",
     "playwright": "^1.41.0",
     "tailwindcss": "^4",

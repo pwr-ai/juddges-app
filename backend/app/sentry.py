@@ -17,6 +17,7 @@ PII scrubbing (``before_send`` -> ``_scrub_event``) is **allowlist-based**, not
 denylist: only a small set of safe request headers survive; everything else
 (``Authorization``, ``Cookie``, query strings, user email/IP/username) is
 dropped, and email addresses are redacted from messages and exception values.
+Stack-frame local variables are dropped wholesale (they can hold bearer keys).
 This keeps ``send_default_pii`` effectively off even if upstream defaults change.
 """
 
@@ -76,6 +77,11 @@ def init_sentry() -> None:
             # Never let the SDK attach PII by default; _scrub_event is the
             # belt-and-suspenders allowlist on top of this.
             send_default_pii=False,
+            # Frame locals are NOT covered by send_default_pii. A middleware
+            # frame (e.g. McpAuthMiddleware) can hold a live, non-expiring
+            # bearer credential in a local, so never attach them. _scrub_event
+            # also strips frame vars in case this is ever flipped back.
+            include_local_variables=False,
             # Keep trace sampling low to avoid budget blow-up
             traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
             # Capture 100% of errors (only traces are sampled)
@@ -115,6 +121,8 @@ def _scrub_event(event: dict, hint: dict) -> dict:
     - filters cookies and query strings wholesale
     - filters user email / ip / username, keeping any stable id for grouping
     - redacts email addresses from the message and exception values
+    - drops ``vars`` (local variables) from every stack frame, in exception
+      and thread stacktraces, since a frame can hold a live bearer credential
 
     Pure function over the event dict so it is unit-testable without the SDK.
     """
@@ -142,7 +150,34 @@ def _scrub_event(event: dict, hint: dict) -> dict:
         event["message"] = _EMAIL_RE.sub(_REDACTED, event["message"])
 
     _redact_emails_in_exceptions(event)
+    _strip_frame_vars(event)
     return event
+
+
+def _strip_frame_vars(event: dict[str, Any]) -> None:
+    """Remove ``vars`` from every stack frame in the event (in place).
+
+    Defensive: event shapes vary by SDK version and integration, so anything
+    unexpected is skipped rather than raised (an error in ``before_send`` would
+    lose the event).
+    """
+    containers: list[Any] = []
+    for key in ("exception", "threads"):
+        section = event.get(key)
+        if isinstance(section, dict):
+            values = section.get("values")
+            if isinstance(values, list):
+                containers.extend(values)
+        elif isinstance(section, list):
+            containers.extend(section)
+    for entry in containers:
+        stacktrace = entry.get("stacktrace") if isinstance(entry, dict) else None
+        frames = stacktrace.get("frames") if isinstance(stacktrace, dict) else None
+        if not isinstance(frames, list):
+            continue
+        for frame in frames:
+            if isinstance(frame, dict):
+                frame.pop("vars", None)
 
 
 def _redact_emails_in_exceptions(event: dict[str, Any]) -> None:

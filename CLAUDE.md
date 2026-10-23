@@ -55,8 +55,16 @@ docker compose up -d                                  # prod (local build)
 ### Backend sub-packages (`backend/packages/`)
 - `juddges_search` — RAG search (LangChain + Supabase pgvector), chat/QA chains. Imported as `from juddges_search.chains.chat import chat_chain`.
 - `schema_generator_agent` — LangGraph agent for extracting structured data from legal documents.
+- `juddges_mcp` — read-only MCP server (`search_judgments`, `get_judgment`, `get_extracted_fields`) over the judgment corpus, served over HTTP at `/mcp` and over stdio for local development.
 
-Both are installed editable via Poetry (`develop = true`).
+All are installed editable via Poetry (`develop = true`).
+
+### MCP server (`juddges_mcp`)
+- The tools in `juddges_mcp/tools/` are transport-agnostic and must stay that way: they read the caller from `juddges_mcp.principal` and never take a credential argument. Authentication belongs to the transport (`juddges_mcp/http.py`, `juddges_mcp/stdio.py`).
+- `/mcp` is a mounted sub-app (`app.mount("/mcp", mcp_mount)`), deliberately **outside** `API_KEY_PROTECTED_ROUTERS`: its credential is a per-user MCP key, not `BACKEND_API_KEY`. Mount it after the router loop, or it swallows `/mcp/keys`.
+- Keys live in `mcp_api_keys` (sha256 hash only; plaintext shown once). Key management (`/mcp/keys`) depends on a Supabase JWT, never on an MCP key, so an MCP key can never mint or revoke keys.
+- Key `scopes` are reserved and **not enforced**: nothing reads `mcp_scopes`. Build enforcement before adding any tool that writes.
+- `MCP_IP_RATE_LIMIT` is only enforced when `TRUSTED_PROXY=true`, which is a **paired** setting: the leftmost `X-Forwarded-For` entry is the real client only while the proxy overwrites that header. Production sets the flag and pairs it with `header_up X-Forwarded-For {remote_host}` (plus the same for `X-Real-IP`) on the `juddges-api` site in the caddy-local gateway, which lives in the `data_stack` repo (`docker/infra/caddy-local/public-domains.caddyfile`) -- do not remove one half without the other. Caddy v2.9.1 happens to replace a client-supplied `X-Forwarded-For` by default and only appends once `trusted_proxies` is configured, so the `header_up` is belt-and-braces rather than the only thing standing between us and spoofed IPs; [`docs/how-to/mcp-server.md`](docs/how-to/mcp-server.md) has the measurements. See also [`docs/reference/mcp-tools.md`](docs/reference/mcp-tools.md).
 
 ### Vector search
 Uses **Supabase pgvector** (`vector(1024)` columns on `judgments` and `document_chunks`, HNSW index — BGE-M3 dimension; `EMBEDDER_DIMENSIONS` in `backend/app/services/meilisearch_embeddings.py` is the single source of truth, guarded by `backend/tests/app/test_embedding_dimension_contract.py`). Some legacy code paths may still reference Weaviate (`WEAVIATE_*` env vars, imports) — these are unused; when touching vector code, verify it goes through pgvector.

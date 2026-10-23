@@ -4,7 +4,13 @@
 // keyed only by URL, which could replay one user's authenticated response
 // to the next on the same browser after logout (issue #210). Activating
 // v4 evicts those entries. Bump again whenever cache semantics change.
-const CACHE_VERSION = "v4";
+// v4 -> v5: /runtime-env.js is excluded from the static cache (it carries the
+// running container's configuration and must always come from the network).
+const CACHE_VERSION = "v5";
+
+// Runtime configuration script served by app/runtime-env.js/route.ts. It ends
+// in ".js" but is not a static asset: never cache it, never serve it offline.
+const RUNTIME_ENV_PATH = "/runtime-env.js";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [];
@@ -131,6 +137,11 @@ self.addEventListener("fetch", (event) => {
   // Never intercept RSC payloads: App Router prefetches for protected routes
   // would otherwise cache pre-login redirect responses and replay them after login.
   if (url.searchParams.has("_rsc")) {
+    return;
+  }
+
+  // Runtime configuration must reflect the current server, not a cache.
+  if (url.pathname === RUNTIME_ENV_PATH) {
     return;
   }
 
