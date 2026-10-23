@@ -11,7 +11,7 @@ jest.mock("@/lib/extractions/use-extracted-data-filters", () => ({
   useExtractedDataFilters: () => ({
     filters: {}, textQuery: "", page: 1, pageSize: 25, nlQuestion: undefined,
     view: mockView, sampleSize: undefined, seed: 1, statsFields: ["appeal_outcome"],
-    setFilters: jest.fn(), setTextQuery: jest.fn(), setPage: jest.fn(), setNlQuestion: jest.fn(),
+    setFilters: jest.fn(), setTextQuery: jest.fn(), setPage: jest.fn(),
     removeFilter: jest.fn(), clearAll: jest.fn(), activeCount: 0,
     setView: jest.fn(), setSampling: jest.fn(), reshuffle: jest.fn(), setStatsFields: jest.fn(),
   }),

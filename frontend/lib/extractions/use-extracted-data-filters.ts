@@ -75,12 +75,17 @@ interface UseExtractedDataFiltersResult extends FilterState {
   setFilters: (next: BaseSchemaFilters) => void;
   setTextQuery: (next: string) => void;
   setPage: (page: number) => void;
-  setNlQuestion: (next: string | undefined) => void;
+  applyNlResult: (
+    filters: BaseSchemaFilters,
+    textQuery: string,
+    nlQuestion: string,
+  ) => void;
   removeFilter: (field: keyof BaseSchemaFilters) => void;
   clearAll: () => void;
   /** Active filter count (excludes empty arrays / empty strings). */
   activeCount: number;
   setView: (view: ResultView) => void;
+  drillBackToList: (patch?: BaseSchemaFilters) => void;
   setSampling: (sampleSize: number | undefined, seed?: number) => void;
   reshuffle: () => void;
   setStatsFields: (fields: string[]) => void;
@@ -264,9 +269,18 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setState((prev) => ({ ...prev, page: Math.max(1, page) }));
   }, []);
 
-  const setNlQuestion = useCallback((next: string | undefined) => {
-    setState((prev) => ({ ...prev, nlQuestion: next }));
-  }, []);
+  const applyNlResult = useCallback(
+    (filters: BaseSchemaFilters, textQuery: string, nlQuestion: string) => {
+      setState((prev) => ({
+        ...prev,
+        filters: pruneEmpty(filters),
+        textQuery,
+        nlQuestion,
+        page: 1,
+      }));
+    },
+    [],
+  );
 
   const removeFilter = useCallback((field: keyof BaseSchemaFilters) => {
     setState((prev) => {
@@ -282,6 +296,19 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
 
   const setView = useCallback((view: ResultView) => {
     setState((prev) => ({ ...prev, view }));
+  }, []);
+
+  const drillBackToList = useCallback((patch?: BaseSchemaFilters) => {
+    setState((prev) =>
+      patch
+        ? {
+            ...prev,
+            filters: pruneEmpty({ ...prev.filters, ...patch }),
+            page: 1,
+            view: "list",
+          }
+        : { ...prev, view: "list" },
+    );
   }, []);
 
   const setSampling = useCallback((sampleSize: number | undefined, seed?: number) => {
@@ -304,11 +331,12 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setFilters,
     setTextQuery,
     setPage,
-    setNlQuestion,
+    applyNlResult,
     removeFilter,
     clearAll,
     activeCount,
     setView,
+    drillBackToList,
     setSampling,
     reshuffle,
     setStatsFields,
