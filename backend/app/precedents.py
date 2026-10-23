@@ -288,10 +288,24 @@ async def _fetch_document_context(document_id: str) -> dict[str, Any] | None:
         return None
 
 
+def _precedent_document(doc: dict[str, Any]) -> dict[str, Any]:
+    """Translate raw judgment columns at the precedents boundary."""
+    return {
+        **doc,
+        "document_id": doc.get("document_id") or doc.get("id"),
+        "date_issued": doc.get("date_issued") or doc.get("decision_date"),
+        "document_type": doc.get("document_type")
+        or doc.get("decision_type")
+        or doc.get("case_type"),
+        "legal_bases": doc.get("legal_bases", doc.get("cited_legislation")),
+    }
+
+
 def _format_candidate_for_analysis(doc: dict[str, Any]) -> str:
     """Format a candidate document for LLM analysis."""
+    doc = _precedent_document(doc)
     parts = []
-    doc_id = doc.get("document_id", "unknown")
+    doc_id = doc.get("document_id") or "unknown"
     parts.append(f"--- Document ID: {doc_id} ---")
 
     if doc.get("title"):
@@ -566,8 +580,9 @@ def _build_precedent_match(
     doc: dict[str, Any], analysis: dict[str, Any] | None = None
 ) -> PrecedentMatch:
     """Build API response model for a single precedent candidate."""
+    doc = _precedent_document(doc)
     analysis_data = analysis or {}
-    doc_id = doc.get("document_id", "")
+    doc_id = doc.get("document_id") or ""
     similarity = doc.get("_similarity_score", 0.0)
     relevance_score = analysis_data.get("relevance_score")
     date_val = doc.get("date_issued")
