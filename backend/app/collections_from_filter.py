@@ -321,12 +321,39 @@ async def create_collection_from_filter(
 ) -> CollectionFromFilterResponse:
     if not supabase_client:
         raise _db_unavailable()
+    return await run_collection_from_filter(
+        request=request,
+        background_tasks=background_tasks,
+        db=db,
+        pairs_db=pairs_db,
+        user=user,
+        filter_client=supabase_client,
+    )
+
+
+async def run_collection_from_filter(
+    *,
+    request: CreateCollectionFromFilterRequest,
+    background_tasks: BackgroundTasks,
+    db: Any,
+    pairs_db: Any,
+    user: AuthenticatedUser,
+    filter_client: Any,
+) -> CollectionFromFilterResponse:
+    """Create collection state from a filter without requiring the HTTP router."""
     await check_collection_ids_ownership(db, request.filters, user_id=user.id)
 
     if request.split_by_jurisdiction:
-        return await _create_pair(request, background_tasks, db, pairs_db, user)
+        return await _create_pair(
+            request,
+            background_tasks,
+            db,
+            pairs_db,
+            user,
+            filter_client=filter_client,
+        )
 
-    resolved = resolve_filter_ids(supabase_client, request.filters, request.text_query)
+    resolved = resolve_filter_ids(filter_client, request.filters, request.text_query)
     if resolved.total == 0:
         raise _filter_empty()
     try:
@@ -362,10 +389,12 @@ async def _create_pair(
     db: Any,
     pairs_db: Any,
     user: AuthenticatedUser,
+    *,
+    filter_client: Any,
 ) -> CollectionFromFilterResponse:
     """split_by_jurisdiction=true: PL + UK collections and a collection_pairs row."""
     filters, ignored = strip_ignored(request.filters)
-    resolved = resolve_filter_ids(supabase_client, filters, request.text_query)
+    resolved = resolve_filter_ids(filter_client, filters, request.text_query)
     try:
         check_cap(resolved, SAVE_FROM_FILTER_MAX_DOCUMENTS, per_jurisdiction=True)
     except FilterTooLargeError as exc:
