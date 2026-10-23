@@ -1,10 +1,10 @@
 import {
   COHORT_GROUP_FIELDS,
-  cohortIdsWithValue,
   groupCohort,
+  projectRankedPrecedents,
   topBucket,
 } from "@/lib/precedents/cohort-grouping";
-import type { PrecedentCohortItem } from "@/lib/api/advanced";
+import type { PrecedentCohortItem, PrecedentMatch } from "@/lib/api/advanced";
 
 function item(id: string, patch: Partial<PrecedentCohortItem> = {}): PrecedentCohortItem {
   return {
@@ -19,6 +19,23 @@ function item(id: string, patch: Partial<PrecedentCohortItem> = {}): PrecedentCo
     sentences_received: [],
     convict_offences: [],
     ...patch,
+  };
+}
+
+function precedent(id: string): PrecedentMatch {
+  return {
+    document_id: id,
+    title: id,
+    document_type: null,
+    date_issued: null,
+    court_name: null,
+    outcome: null,
+    legal_bases: null,
+    summary: null,
+    similarity_score: 0.5,
+    relevance_score: null,
+    matching_factors: [],
+    relevance_explanation: null,
   };
 }
 
@@ -100,18 +117,51 @@ describe("groupCohort", () => {
   });
 });
 
-describe("cohortIdsWithValue", () => {
-  it("returns every judgment carrying the value", () => {
+describe("projectRankedPrecedents", () => {
+  it("keeps ranking order and original ordinals when cohort order differs", () => {
     const cohort = [
-      item("a", { appeal_outcome: ["dismissed", "allowed"] }),
-      item("b", { appeal_outcome: ["allowed"] }),
-      item("c", { appeal_outcome: [] }),
+      item("third", { appeal_outcome: ["allowed"] }),
+      item("first", { appeal_outcome: ["allowed"] }),
+      item("second", { appeal_outcome: ["dismissed"] }),
     ];
+    const ranked = [precedent("first"), precedent("second"), precedent("third")];
 
-    expect(cohortIdsWithValue(cohort, "appeal_outcome", "allowed")).toEqual(
-      new Set(["a", "b"]),
-    );
-    expect(cohortIdsWithValue(cohort, "appeal_outcome", "nope").size).toBe(0);
+    expect(typeof projectRankedPrecedents).toBe("function");
+    expect(
+      projectRankedPrecedents(ranked, cohort, {
+        field: "appeal_outcome",
+        value: "allowed",
+      }),
+    ).toEqual([
+      { precedent: ranked[0], rank: 1 },
+      { precedent: ranked[2], rank: 3 },
+    ]);
+  });
+
+  it("preserves duplicate ranked ids and excludes ids missing from the cohort", () => {
+    const duplicate = precedent("duplicate");
+    const missing = precedent("missing");
+    const ranked = [duplicate, missing, duplicate];
+    const cohort = [item("duplicate", { convict_offences: ["theft"] })];
+
+    expect(
+      projectRankedPrecedents(ranked, cohort, {
+        field: "convict_offences",
+        value: "theft",
+      }),
+    ).toEqual([
+      { precedent: duplicate, rank: 1 },
+      { precedent: duplicate, rank: 3 },
+    ]);
+  });
+
+  it("projects every ranked precedent when no cohort selection is active", () => {
+    const ranked = [precedent("a"), precedent("a")];
+
+    expect(projectRankedPrecedents(ranked, [], null)).toEqual([
+      { precedent: ranked[0], rank: 1 },
+      { precedent: ranked[1], rank: 2 },
+    ]);
   });
 });
 

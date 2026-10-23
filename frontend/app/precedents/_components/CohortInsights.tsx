@@ -8,16 +8,12 @@ import { formatEnumOptionLabel } from "@/lib/extractions/base-schema-filter-conf
 import type { PrecedentCohortItem } from "@/lib/api/advanced";
 import {
   COHORT_GROUP_FIELDS,
+  type CohortFilter,
   type CohortGroupField,
   groupCohort,
   topBucket,
 } from "@/lib/precedents/cohort-grouping";
 import { FieldCard } from "@/app/search/extractions/_components/FieldCard";
-
-export interface CohortFilter {
-  field: CohortGroupField;
-  value: string;
-}
 
 export interface CohortInsightsProps {
   cohort: PrecedentCohortItem[];
