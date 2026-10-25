@@ -183,6 +183,13 @@ The backend image is shared by two services:
 - `backend` — runs the FastAPI API server
 - `backend-worker` — runs `celery -A app.workers worker` (same image, different command)
 
+The backend image bakes the release version in as `APP_VERSION` (a build arg the
+build script sets), so `GET /health` and `/health/healthz` report it, e.g.
+`"version":"1.2.3"`. Before pushing, `scripts/smoke_test_images.sh` refuses an
+image whose `/health` reports a version other than the tag being released. An
+image built without the arg (e.g. a local `docker compose up --build`) reports
+`"unknown"`; a runtime `APP_VERSION` env var overrides the baked value.
+
 ---
 
 ## 6. Production Deployment (Registry Images)

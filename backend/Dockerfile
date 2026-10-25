@@ -82,6 +82,11 @@ USER appuser
 
 EXPOSE 8002
 
+# Release version reported by /health (set by scripts/build_and_push_prod.sh).
+# Declared last so a new version does not invalidate the layers above.
+ARG APP_VERSION=unknown
+ENV APP_VERSION=${APP_VERSION}
+
 # Use gunicorn with uvicorn workers for better process management and monitoring
 # Worker count is env-driven via GUNICORN_WORKERS. When unset it defaults to the
 # gunicorn-recommended (2 * vCPU) + 1, computed from the container's CPU count.

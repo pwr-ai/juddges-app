@@ -3,7 +3,8 @@
 # smoke_test_images.sh
 #
 # Verify that a freshly built backend image starts up cleanly and
-# responds to /health within 30 seconds. Designed to be called from
+# responds to /health within 30 seconds (reporting TAG as its version, unless
+# TAG is "latest"). Designed to be called from
 # scripts/build_and_push_prod.sh AFTER docker build but BEFORE docker push,
 # so that broken images never reach Docker Hub.
 #
@@ -53,7 +54,12 @@ docker run -d --name "$BACKEND_NAME" --network "$NETWORK" \
 
 echo "[smoke] Waiting up to ${TIMEOUT}s for http://localhost:${HOST_PORT}/health ..."
 for i in $(seq 1 "$TIMEOUT"); do
-    if curl -fs "http://localhost:${HOST_PORT}/health" >/dev/null 2>&1; then
+    if body=$(curl -fs "http://localhost:${HOST_PORT}/health" 2>/dev/null); then
+        # A pinned tag must be baked in as APP_VERSION (backend/Dockerfile).
+        if [[ "$TAG" != "latest" && "$body" != *"\"version\":\"${TAG}\""* ]]; then
+            echo "[smoke] FAILED: /health reports a version other than ${TAG}: ${body}" >&2
+            exit 1
+        fi
         echo "[smoke] PASS: backend /health responded after ${i}s"
         exit 0
     fi
