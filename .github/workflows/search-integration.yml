@@ -84,7 +84,7 @@ jobs:
         with:
           version: 1.7.1
 
-      - uses: actions/cache@v6
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/pypoetry

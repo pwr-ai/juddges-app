@@ -1,0 +1,95 @@
+name: Cache Warm
+
+# The only workflow that saves dependency caches. Every other job uses
+# `actions/cache/restore`, so caches are written once, in the `main` scope,
+# which every pull request can read. Before this, each PR saved its own
+# ~300 MB npm and ~600 MB poetry copies under `refs/pull/<n>/merge`, and the
+# duplicates kept the repo pinned at the 10 GB cache limit.
+#
+# The keys and paths below must match the restore steps in ci.yml,
+# performance.yml and search-integration.yml exactly — the cache version
+# hashes the path list, so a mismatch is a silent miss.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/poetry.lock
+      - frontend/package-lock.json
+      - .github/workflows/cache-warm.yml
+  schedule:
+    # Weekly, so the entries outlive GitHub's 7-day eviction on quiet weeks.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: cache-warm
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  poetry:
+    name: Warm poetry cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.7.1
+
+      - id: restore
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+          lookup-only: true
+
+      - name: Install dependencies
+        if: steps.restore.outputs.cache-hit != 'true'
+        working-directory: backend
+        run: poetry install --with dev
+
+      - if: steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+
+  npm:
+    name: Warm npm cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - id: restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          lookup-only: true
+
+      - name: Install dependencies
+        if: steps.restore.outputs.cache-hit != 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - if: steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
