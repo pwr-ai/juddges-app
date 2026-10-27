@@ -2449,6 +2449,7 @@ develop = true
 
 [package.dependencies]
 loguru = "^0.7.3"
+mcp = "1.30.0"
 pydantic = "^2.0"
 
 [package.source]
@@ -7734,4 +7735,4 @@ observability = ["sentry-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "2337387a3e68d52db5228a6655d6fea87b37b9f1ed8bf91a2227b55a04f139f2"
+content-hash = "7fea81acc10d67bd63f6949bde77eb1cb06bb72b10331eab8b3cc5d643d53170"
