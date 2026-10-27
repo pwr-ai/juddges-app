@@ -1,28 +1,35 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# docker-dev.sh
-# Development environment helper for Juddges App
+# deploy_dev.sh
+# Development environment (hot reload) for Juddges App
+#
+# Dev is the "juddges-dev" Compose project and prod is "juddges-app", so dev
+# runs next to production on one host without touching its containers. Dev
+# images are built locally from the mounted source tree and never pushed.
+# Dev shares the production Supabase project, so its writes land in prod data.
 #
 # Usage:
-#   ./docker-dev.sh start       Start dev environment
-#   ./docker-dev.sh stop        Stop all dev services
-#   ./docker-dev.sh restart     Restart all dev services
-#   ./docker-dev.sh logs        View logs (snapshot)
-#   ./docker-dev.sh logs-f      Follow logs in real time
-#   ./docker-dev.sh build       Build images (with cache)
-#   ./docker-dev.sh rebuild     Build images without cache
-#   ./docker-dev.sh status      Show container status
-#   ./docker-dev.sh shell-be    Open shell in backend container
-#   ./docker-dev.sh shell-fe    Open shell in frontend container
-#   ./docker-dev.sh test-be     Run backend tests (pytest)
-#   ./docker-dev.sh test-fe     Run frontend tests (jest)
-#   ./docker-dev.sh clean       Remove containers and volumes
+#   ./scripts/deploy_dev.sh start       Build if needed, start, wait until it answers
+#   ./scripts/deploy_dev.sh stop        Stop all dev services
+#   ./scripts/deploy_dev.sh restart     Restart all dev services
+#   ./scripts/deploy_dev.sh logs        View logs (snapshot)
+#   ./scripts/deploy_dev.sh logs-f      Follow logs in real time
+#   ./scripts/deploy_dev.sh build       Build images (with cache)
+#   ./scripts/deploy_dev.sh rebuild     Build images without cache
+#   ./scripts/deploy_dev.sh status      Show container status
+#   ./scripts/deploy_dev.sh shell-be    Open shell in backend container
+#   ./scripts/deploy_dev.sh shell-fe    Open shell in frontend container
+#   ./scripts/deploy_dev.sh test-be     Run backend tests (pytest)
+#   ./scripts/deploy_dev.sh test-fe     Run frontend tests (jest)
+#   ./scripts/deploy_dev.sh clean       Remove containers and volumes
 # ==============================================================================
 
 set -euo pipefail
 
 COMPOSE_FILE="docker-compose.dev.yml"
-REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DEV_PROJECT="juddges-dev"
+PROD_PROJECT="juddges-app"
 
 # Service names (must match docker-compose.dev.yml)
 SVC_FRONTEND="frontend-dev"
@@ -50,13 +57,44 @@ dc() {
     docker compose -f "${REPO_ROOT}/${COMPOSE_FILE}" "$@"
 }
 
+# COMPOSE_PROJECT_NAME (from the shell or .env) outranks `name:` in the compose
+# file. Pointed at prod, `stop` would tear production down and `clean`
+# (`down -v --remove-orphans`) would delete its containers as orphans.
+check_project() {
+    local project
+    project=$(dc config 2>/dev/null | awk '/^name:/ {print $2; exit}')
+    if [[ "${project}" != "${DEV_PROJECT}" ]]; then
+        err "Dev compose project resolves to '${project:-<config error>}', expected '${DEV_PROJECT}'."
+        err "Remove COMPOSE_PROJECT_NAME from your shell and from .env."
+        exit 1
+    fi
+}
+
+# Poll a URL until it answers or the attempts run out.
+wait_for_url() {
+    local name="$1" url="$2" attempts="$3"
+    local i
+    for i in $(seq 1 "${attempts}"); do
+        if curl -s -o /dev/null --max-time 10 "${url}"; then
+            ok "${name} is responding (${url})"
+            return 0
+        fi
+        sleep 5
+    done
+    warn "${name} not responding yet at ${url}. Check: ./scripts/deploy_dev.sh logs-f"
+}
+
 # ------------------------------------------------------------------------------
 # Commands
 # ------------------------------------------------------------------------------
 cmd_start() {
-    info "Starting dev environment ..."
-    dc up -d
+    info "Starting dev environment (project ${DEV_PROJECT}; prod stays in ${PROD_PROJECT}) ..."
+    dc up -d --build
     ok "Dev environment started"
+    # The backend loads models on start and the first Next.js page compiles on
+    # demand, so both can lag behind a container that is already "running".
+    wait_for_url "Backend dev" "http://localhost:8004/health/healthz" 24
+    wait_for_url "Frontend dev" "http://localhost:3007/" 12
     echo ""
     cmd_status
     echo ""
@@ -135,10 +173,10 @@ cmd_clean() {
 
 cmd_help() {
     echo ""
-    echo "Usage: ./docker-dev.sh <command>"
+    echo "Usage: ./scripts/deploy_dev.sh <command>"
     echo ""
     echo "Commands:"
-    echo "  start       Start dev environment (detached)"
+    echo "  start       Build if needed, start (detached), wait until it answers"
     echo "  stop        Stop all dev services"
     echo "  restart     Restart all dev services"
     echo "  logs        View logs (last 100 lines)"
@@ -161,6 +199,11 @@ cmd_help() {
 main() {
     local cmd="${1:-help}"
     shift 2>/dev/null || true
+
+    case "${cmd}" in
+        help|-h|--help) ;;
+        *) check_project ;;
+    esac
 
     case "${cmd}" in
         start)      cmd_start ;;

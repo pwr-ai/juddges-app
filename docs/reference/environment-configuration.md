@@ -43,6 +43,12 @@ The project uses a **simple two-file strategy** for environment configuration:
    docker compose up -d
    ```
 
+   Dev and prod can run side by side on one host. Each file pins its own
+   Compose project name (`juddges-dev` / `juddges-app`) with a top-level
+   `name:`, so their containers, `ps`, `logs` and `--remove-orphans` never
+   touch each other. Do not set `COMPOSE_PROJECT_NAME` in `.env`: both files
+   read it, and it outranks `name:`, collapsing the two stacks into one project.
+
 ### For Production Deployment
 
 1. Copy `.env.example` to `.env` on your production server
