@@ -81,7 +81,7 @@ Use the dev helper script with `docker-compose.dev.yml`.
 
 ```bash
 # Start dev environment
-./docker-dev.sh start
+./scripts/deploy_dev.sh start
 ```
 
 ### Dev ports
@@ -95,16 +95,16 @@ Use the dev helper script with `docker-compose.dev.yml`.
 ### Common dev commands
 
 ```bash
-./docker-dev.sh stop       # Stop all services
-./docker-dev.sh restart    # Restart all services
-./docker-dev.sh logs-f     # Follow logs
-./docker-dev.sh status     # Show container status
-./docker-dev.sh rebuild    # Rebuild images from scratch
-./docker-dev.sh shell-be   # Shell into backend container
-./docker-dev.sh shell-fe   # Shell into frontend container
-./docker-dev.sh test-be    # Run backend tests (pytest)
-./docker-dev.sh test-fe    # Run frontend tests (jest)
-./docker-dev.sh clean      # Remove containers and volumes
+./scripts/deploy_dev.sh stop       # Stop all services
+./scripts/deploy_dev.sh restart    # Restart all services
+./scripts/deploy_dev.sh logs-f     # Follow logs
+./scripts/deploy_dev.sh status     # Show container status
+./scripts/deploy_dev.sh rebuild    # Rebuild images from scratch
+./scripts/deploy_dev.sh shell-be   # Shell into backend container
+./scripts/deploy_dev.sh shell-fe   # Shell into frontend container
+./scripts/deploy_dev.sh test-be    # Run backend tests (pytest)
+./scripts/deploy_dev.sh test-fe    # Run frontend tests (jest)
+./scripts/deploy_dev.sh clean      # Remove containers and volumes
 ```
 
 ### Hot reload behavior
@@ -112,7 +112,27 @@ Use the dev helper script with `docker-compose.dev.yml`.
 - **Backend**: Python source mounted at `/app`, Uvicorn runs with auto-reload
 - **Frontend**: `frontend/` mounted at `/app`, Next.js dev server handles HMR
 - **Worker**: Celery worker shares the backend volume mount
-- Dependency or Dockerfile changes require `./docker-dev.sh rebuild`
+- Dependency or Dockerfile changes require `./scripts/deploy_dev.sh rebuild`
+
+### Running dev next to production
+
+Dev and prod can run on the same host at the same time:
+
+- **Separate Compose projects.** `docker-compose.dev.yml` pins `name: juddges-dev`
+  and `docker-compose.yml` pins `name: juddges-app`, so `ps`, `logs`, `down` and
+  `--remove-orphans` on one never reach the other. `COMPOSE_PROJECT_NAME` must
+  not be set in `.env` or the shell: it outranks `name:` and collapses both stacks
+  into one project. `deploy_dev.sh` refuses to run when it detects that.
+- **Separate infrastructure.** Dev has its own Redis, Meilisearch, volumes and
+  network (`juddges-app-dev-network`), and does not join `data_stack_network`, so
+  Caddy never exposes it.
+- **Shared Supabase.** Both stacks read the same `.env`, so dev reads and writes
+  production data.
+- **No beat in dev.** Because the database is shared, the dev worker runs without
+  `--beat`: a dev beat would fire the whole `beat_schedule` a second time
+  (duplicate `digest.send` mails, double maintenance runs). Scheduled work runs
+  only in prod's `backend-beat`; queue a task by hand from the dev worker when
+  you need one.
 
 ---
 
@@ -368,7 +388,7 @@ docker system prune -f --volumes
 
 | Script | Purpose | When to use |
 |--------|---------|-------------|
-| `./docker-dev.sh` | Development environment with hot reload | Day-to-day development |
+| `./scripts/deploy_dev.sh` | Development environment with hot reload (project `juddges-dev`) | Day-to-day development, also next to prod |
 | `./scripts/build_and_push_prod.sh` | SemVer release: version sync, Docker build + push, git tag | Releasing a new version |
 | `./scripts/deploy_prod.sh` | Pull from Docker Hub and deploy on production host | Deploying to production |
 
@@ -386,7 +406,7 @@ Need to release a new version?
   |
   +--> No, just test production build locally --> docker compose up -d --build
   |
-  +--> No, just developing --> ./docker-dev.sh start
+  +--> No, just developing --> ./scripts/deploy_dev.sh start
 ```
 
 ### Environment overview

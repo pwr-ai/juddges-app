@@ -23,12 +23,75 @@ concurrency:
 
 jobs:
   # ============================================================================
+  # Change detection
+  # ============================================================================
+  # Gates the backend and frontend suites on the paths a change touches, so a
+  # docs-only or frontend-only PR does not pay for the other half. A job skipped
+  # by its `if:` reports Success, which is what keeps the required checks green
+  # (a workflow-level `paths:` filter would leave them Pending forever).
+  #
+  # Fails open: if this job fails, `needs.changes.result != 'success'` makes
+  # every gated job run. Tag pushes and manual dispatches always run everything.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.out.outputs.backend }}
+      frontend: ${{ steps.out.outputs.frontend }}
+      openapi: ${{ steps.out.outputs.openapi }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: filter
+        if: github.event_name == 'pull_request' || github.ref_type == 'branch' && github.event_name == 'push'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ci: &ci
+              - .github/workflows/ci.yml
+            backend:
+              - *ci
+              - backend/**
+              - supabase/**
+            frontend:
+              - *ci
+              - frontend/**
+            openapi:
+              - *ci
+              - backend/**
+              - frontend/lib/api/**
+              - scripts/regen_openapi_types.sh
+              - scripts/openapi-snapshot.json
+
+      - id: out
+        env:
+          FILTERED: ${{ steps.filter.conclusion == 'success' }}
+          BACKEND: ${{ steps.filter.outputs.backend }}
+          FRONTEND: ${{ steps.filter.outputs.frontend }}
+          OPENAPI: ${{ steps.filter.outputs.openapi }}
+        run: |
+          if [ "$FILTERED" != true ]; then
+            BACKEND=true FRONTEND=true OPENAPI=true
+          fi
+          {
+            echo "backend=${BACKEND}"
+            echo "frontend=${FRONTEND}"
+            echo "openapi=${OPENAPI}"
+          } >> "$GITHUB_OUTPUT"
+          echo "backend=${BACKEND} frontend=${FRONTEND} openapi=${OPENAPI}"
+
+  # ============================================================================
   # Lint & Test (runs on all PRs and pushes)
   # ============================================================================
 
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -72,6 +135,8 @@ jobs:
   openapi-drift:
     name: OpenAPI Type Drift
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.openapi == 'true') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -121,6 +186,8 @@ jobs:
   backend-test:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -186,6 +253,8 @@ jobs:
   database-contract:
     name: Database Contract
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
     services:
       postgres:
         image: pgvector/pgvector:pg17
@@ -239,6 +308,8 @@ jobs:
   frontend-lint:
     name: Frontend Lint
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -267,6 +338,8 @@ jobs:
   frontend-test:
     name: Frontend Unit Tests
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -303,7 +376,8 @@ jobs:
   frontend-build:
     name: Frontend Build
     runs-on: ubuntu-latest
-    needs: [frontend-lint]
+    needs: [changes, frontend-lint]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') && needs.frontend-lint.result == 'success' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -354,7 +428,8 @@ jobs:
   frontend-route-contract:
     name: Frontend Route Contract (Chromium)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: [changes]
+    if: ${{ (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     container:
       image: mcr.microsoft.com/playwright:v1.64.0-jammy
     defaults:
@@ -635,6 +710,8 @@ jobs:
   backend-security:
     name: Backend Dependency Audit
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -703,6 +780,8 @@ jobs:
   frontend-security:
     name: Frontend Dependency Audit
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     steps:
       - uses: actions/checkout@v7
 
