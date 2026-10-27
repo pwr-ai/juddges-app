@@ -14,6 +14,13 @@
 #   2. Fill in actual values in .env
 #   3. Run: docker compose up -d
 #   (or use: ./scripts/deploy_prod.sh)
+#
+# PROJECT NAME:
+#   Pinned to "juddges-app" (the name the running production stack already
+#   carries); dev uses "juddges-dev". Do not set COMPOSE_PROJECT_NAME in .env:
+#   it outranks `name:` and would give dev and prod the same project.
+
+name: juddges-app
 
 services:
   # ============================================================================
