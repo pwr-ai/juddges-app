@@ -40,7 +40,7 @@ jobs:
         with:
           version: 1.7.1
 
-      - uses: actions/cache@v6
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/pypoetry
@@ -82,14 +82,18 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - uses: snok/install-poetry@v1
         with:
           version: 1.7.1
 
-      - uses: actions/cache@v6
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/pypoetry
@@ -128,7 +132,7 @@ jobs:
         with:
           version: 1.7.1
 
-      - uses: actions/cache@v6
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/pypoetry
@@ -205,7 +209,7 @@ jobs:
         with:
           version: 1.7.1
 
-      - uses: actions/cache@v6
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/pypoetry
@@ -241,8 +245,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         working-directory: frontend
@@ -265,8 +273,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         working-directory: frontend
@@ -298,8 +310,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         working-directory: frontend
@@ -319,6 +335,8 @@ jobs:
           name: frontend-build
           path: |
             frontend/.next/
+            !frontend/.next/cache/
+            !frontend/.next/standalone/
             frontend/public/
             frontend/package.json
             frontend/package-lock.json
@@ -326,6 +344,10 @@ jobs:
           # `actions/upload-artifact@v4` defaults `include-hidden-files: false`,
           # which silently skips the dot-prefixed `.next/` directory — leaving
           # ~22 files instead of the full Next.js build output. Enable it.
+          # The consumers run `npm start` (`next start`), which serves the build
+          # output (`server/`, `static/`, manifests). `.next/cache/` (compiler cache) and
+          # `.next/standalone/` (the Docker bundle, with its own node_modules)
+          # are never read and made up most of the ~355 MB uploaded per run.
           include-hidden-files: true
           retention-days: 1
 
@@ -345,8 +367,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         working-directory: frontend
@@ -429,8 +455,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         working-directory: frontend
@@ -508,8 +538,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         working-directory: frontend
@@ -675,8 +709,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         working-directory: frontend

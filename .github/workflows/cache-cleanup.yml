@@ -1,0 +1,25 @@
+name: Cache Cleanup
+
+# Drops every cache scoped to a pull request once it closes. CI only restores
+# caches (see cache-warm.yml), so a PR should not own any — this is the safety
+# net for a step that still saves on its own (a future `actions/cache`, a
+# `setup-*` action with `cache:` set). Without it, such entries linger until
+# GitHub evicts them after 7 days unused.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    name: Delete PR caches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete caches for refs/pull/${{ github.event.pull_request.number }}/merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh cache delete --all --ref "refs/pull/${{ github.event.pull_request.number }}/merge" --succeed-on-no-caches
