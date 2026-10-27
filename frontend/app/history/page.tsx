@@ -1,5 +1,6 @@
 "use client";
 
+import { buildSearchHref } from "@/lib/searchHref";
 import React, { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -231,7 +232,7 @@ export default function SearchHistoryPage(): React.JSX.Element {
               <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Link
-                    href={`/search?q=${encodeURIComponent(item.query)}`}
+                    href={buildSearchHref({ q: item.query })}
                     className="font-medium text-base text-foreground group-hover:text-oxblood transition-colors hover:underline truncate max-w-xl"
                   >
                     {item.query}
@@ -262,7 +263,7 @@ export default function SearchHistoryPage(): React.JSX.Element {
               </div>
 
               <Link
-                href={`/search?q=${encodeURIComponent(item.query)}`}
+                href={buildSearchHref({ q: item.query })}
                 className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-muted hover:bg-primary hover:text-primary-foreground rounded-md transition-colors self-start sm:self-center shrink-0"
               >
                 <span>Re-run</span>
