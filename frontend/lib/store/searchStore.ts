@@ -1140,10 +1140,7 @@ export const useSearchStore = create<SearchState>()(
           p.selectedLanguages ?? new Set<string>(),
         );
         if (selectedLanguages.size === 0) selectedLanguages = new Set(["uk", "pl"]);
-        // Coerce away the broken hybrid mode (bge-m3 not registered — issue #200);
-        // a returning user with searchMode='hybrid' would 502-loop.
-        const searchMode: SearchMode =
-          p.searchMode === "hybrid" ? "text" : (p.searchMode ?? current.searchMode);
+        const searchMode: SearchMode = p.searchMode ?? current.searchMode;
         return {
           ...current,
           ...p,

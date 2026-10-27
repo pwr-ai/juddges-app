@@ -263,13 +263,13 @@ export function useSearchUrlParams({
       setSearchType(modeParam);
     }
 
-    // Backend search mode (text/vector). Bookmarks carrying `searchMode=hybrid`
-    // are coerced to text — Meili hybrid is broken until issue #200 ships the
-    // bge-m3 embedder registration.
-    if (searchModeParam === 'text' || searchModeParam === 'vector') {
+    // Backend search mode (text/vector/hybrid).
+    if (
+      searchModeParam === 'text' ||
+      searchModeParam === 'vector' ||
+      searchModeParam === 'hybrid'
+    ) {
       setSearchMode(searchModeParam);
-    } else if (searchModeParam === 'hybrid') {
-      setSearchMode('text');
     }
 
     // Extracted-field numeric ranges

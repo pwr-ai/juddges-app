@@ -14680,7 +14680,7 @@ export interface operations {
                 offset?: number;
                 /** @description Optional Meilisearch filter expression */
                 filters?: string | null;
-                /** @description Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5. */
+                /** @description Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends 0.75. */
                 semantic_ratio?: number;
                 /** @description When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical. */
                 parse_attributes?: boolean;

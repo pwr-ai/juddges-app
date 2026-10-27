@@ -12,12 +12,18 @@ jest.mock('@/lib/store/searchStore', () => ({
 
 jest.mock('@/lib/api', () => ({
   searchChunks: jest.fn(),
+  searchDocumentsMeili: jest.fn(),
   fetchDocumentsByIds: jest.fn(),
+  HYBRID_SEMANTIC_RATIO: 0.75,
+  GuestSearchLimitError: class GuestSearchLimitError extends Error {},
 }));
 
 import * as api from '@/lib/api';
 
 const mockSearchChunks = api.searchChunks as jest.MockedFunction<typeof api.searchChunks>;
+const mockSearchDocumentsMeili = api.searchDocumentsMeili as jest.MockedFunction<
+  typeof api.searchDocumentsMeili
+>;
 const mockFetchDocumentsByIds = api.fetchDocumentsByIds as jest.MockedFunction<
   typeof api.fetchDocumentsByIds
 >;
@@ -109,6 +115,7 @@ describe('useSearchResults', () => {
         storeState.searchMetadata = [...storeState.searchMetadata, ...metadata];
       }),
       resetSearch: jest.fn(),
+      setGuestAllowance: jest.fn(),
     };
 
     mockUseSearchStore.mockImplementation(() => storeState);
@@ -162,6 +169,30 @@ describe('useSearchResults', () => {
     );
     expect(storeState.setIsSearching).toHaveBeenNthCalledWith(1, true);
     expect(storeState.setIsSearching).toHaveBeenLastCalledWith(false);
+  });
+
+  it.each([
+    ['hybrid', 0.75],
+    ['text', 0],
+  ])('sends the %s mode to Meilisearch with semantic ratio %s', async (mode, ratio) => {
+    storeState.searchMode = mode;
+    storeState.baseFilters = {};
+    mockSearchDocumentsMeili.mockResolvedValueOnce({
+      documents: [],
+      query: 'contract law',
+      pagination: null,
+    } as any);
+
+    const { result } = renderHook(() => useSearchResults());
+
+    await act(async () => {
+      await result.current.search('contract law');
+    });
+
+    expect(mockSearchDocumentsMeili).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'contract law', semanticRatio: ratio })
+    );
+    expect(mockSearchChunks).not.toHaveBeenCalled();
   });
 
   it('stores pagination metadata from the initial search', async () => {
