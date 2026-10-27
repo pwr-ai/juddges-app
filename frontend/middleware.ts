@@ -43,7 +43,9 @@ import { isAnonymousExtractionBffRead } from "@/lib/supabase/public-route-policy
 const DOCUMENT_PAGE_PATTERN = /^\/documents\/([^/]+)$/;
 const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/([^/]+)$/;
-const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
+// `/schemas/base` is a static sibling of `/schemas/[id]`, not a schema ID; the
+// detail preflight below would otherwise rewrite it to the not-found page.
+const SCHEMA_PAGE_PATTERN = /^\/schemas\/(?!base$)([^/]+)$/;
 
 type DocumentPreflight =
   | { kind: "not-document" }
