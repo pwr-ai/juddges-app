@@ -66,17 +66,18 @@ export const teamMembers: TeamMember[] = [
   },
   {
     name: "Prof. Michał Bernaczyk",
-    role: "Professor of Constitutional Law",
+    role: "Professor of Constitutional & Public Law",
     affiliation: "University of Wrocław",
     description:
-      "Professor in the Department of Constitutional Law at the University of Wrocław.",
+      "Professor of Constitutional & Public Law and Attorney-at-Law (Poland) at Gabriela Bar Law&AI. ISO/IEC 42001 Auditor working on AI governance and regulatory compliance, freedom of information, PSI re-use and data governance.",
+    image: "/team/michal-bernaczyk.jpg",
   },
   {
     name: "Krzysztof Kamiński",
-    role: "Judiciary Collaborator",
+    role: "Head of IT Department",
     affiliation: "Court of Appeal in Wrocław",
-    description:
-      "Collaborator from the Court of Appeal in Wrocław.",
+    description: "Head of IT Department at the Court of Appeal in Wrocław.",
+    image: "/team/krzysztof-kaminski.jpg",
   },
 ];
 
