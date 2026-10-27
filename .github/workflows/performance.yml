@@ -29,7 +29,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up Python
+      - id: python
+        name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -38,14 +39,13 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: 1.7.1
+          virtualenvs-in-project: true
 
       - name: Cache dependencies
         uses: actions/cache/restore@v6
         with:
-          path: |
-            ~/.cache/pypoetry
-            backend/.venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+          path: backend/.venv
+          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
 
       - name: Install dependencies
         working-directory: backend
