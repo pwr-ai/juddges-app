@@ -235,6 +235,8 @@ build_and_push() {
             --build-arg "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}"
             --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
         )
+    else
+        build_args=(--build-arg "APP_VERSION=${version}")
     fi
 
     docker build \
