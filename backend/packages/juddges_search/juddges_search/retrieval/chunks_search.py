@@ -109,12 +109,23 @@ async def prepare_retriever(input: "DocumentRetrieval | dict"):
 
         all_results = []
 
-        # Use gather to run all tasks concurrently
-        all_results_lists = await asyncio.gather(*all_tasks)
+        # Use gather to run all tasks concurrently. One failing search (e.g. a
+        # vector RPC hitting a statement timeout) must not discard the results
+        # of the others, so collect exceptions instead of propagating the first.
+        all_results_lists = await asyncio.gather(*all_tasks, return_exceptions=True)
+
+        failures = [result for result in all_results_lists if isinstance(result, BaseException)]
+        for failure in failures:
+            logger.opt(exception=failure).error(f"Chunk search failed, continuing with remaining results: {failure}")
+        # With every search failed there is nothing to answer from; surface the
+        # error instead of returning an empty list that looks like "no matches".
+        if len(failures) == len(all_results_lists):
+            raise failures[0]
 
         # Flatten the results
         for results in all_results_lists:
-            all_results.extend(results)
+            if not isinstance(results, BaseException):
+                all_results.extend(results)
 
         logger.debug(f"All results length: {len(all_results)}")
 
