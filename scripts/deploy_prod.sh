@@ -239,34 +239,46 @@ deploy() {
 
 # ------------------------------------------------------------------------------
 # Post-deploy validation
+#
+# Probes run inside the containers via `docker compose exec`, because the prod
+# services publish no host ports. A host-side curl to localhost:3006 can be
+# answered by an unrelated local process (e.g. a leftover route-contract
+# next-server) and report a false 200.
 # ------------------------------------------------------------------------------
+probe_in_container() {
+    local svc="$1"
+    shift
+    timeout 15 docker compose -f "${COMPOSE_FILE}" exec -T "${svc}" "$@" >/dev/null 2>&1
+}
+
 post_deploy_validation() {
     info "Running post-deploy validation ..."
     local validation_passed=true
 
-    # Test frontend HTTP response
-    info "Checking frontend (http://localhost:3006/) ..."
-    if curl -sf --max-time 10 http://localhost:3006/ >/dev/null 2>&1; then
+    # Test frontend HTTP response (same probe as the compose healthcheck)
+    info "Checking frontend (http://127.0.0.1:3006/ inside container) ..."
+    if probe_in_container frontend node -e \
+        "require('http').get('http://127.0.0.1:3006/', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"; then
         ok "Frontend is responding with HTTP 200"
     else
-        warn "Frontend is not responding on http://localhost:3006/"
-        warn "  This may be expected if frontend is only exposed via reverse proxy."
+        warn "Frontend is not responding on http://127.0.0.1:3006/ inside the frontend container"
         validation_passed=false
     fi
 
-    # Test backend health endpoint
-    info "Checking backend health (http://localhost:8002/health/healthz) ..."
-    if curl -sf --max-time 10 http://localhost:8002/health/healthz >/dev/null 2>&1; then
+    # Test backend health endpoint (the image has python, not curl)
+    info "Checking backend health (http://localhost:8002/health/healthz inside container) ..."
+    if probe_in_container backend python -c \
+        "import urllib.request; urllib.request.urlopen('http://localhost:8002/health/healthz', timeout=10)"; then
         ok "Backend health endpoint is responding"
     else
-        warn "Backend health endpoint is not responding on http://localhost:8002/health/healthz"
-        warn "  This may be expected if ports are only exposed within Docker network."
+        warn "Backend health endpoint is not responding on http://localhost:8002/health/healthz inside the backend container"
         validation_passed=false
     fi
 
     if ! ${validation_passed}; then
-        warn "Post-deploy validation had warnings. Services may still be healthy inside Docker."
+        warn "Post-deploy validation had warnings."
         warn "Check container-level health: docker compose -f ${COMPOSE_FILE} ps"
+        warn "Check logs:                   docker compose -f ${COMPOSE_FILE} logs <service-name>"
         warn "To rollback if needed:        ./scripts/deploy_prod.sh --rollback"
     else
         ok "Post-deploy validation passed"

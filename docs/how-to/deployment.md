@@ -277,8 +277,9 @@ The production `docker-compose.yml` already includes `VIRTUAL_HOST`, `VIRTUAL_PO
 # Service status
 docker compose ps
 
-# Health checks
-curl http://localhost:8002/health/healthz
+# Health checks (run inside the containers: prod publishes no host ports,
+# so a host-side curl to localhost:3006/8002 may reach an unrelated process)
+docker compose exec backend python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8002/health/healthz').status)"
 docker compose exec frontend node -e "require('http').get('http://127.0.0.1:3006/', (r) => { console.log(r.statusCode); process.exit(r.statusCode === 200 ? 0 : 1) })"
 ```
 
@@ -358,7 +359,7 @@ docker stats --no-stream
 | Problem | Diagnosis | Fix |
 |---------|-----------|-----|
 | Service won't start | `docker compose logs <service>` | Check `.env` vars, rebuild |
-| Health check failing | `curl localhost:8002/health/healthz` | Wait for `start_period` (40-60s), check dependencies |
+| Health check failing | `docker compose ps`, then `docker compose logs <service>` | Wait for `start_period` (40-60s), check dependencies |
 | Out of disk space | `docker system df` | `docker system prune -f` |
 | Image pull fails | `docker login` | Re-authenticate with Docker Hub |
 | Port conflict | `lsof -i :8004` | Change port in `.env` or stop conflicting process |
