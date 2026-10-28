@@ -2,6 +2,7 @@ import { useRef, useCallback } from 'react';
 import {
   searchChunks,
   searchDocumentsMeili,
+  HYBRID_SEMANTIC_RATIO,
   fetchDocumentsByIds,
   GuestSearchLimitError,
   PaginationMetadata,
@@ -434,7 +435,7 @@ export function useSearchResults() {
       setIsSearching(true);
 
       // STEP 3: Text and hybrid modes → Meilisearch (no chunks, one hit per doc).
-      // 'text' is pure keyword; 'hybrid' sends semantic_ratio=0.5 so Meili
+      // 'text' is pure keyword; 'hybrid' sends HYBRID_SEMANTIC_RATIO so Meili
       // mixes BGE-M3 vector similarity with keyword matching server-side.
       if (searchMode === 'text' || searchMode === 'hybrid') {
         try {
@@ -444,7 +445,7 @@ export function useSearchResults() {
             limit: PAGE_SIZE,
             offset: 0,
             filters: filterString,
-            semanticRatio: searchMode === 'hybrid' ? 0.5 : 0,
+            semanticRatio: searchMode === 'hybrid' ? HYBRID_SEMANTIC_RATIO : 0,
           });
 
           if (searchIdRef.current !== currentSearchId) return;
@@ -676,7 +677,7 @@ export function useSearchResults() {
           limit: PAGE_SIZE,
           offset: currentPagination.next_offset,
           filters: filterString,
-          semanticRatio: state.searchMode === 'hybrid' ? 0.5 : 0,
+          semanticRatio: state.searchMode === 'hybrid' ? HYBRID_SEMANTIC_RATIO : 0,
         });
 
         const newMetadata = result.documents.map((hit, i) =>
