@@ -76,7 +76,7 @@ export function useSearchUrlParams({
 
         // Add query if present
         if (query.trim()) {
-          params.set('q', encodeURIComponent(query.trim()));
+          params.set('q', query.trim());
         }
 
         // Add languages
@@ -244,7 +244,7 @@ export function useSearchUrlParams({
 
     // Set query from URL parameter (pre-fill only — user must click Search to run it)
     if (queryParam) {
-      setQuery(decodeURIComponent(queryParam));
+      setQuery(queryParam);
     }
 
     // Set language from URL parameter

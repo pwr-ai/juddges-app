@@ -1,5 +1,6 @@
 "use client";
 
+import { buildSearchHref } from "@/lib/searchHref";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -16,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 /** Build a /search link that pre-fills the query with a topic label. */
 function topicSearchHref(topicId: string): string {
-  return `/search?q=${encodeURIComponent(topicId)}`;
+  return buildSearchHref({ q: topicId });
 }
 
 function formatDateTime(iso: string | null): string | null {

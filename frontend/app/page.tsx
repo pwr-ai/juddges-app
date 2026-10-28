@@ -1,5 +1,6 @@
 "use client";
 
+import { buildSearchHref } from "@/lib/searchHref";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -332,7 +333,7 @@ export default function HomePage(): React.JSX.Element {
                       {researchActivity.recentSearches.map((search, index) => (
                         <li key={`${search.created_at}-${index}`}>
                           <Link
-                            href={`/search?q=${encodeURIComponent(search.query)}`}
+                            href={buildSearchHref({ q: search.query })}
                             className="group flex items-center justify-between gap-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
                             <span className="min-w-0">
