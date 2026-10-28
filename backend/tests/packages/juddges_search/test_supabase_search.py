@@ -367,6 +367,38 @@ class TestSupabaseSearchClient:
             assert len(results) == 0
 
     @pytest.mark.asyncio
+    async def test_hybrid_search_keeps_text_results_when_vector_fails(
+        self, mock_supabase_client, monkeypatch
+    ):
+        """A failing vector RPC must not discard the full-text results."""
+        monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
+        mock_client, _ = mock_supabase_client
+        text_chunk = DocumentChunk(
+            document_id="doc_1", chunk_id=1, chunk_text="text hit", text_score=0.8
+        )
+
+        with (
+            patch(
+                "juddges_search.retrieval.supabase_search.create_client",
+                return_value=mock_client,
+            ),
+            patch(
+                "juddges_search.retrieval.supabase_search.embed_texts",
+                return_value=[0.1] * 1024,
+            ),
+        ):
+            client = SupabaseSearchClient()
+            client.vector_search_chunks = AsyncMock(
+                side_effect=RuntimeError("database unavailable")
+            )
+            client.full_text_search_chunks = AsyncMock(return_value=[text_chunk])
+
+            results = await client.hybrid_search_chunks("contract law", match_count=5)
+
+        assert [chunk.document_id for chunk in results] == ["doc_1"]
+
+    @pytest.mark.asyncio
     async def test_merge_search_results(self, monkeypatch):
         """Test merging vector and text search results."""
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")

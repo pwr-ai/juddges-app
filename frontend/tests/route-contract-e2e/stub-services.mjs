@@ -786,6 +786,29 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/extractions/base-schema/definition'
+  ) {
+    logRequest(request, url);
+    const variant = (title) => ({
+      title,
+      type: 'object',
+      required: ['case_number'],
+      properties: { case_number: { type: 'string', description: 'Case number' } },
+    });
+    sendJson(response, 200, {
+      schema_key: 'universal_legal_document_base_schema',
+      default_locale: 'en',
+      available_locales: ['en', 'pl'],
+      schemas: {
+        en: variant('Route contract base schema EN'),
+        pl: variant('Route contract base schema PL'),
+      },
+    });
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/dashboard/stats') {
     // Intentionally partial: StatisticsView only reads `total_judgments`
     // (the corpus size in the cohort line) — the real payload has ~12 more

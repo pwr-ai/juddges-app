@@ -381,6 +381,26 @@ test.describe.serial('production route status contract', () => {
     await page.close();
   });
 
+  test('serves the static base schema page instead of the schema-ID 404', async ({
+    context,
+  }) => {
+    // `/schemas/base` shares the `/schemas/<segment>` shape with the detail
+    // route; the detail preflight used to treat `base` as a malformed ID.
+    await setSyntheticSession(context, 'valid');
+    const page = await context.newPage();
+    const response = await page.goto('/schemas/base');
+    expect(response?.status()).toBe(200);
+    await expect(
+      page.getByRole('heading', { name: 'Base Judgment Extraction Schema' }),
+    ).toBeVisible();
+    await page.getByRole('tab', { name: 'JSON' }).click();
+    await page.getByRole('button', { name: 'English' }).click();
+    await expect(page.getByText(/Route contract base schema EN/)).toBeVisible();
+    await page.getByRole('button', { name: 'Polish' }).click();
+    await expect(page.getByText(/Route contract base schema PL/)).toBeVisible();
+    await page.close();
+  });
+
   test('polls the extraction detail page without dropping schema metadata', async ({
     context,
   }) => {

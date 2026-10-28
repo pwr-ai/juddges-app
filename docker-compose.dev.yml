@@ -18,6 +18,14 @@
 #   1. Copy .env.example to .env
 #   2. Fill in actual values in .env
 #   3. Run: docker compose -f docker-compose.dev.yml up -d
+#
+# PROJECT NAME:
+#   Pinned to "juddges-dev" below so the dev stack is a separate Compose project
+#   from production ("juddges-app"). Both files read the same .env, so do not set
+#   COMPOSE_PROJECT_NAME there: it outranks `name:` and would merge the two stacks
+#   into one project, where `up --remove-orphans` on one deletes the other.
+
+name: juddges-dev
 
 services:
     # ============================================================================
@@ -163,12 +171,17 @@ services:
             dockerfile: Dockerfile
             target: development
         container_name: juddges-backend-worker-dev
-        # Dev runs a single worker across every queue with an embedded beat.
+        # Dev runs a single worker across every queue, with NO embedded beat.
+        # Dev shares the production Supabase project, so a dev beat would fire
+        # the whole beat_schedule a second time against prod data (digest.send
+        # mails users twice, vacuum/partition maintenance runs twice). The
+        # schedule belongs to prod's backend-beat only; trigger a task by hand
+        # from the dev worker when you need it.
         # The queue list must be explicit: task_routes sends work to
         # `extraction` / `maintenance`, and a worker without --queues only
         # consumes the default `celery` queue, so routed tasks would sit unrun.
         command: >
-            celery -A app.workers worker --beat
+            celery -A app.workers worker
             --loglevel=info
             --queues=extraction,maintenance,celery
             --concurrency=${CELERY_DEV_CONCURRENCY:-2}

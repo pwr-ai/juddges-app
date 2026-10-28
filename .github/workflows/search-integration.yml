@@ -205,7 +205,7 @@ jobs:
         with:
           name: search-benchmark-results
           path: backend/benchmark-results.json
-          retention-days: 30
+          retention-days: 14  # repo-wide cap; see ci.yml's SBOM upload
 
       - name: Dump backend logs on failure
         if: failure() && steps.target.outputs.boot_locally == 'true'

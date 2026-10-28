@@ -213,13 +213,18 @@ class SupabaseSearchClient:
             # Generate embedding for the query
             query_embedding = embed_texts(query)
 
-            # Perform both searches in parallel
-            vector_results = await self.vector_search_chunks(
-                query_embedding,
-                match_count=match_count * 2,  # Get more results for merging
-                languages=languages,
-                document_types=document_types,
-            )
+            # A failing vector RPC must not discard the full-text results;
+            # fall back to text-only ranking and keep the error in the logs.
+            try:
+                vector_results = await self.vector_search_chunks(
+                    query_embedding,
+                    match_count=match_count * 2,  # Get more results for merging
+                    languages=languages,
+                    document_types=document_types,
+                )
+            except Exception as e:
+                logger.error(f"Vector search failed in hybrid search, using full-text results only: {e}")
+                vector_results = []
 
             text_results = await self.full_text_search_chunks(
                 query,
