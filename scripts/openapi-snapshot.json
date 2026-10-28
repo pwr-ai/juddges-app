@@ -18905,13 +18905,13 @@
             }
           },
           {
-            "description": "Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5.",
+            "description": "Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends 0.75.",
             "in": "query",
             "name": "semantic_ratio",
             "required": false,
             "schema": {
               "default": 0.0,
-              "description": "Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5.",
+              "description": "Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends 0.75.",
               "maximum": 1.0,
               "minimum": 0.0,
               "title": "Semantic Ratio",

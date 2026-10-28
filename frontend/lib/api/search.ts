@@ -113,6 +113,14 @@ export interface MeilisearchDocumentHit {
   };
 }
 
+/**
+ * Semantic share of the "hybrid" search mode (0 = keyword, 1 = vector).
+ * At 0.5 Meilisearch's keyword score dominated and the top hits matched pure
+ * keyword search; 0.75 lets BGE-M3 similarity reorder them and surface
+ * cross-lingual matches while exact keyword hits still rank.
+ */
+export const HYBRID_SEMANTIC_RATIO = 0.75;
+
 export interface SearchDocumentsMeiliInput {
   query: string;
   limit?: number;
@@ -120,7 +128,8 @@ export interface SearchDocumentsMeiliInput {
   filters?: string;
   /**
    * Hybrid mix for Meilisearch hybrid search. 0 = pure keyword (default,
-   * used by the "text" mode). The "hybrid" mode in the UI sets this to ~0.5.
+   * used by the "text" mode). The "hybrid" mode in the UI sends
+   * HYBRID_SEMANTIC_RATIO.
    */
   semanticRatio?: number;
 }

@@ -348,7 +348,7 @@ async def documents_search(
         le=1.0,
         description=(
             "Hybrid mix between keyword and semantic search. 0 = pure keyword "
-            "(default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5."
+            "(default), 1 = pure semantic. Frontend's 'hybrid' mode sends 0.75."
         ),
     ),
     parse_attributes: bool = Query(
