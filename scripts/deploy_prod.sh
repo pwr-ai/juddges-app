@@ -156,7 +156,12 @@ for line in data.split('\n'):
             print('unhealthy')
         elif 'healthy' in health:
             print('healthy')
+        elif health:
+            # 'starting': the healthcheck has not passed yet. Must not count as
+            # up, or the wait below ends while gunicorn is still booting.
+            print(health)
         else:
+            # No healthcheck defined: running is the best signal there is.
             print('running')
     except:
         print('unknown')
