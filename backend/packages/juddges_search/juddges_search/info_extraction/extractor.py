@@ -123,7 +123,12 @@ class InformationExtractor:
     def prepare_structured_output_schema(schema: dict[str, Any]) -> dict[str, Any]:
         """Normalize schema metadata for OpenAI json_schema structured output."""
         prepared = deepcopy(schema)
-        raw_title = prepared.get("title")
+        # A schema from prepare_schema_from_db is already an OpenAI
+        # response_format.json_schema object ({name, description, strict,
+        # schema}); langchain forwards it verbatim, so a top-level "title"
+        # there is rejected by OpenAI. Its identifier is "name" instead.
+        key = "name" if "name" in prepared and "schema" in prepared else "title"
+        raw_title = prepared.get(key)
         if isinstance(raw_title, str) and raw_title.strip():
             safe_title = raw_title.strip()
         else:
@@ -133,7 +138,7 @@ class InformationExtractor:
         if not safe_title:
             safe_title = "information_extraction_schema"
 
-        prepared["title"] = safe_title[:64]
+        prepared[key] = safe_title[:64]
         return prepared
 
     def estimate_prompt_cost(self, prompts: list[str], verbose: bool = False) -> float:
