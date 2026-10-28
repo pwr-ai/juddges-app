@@ -4,18 +4,12 @@
 {{additional_instructions}}
 {% endif %}
 
-{% set lang = (language|default('pl')|lower) %}
-{% set t = {
-  'pl': {
-    'judgment': 'Tekst orzeczenia do segmentacji strukturalnej:'
-  },
-  'en': {
-    'judgment': 'Judgment text for structural segmentation:'
-  }
-} %}
-{% set labels = t.get(lang, t['pl']) %}
+{# langchain-core renders jinja2 in a sandbox that blocks attribute and method
+   access (no `t.get(...)`, no `labels.x`), so labels are chosen with plain
+   comparisons. Anything other than English falls back to Polish. #}
+{% set is_en = (language|default('pl', true)|lower) == 'en' %}
 
-{{ labels.judgment }}
+{% if is_en %}Judgment text for structural segmentation:{% else %}Tekst orzeczenia do segmentacji strukturalnej:{% endif %}
 ====
 {{ full_text }}
 ====
