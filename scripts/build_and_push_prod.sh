@@ -311,13 +311,24 @@ main() {
     info "=== Juddges Production Build & Push ==="
     echo ""
 
-    # Ensure we're in a clean git state
+    # Ensure we're releasing exactly what is on origin/main. Images are built
+    # from the release commit, so HEAD must be origin/main's tip: building
+    # anything else would ship code main never had, or tag a commit main
+    # cannot reach.
     cd "${REPO_ROOT}"
 
+    info "Fetching origin/main and tags ..."
+    git fetch --quiet --tags origin main
+
+    if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+        err "HEAD is not origin/main. Release from an up-to-date main:"
+        err "  git switch main && git pull --ff-only"
+        exit 1
+    fi
+
     if [[ -n "$(git status --porcelain)" ]]; then
-        warn "Working tree has uncommitted changes."
-        warn "The version tag will be created on the current HEAD anyway."
-        echo ""
+        err "Working tree has uncommitted changes; the release commit would not match the images."
+        exit 1
     fi
 
     # Resolve version
@@ -326,43 +337,46 @@ main() {
     local new_version
     new_version=$(resolve_version "${bump_arg}")
 
+    if git rev-parse -q --verify "refs/tags/prod-v${new_version}" >/dev/null; then
+        err "Tag prod-v${new_version} already exists."
+        exit 1
+    fi
+
     info "Current version: prod-v${current_version}"
     info "New version:     prod-v${new_version}"
     echo ""
 
     # Confirm
     if [[ "${auto_confirm}" != true ]]; then
-        read -rp "Proceed with build and push prod-v${new_version}? [y/N] " confirm
+        info "This pushes the release commit to main, then builds and pushes the"
+        info "images, then pushes tag prod-v${new_version}."
+        read -rp "Proceed with release prod-v${new_version}? [y/N] " confirm
         if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
             info "Aborted."
             exit 0
         fi
     else
-        ok "Auto-confirmed: proceeding with build and push prod-v${new_version}"
+        ok "Auto-confirmed: proceeding with release prod-v${new_version}"
     fi
     echo ""
 
     # Load .env for build args, Docker credentials, and OpenAI release notes
     load_env
 
-    # Sync version across project files
-    sync_version "${new_version}"
-
-    # Login to Docker Hub
+    # Fail on Docker credentials now, not after the release commit is public.
     ensure_docker_login
 
-    # Build and push each image
-    for entry in "${IMAGES[@]}"; do
-        IFS=':' read -r context_dir image_suffix <<< "${entry}"
-        build_and_push "${context_dir}" "${image_suffix}" "${new_version}"
-        echo ""
-    done
+    # Sync version across project files
+    sync_version "${new_version}"
 
     notes_file="${REPO_ROOT}/release-notes/prod-v${new_version}.md"
     generate_release_notes "${new_version}" "${notes_file}"
     echo ""
 
-    # Commit version-synced files
+    # Commit and push the release commit BEFORE building. Image builds take
+    # minutes, and main moves under them; pushing first claims main while it
+    # is still the commit we checked, so a rejected push aborts the release
+    # before any image reaches Docker Hub.
     info "Committing version files ..."
     git add \
         "${REPO_ROOT}/VERSION" \
@@ -370,26 +384,39 @@ main() {
         "${REPO_ROOT}/frontend/package.json" \
         "${REPO_ROOT}/.env.example" \
         "${notes_file}"
-    git commit -m "release: prod-v${new_version}" || warn "Nothing to commit (files already up to date)"
+    if git diff --cached --quiet; then
+        # Rerun after a failed build: main already carries this version.
+        info "Version files already at ${new_version}; building from HEAD."
+    else
+        git commit -m "release: prod-v${new_version}"
 
-    # Create git tag
+        info "Pushing release commit to main ..."
+        if ! git push origin HEAD:main; then
+            err "Push to main was rejected: main moved after the fetch above."
+            git reset --keep HEAD~1
+            err "Release commit undone locally; nothing was built or pushed."
+            err "Pull and run the release again: git pull --ff-only && $0 ${bump_arg}"
+            exit 1
+        fi
+        ok "Pushed release commit $(git rev-parse --short HEAD) to main"
+    fi
+    echo ""
+
+    # Build and push each image from the release commit
+    for entry in "${IMAGES[@]}"; do
+        IFS=':' read -r context_dir image_suffix <<< "${entry}"
+        build_and_push "${context_dir}" "${image_suffix}" "${new_version}"
+        echo ""
+    done
+
+    # Tag last: prod-v<version> is the source of truth for releases, so it only
+    # appears once its images are on Docker Hub. If a build fails above, main
+    # carries the version bump without a tag; rerun with the explicit version
+    # (`$0 ${new_version}`) to build and tag it.
     info "Creating git tag prod-v${new_version} ..."
     git tag -a "prod-v${new_version}" -F "${notes_file}"
-    ok "Created tag prod-v${new_version}"
-
-    # Push commit and tag to remote
-    if [[ "${auto_confirm}" != true ]]; then
-        read -rp "Push commit and tag prod-v${new_version} to origin? [y/N] " push_tag
-        if [[ "${push_tag}" == "y" || "${push_tag}" == "Y" ]]; then
-            git push origin HEAD
-            git push origin "prod-v${new_version}"
-            ok "Pushed commit and tag prod-v${new_version} to origin"
-        fi
-    else
-        git push origin HEAD
-        git push origin "prod-v${new_version}"
-        ok "Pushed commit and tag prod-v${new_version} to origin"
-    fi
+    git push origin "prod-v${new_version}"
+    ok "Created and pushed tag prod-v${new_version}"
 
     # Send Discord notification
     if [[ -f "${REPO_ROOT}/scripts/notify_discord.sh" ]]; then

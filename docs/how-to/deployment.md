@@ -175,18 +175,20 @@ git checkout main && git pull                  # always run from clean main
 
 ### What the script does
 
-1. Reads the latest `prod-v*` git tag to determine current version (legacy `v*` fallback)
-2. Calculates the next version based on bump type
-3. Confirms with the user before proceeding
-4. **Syncs version** across all project files (see table below)
-5. Loads `.env` for Docker Hub credentials and frontend build args
-6. Logs into Docker Hub
-7. Builds and pushes two Docker images (tagged with version + `latest`):
+1. Fetches `origin/main` and tags, and **refuses to run** unless `HEAD` is exactly `origin/main` with a clean working tree. The images are built from the release commit, so anything else would ship code `main` never had.
+2. Reads the latest `prod-v*` git tag to determine current version (legacy `v*` fallback), calculates the next one, and refuses a version whose tag already exists
+3. Confirms with the user before proceeding (skipped with `--yes`)
+4. Loads `.env` and logs into Docker Hub, so missing credentials fail before anything is public
+5. **Syncs version** across all project files (see table below) and generates release notes
+6. Commits them as `release: prod-v<version>` and **pushes that commit to `main` before building**. If the push is rejected (`main` moved since step 1), the commit is undone locally and the script exits without building or pushing anything — pull and run it again.
+7. Builds and pushes two Docker images from that commit (tagged with version + `latest`):
    - `<username>/juddges-frontend:<version>`
    - `<username>/juddges-backend:<version>`
-8. Commits the version-synced files with message `release: v<version>`
-9. Creates an annotated git tag `prod-v<version>`
-10. Optionally pushes the commit and tag to origin (the tag push triggers the `deploy-prod` CI job)
+8. Creates and pushes the annotated tag `prod-v<version>` last, so a tag only exists once its images are on Docker Hub
+
+Why this order: image builds take minutes, and other PRs merge into `main` meanwhile. When the commit was pushed *after* the build, a moved `main` rejected it after the images were already public, leaving images with no tag and no release commit on `main` (prod-v1.5.23 and prod-v1.5.24 both hit this).
+
+If a build fails after step 6, `main` carries the version bump without a tag. Rerun with the explicit version (`./scripts/build_and_push_prod.sh <version>`): the version files are already in place, so it skips the commit and goes straight to building and tagging.
 
 ### Version files kept in sync
 
@@ -246,7 +248,7 @@ runs from CI, a cron job, or a backgrounded shell.
 2. Pulls both images at the specified tag
 3. Stops existing containers gracefully (30s timeout)
 4. Starts services with `JUDDGES_IMAGE_TAG` set to the target version
-5. Waits up to 120s for health checks (3+ containers running, none unhealthy)
+5. Waits up to 120s until every required service is `healthy` (or `running`, for a service without a healthcheck). A container still in `health: starting` does not count, so the post-deploy probes below no longer fire while gunicorn is booting.
 6. Logs the deployment to `.deploy-history`
 
 ### Manual deployment (without the script)
