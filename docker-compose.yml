@@ -161,9 +161,11 @@ services:
 
   meilisearch:
     # Tag is parameterized so rollback to the previous engine is a one-line .env
-    # edit + recreate. Bumped from v1.13 → v1.43 on 2026-05-13; see
-    # docs/how-to/upgrade-meilisearch.md for the dump-based migration runbook.
-    image: getmeili/meilisearch:${MEILISEARCH_IMAGE_TAG:-v1.43.0}
+    # edit + recreate. Bumped v1.13 → v1.43 on 2026-05-13 (dump-based) and
+    # v1.43 → v1.49 (dumpless). v1.49 refuses a v1.43 volume until it has been
+    # upgraded in place, so the data must be migrated BEFORE this tag reaches the
+    # host: see docs/how-to/upgrade-meilisearch.md, "Dumpless upgrade".
+    image: getmeili/meilisearch:${MEILISEARCH_IMAGE_TAG:-v1.49.0}
     container_name: juddges-meilisearch
     restart: unless-stopped
     expose:

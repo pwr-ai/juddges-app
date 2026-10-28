@@ -1,4 +1,4 @@
-# Upgrade Meilisearch (dump-based migration)
+# Upgrade Meilisearch
 
 This runbook covers a cross-version Meilisearch engine upgrade for the
 production stack defined in `docker-compose.yml`. The procedure was
@@ -15,6 +15,57 @@ The procedure is non-destructive when followed end-to-end: the old
 volume is preserved as `juddges-meilisearch-data-v<old>-backup`, and
 the cross-version dump is also copied off the volume to the host so
 rollback paths exist at two levels.
+
+---
+
+## Dumpless upgrade (source v1.12 or newer)
+
+From v1.12 onward Meilisearch can upgrade its on-disk data in place with
+`--experimental-dumpless-upgrade`, so no dump is needed. Without the flag a
+newer engine refuses the old volume and crash-loops with
+`Your database version (1.43.0) is incompatible with your current engine
+version (1.49.0)`. That is why the data is upgraded with a one-off container
+first, and the Compose tag is bumped only afterwards.
+
+Rehearsed v1.43.0 → v1.49.0 on a copy of the prod volume (12,307 judgments
++ 149 topics): `upgradeDatabase` task `succeeded`, no failed tasks, identical
+document counts, identical `judgments` settings (same md5), identical top-10
+ids for PL and UK queries. `estimatedTotalHits` can differ from the old engine
+(e.g. 1345 vs 1000 at `maxTotalHits: 1000`): the estimate changed, not the
+results. Only search is down during the switch (roughly 1–2 minutes).
+
+```bash
+OLD=v1.43.0 NEW=v1.49.0
+
+# 1. Stop only Meilisearch (search is down from here)
+docker compose stop meilisearch
+
+# 2. Back up the volume (seconds for ~3 GB)
+docker volume create juddges-meilisearch-data-${OLD}-backup
+docker run --rm -v juddges-meilisearch-data:/src:ro \
+  -v juddges-meilisearch-data-${OLD}-backup:/dst alpine cp -a /src/. /dst/
+
+# 3. Upgrade the data in place with a one-off container (no network)
+docker run -d --name meili-upgrade --network none \
+  -v juddges-meilisearch-data:/meili_data -e MEILI_MASTER_KEY=upgrade \
+  getmeili/meilisearch:${NEW} meilisearch --experimental-dumpless-upgrade
+docker exec meili-upgrade sh -c \
+  "curl -s -H 'Authorization: Bearer upgrade' 'http://localhost:7700/tasks?types=upgradeDatabase'"
+# wait for "status":"succeeded", then:
+docker rm -f meili-upgrade
+
+# 4. Start the new engine through Compose (tag v1.49.0 from this file,
+#    or MEILISEARCH_IMAGE_TAG=v1.49.0 in .env if the bump is not on main yet)
+docker compose up -d --no-deps meilisearch
+```
+
+Verify with section 8 below. Rollback: stop Meilisearch, copy the backup
+volume back over `juddges-meilisearch-data`, pin
+`MEILISEARCH_IMAGE_TAG=${OLD}` in `.env`, and `docker compose up -d --no-deps
+meilisearch`. The upgrade is one-way: the old engine cannot read upgraded
+data, so rollback always goes through the backup.
+
+The dump-based procedure below is still the path for sources older than v1.12.
 
 ---
 
