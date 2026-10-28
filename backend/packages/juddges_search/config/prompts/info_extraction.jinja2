@@ -4,27 +4,19 @@
 {{additional_instructions}}
 {% endif %}
 
-{% set lang = (language|default('pl')|lower) %}
-{% set t = {
-  'pl': {
-    'schema': 'Schemat ekstrakcji:',
-    'judgment': 'Tekst orzeczenia do analizy:'
-  },
-  'en': {
-    'schema': 'Schema for extraction:',
-    'judgment': 'Judgment text to analyze:'
-  }
-} %}
-{% set labels = t.get(lang, t['pl']) %}
+{# langchain-core renders jinja2 in a sandbox that blocks attribute and method
+   access (no `t.get(...)`, no `labels.x`), so labels are chosen with plain
+   comparisons. Anything other than English falls back to Polish. #}
+{% set is_en = (language|default('pl', true)|lower) == 'en' %}
 
 {% if schema %}
-{{ labels.schema }}
+{% if is_en %}Schema for extraction:{% else %}Schemat ekstrakcji:{% endif %}
 ====
 {{ schema }}
 ====
 {% endif %}
 
-{{ labels.judgment }}
+{% if is_en %}Judgment text to analyze:{% else %}Tekst orzeczenia do analizy:{% endif %}
 ====
 {{ full_text }}
 ====
