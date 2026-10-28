@@ -36,21 +36,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - id: python
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - uses: snok/install-poetry@v1
         with:
           version: 1.7.1
+          virtualenvs-in-project: true
 
       - id: restore
         uses: actions/cache/restore@v6
         with:
-          path: |
-            ~/.cache/pypoetry
-            backend/.venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+          path: backend/.venv
+          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
           lookup-only: true
 
       - name: Install dependencies
@@ -61,10 +61,8 @@ jobs:
       - if: steps.restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: |
-            ~/.cache/pypoetry
-            backend/.venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+          path: backend/.venv
+          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
 
   npm:
     name: Warm npm cache
