@@ -234,13 +234,14 @@ jobs:
         working-directory: backend
         run: poetry run python scripts/search_benchmark.py --help > /dev/null
 
+      # Only main's report is kept; per-PR HTML reports were never opened.
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && github.ref == 'refs/heads/main'
         with:
           name: backend-coverage-report
           path: backend/htmlcov/
-          retention-days: 30
+          retention-days: 7
 
   # Issue #482. Everything the migrations create — 19 tables, 4 RPCs, a trigger,
   # every RLS policy, and the foreign keys the PostgREST embeds resolve through —
@@ -365,13 +366,14 @@ jobs:
         working-directory: frontend
         run: npm run test:production-contracts
 
+      # Only main's report is kept; per-PR HTML reports were never opened.
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && github.ref == 'refs/heads/main'
         with:
           name: frontend-coverage-report
           path: frontend/coverage/
-          retention-days: 30
+          retention-days: 7
 
   frontend-build:
     name: Frontend Build
@@ -881,4 +883,6 @@ jobs:
           path: |
             backend/sbom-backend.txt
             frontend/sbom-frontend.json
-          retention-days: 90
+          # The repo caps artifact retention at 14 days (Settings → Actions);
+          # a higher value here would be silently clamped.
+          retention-days: 14

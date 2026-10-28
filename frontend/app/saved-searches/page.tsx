@@ -231,7 +231,7 @@ export default function SavedSearchesPage() {
     // Navigate to search page - the URL params hook will trigger the search
     // Filters are passed via URL params below so the search page can restore them
     const params = new URLSearchParams();
-    if (search.query) params.set('q', encodeURIComponent(search.query));
+    if (search.query) params.set('q', search.query);
     if (search.search_mode) params.set('mode', search.search_mode);
     if (search.languages.length > 0) params.set('lang', search.languages.join(','));
 
