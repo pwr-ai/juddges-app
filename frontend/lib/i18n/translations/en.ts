@@ -575,6 +575,8 @@ export const en: Translations = {
 
     // Detail page — member judgments
     membersHeading: 'Judgments in this line ({{count}})',
+    membersShowing: 'Showing {{shown}} of {{total}}',
+    membersShowMore: 'Show more',
     membersEmptyTitle: 'No judgments in this line yet',
     membersEmptyDescription: 'No judgments have been assigned to this reasoning line. The weekly auto-assignment job adds newly ingested judgments that match — check back after the next run.',
 

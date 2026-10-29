@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.rate_limiter import limiter
 
+from ._fetch import fetch_all_pages, fetch_by_ids
 from .constants import (
     REASONING_LINES_READ_RATE_LIMIT,
 )
@@ -68,11 +69,13 @@ async def get_reasoning_line_timeline(
 
     # Step 2: Fetch all members with outcome_direction
     try:
-        members_response = (
-            db.client.table("reasoning_line_members")
-            .select("judgment_id, outcome_direction")
-            .eq("reasoning_line_id", line_id)
-            .execute()
+        member_rows = fetch_all_pages(
+            lambda: (
+                db.client.table("reasoning_line_members")
+                .select("judgment_id, outcome_direction")
+                .eq("reasoning_line_id", line_id)
+                .order("judgment_id")
+            )
         )
     except Exception as e:
         logger.error(f"Error fetching members for timeline on line {line_id}: {e}")
@@ -80,7 +83,6 @@ async def get_reasoning_line_timeline(
             status_code=500, detail="Failed to fetch reasoning line members"
         )
 
-    member_rows = members_response.data or []
     if not member_rows:
         return ReasoningLineTimeline(
             line_id=line_id,
@@ -95,19 +97,14 @@ async def get_reasoning_line_timeline(
     # Step 3: Fetch decision_date for each member's judgment
     judgment_ids = [str(m["judgment_id"]) for m in member_rows]
     try:
-        j_response = (
-            db.client.table("judgments")
-            .select("id, decision_date")
-            .in_("id", judgment_ids)
-            .execute()
-        )
+        j_rows = fetch_by_ids(db.client, "judgments", "id, decision_date", judgment_ids)
     except Exception as e:
         logger.error(f"Error fetching judgment dates for timeline: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch judgment dates")
 
     dates_by_id: dict[str, str | None] = {
         str(j["id"]): str(j["decision_date"]) if j.get("decision_date") else None
-        for j in (j_response.data or [])
+        for j in j_rows
     }
 
     # Step 4: Merge member data with dates for bucketing

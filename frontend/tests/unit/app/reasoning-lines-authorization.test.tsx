@@ -213,6 +213,59 @@ describe('reasoning-lines admin-only controls', () => {
   });
 });
 
+describe('reasoning line member timeline pagination', () => {
+  const makeMembers = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      judgment_id: `j-${i}`,
+      signature: `SIG ${i}`,
+      title: `Case ${i}`,
+      court_name: 'NSA',
+      decision_date: new Date(Date.UTC(2020, 0, 1 + i)).toISOString().slice(0, 10),
+      similarity_to_centroid: 0.9,
+      cited_legislation: [],
+    }));
+
+  it('reveals members 100 at a time and hides the button when exhausted', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1', app_metadata: {} }, loading: false });
+    mockGetReasoningLineDAG.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      statistics: { total_nodes: 0, total_edges: 0 },
+    });
+    mockGetReasoningLineTimeline.mockResolvedValue({
+      line_id: reasoningLine.id,
+      legal_question: reasoningLine.legal_question,
+      points: [],
+      trend: 'stable',
+      trend_slope: 0,
+      total_classified: 0,
+      total_unclassified: 0,
+    });
+    mockGetRelatedLines.mockResolvedValue({ related: [] });
+    mockGetReasoningLineDetail.mockResolvedValue({
+      ...reasoningLine,
+      case_count: 250,
+      members: makeMembers(250),
+    });
+
+    renderWithQueryClient(<ReasoningLineDetailPage />);
+
+    const entries = () =>
+      screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/documents/'));
+
+    await screen.findByText('Showing 100 of 250');
+    expect(entries()).toHaveLength(100);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    expect(screen.getByText('Showing 200 of 250')).toBeInTheDocument();
+    expect(entries()).toHaveLength(200);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    expect(entries()).toHaveLength(250);
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+  });
+});
+
 /**
  * Regression guard for #519: this subtree used to hardcode stripped-diacritic
  * Polish while the rest of the app was English. Assert both that the English

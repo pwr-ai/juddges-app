@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.ingestion.chunk_judgments import (
+    INSERT_BATCH_SIZE,
     JURISDICTION_TO_LANGUAGE,
     POLISH_SECTION_PATTERNS,
     UK_SECTION_PATTERNS,
@@ -411,3 +412,58 @@ def test_log_summary_emits_via_loguru_not_print(capsys):
     assert "Judgments processed" in blob and "5" in blob
     assert "Chunks created" in blob and "42" in blob
     assert capsys.readouterr().out == ""
+
+
+# ============================================================================
+# Embedding failures
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestEmbeddingFailures:
+    async def test_document_with_missing_embeddings_is_not_saved(self):
+        """A failed embedding batch must not leave NULL-embedding chunks behind.
+
+        Chunks are only written when every chunk has a vector, so the
+        judgment stays unchunked and the next run retries it.
+        """
+        chunker = _make_chunker()
+        chunker.chunk_document = MagicMock(
+            return_value=[{"chunk_index": 0}, {"chunk_index": 1}]
+        )
+        chunker.generate_chunk_embeddings = AsyncMock(return_value=[[0.1], None])
+        chunker.save_chunks = MagicMock(return_value=2)
+
+        await chunker.process_batch(
+            [{"id": "j1", "full_text": "text", "jurisdiction": "PL"}]
+        )
+
+        chunker.save_chunks.assert_not_called()
+        assert chunker.stats["failed"] == 1
+        assert chunker.stats["documents_processed"] == 0
+
+    def test_embedding_batch_fits_tei_client_batch_limit(self):
+        """TEI's default max_client_batch_size is 32; larger batches get 413."""
+        from app.ingestion.chunk_judgments import EMBEDDING_BATCH_SIZE
+
+        assert EMBEDDING_BATCH_SIZE <= 32
+
+    def test_failed_insert_removes_partial_chunks(self):
+        """If a later insert batch fails, earlier batches of the same call are
+        deleted, so no judgment is left with a truncated chunk set."""
+        chunker = _make_chunker()
+        table = chunker.supabase.table.return_value
+        table.insert.return_value.execute.side_effect = [None, RuntimeError("57014")]
+        chunks = [
+            {
+                "document_id": "j1",
+                "chunk_index": i,
+                "chunk_text": "t",
+                "chunk_type": "paragraph_block",
+                "embedding": [0.1],
+            }
+            for i in range(INSERT_BATCH_SIZE + 1)
+        ]
+
+        assert chunker.save_chunks(chunks) == 0
+        table.delete.return_value.in_.assert_called_once_with("document_id", ["j1"])
