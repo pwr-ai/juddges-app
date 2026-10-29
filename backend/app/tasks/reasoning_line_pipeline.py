@@ -159,30 +159,45 @@ def _fetch_unassigned_judgment_ids(limit: int = 100) -> list[dict[str, Any]]:
     if not supabase_client:
         return []
 
-    # Get all judgment IDs already assigned to reasoning lines
-    assigned_resp = (
-        supabase_client.table("reasoning_line_members").select("judgment_id").execute()
-    )
-    assigned_ids = {row["judgment_id"] for row in (assigned_resp.data or [])}
+    # Lazy import: app.reasoning_lines pulls in the FastAPI routers
+    from app.reasoning_lines._fetch import PAGE_SIZE, fetch_all_pages
 
-    # Fetch recent judgments with embeddings, ordered by decision_date DESC
+    # Get all judgment IDs already assigned to reasoning lines (PostgREST caps
+    # un-ranged selects at 1000 rows, so page through them)
+    assigned_rows = fetch_all_pages(
+        lambda: (
+            supabase_client.table("reasoning_line_members")
+            .select("judgment_id")
+            .order("judgment_id")
+        )
+    )
+    assigned_ids = {row["judgment_id"] for row in assigned_rows}
+
+    # Page through recent judgments with embeddings (decision_date DESC) until
+    # enough unassigned ones are found; a single over-fetch would be capped at
+    # 1000 rows and could contain only assigned judgments.
     select_fields = "id, embedding, decision_date, title, case_number, court_name, cited_legislation"
-    resp = (
-        supabase_client.table("judgments")
-        .select(select_fields)
-        .not_.is_("embedding", "null")
-        .order("decision_date", desc=True)
-        .limit(limit + len(assigned_ids))  # over-fetch to account for filtering
-        .execute()
-    )
-
-    # Filter out already-assigned judgments
-    unassigned = []
-    for row in resp.data or []:
-        if row["id"] not in assigned_ids:
-            unassigned.append(row)
-            if len(unassigned) >= limit:
-                break
+    unassigned: list[dict[str, Any]] = []
+    offset = 0
+    while len(unassigned) < limit:
+        resp = (
+            supabase_client.table("judgments")
+            .select(select_fields)
+            .not_.is_("embedding", "null")
+            .order("decision_date", desc=True)
+            .order("id")
+            .range(offset, offset + PAGE_SIZE - 1)
+            .execute()
+        )
+        page = resp.data or []
+        for row in page:
+            if row["id"] not in assigned_ids:
+                unassigned.append(row)
+                if len(unassigned) >= limit:
+                    break
+        if len(page) < PAGE_SIZE:
+            break
+        offset += PAGE_SIZE
 
     return unassigned
 

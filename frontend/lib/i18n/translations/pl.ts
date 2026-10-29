@@ -575,6 +575,8 @@ export const pl: Translations = {
 
     // Detail page — member judgments
     membersHeading: 'Orzeczenia w linii ({{count}})',
+    membersShowing: 'Wyświetlono {{shown}} z {{total}}',
+    membersShowMore: 'Pokaż więcej',
     membersEmptyTitle: 'Brak orzeczeń w tej linii',
     membersEmptyDescription: 'Do tej linii orzeczniczej nie przypisano jeszcze żadnych orzeczeń. Cotygodniowe automatyczne przypisywanie dodaje pasujące, nowo zaimportowane orzeczenia — wróć po kolejnym przebiegu.',
 

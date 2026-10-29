@@ -36,8 +36,13 @@ TARGET_CHUNK_SIZE = 400  # tokens
 CHUNK_OVERLAP = 100  # tokens
 MIN_CHUNK_SIZE = 50  # minimum tokens to create a chunk
 
-# Maximum chunks to embed in a single API call
-EMBEDDING_BATCH_SIZE = 200
+# Maximum chunks to embed in a single API call. TEI rejects requests above its
+# max_client_batch_size (32 by default) with HTTP 413.
+EMBEDDING_BATCH_SIZE = 32
+
+# Rows per document_chunks INSERT. Each row also updates the HNSW index, and
+# 500-row inserts hit the statement timeout once the index outgrew RAM.
+INSERT_BATCH_SIZE = 50
 
 # Polish legal document section patterns
 POLISH_SECTION_PATTERNS = [
@@ -356,14 +361,24 @@ class DocumentChunker:
                     data["embedding"] = chunk["embedding"]
                 insert_data.append(data)
 
-            # Insert in batches of 500 to stay within Supabase limits
-            for i in range(0, len(insert_data), 500):
-                batch = insert_data[i : i + 500]
+            for i in range(0, len(insert_data), INSERT_BATCH_SIZE):
+                batch = insert_data[i : i + INSERT_BATCH_SIZE]
                 self.supabase.table("document_chunks").insert(batch).execute()
 
             return len(chunks)
         except Exception as e:
             logger.error(f"Failed to save chunks: {e}")
+            # A judgment with any chunk counts as chunked, so drop the batches
+            # that did land rather than leave a truncated set behind.
+            doc_ids = sorted({c["document_id"] for c in chunks})
+            try:
+                self.supabase.table("document_chunks").delete().in_(
+                    "document_id", doc_ids
+                ).execute()
+            except Exception as cleanup_error:
+                logger.error(
+                    f"Could not remove partial chunks for {doc_ids}: {cleanup_error}"
+                )
             return 0
 
     async def process_document(self, judgment: dict) -> int:
@@ -391,6 +406,14 @@ class DocumentChunker:
 
         # Generate embeddings for chunks
         embeddings = await self.generate_chunk_embeddings(chunks)
+
+        # A judgment counts as chunked once any chunk exists, so saving a partly
+        # embedded set would leave NULL vectors that no later run repairs.
+        missing = sum(1 for e in embeddings if e is None)
+        if missing:
+            raise RuntimeError(
+                f"{missing}/{len(chunks)} chunk embeddings failed; not saving"
+            )
 
         # Add embeddings to chunks
         for i, chunk in enumerate(chunks):
