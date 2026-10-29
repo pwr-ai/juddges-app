@@ -40,6 +40,30 @@ def _get_service() -> MeiliSearchService:
     return MeiliSearchService.from_env()
 
 
+# MeiliSearchService caches one httpx.AsyncClient bound to the event loop it was
+# first used in (#287). ``asyncio.run`` closes its loop on return, so a task must
+# do ALL its async work inside ONE ``asyncio.run`` and close the service's client
+# before that loop goes away -- otherwise the next call dies with
+# ``RuntimeError: Event loop is closed``.
+
+
+async def _delete_document(service: MeiliSearchService, judgment_id: str) -> Any:
+    try:
+        return await service.delete_document(judgment_id)
+    finally:
+        await service.aclose()
+
+
+async def _embed_and_upsert(
+    service: MeiliSearchService, doc: dict[str, Any], row: dict[str, Any]
+) -> Any:
+    try:
+        doc = await attach_embedding(doc, row)
+        return await service.upsert_documents([doc])
+    finally:
+        await service.aclose()
+
+
 # ── Incremental sync ─────────────────────────────────────────────────────────
 
 
@@ -68,7 +92,7 @@ def sync_judgment_to_meilisearch(
         return {"status": "skipped", "reason": "not_configured"}
 
     if operation == "delete":
-        result = asyncio.run(service.delete_document(judgment_id))
+        result = asyncio.run(_delete_document(service, judgment_id))
         logger.info(f"Deleted judgment {judgment_id} from Meilisearch")
         return {"status": "deleted", "task": result}
 
@@ -89,8 +113,7 @@ def sync_judgment_to_meilisearch(
 
     row = resp.data[0]
     doc = transform_judgment_for_meilisearch(row)
-    doc = asyncio.run(attach_embedding(doc, row))
-    result = asyncio.run(service.upsert_documents([doc]))
+    result = asyncio.run(_embed_and_upsert(service, doc, row))
     logger.info(f"Upserted judgment {judgment_id} to Meilisearch")
     return {"status": "upserted", "task": result}
 
@@ -143,43 +166,49 @@ def full_sync_judgments_to_meilisearch(
                 logger.info("Meilisearch full sync already running — skipping")
                 return {"status": "skipped", "reason": "already_running"}
 
-    total_synced = 0
-    offset = 0
+    async def _sync_all() -> int:
+        total_synced = 0
+        offset = 0
+        try:
+            while True:
+                resp = (
+                    supabase_client.table("judgments")
+                    .select(JUDGMENT_SYNC_COLUMNS)
+                    .order("created_at")
+                    .range(offset, offset + batch_size - 1)
+                    .execute()
+                )
+
+                rows = resp.data or []
+                if not rows:
+                    break
+
+                documents = [transform_judgment_for_meilisearch(row) for row in rows]
+                documents = await attach_embeddings_batch(documents, rows)
+                result = await service.upsert_documents(documents)
+
+                # Wait for the indexing task to finish before moving on
+                task_uid = result.get("taskUid")
+                if task_uid is not None:
+                    await service.wait_for_task(task_uid, max_wait=120.0)
+
+                total_synced += len(documents)
+                offset += batch_size
+
+                self.update_state(
+                    state="PROGRESS",
+                    meta={"synced": total_synced, "current_batch": len(documents)},
+                )
+
+                logger.info(
+                    f"Meilisearch full sync: {total_synced} documents synced so far"
+                )
+        finally:
+            await service.aclose()
+        return total_synced
 
     try:
-        while True:
-            resp = (
-                supabase_client.table("judgments")
-                .select(JUDGMENT_SYNC_COLUMNS)
-                .order("created_at")
-                .range(offset, offset + batch_size - 1)
-                .execute()
-            )
-
-            rows = resp.data or []
-            if not rows:
-                break
-
-            documents = [transform_judgment_for_meilisearch(row) for row in rows]
-            documents = asyncio.run(attach_embeddings_batch(documents, rows))
-            result = asyncio.run(service.upsert_documents(documents))
-
-            # Wait for the indexing task to finish before moving on
-            task_uid = result.get("taskUid")
-            if task_uid is not None:
-                asyncio.run(service.wait_for_task(task_uid, max_wait=120.0))
-
-            total_synced += len(documents)
-            offset += batch_size
-
-            self.update_state(
-                state="PROGRESS",
-                meta={"synced": total_synced, "current_batch": len(documents)},
-            )
-
-            logger.info(
-                f"Meilisearch full sync: {total_synced} documents synced so far"
-            )
+        total_synced = asyncio.run(_sync_all())
     except Exception as exc:
         record_sync_failed(str(exc))
         raise
@@ -202,5 +231,12 @@ def full_sync_judgments_to_meilisearch(
 def setup_meilisearch_index_task() -> dict[str, Any]:
     """One-shot task to create and configure the Meilisearch index."""
     service = _get_service()
-    success = asyncio.run(setup_meilisearch_index(service))
+
+    async def _setup() -> bool:
+        try:
+            return await setup_meilisearch_index(service)
+        finally:
+            await service.aclose()
+
+    success = asyncio.run(_setup())
     return {"status": "completed" if success else "skipped"}
