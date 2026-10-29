@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.rate_limiter import limiter
 
+from ._fetch import fetch_all_pages, fetch_by_ids
 from .constants import (
     REASONING_LINES_RATE_LIMIT,
 )
@@ -71,11 +72,13 @@ async def analyze_drift(
 
     # Step 2: Fetch member judgment IDs from reasoning_line_members
     try:
-        members_response = (
-            db.client.table("reasoning_line_members")
-            .select("judgment_id")
-            .eq("reasoning_line_id", line_id)
-            .execute()
+        member_rows = fetch_all_pages(
+            lambda: (
+                db.client.table("reasoning_line_members")
+                .select("judgment_id")
+                .eq("reasoning_line_id", line_id)
+                .order("judgment_id")
+            )
         )
     except Exception as e:
         logger.error(
@@ -85,7 +88,6 @@ async def analyze_drift(
             status_code=500, detail="Failed to fetch reasoning line members"
         )
 
-    member_rows = members_response.data or []
     judgment_ids = [str(m["judgment_id"]) for m in member_rows]
 
     if len(judgment_ids) < 6:
@@ -99,17 +101,15 @@ async def analyze_drift(
 
     # Step 3: Fetch judgments with embeddings, titles, summaries, and decision_dates
     try:
-        j_response = (
-            db.client.table("judgments")
-            .select("id, title, summary, decision_date, embedding")
-            .in_("id", judgment_ids)
-            .execute()
+        judgments_raw = fetch_by_ids(
+            db.client,
+            "judgments",
+            "id, title, summary, decision_date, embedding",
+            judgment_ids,
         )
     except Exception as e:
         logger.error(f"Error fetching judgment embeddings for drift analysis: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch judgment data")
-
-    judgments_raw = j_response.data or []
 
     # Filter to judgments that have valid embeddings
     judgments_with_embeddings = [

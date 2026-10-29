@@ -638,6 +638,8 @@ export interface ReasoningLinesTranslations {
 
   // Detail page — member judgments
   membersHeading: string;
+  membersShowing: string;
+  membersShowMore: string;
   membersEmptyTitle: string;
   membersEmptyDescription: string;
 
