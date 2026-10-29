@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.ingestion.chunk_judgments import (
+    INSERT_BATCH_SIZE,
     JURISDICTION_TO_LANGUAGE,
     POLISH_SECTION_PATTERNS,
     UK_SECTION_PATTERNS,
@@ -446,3 +447,23 @@ class TestEmbeddingFailures:
         from app.ingestion.chunk_judgments import EMBEDDING_BATCH_SIZE
 
         assert EMBEDDING_BATCH_SIZE <= 32
+
+    def test_failed_insert_removes_partial_chunks(self):
+        """If a later insert batch fails, earlier batches of the same call are
+        deleted, so no judgment is left with a truncated chunk set."""
+        chunker = _make_chunker()
+        table = chunker.supabase.table.return_value
+        table.insert.return_value.execute.side_effect = [None, RuntimeError("57014")]
+        chunks = [
+            {
+                "document_id": "j1",
+                "chunk_index": i,
+                "chunk_text": "t",
+                "chunk_type": "paragraph_block",
+                "embedding": [0.1],
+            }
+            for i in range(INSERT_BATCH_SIZE + 1)
+        ]
+
+        assert chunker.save_chunks(chunks) == 0
+        table.delete.return_value.in_.assert_called_once_with("document_id", ["j1"])
