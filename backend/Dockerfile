@@ -1,26 +1,50 @@
 # ==============================================================================
-# Base Stage - Common Poetry setup
+# Base Stage - Common uv setup
 # ==============================================================================
 FROM python:3.12.10-slim AS base
 
-RUN pip install --no-cache-dir poetry==2.1.3 && \
-    poetry config virtualenvs.create false
+# Pinned uv binary (keep in step with the CI setup-uv version and the
+# uv_build pin in pyproject.toml). Only the base/builder stages carry it; the
+# production stage starts from a clean python image and copies the venv only.
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/
+
+# The venv lives OUTSIDE /app: docker-compose.dev.yml bind-mounts ./backend over
+# /app, which would hide a /app/.venv. Putting its bin/ first on PATH makes
+# python, gunicorn, uvicorn, celery and pytest resolve without `uv run`.
+# UV_LINK_MODE=copy: the uv cache is a BuildKit cache mount (another
+# filesystem), so hardlinking is impossible. Use the image's interpreter and
+# never download one, so the venv's python symlink is valid in production too.
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_LINK_MODE=copy \
+    UV_PYTHON=/usr/local/bin/python3.12 \
+    UV_PYTHON_DOWNLOADS=never \
+    PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
-# Copy dependency files first for better caching
-COPY ./pyproject.toml ./README.md ./poetry.lock* ./
-COPY ./packages ./packages
+# Copy dependency metadata first for better caching: the lockfile plus every
+# workspace member's pyproject.toml (uv needs them to resolve the workspace),
+# but not the sources, so a code change does not reinstall dependencies.
+COPY ./pyproject.toml ./README.md ./uv.lock ./
+COPY ./packages/juddges_search/pyproject.toml ./packages/juddges_search/README.md ./packages/juddges_search/
+COPY ./packages/schema_generator_agent/pyproject.toml ./packages/schema_generator_agent/README.md ./packages/schema_generator_agent/
+COPY ./packages/research_agent/pyproject.toml ./packages/research_agent/README.md ./packages/research_agent/
+COPY ./packages/juddges_mcp/pyproject.toml ./packages/juddges_mcp/README.md ./packages/juddges_mcp/
 
 # ==============================================================================
 # Development Stage - For hot reload development
 # ==============================================================================
 FROM base AS development
 
-# Install all dependencies including dev dependencies
-RUN poetry install --no-interaction --no-ansi --no-root
+# Install all dependencies including the dev group. Third-party packages first
+# (--no-install-workspace skips the root project and the workspace members,
+# whose sources are not copied yet), then the workspace itself, editable.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-workspace
+COPY ./packages ./packages
 COPY ./app ./app
-RUN poetry install --no-interaction --no-ansi --with dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen
 
 # Set up Hugging Face cache directories
 ENV HF_HOME=/tmp/hf \
@@ -47,8 +71,21 @@ CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8080", "--relo
 # ==============================================================================
 FROM base AS builder
 
-# Install dependencies only (no dev dependencies)
-RUN poetry install --no-interaction --no-ansi --no-root --only main
+# Compile .pyc at install time so production workers do not pay for it on boot.
+ENV UV_COMPILE_BYTECODE=1
+
+# Dependencies only (no dev group), then the workspace. The workspace stays an
+# EDITABLE install on purpose: juddges_search locates its config/ (prompts,
+# schemas, extraction contexts) via Path(__file__).parents[2], and
+# app/extraction_domain reads packages/juddges_search/config/prompts relative
+# to /app. A --no-editable wheel install would put the modules in site-packages
+# without that sibling config/ tree, so the sources must stay at /app/packages.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-workspace
+COPY ./packages ./packages
+COPY ./app ./app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 # ==============================================================================
 # Production Stage - Optimized for production deployment
@@ -57,9 +94,10 @@ FROM python:3.12.10-slim AS production
 
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# The venv from the builder (no uv, no build tooling). Its editable .pth files
+# point at /app and /app/packages, which are copied below at the same paths.
+ENV PATH="/opt/venv/bin:${PATH}"
+COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
 COPY ./packages ./packages
