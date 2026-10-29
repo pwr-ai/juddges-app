@@ -25,7 +25,6 @@ pyyaml = "^6.0.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
-black = "^23.7.0"
 ruff = "^0.11.0"
 
 [build-system]
@@ -43,10 +42,6 @@ select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401", "F403"]
-
-[tool.black]
-line-length = 120
-target-version = ['py312']
 
 [tool.langserve]
 export_module = "juddges_search"

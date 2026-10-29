@@ -101,6 +101,31 @@ def reap_stale_extraction_jobs(self: Task) -> dict[str, Any]:
         raise
 
 
+DASHBOARD_REFRESH_STATEMENT_TIMEOUT = os.environ.get(
+    "DASHBOARD_REFRESH_STATEMENT_TIMEOUT", "15min"
+)
+
+
+def _refresh_dashboard_stats_direct(database_url: str) -> None:
+    """Run the refresh over a direct connection with a raised statement_timeout.
+
+    A function-level ``SET statement_timeout`` does not help: the timer for the
+    top-level statement is armed before the function body runs. Setting it on
+    the session does.
+    """
+    import psycopg
+
+    with (
+        psycopg.connect(database_url, autocommit=True) as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(
+            "SELECT set_config('statement_timeout', %s, false)",
+            (DASHBOARD_REFRESH_STATEMENT_TIMEOUT,),
+        )
+        cur.execute("SELECT public.refresh_dashboard_stats()")
+
+
 @celery_app.task(
     bind=True,
     name="maintenance.refresh_dashboard_stats",
@@ -123,19 +148,31 @@ def refresh_dashboard_stats(self: Task) -> dict[str, Any]:
     to any process that has not cached it locally. With a daily cadence the
     worst case is stats 4h behind the last refresh, against three months before.
     """
-    from app.core.supabase import supabase_client
-
-    if not supabase_client:
-        logger.warning("Supabase client unavailable — skipping dashboard refresh")
-        return {"status": "skipped", "reason": "no_supabase_client"}
+    database_url = os.environ.get("DATABASE_URL")
 
     try:
         logger.info("Refreshing precomputed dashboard statistics")
-        supabase_client.rpc("refresh_dashboard_stats").execute()
-        logger.info("refresh_dashboard_stats RPC call succeeded")
+        if database_url:
+            _refresh_dashboard_stats_direct(database_url)
+        else:
+            from app.core.supabase import supabase_client
+
+            if not supabase_client:
+                logger.warning(
+                    "Supabase client unavailable — skipping dashboard refresh"
+                )
+                return {"status": "skipped", "reason": "no_supabase_client"}
+            # PostgREST enforces the API role's statement_timeout, which the
+            # full-corpus aggregation can exceed (57014); fallback only.
+            supabase_client.rpc("refresh_dashboard_stats").execute()
+        logger.info("refresh_dashboard_stats call succeeded")
     except Exception as exc:
         logger.error(f"Dashboard stats refresh failed: {exc}")
-        raise
+        # postgrest's APIError is not picklable, so re-raising it makes Celery
+        # store an UnpickleableExceptionWrapper. Raise a plain, picklable error.
+        raise RuntimeError(
+            f"refresh_dashboard_stats failed: {type(exc).__name__}: {exc}"
+        ) from None
 
     # Drop the shared cache so the fresh rows are actually served. Import the
     # key names rather than re-spelling them: they carry a version suffix, and a
