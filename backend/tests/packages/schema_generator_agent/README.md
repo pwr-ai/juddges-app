@@ -17,7 +17,7 @@ Tests for prompt file validation and structure.
 **Running:**
 ```bash
 cd backend
-poetry run pytest tests/packages/schema_generator_agent/test_prompts.py -v
+uv run pytest tests/packages/schema_generator_agent/test_prompts.py -v
 ```
 
 **No external dependencies required** - these tests only validate YAML files.
@@ -37,7 +37,7 @@ Tests for edge cases and routing logic.
 **Running:**
 ```bash
 cd backend
-poetry run pytest tests/packages/schema_generator_agent/test_edge_cases.py -v
+uv run pytest tests/packages/schema_generator_agent/test_edge_cases.py -v
 ```
 
 **Dependencies:** Requires LangChain and OpenAI packages (but not API calls for most tests).
@@ -57,7 +57,7 @@ Unit tests for individual schema generator agents.
 **Running:**
 ```bash
 cd backend
-poetry run pytest tests/packages/schema_generator_agent/test_agents.py -v -m unit
+uv run pytest tests/packages/schema_generator_agent/test_agents.py -v -m unit
 ```
 
 **Dependencies:** Requires OpenAI API key (makes actual LLM calls).
@@ -76,7 +76,7 @@ Integration tests for full schema generation workflow.
 **Running:**
 ```bash
 cd backend
-poetry run pytest tests/packages/schema_generator_agent/test_workflow.py -v -m integration
+uv run pytest tests/packages/schema_generator_agent/test_workflow.py -v -m integration
 ```
 
 **Dependencies:**
@@ -89,19 +89,19 @@ poetry run pytest tests/packages/schema_generator_agent/test_workflow.py -v -m i
 ```bash
 # Run all schema generator tests
 cd backend
-poetry run pytest tests/packages/schema_generator_agent/ -v
+uv run pytest tests/packages/schema_generator_agent/ -v
 
 # Run only unit tests (no LLM calls for some)
-poetry run pytest tests/packages/schema_generator_agent/ -v -m unit
+uv run pytest tests/packages/schema_generator_agent/ -v -m unit
 
 # Run only integration tests (requires API key)
-poetry run pytest tests/packages/schema_generator_agent/ -v -m integration
+uv run pytest tests/packages/schema_generator_agent/ -v -m integration
 
 # Run with coverage
-poetry run pytest tests/packages/schema_generator_agent/ --cov=schema_generator_agent
+uv run pytest tests/packages/schema_generator_agent/ --cov=schema_generator_agent
 
 # Skip slow tests
-poetry run pytest tests/packages/schema_generator_agent/ -v -m "not slow"
+uv run pytest tests/packages/schema_generator_agent/ -v -m "not slow"
 ```
 
 ## Environment Setup
@@ -113,10 +113,10 @@ For tests that require LLM calls, you need:
    export OPENAI_API_KEY="your-key-here"
    ```
 
-2. Dependencies installed via Poetry:
+2. Dependencies installed with uv:
    ```bash
    cd backend
-   poetry install
+   uv sync
    ```
 
 ## Test Markers
@@ -160,8 +160,8 @@ If you see `ModuleNotFoundError` for `schema_generator_agent` or `juddges_search
 # Make sure you're in the backend directory
 cd backend
 
-# Use poetry to run tests (it sets up paths correctly)
-poetry run pytest tests/packages/schema_generator_agent/
+# Use uv to run tests (it sets up paths correctly)
+uv run pytest tests/packages/schema_generator_agent/
 ```
 
 ### API Key Errors
@@ -182,7 +182,7 @@ If workflow tests timeout:
 
 ```bash
 # Increase timeout in pytest.ini or run with custom timeout
-poetry run pytest tests/packages/schema_generator_agent/ --timeout=300
+uv run pytest tests/packages/schema_generator_agent/ --timeout=300
 ```
 
 ## Next Steps

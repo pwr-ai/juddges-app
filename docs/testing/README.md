@@ -19,10 +19,10 @@ The dated multi-week test plan (`MASTER_TEST_PLAN.md`) was archived to `.context
 ### Backend
 ```bash
 cd backend
-poetry run poe test-local                       # fast local profile
-poetry run pytest -v -m unit                     # unit only
-poetry run pytest -v -m integration              # integration only
-poetry run pytest --cov=app --cov-report=html    # with coverage
+uv run poe test-local                       # fast local profile
+uv run pytest -v -m unit                     # unit only
+uv run pytest -v -m integration              # integration only
+uv run pytest --cov=app --cov-report=html    # with coverage
 ```
 
 ### Frontend

@@ -54,7 +54,7 @@ Before you begin, ensure you have:
 
    # Or run services individually
    cd frontend && npm run dev  # Port 3007
-   cd backend && poetry run uvicorn app.server:app --reload --port 8004
+   cd backend && uv run uvicorn app.server:app --reload --port 8004
    ```
 
 4. **Ingest data** (optional):

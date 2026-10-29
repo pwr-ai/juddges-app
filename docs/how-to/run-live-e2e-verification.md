@@ -48,17 +48,17 @@ stay in sync.
 cd backend
 
 # All checks against local dev (defaults to http://localhost:8004)
-poetry run poe e2e-live
+uv run poe e2e-live
 
 # Against a deployed environment
-poetry run poe e2e-live --url https://your-backend.example.com
+uv run poe e2e-live --url https://your-backend.example.com
 
 # A subset by feature, and write a machine-readable report
-poetry run poe e2e-live --only search,documents --json e2e-report.json
+uv run poe e2e-live --only search,documents --json e2e-report.json
 
 # List every check without running, or show help
-poetry run poe e2e-live --list
-poetry run poe e2e-live --help
+uv run poe e2e-live --list
+uv run poe e2e-live --help
 ```
 
 You can also invoke the module directly: `python -m tests.e2e_live ...`.
@@ -103,7 +103,7 @@ so normal unit CI stays hermetic:
 ```bash
 RUN_E2E_LIVE=1 BACKEND_API_KEY=... \
   JUDDGES_BENCHMARK_API_URL=http://localhost:8004 \
-  poetry run pytest -v -m e2e tests/e2e_live/test_e2e_live.py
+  uv run pytest -v -m e2e tests/e2e_live/test_e2e_live.py
 ```
 
 ## Related

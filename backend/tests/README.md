@@ -34,7 +34,7 @@ tests/
 1. **Install dependencies**:
    ```bash
    cd backend
-   poetry install
+   uv sync
    ```
 
 2. **For integration tests**: Ensure database is running:
@@ -48,69 +48,69 @@ tests/
 #### Basic Test Commands
 ```bash
 # Fast local profile (default coding loop)
-poetry run poe test-local
+uv run poe test-local
 
 # Run all tests
-poetry run poe test
+uv run poe test
 
 # Run only unit tests (no external dependencies)
-poetry run poe test-unit
+uv run poe test-unit
 
 # Run only integration tests (requires database)
-poetry run poe test-integration
+uv run poe test-integration
 
 # Run specific test files
-poetry run poe test-search     # Search functionality tests
-poetry run poe test-language   # Language-specific tests
+uv run poe test-search     # Search functionality tests
+uv run poe test-language   # Language-specific tests
 ```
 
 #### Code Coverage
 ```bash
 # Run tests with coverage report
-poetry run poe test-cov
+uv run poe test-cov
 
 # Generate HTML coverage report
-poetry run poe test-cov-html
+uv run poe test-cov-html
 # View at: htmlcov/index.html
 ```
 
 #### Code Quality
 ```bash
 # Check code style and format
-poetry run poe lint
-poetry run poe format-check
+uv run poe lint
+uv run poe format-check
 
 # Auto-fix code style issues
-poetry run poe lint-fix
-poetry run poe format
+uv run poe lint-fix
+uv run poe format
 
 # Run all quality checks + unit tests
-poetry run poe check
+uv run poe check
 
 # Run all quality checks + all tests
-poetry run poe check-all
+uv run poe check-all
 ```
 
 #### CI/CD Command
 ```bash
 # Run the same checks as CI/CD pipeline
-poetry run poe ci
+uv run poe ci
 ```
 
 #### Optional Extended Local Profiles
 ```bash
 # Include integration suites
-poetry run poe test-local-integration
+uv run poe test-local-integration
 
 # Include AI-backed suites (requires a real OPENAI_API_KEY)
-poetry run poe test-local-ai
+uv run poe test-local-ai
 
 # Include deprecated legacy schema API suites
-poetry run poe test-local-legacy
+uv run poe test-local-legacy
 
 # Include removed /api/schemas and /api/extractions compatibility suites
 # These tests target a backend API surface that is no longer mounted by default.
-poetry run poe test-local-legacy-schema-api
+uv run poe test-local-legacy-schema-api
 
 # Root wrappers
 make test-local-integration
@@ -125,10 +125,10 @@ For integration tests that require database, you can run tests inside the Docker
 
 ```bash
 # Run tests in the backend container
-docker exec juddges-backend poetry run poe test-integration
+docker exec juddges-backend poe test-integration
 
 # Run specific test file in container
-docker exec juddges-backend poetry run poe test-search
+docker exec juddges-backend poe test-search
 ```
 
 ### Local Development
@@ -136,11 +136,11 @@ For unit tests and development, you can run tests locally without Docker:
 
 ```bash
 # Unit tests work without external services
-poetry run poe test-unit
+uv run poe test-unit
 
 # Code quality checks work locally
-poetry run poe lint
-poetry run poe format
+uv run poe lint
+uv run poe format
 ```
 
 ## Writing Tests
@@ -182,10 +182,10 @@ async def test_weaviate_search():
 ### Verbose Output
 ```bash
 # Run with verbose output
-poetry run poe test -v
+uv run poe test -v
 
 # Run with extra verbose output
-poetry run poe test -vv
+uv run poe test -vv
 ```
 
 ### Run Specific Tests
@@ -215,4 +215,4 @@ The test setup is designed to work in CI/CD environments:
 - **Code quality** checks ensure consistent style
 - **Coverage reports** track test effectiveness
 
-Use `poetry run poe ci` to run the same checks as the CI pipeline.
+Use `uv run poe ci` to run the same checks as the CI pipeline.

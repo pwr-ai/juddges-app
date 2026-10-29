@@ -20,7 +20,7 @@ Before starting, ensure you have:
 - [ ] **Supabase CLI**: Install via `npm install -g supabase` or [other methods](https://supabase.com/docs/guides/cli)
 - [ ] **Node.js 18+**: For frontend development
 - [ ] **Python 3.12+**: For backend development
-- [ ] **Poetry**: For Python dependency management
+- [ ] **[uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.1**: For Python dependency management
 
 ---
 
@@ -102,7 +102,7 @@ Run the verification script to ensure everything is configured correctly:
 ```bash
 # Install dependencies first (if not done)
 cd backend
-poetry install
+uv sync
 cd ..
 
 # Run verification
@@ -346,7 +346,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
    npm run dev
 
    # Backend
-   poetry run uvicorn app.server:app --reload
+   uv run uvicorn app.server:app --reload
    ```
 
 ### Issue: "Auth users table does not exist"
@@ -389,7 +389,7 @@ Once Supabase is set up:
 
    # Backend (port 8004)
    cd backend
-   poetry run uvicorn app.server:app --reload
+   uv run uvicorn app.server:app --reload
    ```
 
 3. **Test Authentication**: Visit `http://localhost:3007/auth/login` and create a user
