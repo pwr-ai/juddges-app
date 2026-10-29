@@ -94,7 +94,9 @@ AppealOutcome = Literal[
 
 # Core columns deliberately NOT exposed to the NL translator until the data is
 # fixed (docs/reference/APP_STATUS_2026-08-21.md §4: case_type='Civil' on UK
-# criminal appeals, court_level='Crown Court' wrong). Tested in
+# criminal appeals, court_level='Crown Court' wrong). Ingestion is fixed in #799;
+# remove this exclusion once scripts/backfill_uk_case_type.py --apply has run on
+# prod (docs/how-to/backfill-uk-case-type.md). Tested in
 # tests/app/test_nl_filter_generator.py and test_nl_filter_prompt_contract.py.
 NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type", "court_level"})
 

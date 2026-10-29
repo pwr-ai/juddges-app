@@ -49,6 +49,24 @@ except ImportError as e:
 # Initialize rich console
 console = Console()
 
+
+def _load_uk_classifier():
+    """Load backend/app/utils/uk_classification.py by path (issue #799).
+
+    Loaded by file path so the script does not need the backend package (and
+    its heavy ``app.utils`` imports) on sys.path; the module is dependency-free.
+    """
+    import importlib.util
+
+    path = (
+        Path(__file__).resolve().parent.parent
+        / "backend" / "app" / "utils" / "uk_classification.py"
+    )
+    spec = importlib.util.spec_from_file_location("uk_classification", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.classify_uk_judgment
+
 # Checkpoint file path
 CHECKPOINT_FILE = Path(__file__).parent / ".ingest_checkpoint.json"
 
@@ -623,18 +641,20 @@ class JudgmentIngestionPipeline:
                 # Determine court type
                 court_type = raw_data.get('court_type', 'unknown')
                 court_name = court_type.replace('_', ' ').title()
+                case_number = raw_data.get('citation', raw_data.get('docket_number', f"UK-{raw_data.get('judgment_id', 'unknown')[:10]}"))
+                case_type, court_level = _load_uk_classifier()(case_number, court_type)
 
                 return {
-                    'case_number': raw_data.get('citation', raw_data.get('docket_number', f"UK-{raw_data.get('judgment_id', 'unknown')[:10]}")),
+                    'case_number': case_number,
                     'jurisdiction': 'UK',
                     'court_name': court_name,
-                    'court_level': 'High Court' if 'high' in court_type.lower() else 'Crown Court' if 'crown' in court_type.lower() else 'Court',
+                    'court_level': court_level,
                     'decision_date': self._parse_date(raw_data.get('publication_date')),
                     'title': raw_data.get('excerpt', full_text[:200])[:500],
                     'summary': raw_data.get('excerpt', ''),
                     'full_text': full_text,
                     'judges': judges,
-                    'case_type': 'Criminal' if 'crim' in court_type.lower() else 'Civil',
+                    'case_type': case_type,
                     'decision_type': 'Judgment',
                     'outcome': None,
                     'keywords': [],

@@ -277,6 +277,38 @@ def _c_facets(ctx: CaseContext) -> str:
     return f"{len(facets)} facet types: {sample}"
 
 
+def _c_uk_case_type_contract(ctx: CaseContext) -> str:
+    """Data contract (#799): no UK ``EWCA Crim`` judgment may be case_type=Civil.
+
+    Fails on prod until ``scripts/backfill_uk_case_type.py --apply`` has run.
+    """
+    resp = ctx.get(
+        "/api/search/documents",
+        params={
+            "q": "EWCA Crim",
+            "limit": 100,
+            "filters": 'jurisdiction = "UK" AND case_type = "Civil"',
+        },
+        timeout=30.0,
+    )
+    assert resp.status_code in (200, 503), f"meili search -> {resp.status_code}"
+    if resp.status_code == 503:
+        raise SkipCase("Meilisearch not configured (503)")
+    docs = resp.json().get("documents") or []
+    bad = [
+        d.get("case_number")
+        for d in docs
+        if "ewca crim" in str(d.get("case_number", "")).lower()
+        or "(crim)" in str(d.get("case_number", "")).lower()
+    ]
+    _detail(ctx, checked=len(docs), mislabelled=len(bad))
+    assert not bad, (
+        f"{len(bad)} UK EWCA Crim docs labelled Civil (e.g. {bad[:3]}); "
+        "run scripts/backfill_uk_case_type.py --apply (#799)"
+    )
+    return f"{len(docs)} UK Civil docs checked, none are EWCA Crim"
+
+
 def _c_autocomplete(ctx: CaseContext) -> str:
     resp = ctx.get(
         "/api/search/autocomplete", params={"q": "umowa", "limit": 10}, timeout=20.0
@@ -528,6 +560,12 @@ _FEATURE_CASES: list[Case] = [
         "embedding_coverage",
         "GET /documents/stats/embeddings",
         _c_embedding_coverage,
+    ),
+    Case(
+        "documents",
+        "uk_case_type_contract",
+        "UK EWCA Crim docs are not case_type=Civil (#799)",
+        _c_uk_case_type_contract,
     ),
     Case("autocomplete", "topics", "GET /api/search/autocomplete", _c_autocomplete),
     Case("autocomplete", "topics_meta", "GET /api/search/topics/meta", _c_topics_meta),
