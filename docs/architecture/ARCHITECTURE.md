@@ -391,6 +391,14 @@ CREATE INDEX idx_judgments_metadata ON judgments USING GIN(metadata);
 CREATE INDEX idx_judgments_embedding ON judgments
   USING hnsw (embedding vector_cosine_ops)
   WITH (m = 16, ef_construction = 64);
+
+-- Chunk vectors: HNSW over a halfvec(1024) expression. The column stays
+-- vector(1024); the 2-byte graph is ~3x smaller at the same recall, so the
+-- index fits in RAM. Queries must ORDER BY the same expression
+-- (embedding::halfvec(1024) <=> query::halfvec(1024)) to use it.
+CREATE INDEX idx_document_chunks_embedding_halfvec ON document_chunks
+  USING hnsw ((embedding::halfvec(1024)) halfvec_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
 ```
 
 ### Search Functions
