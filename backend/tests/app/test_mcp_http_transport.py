@@ -66,6 +66,14 @@ def _fresh_sse_exit_event():
 
 
 @pytest.fixture(autouse=True)
+def _fresh_touch_state():
+    """The per-process touch throttle is keyed on key id; "key-1" is reused."""
+    mcp_http._touch_scheduled.clear()
+    yield
+    mcp_http._touch_scheduled.clear()
+
+
+@pytest.fixture(autouse=True)
 def _no_real_key_writes():
     """Requests that clear auth now schedule a key-use write; never let one
     reach Supabase from a test that is about something else."""
@@ -483,7 +491,7 @@ class TestKeyUseRecording:
             {"Authorization": "Bearer jdg_mcp_good"}, principal
         )
         assert response.status_code == 200
-        touch.assert_called_once_with("key-1")
+        touch.assert_called_once_with("key-1", None)
 
     @pytest.mark.parametrize(
         ("headers", "resolves"),
@@ -534,6 +542,111 @@ class TestKeyUseRecording:
         await asyncio.sleep(0)
         loop = asyncio.get_running_loop()
         assert not [t for t in mcp_http._key_use_tasks if t.get_loop() is loop]
+
+
+@pytest.mark.unit
+class TestResolutionOffTheEventLoop:
+    async def test_resolution_does_not_block_event_loop(self):
+        import time
+
+        def slow_resolver(_credential):
+            time.sleep(0.2)  # a sync Supabase round trip
+            return MagicMock(id="user-123", mcp_key_id="key-1")
+
+        ticks = 0
+        stop = asyncio.Event()
+
+        async def ticker():
+            nonlocal ticks
+            while not stop.is_set():
+                ticks += 1
+                await asyncio.sleep(0.01)
+
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", slow_resolver),
+            patch("juddges_mcp.http.touch_key"),
+        ):
+            task = asyncio.create_task(ticker())
+            await asyncio.sleep(0)
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                response = await c.post("/", headers=BEARER)
+            stop.set()
+            await task
+            await _drain_key_use_tasks()
+        assert response.status_code == 200
+        assert ticks >= 5, f"event loop was blocked during resolution ({ticks} ticks)"
+
+    async def test_touch_recent_key_no_queries(self):
+        from datetime import UTC, datetime
+
+        principal = MagicMock(
+            id="user-123",
+            mcp_key_id="key-1",
+            mcp_last_used_at=datetime.now(UTC).isoformat(),
+        )
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", return_value=principal),
+            patch("juddges_mcp.http.touch_key") as touch,
+        ):
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                response = await c.post("/", headers=BEARER)
+            await _drain_key_use_tasks()
+        assert response.status_code == 200
+        touch.assert_not_called()
+
+    async def test_stale_key_schedules_one_touch(self):
+        principal = MagicMock(
+            id="user-123",
+            mcp_key_id="key-1",
+            mcp_last_used_at="2020-01-01T00:00:00+00:00",
+        )
+        with (
+            patch("juddges_mcp.http.resolve_mcp_principal", return_value=principal),
+            patch("juddges_mcp.http.touch_key") as touch,
+        ):
+            async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                await c.post("/", headers=BEARER)
+            await _drain_key_use_tasks()
+        touch.assert_called_once_with("key-1", "2020-01-01T00:00:00+00:00")
+
+
+@pytest.mark.unit
+class TestCachedPrincipalTouchThrottle:
+    async def test_stale_key_through_real_cache_schedules_one_touch(self, monkeypatch):
+        from app.core import auth_mcp
+
+        monkeypatch.setenv("MCP_KEY_CACHE_TTL_SECONDS", "30")
+        auth_mcp.clear_principal_cache()
+        rows = MagicMock()
+        rows.data = [
+            {
+                "id": "key-1",
+                "user_id": "user-123",
+                "scopes": [],
+                "expires_at": None,
+                "revoked_at": None,
+                "last_used_at": None,
+            }
+        ]
+        admin = MagicMock()
+        admin.table.return_value.select.return_value.eq.return_value.execute.return_value = rows
+        try:
+            with (
+                patch(
+                    "app.core.auth_mcp.get_admin_supabase_client", return_value=admin
+                ),
+                patch("juddges_mcp.http.touch_key") as touch,
+            ):
+                async with _asgi_client(McpAuthMiddleware(_ok_inner)) as c:
+                    first = await c.post("/", headers=BEARER)
+                    second = await c.post("/", headers=BEARER)
+                await _drain_key_use_tasks()
+        finally:
+            auth_mcp.clear_principal_cache()
+        assert first.status_code == second.status_code == 200
+        # Second request was a cache hit carrying the same stale last_used_at.
+        assert admin.table.call_count == 1
+        touch.assert_called_once_with("key-1", None)
 
 
 def _asgi_client(asgi_app):
@@ -600,7 +713,7 @@ class TestMcpRateLimiting:
         responses, _, touch = await self._call(principal=principal, n=3)
         assert [r.status_code for r in responses] == [200, 429, 429]
         # Only the one served request recorded a use.
-        touch.assert_called_once_with("key-1")
+        touch.assert_called_once_with("key-1", None)
 
     async def test_throttled_key_never_calls_record_key_use(self):
         from app.mcp_rate_limit import McpRateLimitExceeded

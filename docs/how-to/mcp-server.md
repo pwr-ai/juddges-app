@@ -82,7 +82,7 @@ Provenance matters when you quote a result. Only the `full_text` section of `get
 
 ## 5. Revoke a key
 
-In **Settings > MCP access**, click the bin icon next to the key and confirm. Revocation is checked on every request, so it takes effect immediately and cannot be undone. The row is kept (marked **Revoked**) for the audit trail.
+In **Settings > MCP access**, click the bin icon next to the key and confirm. Revocation takes effect immediately in a fresh process. A backend that already resolved the key may keep accepting a revoked or expired key for up to `MCP_KEY_CACHE_TTL_SECONDS` (default 30 s, `0` disables the cache); it cannot be undone. The row is kept (marked **Revoked**) for the audit trail.
 
 Afterwards a client using that key receives `401 Unauthorized`:
 
