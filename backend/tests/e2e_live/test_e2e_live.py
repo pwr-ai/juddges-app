@@ -8,7 +8,7 @@ Run it explicitly:
 
     RUN_E2E_LIVE=1 BACKEND_API_KEY=... \
       JUDDGES_BENCHMARK_API_URL=http://localhost:8004 \
-      poetry run pytest -v -m e2e tests/e2e_live/test_e2e_live.py
+      uv run pytest -v -m e2e tests/e2e_live/test_e2e_live.py
 """
 
 from __future__ import annotations

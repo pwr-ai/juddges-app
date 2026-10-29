@@ -20,28 +20,13 @@ cd "$(dirname "$0")/.."
 echo "📁 Project root: $(pwd)"
 echo ""
 
-# Resolve Poetry runner robustly (broken PATH shims are common after venv moves)
-POETRY_CMD=()
-POETRY_DISPLAY=""
-if command -v poetry >/dev/null 2>&1 && poetry --version >/dev/null 2>&1; then
-    POETRY_CMD=(poetry)
-    POETRY_DISPLAY="poetry"
-elif command -v python3 >/dev/null 2>&1 && python3 -m poetry --version >/dev/null 2>&1; then
-    POETRY_CMD=(python3 -m poetry)
-    POETRY_DISPLAY="python3 -m poetry"
-elif command -v python >/dev/null 2>&1 && python -m poetry --version >/dev/null 2>&1; then
-    POETRY_CMD=(python -m poetry)
-    POETRY_DISPLAY="python -m poetry"
-else
-    echo -e "${RED}✗ Poetry not found (tried: poetry, python3 -m poetry, python -m poetry)${NC}"
+# The backend is a uv project (backend/pyproject.toml + backend/uv.lock).
+if ! command -v uv >/dev/null 2>&1; then
+    echo -e "${RED}✗ uv not found (install: https://docs.astral.sh/uv/)${NC}"
     exit 1
 fi
 
-poetry_exec() {
-    "${POETRY_CMD[@]}" "$@"
-}
-
-echo -e "${GREEN}✓${NC} Using Poetry runner: ${POETRY_DISPLAY}"
+echo -e "${GREEN}✓${NC} Using uv: $(uv --version)"
 echo ""
 
 # 1. Check environment variables
@@ -72,18 +57,18 @@ done
 
 echo ""
 
-# 2. Check Poetry dependencies
+# 2. Check locked backend dependencies
 echo "2️⃣  Checking backend dependencies..."
 cd backend
-if poetry_exec show weaviate-client 2>/dev/null; then
+if grep -q '^name = "weaviate-client"$' uv.lock; then
     echo -e "${RED}✗ weaviate-client still in dependencies${NC}"
     exit 1
 else
     echo -e "${GREEN}✓${NC} weaviate-client removed"
 fi
 
-if poetry_exec show supabase | grep -q "supabase"; then
-    echo -e "${GREEN}✓${NC} supabase package installed"
+if grep -q '^name = "supabase"$' uv.lock; then
+    echo -e "${GREEN}✓${NC} supabase package locked"
 else
     echo -e "${RED}✗ supabase package missing${NC}"
     exit 1
@@ -145,7 +130,7 @@ echo ""
 # 6. Run quick backend syntax check
 echo "6️⃣  Running backend syntax check..."
 cd backend
-if BACKEND_IMPORT_ERR="$(poetry_exec run python -c "import app.server" 2>&1)"; then
+if BACKEND_IMPORT_ERR="$(uv run python -c "import app.server" 2>&1)"; then
     echo -e "${GREEN}✓${NC} Backend imports successful"
 else
     echo -e "${RED}✗${NC} Backend has import errors"
@@ -180,7 +165,7 @@ echo "========================================"
 echo -e "${GREEN}✅ All checks passed!${NC}"
 echo ""
 echo "Next steps:"
-echo "1. Run: cd backend && ${POETRY_DISPLAY} run pytest tests/ -v"
+echo "1. Run: cd backend && uv run pytest tests/ -v"
 echo "2. Run: cd frontend && npm run test"
 echo "3. Run: cd frontend && npm run test:e2e"
 echo "4. Start dev servers and test manually"

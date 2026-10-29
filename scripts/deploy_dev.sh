@@ -151,7 +151,7 @@ cmd_shell_fe() {
 
 cmd_test_be() {
     info "Running backend tests ..."
-    dc exec "${SVC_BACKEND}" poetry run pytest "$@"
+    dc exec "${SVC_BACKEND}" pytest "$@"
 }
 
 cmd_test_fe() {

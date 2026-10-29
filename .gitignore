@@ -34,12 +34,13 @@ out/
 build/
 dist/
 
-# Poetry
+# Virtual environments (uv creates backend/.venv)
 .venv/
 .venv-ingest/
 venv/
-# Sub-package locks are never installed from: juddges_search and
-# schema_generator_agent are editable path deps resolved by backend/poetry.lock.
+# Workspace members are resolved by the single backend/uv.lock; a per-package
+# lock (or a stale Poetry one from before the uv migration) is never used.
+backend/packages/*/uv.lock
 backend/packages/*/poetry.lock
 
 # Python virtual environments (top-level only — do NOT match nested code dirs like frontend/lib/env/)

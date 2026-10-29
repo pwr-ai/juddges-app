@@ -13,13 +13,13 @@ CI required checks do not run SQL / hit live services.
 Usage
 -----
     # backend must be running (default http://localhost:8004)
-    poetry run poe bench-search
+    uv run poe bench-search
     # or
     JUDDGES_BENCHMARK_API_URL=http://127.0.0.1:8005 \
-        BACKEND_API_KEY=... poetry run python scripts/search_benchmark.py
+        BACKEND_API_KEY=... uv run python scripts/search_benchmark.py
 
     # add LLM-judged precision@K (needs a real OPENAI_API_KEY):
-    SEARCH_LLM_JUDGE=1 JUDGE_MODEL=gpt-4.1-mini ... poetry run python scripts/search_benchmark.py
+    SEARCH_LLM_JUDGE=1 JUDGE_MODEL=gpt-4.1-mini ... uv run python scripts/search_benchmark.py
 
 Env
 ---

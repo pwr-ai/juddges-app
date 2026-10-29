@@ -6,7 +6,7 @@ These tests require a live Supabase instance with:
 - judgments table with pgvector extension enabled
 - Sample data loaded in the database
 
-Run with: poetry run pytest tests/packages/juddges_search/test_supabase_search_integration.py -v -m integration
+Run with: uv run pytest tests/packages/juddges_search/test_supabase_search_integration.py -v -m integration
 """
 
 import os

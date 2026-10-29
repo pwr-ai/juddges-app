@@ -11,11 +11,11 @@ Idempotent: re-running re-embeds and overwrites. ~5 min wall-clock for
 Usage (run inside the backend container per project convention):
 
     docker compose -f docker-compose.dev.yml exec backend \\
-        poetry run python scripts/backfill_meilisearch_embeddings.py
+        uv run python scripts/backfill_meilisearch_embeddings.py
     docker compose -f docker-compose.dev.yml exec backend \\
-        poetry run python scripts/backfill_meilisearch_embeddings.py --batch-size 32
+        uv run python scripts/backfill_meilisearch_embeddings.py --batch-size 32
     docker compose -f docker-compose.dev.yml exec backend \\
-        poetry run python scripts/backfill_meilisearch_embeddings.py --dry-run
+        uv run python scripts/backfill_meilisearch_embeddings.py --dry-run
 """
 
 from __future__ import annotations
