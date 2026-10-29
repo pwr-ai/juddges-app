@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.rate_limiter import limiter
 
+from ._fetch import fetch_all_pages, fetch_by_ids
 from .constants import (
     REASONING_LINES_LLM_RATE_LIMIT,
     REASONING_LINES_READ_RATE_LIMIT,
@@ -93,13 +94,14 @@ async def detect_events(request: Request, response: Response) -> EventDetectionR
         line_by_id[line_id] = line
 
         try:
-            members_resp = (
-                db.client.table("reasoning_line_members")
-                .select("judgment_id, outcome_direction")
-                .eq("reasoning_line_id", line_id)
-                .execute()
+            member_rows = fetch_all_pages(
+                lambda line_id=line_id: (
+                    db.client.table("reasoning_line_members")
+                    .select("judgment_id, outcome_direction")
+                    .eq("reasoning_line_id", line_id)
+                    .order("judgment_id")
+                )
             )
-            member_rows = members_resp.data or []
             judgment_ids = [str(m["judgment_id"]) for m in member_rows]
 
             if not judgment_ids:
@@ -107,13 +109,13 @@ async def detect_events(request: Request, response: Response) -> EventDetectionR
                 continue
 
             # Fetch judgment details with embeddings and dates
-            j_resp = (
-                db.client.table("judgments")
-                .select("id, decision_date, embedding")
-                .in_("id", judgment_ids)
-                .execute()
+            j_rows = fetch_by_ids(
+                db.client,
+                "judgments",
+                "id, decision_date, embedding",
+                judgment_ids,
             )
-            judgment_map = {str(j["id"]): j for j in (j_resp.data or [])}
+            judgment_map = {str(j["id"]): j for j in j_rows}
 
             # Merge member outcome_direction with judgment data
             enriched = []

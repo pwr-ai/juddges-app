@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.rate_limiter import limiter
 
+from ._fetch import fetch_all_pages, fetch_by_ids
 from .constants import (
     REASONING_LINES_RATE_LIMIT,
     REASONING_LINES_READ_RATE_LIMIT,
@@ -60,11 +61,11 @@ async def create_reasoning_line(
 
     # Fetch judgment metadata and embeddings for all requested IDs
     try:
-        response = (
-            db.client.table("judgments")
-            .select("id, case_number, title, court_name, decision_date, embedding")
-            .in_("id", unique_ids)
-            .execute()
+        judgment_rows = fetch_by_ids(
+            db.client,
+            "judgments",
+            "id, case_number, title, court_name, decision_date, embedding",
+            unique_ids,
         )
     except Exception as e:
         logger.error(f"Error fetching judgments for reasoning line creation: {e}")
@@ -73,7 +74,7 @@ async def create_reasoning_line(
         )
 
     judgments_by_id: dict[str, dict[str, Any]] = {
-        str(j["id"]): j for j in (response.data or [])
+        str(j["id"]): j for j in judgment_rows
     }
 
     # Validate that all requested judgments exist
@@ -353,12 +354,14 @@ async def get_reasoning_line(
         "reasoning_pattern, outcome_direction"
     )
     try:
-        members_response = (
-            db.client.table("reasoning_line_members")
-            .select(member_fields)
-            .eq("reasoning_line_id", line_id)
-            .order("position_in_line")
-            .execute()
+        member_rows = fetch_all_pages(
+            lambda: (
+                db.client.table("reasoning_line_members")
+                .select(member_fields)
+                .eq("reasoning_line_id", line_id)
+                .order("position_in_line")
+                .order("judgment_id")
+            )
         )
     except Exception as e:
         logger.error(f"Error fetching members for reasoning line {line_id}: {e}")
@@ -366,21 +369,19 @@ async def get_reasoning_line(
             status_code=500, detail="Failed to fetch reasoning line members"
         )
 
-    member_rows = members_response.data or []
-
-    # Fetch judgment metadata for all members in one batch query
+    # Fetch judgment metadata for all members in URL-safe batches
     judgment_ids = [str(m["judgment_id"]) for m in member_rows]
     judgments_by_id: dict[str, dict[str, Any]] = {}
 
     if judgment_ids:
         try:
-            j_response = (
-                db.client.table("judgments")
-                .select("id, case_number, title, court_name, decision_date")
-                .in_("id", judgment_ids)
-                .execute()
+            j_rows = fetch_by_ids(
+                db.client,
+                "judgments",
+                "id, case_number, title, court_name, decision_date",
+                judgment_ids,
             )
-            judgments_by_id = {str(j["id"]): j for j in (j_response.data or [])}
+            judgments_by_id = {str(j["id"]): j for j in j_rows}
         except Exception as e:
             logger.warning(f"Error fetching judgment details for line {line_id}: {e}")
             # Non-fatal: we still return members with available data
