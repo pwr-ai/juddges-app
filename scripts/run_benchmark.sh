@@ -114,7 +114,7 @@ else
     echo "Please ensure the backend is running and accessible." >&2
     echo ""
     echo "For development:"
-    echo "  cd backend && poetry run uvicorn app.server:app --reload --port 8004"
+    echo "  cd backend && uv run uvicorn app.server:app --reload --port 8004"
     echo ""
     echo "With Docker:"
     echo "  docker compose -f docker-compose.dev.yml up backend"

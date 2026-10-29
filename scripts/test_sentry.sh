@@ -25,7 +25,7 @@ cd "${REPO_ROOT}/backend"
 
 echo "Sending smoke-test events (release=${SENTRY_RELEASE:-${GIT_SHA:-unset}}) ..."
 
-poetry run python - <<'PY'
+uv run --extra observability python - <<'PY'
 import sentry_sdk
 
 from app.sentry import init_sentry

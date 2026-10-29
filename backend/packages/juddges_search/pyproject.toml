@@ -1,34 +1,35 @@
-[tool.poetry]
+[project]
 name = "juddges_search"
 version = "0.1.0"
 description = "Juddges project search - AI-powered judicial decision search"
-authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
+authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak.com" }]
 readme = "README.md"
-packages = [
-    { include = "juddges_search" }
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "langchain-community>=0.4.1",
+    "langchain-openai>=1.1.14,<2",
+    "termcolor>=2.5.0,<3",
+    "loguru>=0.7.3,<0.8",
+    "jinja2>=3.1.6,<4",
+    "python-dotenv>=1.0.0,<2",
+    "langfuse>=3.2.3,<4",
+    "rich>=14.1.0,<15",
+    "celery[redis]>=5.5.3,<6",
+    "jsonschema>=4.23.0,<5",
+    "pyyaml>=6.0.2,<7",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.14"
-langchain-community = ">=0.4.1"
-langchain-openai = "^1.1.14"
-termcolor = "^2.5.0"
-loguru = "^0.7.3"
-jinja2 = "^3.1.6"
-python-dotenv = "^1.0.0"
-langfuse = "^3.2.3"
-rich = "^14.1.0"
-celery = {extras = ["redis"], version = "^5.5.3"}
-jsonschema = "^4.23.0"
-pyyaml = "^6.0.2"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
-ruff = "^0.11.0"
+# No [dependency-groups] here: dev tooling (pytest, ruff, ...) lives in the
+# workspace root's `dev` group. uv resolves every member's groups into the one
+# backend/uv.lock, and the old per-package Poetry dev pins (never installed by
+# the root `poetry install`) conflicted with the root's.
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.13.1,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
 
 [tool.ruff]
 line-length = 120

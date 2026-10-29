@@ -195,7 +195,8 @@ If a build fails after step 6, `main` carries the version bump without a tag. Re
 | File | Field | Example |
 |------|-------|---------|
 | `VERSION` | Plain text | `1.2.3` |
-| `backend/pyproject.toml` | `version = "..."` | `version = "1.2.3"` |
+| `backend/pyproject.toml` | `[project] version = "..."` | `version = "1.2.3"` |
+| `backend/uv.lock` | Re-locked with `uv lock` (pinned uv 0.13.1, in a container) — the lock records the root project version, so CI's `uv sync --locked` would fail without it; dependency pins are unchanged | `version = "1.2.3"` under `name = "juddges"` |
 | `frontend/package.json` | `"version": "..."` | `"version": "1.2.3"` |
 | `.env.example` | `JUDDGES_IMAGE_TAG` comment | `# JUDDGES_IMAGE_TAG=1.2.3` |
 

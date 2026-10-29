@@ -52,7 +52,7 @@ For working on the MCP server itself you can run it over stdio instead of deploy
 ```bash
 export JUDDGES_MCP_KEY=jdg_mcp_<your key>
 cd backend
-poetry run poe mcp-stdio
+uv run poe mcp-stdio
 ```
 
 !!! warning "This is not a path for external users"

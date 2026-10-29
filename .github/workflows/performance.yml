@@ -35,22 +35,19 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      # Restores the uv cache only; cache-warm.yml is the one workflow that saves
+      # it. Inputs must match there exactly, or the cache key differs.
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: 1.7.1
-          virtualenvs-in-project: true
-
-      - name: Cache dependencies
-        uses: actions/cache/restore@v6
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+          version: "0.13.1"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          save-cache: false
 
       - name: Install dependencies
         working-directory: backend
         run: |
-          poetry install --with dev
+          uv sync --locked
 
       - name: Run pytest performance tests
         working-directory: backend
@@ -67,7 +64,7 @@ jobs:
           # an authenticated remote backend.
           BACKEND_API_KEY: test-key
         run: |
-          poetry run pytest tests/performance/ --performance -v -s --tb=short
+          uv run pytest tests/performance/ --performance -v -s --tb=short
 
       - name: Upload performance results
         uses: actions/upload-artifact@v7

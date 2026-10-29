@@ -142,7 +142,7 @@ docker compose run --rm backend python scripts/script_name.py
 
 ```bash
 cd backend
-poetry install
+uv sync
 ```
 
 ### Viewing Logs
@@ -233,8 +233,8 @@ Make sure you're in the backend directory and dependencies are installed:
 
 ```bash
 cd backend
-poetry install
-poetry shell
+uv sync
+source .venv/bin/activate   # or prefix each command with `uv run`
 ```
 
 ### Log Directory Not Found

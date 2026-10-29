@@ -57,7 +57,7 @@ check_server() {
         print_success "Server is running"
     else
         print_error "Server not running at $BASE_URL"
-        print_info "Start with: poetry run uvicorn app.server:app --port 8003"
+        print_info "Start with: uv run uvicorn app.server:app --port 8003"
         print_warning "Continuing with tests anyway..."
     fi
 }
@@ -65,7 +65,7 @@ check_server() {
 # Test No Authentication (should fail)
 test_no_auth() {
     print_test "Testing no authentication (should fail)"
-    
+
     status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/collections")
     if [ "$status" = "403" ]; then
         print_success "No auth correctly rejected (401)"
@@ -77,23 +77,23 @@ test_no_auth() {
 # Test API Key Authentication
 test_api_key_auth() {
     print_test "Testing API key authentication"
-    
+
     # Valid API key
     status=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "X-API-Key: $API_KEY" \
         "$BASE_URL/collections")
-    
+
     if [ "$status" = "200" ]; then
         print_success "API key authentication works"
     else
         print_error "API key auth failed, status: $status"
     fi
-    
+
     # Invalid API key
     status=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "X-API-Key: invalid-key" \
         "$BASE_URL/collections")
-    
+
     if [ "$status" = "401" ]; then
         print_success "Invalid API key correctly rejected"
     else
@@ -104,17 +104,17 @@ test_api_key_auth() {
 # Test creating collection
 test_create_collection() {
     print_test "Creating collection"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -X POST \
         -H "X-API-Key: $API_KEY" \
         -H "Content-Type: application/json" \
         -d '{"name": "Test Collection", "description": "Created via test script"}' \
         "$BASE_URL/collections")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         print_success "Collection created"
         COLLECTION_ID=$(echo "$body" | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])" 2>/dev/null || echo "")
@@ -132,14 +132,14 @@ test_create_collection() {
 # Test listing collections
 test_list_collections() {
     print_test "Listing collections"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -H "X-API-Key: $API_KEY" \
         "$BASE_URL/collections")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         count=$(echo "$body" | python3 -c "import sys, json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "unknown")
         print_success "Listed collections (count: $count)"
@@ -155,16 +155,16 @@ test_get_collection() {
         print_warning "Skipping get collection test (no collection ID)"
         return
     fi
-    
+
     print_test "Getting collection $COLLECTION_ID"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -H "X-API-Key: $API_KEY" \
         "$BASE_URL/collections/$COLLECTION_ID")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         name=$(echo "$body" | python3 -c "import sys, json; print(json.load(sys.stdin)['name'])" 2>/dev/null || echo "unknown")
         print_success "Got collection: $name"
@@ -180,19 +180,19 @@ test_update_collection() {
         print_warning "Skipping update collection test (no collection ID)"
         return
     fi
-    
+
     print_test "Updating collection $COLLECTION_ID"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -X PUT \
         -H "X-API-Key: $API_KEY" \
         -H "Content-Type: application/json" \
         -d '{"name": "Updated Test Collection"}' \
         "$BASE_URL/collections/$COLLECTION_ID")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         print_success "Collection updated"
     else
@@ -207,19 +207,19 @@ test_add_document() {
         print_warning "Skipping add document test (no collection ID)"
         return
     fi
-    
+
     print_test "Adding document to collection"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -X POST \
         -H "X-API-Key: $API_KEY" \
         -H "Content-Type: application/json" \
         -d '{"document_id": "test-doc-123"}' \
         "$BASE_URL/collections/$COLLECTION_ID/documents")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         print_success "Document added to collection"
     else
@@ -234,17 +234,17 @@ test_remove_document_url() {
         print_warning "Skipping remove document test (no collection ID)"
         return
     fi
-    
+
     print_test "Removing document via URL"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -X DELETE \
         -H "X-API-Key: $API_KEY" \
         "$BASE_URL/collections/$COLLECTION_ID/documents/test-doc-123")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         print_success "Document removed via URL"
     else
@@ -259,26 +259,26 @@ test_remove_document_body() {
         print_warning "Skipping remove document body test (no collection ID)"
         return
     fi
-    
+
     # Add a document first
     curl -s -X POST \
         -H "X-API-Key: $API_KEY" \
         -H "Content-Type: application/json" \
         -d '{"document_id": "test-doc-456"}' \
         "$BASE_URL/collections/$COLLECTION_ID/documents" > /dev/null
-    
+
     print_test "Removing document via request body"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -X DELETE \
         -H "X-API-Key: $API_KEY" \
         -H "Content-Type: application/json" \
         -d '{"document_id": "test-doc-456"}' \
         "$BASE_URL/collections/$COLLECTION_ID/documents")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         print_success "Document removed via request body"
     else
@@ -293,17 +293,17 @@ test_delete_collection() {
         print_warning "Skipping delete collection test (no collection ID)"
         return
     fi
-    
+
     print_test "Deleting collection $COLLECTION_ID"
-    
+
     response=$(curl -s -w "\n%{http_code}" \
         -X DELETE \
         -H "X-API-Key: $API_KEY" \
         "$BASE_URL/collections/$COLLECTION_ID")
-    
+
     status=$(echo "$response" | tail -n1)
     body=$(echo "$response" | head -n1)
-    
+
     if [ "$status" = "200" ]; then
         print_success "Collection deleted"
     else
@@ -315,18 +315,18 @@ test_delete_collection() {
 # Test error handling
 test_error_handling() {
     print_test "Testing error handling"
-    
+
     # Test 404 - non-existent collection
     status=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "X-API-Key: $API_KEY" \
         "$BASE_URL/collections/non-existent-id")
-    
+
     if [ "$status" = "404" ]; then
         print_success "404 error handled correctly"
     else
         print_error "Expected 404 for non-existent collection, got $status"
     fi
-    
+
     # Test 400 - invalid request
     status=$(curl -s -o /dev/null -w "%{http_code}" \
         -X POST \
@@ -334,7 +334,7 @@ test_error_handling() {
         -H "Content-Type: application/json" \
         -d '{"invalid": "data"}' \
         "$BASE_URL/collections")
-    
+
     if [ "$status" = "422" ] || [ "$status" = "400" ]; then
         print_success "Invalid request handled correctly ($status)"
     else
@@ -348,15 +348,15 @@ run_tests() {
     echo
     print_info "Testing with Backend: $BASE_URL"
     print_info "API Key: $API_KEY"
-    
+
     # Server check
     check_server
-    
+
     # Authentication Tests
     print_header "🔐 Authentication Tests"
     test_no_auth
     test_api_key_auth
-    
+
     # CRUD Tests
     print_header "📝 CRUD Tests"
     test_create_collection
@@ -367,11 +367,11 @@ run_tests() {
     test_remove_document_url
     test_remove_document_body
     test_delete_collection
-    
+
     # Error Handling
     print_header "⚠️ Error Handling Tests"
     test_error_handling
-    
+
     # Results summary
     print_header "📊 Test Results Summary"
     echo
@@ -382,7 +382,7 @@ run_tests() {
         print_error "Some tests failed!"
         print_info "Passed: $TESTS_PASSED, Failed: $TESTS_FAILED"
     fi
-    
+
     echo
     print_info "✅ Collections API uses official Supabase client!"
     print_info "📝 Clean and simple API key authentication"

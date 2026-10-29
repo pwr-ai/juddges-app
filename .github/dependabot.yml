@@ -26,8 +26,9 @@ updates:
     commit-message:
       prefix: "chore(deps)"
 
-  # Backend (poetry) — weekly, minor+patch grouped into a single PR
-  - package-ecosystem: "pip"
+  # Backend (uv workspace; Dependabot updates pyproject.toml + uv.lock) —
+  # weekly, minor+patch grouped into a single PR
+  - package-ecosystem: "uv"
     directory: "/backend"
     schedule:
       interval: "weekly"
@@ -35,7 +36,7 @@ updates:
       time: "06:00"
       timezone: "Europe/Warsaw"
     groups:
-      pip-minor-patch:
+      uv-minor-patch:
         applies-to: version-updates
         update-types:
           - "minor"

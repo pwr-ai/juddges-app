@@ -10,7 +10,7 @@ are exercised, so the engine is safe to point at production.
 
 Entry points:
     python -m tests.e2e_live            # run all checks with rich output
-    poetry run poe e2e-live             # same, via poe task
+    uv run poe e2e-live                 # same, via poe task
     tests/e2e_live/test_e2e_live.py     # gated pytest bridge (RUN_E2E_LIVE=1)
 """
 

@@ -1,20 +1,21 @@
 name: Cache Warm
 
 # The only workflow that saves dependency caches. Every other job uses
-# `actions/cache/restore`, so caches are written once, in the `main` scope,
-# which every pull request can read. Before this, each PR saved its own
-# ~300 MB npm and ~600 MB poetry copies under `refs/pull/<n>/merge`, and the
-# duplicates kept the repo pinned at the 10 GB cache limit.
+# `actions/cache/restore`, or setup-uv with `save-cache: false`, so caches are
+# written once, in the `main` scope, which every pull request can read. Before
+# this, each PR saved its own ~300 MB npm and ~600 MB Python dependency copies
+# under `refs/pull/<n>/merge`, and the duplicates kept the repo pinned at the
+# 10 GB cache limit.
 #
-# The keys and paths below must match the restore steps in ci.yml,
-# performance.yml and search-integration.yml exactly — the cache version
-# hashes the path list, so a mismatch is a silent miss.
+# The keys, paths and setup-uv inputs below must match the restore steps in
+# ci.yml, performance.yml and search-integration.yml exactly -- the cache key
+# hashes them, so a mismatch is a silent miss.
 
 on:
   push:
     branches: [main]
     paths:
-      - backend/poetry.lock
+      - backend/uv.lock
       - frontend/package-lock.json
       - .github/workflows/cache-warm.yml
   schedule:
@@ -30,39 +31,29 @@ permissions:
   contents: read
 
 jobs:
-  poetry:
-    name: Warm poetry cache
+  uv:
+    name: Warm uv cache
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - id: python
-        uses: actions/setup-python@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
-      - uses: snok/install-poetry@v1
+      # The only setup-uv step that saves. setup-uv skips the save when the
+      # key already exists, so an unchanged uv.lock costs a restore, not an
+      # upload. Every input except save-cache must match the restore steps.
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: 1.7.1
-          virtualenvs-in-project: true
-
-      - id: restore
-        uses: actions/cache/restore@v6
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
-          lookup-only: true
+          version: "0.13.1"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          save-cache: true
 
       - name: Install dependencies
-        if: steps.restore.outputs.cache-hit != 'true'
         working-directory: backend
-        run: poetry install --with dev
-
-      - if: steps.restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+        run: uv sync --locked
 
   npm:
     name: Warm npm cache

@@ -32,7 +32,7 @@ backend/
 │   └── schema_generator_agent/
 ├── tests/                 # Test suite
 ├── scripts/               # Utility scripts
-└── pyproject.toml        # Poetry dependencies
+└── pyproject.toml        # uv workspace root (dependencies; lock in uv.lock)
 ```
 
 ## API Documentation
@@ -47,7 +47,7 @@ Once the backend is running, visit:
 ### Prerequisites
 
 - Python 3.11+
-- Poetry (dependency management)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.1 (dependency management)
 - Docker & Docker Compose
 
 ### Setup
@@ -60,38 +60,38 @@ Once the backend is running, visit:
 
 2. **Install dependencies:**
    ```bash
-   poetry install
+   uv sync
    ```
 
 3. **Run locally (without Docker):**
    ```bash
-   poetry run uvicorn app.server:app --reload --port 8000
+   uv run uvicorn app.server:app --reload --port 8000
    ```
 
 ### Running Tests
 
 ```bash
 # Run all tests
-poetry run pytest
+uv run pytest
 
 # Run with coverage
-poetry run pytest --cov=app
+uv run pytest --cov=app
 
 # Run specific test file
-poetry run pytest tests/app/test_documents.py
+uv run pytest tests/app/test_documents.py
 ```
 
 ### Code Quality
 
 ```bash
 # Format code
-poetry run ruff format .
+uv run ruff format .
 
 # Lint code
-poetry run ruff check .
+uv run ruff check .
 
 # Type checking
-poetry run mypy app/
+uv run mypy app/
 ```
 
 ## Environment Variables
@@ -156,9 +156,9 @@ This project uses a two-branch flow: `develop` is the integration branch, `main`
 
 1. Branch from `develop`: `git checkout develop && git pull && git checkout -b feature/your-change`
 2. Write tests for new functionality
-3. Ensure all tests pass: `poetry run pytest`
-4. Format code: `poetry run ruff format .`
-5. Run linting: `poetry run ruff check .`
+3. Ensure all tests pass: `uv run pytest`
+4. Format code: `uv run ruff format .`
+5. Run linting: `uv run ruff check .`
 6. Open a pull request **into `develop`** (never directly into `main`)
 
 Releases roll up by opening a `release: vX.Y.Z` PR from `develop` → `main`; production deploys are tag-driven (`prod-v*` tags cut from `main`). See the root `README.md` and `docs/how-to/deployment.md` for the full release flow.

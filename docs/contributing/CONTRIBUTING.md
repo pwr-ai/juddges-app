@@ -63,7 +63,7 @@ We welcome many types of contributions:
 
 - Node.js 20+
 - Python 3.12+
-- Poetry
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.1
 - Docker and Docker Compose
 - Git
 
@@ -81,7 +81,7 @@ git remote add upstream https://github.com/original-org/juddges-app.git
 cp .env.example .env.secrets
 
 # Install dependencies
-cd backend && poetry install && cd ..
+cd backend && uv sync && cd ..
 cd frontend && npm install && cd ..
 
 # Start development servers
@@ -94,22 +94,50 @@ For detailed setup instructions, see [DEVELOPER_ONBOARDING.md](../getting-starte
 
 Both lockfiles are committed and are the source of truth for installed versions:
 
-- **Backend**: `backend/poetry.lock` (Poetry). `poetry install` installs exactly what the lock pins.
+- **Backend**: `backend/uv.lock` ([uv](https://docs.astral.sh/uv/getting-started/installation/), pinned to **0.13.1** in `backend/Dockerfile`, the CI `setup-uv` steps and the release script — use the same version locally). `uv sync` installs exactly what the lock pins, including the `dev` group.
 - **Frontend**: `frontend/package-lock.json` (npm). Use `npm ci` for reproducible installs.
 
-To change backend dependencies, edit the version range in `backend/pyproject.toml`, then regenerate the lock and commit **both** files:
+#### Workspace layout
+
+The backend is a single uv workspace with one lock and one environment:
+
+- `backend/pyproject.toml` is the workspace root and the `juddges` project itself (the `app/` package). It lists the members under `[tool.uv.workspace]` (`members = ["packages/*"]`) and maps each one to the workspace in `[tool.uv.sources]`.
+- `backend/packages/*` (`juddges_search`, `schema_generator_agent`, `research_agent`, `juddges_mcp`) are workspace members, installed editable — a change under `packages/` is live without reinstalling.
+- `backend/uv.lock` covers the root and every member. Members never get their own lockfile (`.gitignore` excludes stray `backend/packages/*/uv.lock`).
+
+The sub-packages have **no dev groups of their own**: all dev tooling (pytest, ruff, mypy, poethepoet, ...) lives in the root `dev` group. uv resolves every member's groups into the one lock, so separate per-package dev pins would only add a second set of constraints that can conflict with the root's.
+
+#### Add, change or upgrade a dependency
+
+Run these from `backend/` and commit `pyproject.toml` (the root's or the member's) together with `uv.lock`:
 
 ```bash
 cd backend
 
-# After editing pyproject.toml
-poetry lock
+# Add a runtime dependency to the root project
+uv add "httpx>=0.27,<0.29"
 
-# Or bump a single package within its existing range
-poetry update <package>
+# Add a dev-only tool (root `dev` group)
+uv add --dev some-tool
+
+# Add a dependency to a workspace member
+uv add --package juddges-search some-lib
+
+# After editing a version range in any pyproject.toml by hand
+uv lock
+
+# Upgrade one package within its existing range
+uv lock --upgrade-package <package>
+
+# Install what the lock now pins
+uv sync
 ```
 
-CI installs from the lockfile, so a stale `poetry.lock` (out of sync with `pyproject.toml`) will fail the build — `poetry check --lock` verifies consistency locally. Routine version bumps are automated by Dependabot (see `.github/dependabot.yml`), which updates the lockfiles in its PRs.
+CI installs with `uv sync --locked`, so a stale `uv.lock` (out of sync with any `pyproject.toml`) fails the build — `uv lock --check` verifies consistency locally. Routine version bumps are automated by Dependabot (`uv` ecosystem, see `.github/dependabot.yml`), which updates the lockfile in its PRs.
+
+#### Version bumps re-lock
+
+`uv.lock` records the root project's own version, so bumping `[project] version` changes the lock. `scripts/build_and_push_prod.sh` handles this: after writing the new version it runs `uv lock` (pinned uv, in a container) and commits `backend/uv.lock` with the release. `uv lock` without `--upgrade` keeps every dependency pin as it is. If you change the version by hand, run `uv lock` yourself.
 
 ## Code Style
 
@@ -129,13 +157,13 @@ CI installs from the lockfile, so a stale `poetry.lock` (out of sync with `pypro
 cd backend
 
 # Format code
-poetry run ruff format .
+uv run ruff format .
 
 # Check linting
-poetry run ruff check .
+uv run ruff check .
 
 # Auto-fix linting issues
-poetry run ruff check . --fix
+uv run ruff check . --fix
 ```
 
 **Style Guide:**
@@ -337,7 +365,7 @@ Closes #123"
    ```bash
    # Backend
    cd backend
-   poetry run pytest tests/ -v
+   uv run pytest tests/ -v
 
    # Frontend
    cd frontend
@@ -426,7 +454,7 @@ git push origin --delete feature/your-feature-name
 **Running tests:**
 ```bash
 cd backend
-poetry run pytest tests/ -v --cov=app --cov-report=term-missing
+uv run pytest tests/ -v --cov=app --cov-report=term-missing
 ```
 
 **Writing tests:**
