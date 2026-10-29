@@ -1,4 +1,4 @@
-from langchain.schema import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
 
 from juddges_search.settings import MAX_CHAT_LAST_MESSAGES
