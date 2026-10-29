@@ -2453,7 +2453,6 @@ develop = true
 celery = {version = "^5.5.3", extras = ["redis"]}
 jinja2 = "^3.1.6"
 jsonschema = "^4.23.0"
-langchain = "^1.3.9"
 langchain-community = ">=0.4.1"
 langchain-openai = "^1.1.14"
 langfuse = "^3.2.3"
@@ -2737,44 +2736,6 @@ sqlalchemy = ["sqlalchemy (>=1.4.48,<2.1)"]
 sqs = ["boto3 (>=1.26.143)", "pycurl (>=7.43.0.5) ; sys_platform != \"win32\" and platform_python_implementation == \"CPython\"", "urllib3 (>=1.26.16)"]
 yaml = ["PyYAML (>=3.10)"]
 zookeeper = ["kazoo (>=2.8.0)"]
-
-[[package]]
-name = "langchain"
-version = "1.4.6"
-description = "Building applications with LLMs through composability"
-optional = false
-python-versions = "<4.0.0,>=3.10.0"
-groups = ["main"]
-files = [
-    {file = "langchain-1.4.6-py3-none-any.whl", hash = "sha256:7c3fbd5460ddc180115c10bbd385fbbde335fa166dd525ad22c0f599d13a9fad"},
-    {file = "langchain-1.4.6.tar.gz", hash = "sha256:ad3ccfdc50005eb06bf1fcbae61aa69ad98fe8bc7d7c1b4ad88323b5bda4cbac"},
-]
-
-[package.dependencies]
-langchain-core = ">=1.6.10,<2.0.0"
-langgraph = ">=1.2.12,<1.3.0"
-pydantic = ">=2.7.4,<3.0.0"
-
-[package.extras]
-anthropic = ["langchain-anthropic"]
-aws = ["langchain-aws"]
-azure-ai = ["langchain-azure-ai"]
-baseten = ["langchain-baseten (>=0.2.0)"]
-community = ["langchain-community"]
-deepseek = ["langchain-deepseek"]
-fireworks = ["langchain-fireworks"]
-google-genai = ["langchain-google-genai"]
-google-vertexai = ["langchain-google-vertexai"]
-groq = ["langchain-groq"]
-huggingface = ["langchain-huggingface"]
-mcp = ["fastmcp (>=4.0.11,<5.0.0)"]
-meta = ["langchain-meta"]
-mistralai = ["langchain-mistralai"]
-ollama = ["langchain-ollama"]
-openai = ["langchain-openai"]
-perplexity = ["langchain-perplexity"]
-together = ["langchain-together"]
-xai = ["langchain-xai"]
 
 [[package]]
 name = "langchain-classic"
@@ -5836,7 +5797,6 @@ develop = true
 
 [package.dependencies]
 juddges-search = {path = "../juddges_search", develop = true}
-langchain = "^1.3.9"
 langchain-core = "^1.2.22"
 langchain-openai = "^1.1.14"
 langgraph = "^1.0.10"
@@ -6095,7 +6055,6 @@ develop = true
 
 [package.dependencies]
 juddges-search = {path = "../juddges_search", develop = true}
-langchain = "^1.3.9"
 langchain-community = ">=0.4.1"
 langchain-core = "^1.2.22"
 langchain-openai = "^1.1.14"
@@ -7842,4 +7801,4 @@ observability = ["sentry-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "743a07faf86af360a1703df84c760e632bc634e2a4d5a4c9652560368011c856"
+content-hash = "50a92730b170e2af8e94c8fc6f18bf74bb8a579e81f520cabf928468817e8e9a"
