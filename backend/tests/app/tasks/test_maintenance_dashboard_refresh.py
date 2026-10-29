@@ -49,6 +49,7 @@ def test_refresh_is_scheduled_and_routed() -> None:
 def test_refresh_calls_the_rpc_and_clears_the_shared_cache(monkeypatch) -> None:
     from app.tasks import maintenance
 
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     supabase = MagicMock()
     monkeypatch.setattr("app.core.supabase.supabase_client", supabase)
 
@@ -82,6 +83,7 @@ def test_cache_failure_does_not_fail_the_refresh(monkeypatch) -> None:
     """
     from app.tasks import maintenance
 
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     supabase = MagicMock()
     monkeypatch.setattr("app.core.supabase.supabase_client", supabase)
 
@@ -115,8 +117,55 @@ def test_rpc_failure_propagates(monkeypatch) -> None:
 def test_missing_supabase_skips_without_calling_the_rpc(monkeypatch) -> None:
     from app.tasks import maintenance
 
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr("app.core.supabase.supabase_client", None)
 
     result = maintenance.refresh_dashboard_stats.apply().result
 
     assert result == {"status": "skipped", "reason": "no_supabase_client"}
+
+
+@pytest.mark.unit
+def test_direct_connection_raises_statement_timeout(monkeypatch) -> None:
+    """With DATABASE_URL the refresh bypasses PostgREST's short role timeout."""
+    from app.tasks import maintenance
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@db/x")
+    monkeypatch.setattr("app.services.sync_status._get_redis", lambda: None)
+    cur = MagicMock()
+    conn = MagicMock()
+    conn.__enter__.return_value = conn
+    conn.cursor.return_value.__enter__.return_value = cur
+    connect = MagicMock(return_value=conn)
+    monkeypatch.setattr("psycopg.connect", connect)
+
+    result = maintenance.refresh_dashboard_stats.apply().result
+
+    assert result["status"] == "completed"
+    sqls = [c.args[0] for c in cur.execute.call_args_list]
+    assert "statement_timeout" in sqls[0]
+    assert sqls[1] == "SELECT public.refresh_dashboard_stats()"
+
+
+@pytest.mark.unit
+def test_failure_is_a_picklable_error(monkeypatch) -> None:
+    """postgrest's APIError is unpicklable; Celery must get a clean exception."""
+    import pickle
+
+    from postgrest.exceptions import APIError
+
+    from app.tasks import maintenance
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    supabase = MagicMock()
+    supabase.rpc.return_value.execute.side_effect = APIError(
+        {"message": "canceling statement due to statement timeout", "code": "57014"}
+    )
+    monkeypatch.setattr("app.core.supabase.supabase_client", supabase)
+
+    outcome = maintenance.refresh_dashboard_stats.apply()
+
+    assert not outcome.successful()
+    err = pickle.loads(pickle.dumps(outcome.result))  # noqa: S301
+    assert isinstance(err, RuntimeError)
+    assert "57014" in str(err)
