@@ -42,6 +42,9 @@ import { useTranslation } from '@/contexts/LanguageContext';
 import { logger } from '@/lib/logger';
 
 /** Format date string to a short, locale-stable numeric format */
+/** Timeline entries revealed per click; keeps huge lines from rendering at once */
+const MEMBERS_PAGE_SIZE = 100;
+
 function formatDate(dateStr: string): string {
   try {
     const date = new Date(dateStr);
@@ -63,6 +66,11 @@ export default function ReasoningLineDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const id = params.id;
+
+  // Members rendered in the timeline; a line can hold thousands, so reveal in pages
+  // Tagged with the line id so navigating to another line falls back to the first page
+  const [revealed, setRevealed] = useState({ id, count: MEMBERS_PAGE_SIZE });
+  const visibleCount = revealed.id === id ? revealed.count : MEMBERS_PAGE_SIZE;
 
   // Confirmation state for delete
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -364,7 +372,7 @@ export default function ReasoningLineDetailPage() {
             <div className="absolute left-[23px] top-0 bottom-0 w-px bg-rule" />
 
             <div className="space-y-3">
-              {sortedMembers.map((member, index) => (
+              {sortedMembers.slice(0, visibleCount).map((member, index) => (
                 <TimelineEntry
                   key={member.judgment_id}
                   member={member}
@@ -373,6 +381,25 @@ export default function ReasoningLineDetailPage() {
                 />
               ))}
             </div>
+
+            {sortedMembers.length > visibleCount && (
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <p className="text-xs font-mono text-ink-soft">
+                  {t('reasoningLines.membersShowing', {
+                    shown: visibleCount,
+                    total: sortedMembers.length,
+                  })}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRevealed({ id, count: visibleCount + MEMBERS_PAGE_SIZE })}
+                  className="text-xs font-mono rounded-none border-rule"
+                >
+                  {t('reasoningLines.membersShowMore')}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

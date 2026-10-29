@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.rate_limiter import limiter
 
+from ._fetch import fetch_all_pages, fetch_by_ids
 from .constants import (
     REASONING_LINES_LLM_RATE_LIMIT,
 )
@@ -95,11 +96,13 @@ async def analyze_outcomes(
 
     # Step 2: Fetch all members and identify those needing classification
     try:
-        members_response = (
-            db.client.table("reasoning_line_members")
-            .select("judgment_id, outcome_direction")
-            .eq("reasoning_line_id", line_id)
-            .execute()
+        all_members = fetch_all_pages(
+            lambda: (
+                db.client.table("reasoning_line_members")
+                .select("judgment_id, outcome_direction")
+                .eq("reasoning_line_id", line_id)
+                .order("judgment_id")
+            )
         )
     except Exception as e:
         logger.error(
@@ -108,8 +111,6 @@ async def analyze_outcomes(
         raise HTTPException(
             status_code=500, detail="Failed to fetch reasoning line members"
         )
-
-    all_members = members_response.data or []
 
     # Separate already-classified from unclassified members
     unclassified_ids: list[str] = []
@@ -129,19 +130,14 @@ async def analyze_outcomes(
 
     # Step 3: Fetch judgment text (full_text preferred, fallback to summary)
     try:
-        j_response = (
-            db.client.table("judgments")
-            .select("id, full_text, summary")
-            .in_("id", unclassified_ids)
-            .execute()
+        j_rows = fetch_by_ids(
+            db.client, "judgments", "id, full_text, summary", unclassified_ids
         )
     except Exception as e:
         logger.error(f"Error fetching judgment texts for outcome analysis: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch judgment texts")
 
-    judgments_by_id: dict[str, dict[str, Any]] = {
-        str(j["id"]): j for j in (j_response.data or [])
-    }
+    judgments_by_id: dict[str, dict[str, Any]] = {str(j["id"]): j for j in j_rows}
 
     # Step 4: Build LLM chain (same pattern as argumentation.py)
     chat_prompt = ChatPromptTemplate.from_messages(
