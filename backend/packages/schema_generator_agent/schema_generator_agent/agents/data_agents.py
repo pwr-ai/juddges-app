@@ -4,8 +4,7 @@ from typing import Any
 
 from juddges_search.models import DocumentType
 from juddges_search.retrieval.supabase_search import search_documents
-from langchain.schema import StrOutputParser
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from loguru import logger
 from pydantic import BaseModel

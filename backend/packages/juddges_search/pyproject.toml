@@ -10,9 +10,8 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
-langchain = "^0.3"
-langchain-community = "^0.3.19"
-langchain-openai = "^0.3.7"
+langchain-community = ">=0.4.1"
+langchain-openai = "^1.1.14"
 termcolor = "^2.5.0"
 loguru = "^0.7.3"
 jinja2 = "^3.1.6"

@@ -18,9 +18,8 @@ python = ">=3.12,<3.14"
 uvicorn = ">=0.23.2,<0.55.0"
 gunicorn = ">=23,<27"
 langserve = { extras = ["server"], version = "^0.3.2" }
-langchain = "^0.3"
-langchain-community = "^0.3.19"
-langchain-openai = "^0.3.7"
+langchain-community = ">=0.4.1"
+langchain-openai = "^1.1.14"
 juddges_search = { path = "packages/juddges_search", develop = true }
 schema_generator_agent = { path = "packages/schema_generator_agent", develop = true }
 research_agent = { path = "packages/research_agent", develop = true }
@@ -32,7 +31,7 @@ langfuse = "^3.2.3"
 aiohttp = "^3.11.14"
 httpx = ">=0.27,<0.29"
 supabase = "^2.20.0"
-langgraph-checkpoint-postgres = "^2.0.23"
+langgraph-checkpoint-postgres = "^3.1.3"
 psycopg-binary = "^3.2.10"
 celery = { extras = ["redis"], version = "^5.5.3" }
 werkzeug = "^3.1.3"

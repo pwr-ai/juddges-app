@@ -5589,10 +5589,10 @@ export interface components {
          * AIMessage
          * @description Message from an AI.
          *
-         *     AIMessage is returned from a chat model as a response to a prompt.
+         *     An `AIMessage` is returned from a chat model as a response to a prompt.
          *
          *     This message represents the output of the model and consists of both
-         *     the raw output as returned by the model together standardized fields
+         *     the raw output as returned by the model and standardized fields
          *     (e.g., tool calls, usage metadata) added by the LangChain framework.
          */
         AIMessage: {
@@ -5604,29 +5604,18 @@ export interface components {
             content: string | (string | {
                 [key: string]: unknown;
             })[];
-            /**
-             * Example
-             * @default false
-             */
-            example: boolean;
             /** Id */
             id?: string | null;
-            /**
-             * Invalid Tool Calls
-             * @default []
-             */
-            invalid_tool_calls: components["schemas"]["InvalidToolCall"][];
+            /** Invalid Tool Calls */
+            invalid_tool_calls?: components["schemas"]["InvalidToolCall"][];
             /** Name */
             name?: string | null;
             /** Response Metadata */
             response_metadata?: {
                 [key: string]: unknown;
             };
-            /**
-             * Tool Calls
-             * @default []
-             */
-            tool_calls: components["schemas"]["ToolCall"][];
+            /** Tool Calls */
+            tool_calls?: components["schemas"]["ToolCall"][];
             /**
              * Type
              * @default ai
@@ -9044,24 +9033,23 @@ export interface components {
         };
         /**
          * HumanMessage
-         * @description Message from a human.
+         * @description Message from the user.
          *
-         *     ``HumanMessage``s are messages that are passed in from a human to the model.
+         *     A `HumanMessage` is a message that is passed in from a user to the model.
          *
          *     Example:
+         *         ```python
+         *         from langchain_core.messages import HumanMessage, SystemMessage
          *
-         *         .. code-block:: python
+         *         messages = [
+         *             SystemMessage(content="You are a helpful assistant! Your name is Bob."),
+         *             HumanMessage(content="What is your name?"),
+         *         ]
          *
-         *             from langchain_core.messages import HumanMessage, SystemMessage
-         *
-         *             messages = [
-         *                 SystemMessage(content="You are a helpful assistant! Your name is Bob."),
-         *                 HumanMessage(content="What is your name?"),
-         *             ]
-         *
-         *             # Instantiate a chat model and invoke it with the messages
-         *             model = ...
-         *             print(model.invoke(messages))
+         *         # Instantiate a chat model and invoke it with the messages
+         *         model = ...
+         *         print(model.invoke(messages))
+         *         ```
          */
         HumanMessage: {
             /** Additional Kwargs */
@@ -9072,11 +9060,6 @@ export interface components {
             content: string | (string | {
                 [key: string]: unknown;
             })[];
-            /**
-             * Example
-             * @default false
-             */
-            example: boolean;
             /** Id */
             id?: string | null;
             /** Name */
@@ -9197,17 +9180,17 @@ export interface components {
          *     Does *not* need to sum to full input token count. Does *not* need to have all keys.
          *
          *     Example:
-         *         .. code-block:: python
-         *
-         *             {
-         *                 "audio": 10,
-         *                 "cache_creation": 200,
-         *                 "cache_read": 100,
-         *             }
-         *
-         *     .. versionadded:: 0.3.9
+         *         ```python
+         *         {
+         *             "audio": 10,
+         *             "cache_creation": 200,
+         *             "cache_read": 100,
+         *         }
+         *         ```
          *
          *     May also hold extra provider-specific keys.
+         *
+         *     !!! version-added "Added in `langchain-core` 0.3.9"
          */
         InputTokenDetails: {
             /** Audio */
@@ -9223,7 +9206,7 @@ export interface components {
          * InvalidToolCall
          * @description Allowance for errors made by LLM.
          *
-         *     Here we add an ``error`` key to surface errors made during generation
+         *     Here we add an `error` key to surface errors made during generation
          *     (e.g., invalid JSON arguments.)
          */
         InvalidToolCall: {
@@ -9231,15 +9214,21 @@ export interface components {
             args: string | null;
             /** Error */
             error: string | null;
+            /** Extras */
+            extras?: {
+                [key: string]: unknown;
+            };
             /** Id */
             id: string | null;
+            /** Index */
+            index?: number | string;
             /** Name */
             name: string | null;
             /**
              * Type
              * @constant
              */
-            type?: "invalid_tool_call";
+            type: "invalid_tool_call";
         } & {
             [key: string]: unknown;
         };
@@ -9899,14 +9888,16 @@ export interface components {
          *     Does *not* need to sum to full output token count. Does *not* need to have all keys.
          *
          *     Example:
-         *         .. code-block:: python
+         *         ```python
+         *         {
+         *             "audio": 10,
+         *             "reasoning": 200,
+         *         }
+         *         ```
          *
-         *             {
-         *                 "audio": 10,
-         *                 "reasoning": 200,
-         *             }
+         *     May also hold extra provider-specific keys.
          *
-         *     .. versionadded:: 0.3.9
+         *     !!! version-added "Added in `langchain-core` 0.3.9"
          */
         OutputTokenDetails: {
             /** Audio */
@@ -12448,16 +12439,22 @@ export interface components {
         };
         /**
          * ToolCall
-         * @description Represents a request to call a tool.
+         * @description Represents an AI's request to call a tool.
          *
          *     Example:
+         *         ```python
+         *         {"name": "foo", "args": {"a": 1}, "id": "123"}
+         *         ```
          *
-         *         .. code-block:: python
+         *         This represents a request to call the tool named `'foo'` with arguments
+         *         `{"a": 1}` and an identifier of `'123'`.
          *
-         *             {"name": "foo", "args": {"a": 1}, "id": "123"}
+         *     !!! note "Factory function"
          *
-         *         This represents a request to call the tool named ``'foo'`` with arguments
-         *         ``{"a": 1}`` and an identifier of ``'123'``.
+         *         `tool_call` may also be used as a factory to create a `ToolCall`. Benefits
+         *         include:
+         *
+         *         * Required arguments strictly validated at creation time
          */
         ToolCall: {
             /** Args */
@@ -12816,26 +12813,32 @@ export interface components {
          *     This is a standard representation of token usage that is consistent across models.
          *
          *     Example:
-         *         .. code-block:: python
+         *         ```python
+         *         {
+         *             "input_tokens": 350,
+         *             "output_tokens": 240,
+         *             "total_tokens": 590,
+         *             "input_token_details": {
+         *                 "audio": 10,
+         *                 "cache_creation": 200,
+         *                 "cache_read": 100,
+         *             },
+         *             "output_token_details": {
+         *                 "audio": 10,
+         *                 "reasoning": 200,
+         *             },
+         *         }
+         *         ```
          *
-         *             {
-         *                 "input_tokens": 350,
-         *                 "output_tokens": 240,
-         *                 "total_tokens": 590,
-         *                 "input_token_details": {
-         *                     "audio": 10,
-         *                     "cache_creation": 200,
-         *                     "cache_read": 100,
-         *                 },
-         *                 "output_token_details": {
-         *                     "audio": 10,
-         *                     "reasoning": 200,
-         *                 },
-         *             }
+         *     !!! warning "Behavior changed in `langchain-core` 0.3.9"
          *
-         *     .. versionchanged:: 0.3.9
+         *         Added `input_token_details` and `output_token_details`.
          *
-         *         Added ``input_token_details`` and ``output_token_details``.
+         *     !!! note "LangSmith SDK"
+         *
+         *         The LangSmith SDK also has a `UsageMetadata` class. While the two share fields,
+         *         LangSmith's `UsageMetadata` has additional fields to capture cost information
+         *         used by the LangSmith platform.
          */
         UsageMetadata: {
             input_token_details?: components["schemas"]["InputTokenDetails"];

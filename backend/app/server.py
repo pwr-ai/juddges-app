@@ -249,8 +249,16 @@ async def _app_lifespan(app: FastAPI):
                 },
             )
             await pool.open()
-            app.state.checkpointer = AsyncPostgresSaver(pool)
-            logger.info("LangGraph PostgreSQL checkpointer initialized (persistent)")
+            checkpointer = AsyncPostgresSaver(pool)
+            # Create/migrate the checkpoint tables. No Supabase migration owns
+            # them, so without this every persistent session hits UndefinedTable.
+            # Idempotent: only migrations missing from checkpoint_migrations run.
+            await checkpointer.setup()
+            app.state.checkpointer = checkpointer
+            logger.info(
+                "LangGraph PostgreSQL checkpointer initialized (persistent, "
+                "tables ready)"
+            )
         except Exception as e:
             logger.warning(f"PostgreSQL connection failed: {e}")
             logger.warning("Falling back to in-memory checkpointer (non-persistent)")

@@ -285,6 +285,16 @@ DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supab
   server-side prepared statements or session-scoped state — e.g. if
   `langgraph-checkpoint-postgres` is ever run without `prepare_threshold=None`.
   Keep that on a separate URL rather than downgrading the shared `DATABASE_URL`.
+- **Checkpoint tables are created at startup.** No Supabase migration owns the
+  LangGraph tables (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`,
+  `checkpoint_migrations`); the lifespan in `server.py` calls
+  `AsyncPostgresSaver.setup()` on every boot, which applies only the
+  migrations not yet recorded in `checkpoint_migrations` (v0–9 on
+  `langgraph-checkpoint-postgres` 3.x), so restarts are no-ops. The role behind
+  `DATABASE_URL` therefore needs `CREATE` on the `public` schema, and three
+  migrations use `CREATE INDEX CONCURRENTLY`. If `setup()` fails, startup logs
+  `PostgreSQL connection failed: ...` and falls back to the in-memory
+  checkpointer — sessions then survive only until the next restart.
 
 > Verify in your deployment: the running backend's `DATABASE_URL` host contains
 > `pooler.supabase.com` and the port is `6543`. If it points at `db.<ref>...:5432`
