@@ -15,9 +15,9 @@ import re
 APPEAL_COURT_LEVEL = "Court of Appeal"  # same value the PL appeal courts use
 HIGH_COURT_LEVEL = "High Court"
 
-# `[2013] EWCA Crim 2410` and the odd `[2017] EWCA 967 (Crim)` form.
+# `[2013] EWCA Crim 2410`, `[2020] EWCA (Crim) 596` and `[2017] EWCA 967 (Crim)`.
 _EWCA_RE = re.compile(
-    r"EWCA\s*(?:(?P<pre>Crim|Civ)\b|\d+\s*\((?P<post>Crim|Civ)\))", re.IGNORECASE
+    r"EWCA\s*(?:\(?(?P<pre>Crim|Civ)\b\)?|\d+\s*\((?P<post>Crim|Civ)\))", re.IGNORECASE
 )
 _EWHC_RE = re.compile(r"EWHC\b(?:\s*\d+)?(?:\s*\((?P<div>[A-Za-z]+)\))?", re.IGNORECASE)
 
