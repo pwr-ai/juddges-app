@@ -278,6 +278,7 @@ class TestIncrementalSyncEmbeds:
 
         service = MagicMock()
         service.admin_configured = True
+        service.aclose = AsyncMock()
         service.upsert_documents = AsyncMock(return_value={"taskUid": 1})
 
         with (
@@ -347,6 +348,7 @@ class TestFullSyncEmbeds:
 
         service = MagicMock()
         service.admin_configured = True
+        service.aclose = AsyncMock()
         service.upsert_documents = AsyncMock(return_value={"taskUid": 7})
         service.wait_for_task = AsyncMock(return_value={"status": "succeeded"})
 
@@ -401,6 +403,7 @@ class TestFullSyncEmbeds:
 
         service = MagicMock()
         service.admin_configured = True
+        service.aclose = AsyncMock()
         service.upsert_documents = AsyncMock(return_value={"taskUid": 1})
         service.wait_for_task = AsyncMock(return_value={"status": "succeeded"})
 
@@ -722,3 +725,121 @@ class TestAtomicApplyPartialFailureRollback:
         assert any("embedder" in r["message"].lower() for r in warnings), (
             "the partial-failure warning must identify the embedder block"
         )
+
+
+class _FakeMeili:
+    """Tiny keep-alive HTTP server standing in for Meilisearch (real sockets)."""
+
+    def __init__(self):
+        import json
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        outer = self
+        self.requests: list[tuple[str, str]] = []
+
+        class Handler(BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+
+            def _reply(self):
+                length = int(self.headers.get("Content-Length") or 0)
+                if length:
+                    self.rfile.read(length)
+                outer.requests.append((self.command, self.path))
+                if self.path.startswith("/tasks/"):
+                    body = {"uid": 1, "status": "succeeded"}
+                else:
+                    body = {"taskUid": 1, "status": "enqueued"}
+                raw = json.dumps(body).encode()
+                self.send_response(202 if self.command != "GET" else 200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+
+            do_GET = do_POST = do_PUT = do_DELETE = do_PATCH = _reply
+
+            def log_message(self, *args):
+                pass
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+@pytest.mark.unit
+class TestSyncTasksSurviveSharedHttpClient:
+    """Regression: MeiliSearchService caches one httpx client (#287); a task that
+    calls ``asyncio.run`` repeatedly bound it to a loop that was then closed
+    ("Event loop is closed" in prod ``meilisearch.full_sync``)."""
+
+    @staticmethod
+    def _row(i):
+        return {"id": uuid4(), "case_number": f"C{i}", "jurisdiction": "PL"}
+
+    def test_full_sync_multiple_batches_with_real_service(self):
+        from app.services.search import MeiliSearchService
+        from app.tasks.meilisearch_sync import full_sync_judgments_to_meilisearch
+
+        fake = _FakeMeili()
+        try:
+            service = MeiliSearchService(
+                base_url=fake.url, api_key="k", admin_key="k", index_name="judgments"
+            )
+            batches = [
+                [self._row(0), self._row(1)],
+                [self._row(2), self._row(3)],
+                [],
+            ]
+            sb = MagicMock()
+            sb.table().select().order().range().execute.side_effect = [
+                MagicMock(data=b) for b in batches
+            ]
+            embed_mock = MagicMock(
+                side_effect=lambda texts, *a, **k: [[0.1] * 4] * len(texts)
+            )
+
+            with (
+                patch("app.tasks.meilisearch_sync.supabase_client", sb),
+                patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+                patch("app.tasks.meilisearch_sync._get_redis", return_value=None),
+                patch("app.services.meilisearch_embeddings.embed_texts", embed_mock),
+                patch("app.tasks.meilisearch_sync.record_sync_completed"),
+                patch.object(full_sync_judgments_to_meilisearch, "update_state"),
+            ):
+                result = full_sync_judgments_to_meilisearch.run(batch_size=2)
+
+            assert result == {"status": "completed", "total_synced": 4}
+            assert sum(1 for m, p in fake.requests if m == "GET") == 2
+            assert service._http is None  # client released at end of task
+        finally:
+            fake.close()
+
+    def test_incremental_upsert_with_real_service(self):
+        from app.services.search import MeiliSearchService
+        from app.tasks.meilisearch_sync import sync_judgment_to_meilisearch
+
+        fake = _FakeMeili()
+        try:
+            service = MeiliSearchService(
+                base_url=fake.url, api_key="k", admin_key="k", index_name="judgments"
+            )
+            row = self._row(0)
+            sb = MagicMock()
+            sb.table().select().eq().execute.return_value = MagicMock(data=[row])
+            with (
+                patch("app.tasks.meilisearch_sync.supabase_client", sb),
+                patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+                patch(
+                    "app.services.meilisearch_embeddings.embed_texts",
+                    return_value=[0.1] * 4,
+                ),
+            ):
+                result = sync_judgment_to_meilisearch.run(str(row["id"]), "upsert")
+            assert result["status"] == "upserted"
+        finally:
+            fake.close()

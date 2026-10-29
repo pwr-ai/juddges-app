@@ -138,6 +138,32 @@ python scripts/curate_polish_dataset.py --target 3000
 - `JuDDGES/pl-court-raw` (fallback)
 - `JuDDGES/pl-nsa` (fallback)
 
+### PR Merging
+
+Both scripts need an authenticated `gh` and target `main`. They merge with
+`--merge --delete-branch` (squash is disabled repo-side), and treat a skipped
+required check as passed, the way branch protection does: a scripts/docs-only
+PR skips the whole CI suite through the paths filter in `ci.yml`.
+
+#### `merge_pr_when_green.sh`
+Keeps one of our own PRs up to date with `main` (`gh pr update-branch`, a merge,
+not a rebase) and merges it once the required checks pass. Stops on a failed or
+cancelled required check, or after ~90 minutes.
+
+```bash
+./scripts/merge_pr_when_green.sh 797
+```
+
+#### `merge_dependabot_prs.sh`
+Merges Dependabot PRs one after another. A PR that is behind `main` gets an
+`@dependabot rebase` comment (re-sent every 15 minutes) instead of a push, so
+Dependabot keeps managing it. Stops on a failed check or merge, or after ~80
+minutes on one PR.
+
+```bash
+./scripts/merge_dependabot_prs.sh 776 777
+```
+
 ## Dependencies
 
 Core dependencies are in `requirements.txt`:

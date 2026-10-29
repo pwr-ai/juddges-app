@@ -31,6 +31,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from app.utils.uk_classification import classify_uk_judgment
 from app.workers import celery_app
 
 if TYPE_CHECKING:
@@ -586,28 +587,26 @@ class JudgmentIngestionPipeline:
 
             court_type = raw_data.get("court_type", "unknown")
             court_name = court_type.replace("_", " ").title()
+            case_number = raw_data.get(
+                "citation",
+                raw_data.get(
+                    "docket_number",
+                    f"UK-{raw_data.get('judgment_id', 'unknown')[:10]}",
+                ),
+            )
+            case_type, court_level = classify_uk_judgment(case_number, court_type)
 
             return {
-                "case_number": raw_data.get(
-                    "citation",
-                    raw_data.get(
-                        "docket_number",
-                        f"UK-{raw_data.get('judgment_id', 'unknown')[:10]}",
-                    ),
-                ),
+                "case_number": case_number,
                 "jurisdiction": "UK",
                 "court_name": court_name,
-                "court_level": "High Court"
-                if "high" in court_type.lower()
-                else "Crown Court"
-                if "crown" in court_type.lower()
-                else "Court",
+                "court_level": court_level,
                 "decision_date": self._parse_date(raw_data.get("publication_date")),
                 "title": raw_data.get("excerpt", full_text[:200])[:500],
                 "summary": raw_data.get("excerpt", ""),
                 "full_text": full_text,
                 "judges": judges,
-                "case_type": "Criminal" if "crim" in court_type.lower() else "Civil",
+                "case_type": case_type,
                 "decision_type": "Judgment",
                 "outcome": None,
                 "keywords": [],
