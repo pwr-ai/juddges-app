@@ -44,7 +44,7 @@ jobs:
       # The only setup-uv step that saves. setup-uv skips the save when the
       # key already exists, so an unchanged uv.lock costs a restore, not an
       # upload. Every input except save-cache must match the restore steps.
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           version: "0.13.1"
           enable-cache: true
