@@ -1,6 +1,6 @@
 [project]
 name = "juddges"
-version = "1.5.28"
+version = "1.5.29"
 description = "Juddges App - AI-powered judicial decision search for Polish and UK courts"
 authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak.com" }]
 license = "Apache-2.0"
