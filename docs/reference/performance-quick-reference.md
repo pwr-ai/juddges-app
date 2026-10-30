@@ -24,10 +24,10 @@
 cd backend
 
 # All performance tests
-poetry run pytest tests/performance/ --performance -v
+uv run pytest tests/performance/ --performance -v
 
 # Specific test
-poetry run pytest tests/performance/test_search_performance.py::TestSearchPerformance::test_semantic_search_latency --performance -v
+uv run pytest tests/performance/test_search_performance.py::TestSearchPerformance::test_semantic_search_latency --performance -v
 ```
 
 ### Load Testing
@@ -77,7 +77,7 @@ node scripts/analyze-bundle.js
 ```bash
 # Backend server (required for tests)
 cd backend
-poetry run uvicorn app.server:app --port 8004
+uv run uvicorn app.server:app --port 8004
 
 # Run quick performance check
 ./scripts/run_performance_tests.sh --quick --monitor
@@ -109,11 +109,11 @@ locust -f backend/tests/performance/locustfile.py --host=http://localhost:8004 -
 ```bash
 # Tests skipped?
 # → Add --performance flag
-poetry run pytest tests/performance/ --performance
+uv run pytest tests/performance/ --performance
 
 # Backend not running?
 # → Start backend server
-cd backend && poetry run uvicorn app.server:app --port 8004
+cd backend && uv run uvicorn app.server:app --port 8004
 
 # Locust not installed?
 # → Install dependencies
@@ -121,7 +121,7 @@ cd backend/tests/performance && pip install -r requirements.txt
 
 # Import errors?
 # → Check PYTHONPATH and install packages
-cd backend && poetry install
+cd backend && uv sync
 ```
 
 ## Files

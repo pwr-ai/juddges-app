@@ -36,7 +36,7 @@ dev-logs: ## Tail development logs
 
 .PHONY: dev-backend
 dev-backend: ## Start backend dev server (no Docker)
-	cd backend && poetry run uvicorn app.server:app --reload --port 8004
+	cd backend && uv run uvicorn app.server:app --reload --port 8004
 
 .PHONY: dev-frontend
 dev-frontend: ## Start frontend dev server (no Docker)
@@ -83,23 +83,23 @@ test-local-legacy: test-local-backend-legacy test-local-frontend ## Run local pr
 
 .PHONY: test-backend
 test-backend: ## Run backend unit tests
-	cd backend && poetry run pytest -v -m unit
+	cd backend && uv run pytest -v -m unit
 
 .PHONY: test-local-backend
 test-local-backend: ## Run backend local profile (no integration/AI/legacy suites)
-	cd backend && poetry run poe test-local
+	cd backend && uv run poe test-local
 
 .PHONY: test-local-backend-integration
 test-local-backend-integration: ## Run backend local profile with integration suites
-	cd backend && poetry run poe test-local-integration
+	cd backend && uv run poe test-local-integration
 
 .PHONY: test-local-backend-ai
 test-local-backend-ai: ## Run backend local profile with AI suites
-	cd backend && poetry run poe test-local-ai
+	cd backend && uv run poe test-local-ai
 
 .PHONY: test-local-backend-legacy
 test-local-backend-legacy: ## Run backend local profile with legacy schema suites
-	cd backend && poetry run poe test-local-legacy
+	cd backend && uv run poe test-local-legacy
 
 .PHONY: test-frontend
 test-frontend: ## Run frontend unit tests
@@ -115,7 +115,7 @@ test-e2e: ## Run E2E tests (Playwright)
 
 .PHONY: test-integration
 test-integration: ## Run backend integration tests
-	cd backend && poetry run pytest -v -m integration
+	cd backend && uv run pytest -v -m integration
 
 # ==============================================================================
 # Code Quality
@@ -126,7 +126,7 @@ lint: lint-backend lint-frontend ## Run all linters
 
 .PHONY: lint-backend
 lint-backend: ## Lint backend (Ruff)
-	cd backend && poetry run ruff check . && poetry run ruff format --check .
+	cd backend && uv run ruff check . && uv run ruff format --check .
 
 .PHONY: lint-frontend
 lint-frontend: ## Lint frontend (ESLint)
@@ -134,7 +134,7 @@ lint-frontend: ## Lint frontend (ESLint)
 
 .PHONY: format
 format: ## Auto-format backend code
-	cd backend && poetry run ruff format . && poetry run ruff check . --fix
+	cd backend && uv run ruff format . && uv run ruff check . --fix
 
 # ==============================================================================
 # Release & Deploy (Gitflow)

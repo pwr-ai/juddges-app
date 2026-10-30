@@ -467,3 +467,107 @@ class TestEmbeddingFailures:
 
         assert chunker.save_chunks(chunks) == 0
         table.delete.return_value.in_.assert_called_once_with("document_id", ["j1"])
+
+
+# ============================================================================
+# Unchunked-judgment selection (server-side anti-join, keyset cursor)
+# ============================================================================
+
+
+class _FakeRpcSupabase:
+    """In-memory stand-in for the get_unchunked_judgments RPC.
+
+    Mirrors the SQL: anti-join on chunked ids, ordered by (created_at, id),
+    keyset cursor (p_after_created_at, p_after_id). Counts requests.
+    """
+
+    def __init__(self, judgments: list[dict], chunked: set[str]):
+        self.judgments = judgments
+        self.chunked = chunked
+        self.requests = 0
+        self.tables: list[str] = []
+
+    def table(self, name: str):
+        self.tables.append(name)
+        raise AssertionError(f"unexpected table scan: {name}")
+
+    def rpc(self, name: str, params: dict):
+        assert name == "get_unchunked_judgments"
+        self.requests += 1
+        after = (params.get("p_after_created_at"), params.get("p_after_id"))
+        rows = sorted(
+            (
+                j
+                for j in self.judgments
+                if j["id"] not in self.chunked
+                and (after[0] is None or (j["created_at"], j["id"]) > after)
+            ),
+            key=lambda j: (j["created_at"], j["id"]),
+        )[: params["p_limit"]]
+        rows = [{**r, "sort_created_at": r["created_at"]} for r in rows]
+        resp = MagicMock()
+        resp.data = rows
+        query = MagicMock()
+        query.execute.return_value = resp
+        return query
+
+
+def _judgments(n: int, same_created_at: bool = False) -> list[dict]:
+    return [
+        {
+            "id": f"id-{i:06d}",
+            "case_number": f"C{i}",
+            "jurisdiction": "PL",
+            "full_text": "x",
+            "created_at": "2026-01-01T00:00:00+00:00"
+            if same_created_at
+            else f"2026-01-01T00:{i // 60 % 60:02d}:{i % 60:02d}+00:00",
+        }
+        for i in range(n)
+    ]
+
+
+@pytest.mark.unit
+class TestUnchunkedSelection:
+    def test_existing_ids_rpc_failure_raises(self):
+        chunker = _make_chunker()
+        chunker.supabase = MagicMock()
+        chunker.supabase.rpc.return_value.execute.side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            chunker.get_judgments_without_chunks(limit=10)
+
+    def test_batch_bounded_requests_independent_of_chunked_count(self):
+        counts = []
+        for n_chunked in (0, 5000):
+            data = _judgments(5100)
+            chunked = {j["id"] for j in data[:n_chunked]}
+            chunker = _make_chunker()
+            chunker.supabase = _FakeRpcSupabase(data, chunked)
+            got = chunker.get_judgments_without_chunks(limit=50)
+            assert len(got) == 50
+            counts.append(chunker.supabase.requests)
+        assert counts[0] == counts[1] == 1
+
+    def test_no_skip_no_duplicate_across_batches(self):
+        data = _judgments(23, same_created_at=True)
+        chunker = _make_chunker()
+        chunker.supabase = _FakeRpcSupabase(data, {"id-000003"})
+        seen: list[str] = []
+        while batch := chunker.get_judgments_without_chunks(limit=5):
+            seen.extend(j["id"] for j in batch)
+        expected = sorted(j["id"] for j in data if j["id"] != "id-000003")
+        assert seen == expected
+
+    @pytest.mark.asyncio
+    async def test_rerun_no_duplicates_inserts_nothing(self):
+        data = _judgments(8)
+        chunker = _make_chunker()
+        chunker.supabase = _FakeRpcSupabase(data, {j["id"] for j in data})
+        chunker.save_chunks = MagicMock()
+
+        stats = await chunker.run()
+
+        assert stats["chunks_created"] == 0
+        assert stats["documents_processed"] == 0
+        chunker.save_chunks.assert_not_called()

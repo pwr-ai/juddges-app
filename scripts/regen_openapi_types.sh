@@ -21,7 +21,7 @@ export DATABASE_URL="${DATABASE_URL:-postgresql://stub:stub@localhost:5432/stub}
 export REDIS_HOST="${REDIS_HOST:-localhost}"
 export REDIS_PORT="${REDIS_PORT:-6379}"
 
-poetry run python -c "
+uv run python -c "
 import json
 from app.server import app
 with open('$SNAPSHOT', 'w') as f:

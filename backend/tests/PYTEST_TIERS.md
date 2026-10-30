@@ -13,7 +13,7 @@
 Inspect the deterministic unit boundary without running tests:
 
 ```bash
-poetry run pytest --collect-only -q -m unit
-poetry run pytest --collect-only -q -m integration
-poetry run pytest --collect-only -q -m e2e
+uv run pytest --collect-only -q -m unit
+uv run pytest --collect-only -q -m integration
+uv run pytest --collect-only -q -m e2e
 ```

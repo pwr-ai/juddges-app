@@ -50,7 +50,7 @@ which now reads the embedders back after applying and **exits non-zero if the
 
 ```bash
 docker compose -f docker-compose.dev.yml exec backend \
-    poetry run python scripts/sync_meilisearch.py --setup
+    python scripts/sync_meilisearch.py --setup
 # prints: Index setup complete (embedder 'bge-m3' registered).
 ```
 
@@ -70,11 +70,11 @@ curl -H "Authorization: Bearer $MEILI_MASTER_KEY" \
 ```bash
 # Preview first (no writes)
 docker compose -f docker-compose.dev.yml exec backend \
-    poetry run python scripts/backfill_meilisearch_embeddings.py --dry-run
+    python scripts/backfill_meilisearch_embeddings.py --dry-run
 
 # Real run (~5 min for ~12K rows)
 docker compose -f docker-compose.dev.yml exec backend \
-    poetry run python scripts/backfill_meilisearch_embeddings.py
+    python scripts/backfill_meilisearch_embeddings.py
 ```
 
 The backfill is idempotent and uses the `attach_embeddings_batch` helper

@@ -67,13 +67,13 @@ Comprehensive testing strategy and guidelines for Juddges Legal Assistant.
 cd backend
 
 # Install test dependencies
-poetry install
+uv sync
 
 # Run all tests
-poetry run pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run with coverage
-poetry run pytest tests/ --cov=app --cov-report=html
+uv run pytest tests/ --cov=app --cov-report=html
 ```
 
 ### Test Structure
@@ -267,29 +267,29 @@ async def test_async_document_fetch():
 
 ```bash
 # All tests
-poetry run pytest tests/ -v
+uv run pytest tests/ -v
 
 # Unit tests only (fast)
-poetry run pytest tests/ -v -m unit
+uv run pytest tests/ -v -m unit
 
 # Integration tests only (slower)
-poetry run pytest tests/ -v -m integration
+uv run pytest tests/ -v -m integration
 
 # Specific test file
-poetry run pytest tests/app/test_documents.py -v
+uv run pytest tests/app/test_documents.py -v
 
 # Specific test function
-poetry run pytest tests/app/test_documents.py::test_search_documents -v
+uv run pytest tests/app/test_documents.py::test_search_documents -v
 
 # With coverage
-poetry run pytest tests/ --cov=app --cov-report=html
+uv run pytest tests/ --cov=app --cov-report=html
 open htmlcov/index.html
 
 # Using Poe tasks
-poetry run poe test
-poetry run poe test-unit
-poetry run poe test-integration
-poetry run poe test-cov
+uv run poe test
+uv run poe test-unit
+uv run poe test-integration
+uv run poe test-cov
 ```
 
 ## Frontend Testing
@@ -643,7 +643,7 @@ test.describe("Document Search", () => {
 **Backend:**
 ```bash
 cd backend
-poetry run pytest tests/ --cov=app --cov-report=html --cov-report=term-missing
+uv run pytest tests/ --cov=app --cov-report=html --cov-report=term-missing
 open htmlcov/index.html
 ```
 
@@ -736,18 +736,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          python-version: "3.12"
+          version: "0.13.1"
       - name: Install dependencies
         run: |
           cd backend
-          pip install poetry
-          poetry install
+          uv sync --locked
       - name: Run tests
         run: |
           cd backend
-          poetry run pytest tests/ -v --cov=app
+          uv run pytest tests/ -v --cov=app
 
   frontend-tests:
     runs-on: ubuntu-latest

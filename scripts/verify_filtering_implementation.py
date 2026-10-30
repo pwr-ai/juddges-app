@@ -269,7 +269,7 @@ class FilteringVerifier:
             return True  # Not a failure, just skipped
         except Exception as e:
             logger.warning(f"⚠ Backend API tests failed (is backend running?): {e}")
-            logger.info(f"  Start backend with: cd backend && poetry run uvicorn app.server:app --port 8004")
+            logger.info(f"  Start backend with: cd backend && uv run uvicorn app.server:app --port 8004")
             return True  # Not a critical failure
 
     def run_all_tests(self) -> bool:

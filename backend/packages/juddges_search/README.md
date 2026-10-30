@@ -13,11 +13,11 @@ This package provides AI-powered search capabilities for judicial decisions, inc
 
 ## Installation
 
-This package is installed as an editable dependency in the main backend:
+This package is a uv workspace member, installed editable into the main backend environment:
 
 ```bash
 cd backend
-poetry install
+uv sync
 ```
 
 ## Usage

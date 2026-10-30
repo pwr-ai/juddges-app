@@ -11,7 +11,7 @@ To run this test, you need to set the following environment variables:
 
 Example:
     export OPENAI_API_KEY="your-key-here"
-    poetry run pytest tests/test_chat_history_integration.py -v -m integration
+    uv run pytest tests/test_chat_history_integration.py -v -m integration
 """
 
 import os

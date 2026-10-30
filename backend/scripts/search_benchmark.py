@@ -5,9 +5,9 @@ backend (defaults to http://localhost:8004), records per-query timing and
 hit count, and exits non-zero on any recall / latency threshold breach.
 
 Usage:
-    poetry run python scripts/search_benchmark.py
-    poetry run python scripts/search_benchmark.py --api-url https://prod.example
-    poetry run python scripts/search_benchmark.py --output results.json --runs 5
+    uv run python scripts/search_benchmark.py
+    uv run python scripts/search_benchmark.py --api-url https://prod.example
+    uv run python scripts/search_benchmark.py --output results.json --runs 5
 
 The fixture file lives at tests/fixtures/search_queries.yaml so the same
 queries power pytest integration tests and this script.
