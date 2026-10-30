@@ -34,5 +34,13 @@ leaves rows without a recognisable citation unchanged.
 
 ## After the backfill
 
-Remove `case_type` / `court_level` from `NL_EXCLUDED_CORE_FIELDS` in
-`backend/app/extraction_domain/nl_filter_generator.py` (and update its tests).
+- `case_type`: done. The backfill ran on prod (#803, #807), `case_type` is no
+  longer in `NL_EXCLUDED_CORE_FIELDS`, and the NL filter translator emits
+  `case_type: ["Criminal" | "Civil" | "Administrative"]`. The RPC
+  `list_extracted_filter_matches` filters on it (migration
+  `20261030000001_extracted_filter_case_type.sql`, case-insensitive match).
+- `court_level`: still excluded. 52 UK rows carry `Appeal Court` where 6101
+  carry `Court of Appeal`; normalise that, then remove `court_level` from
+  `NL_EXCLUDED_CORE_FIELDS` in
+  `backend/app/extraction_domain/nl_filter_generator.py`, add it to the RPC and
+  update the tests.

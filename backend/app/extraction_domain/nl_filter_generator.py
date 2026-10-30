@@ -4,8 +4,9 @@ Converts a user's plain-English (or Polish) question into the JSON `p_filters`
 shape accepted by the Postgres RPC `filter_documents_by_extracted_data` (defined
 in supabase/migrations/20260226000001_create_judgment_base_extractions_table.sql
 and extended by 20260505000001_extend_base_schema_filterable_searchable.sql).
-Besides the `base_*` extraction fields, two core `judgments` columns are also
-exposed: `jurisdiction` and `decision_date`.
+Besides the `base_*` extraction fields, three core `judgments` columns are also
+exposed: `jurisdiction`, `decision_date` and `case_type` (the latter filtered by
+`list_extracted_filter_matches` since 20261030000001).
 
 The output is validated by Pydantic; every enum-constrained field uses
 `Literal[...]` mirroring the CHECK constraints in the migration, so an LLM
@@ -59,6 +60,10 @@ RemandDecision = Literal[
     "unconditional_bail", "conditional_bail", "remanded_in_custody", "dont_know"
 ]
 SentenceServe = Literal["serve_concurrent", "serve_consecutive", "serve_unknown"]
+# judgments.case_type as stored on prod (PL + UK): see
+# docs/how-to/backfill-uk-case-type.md. Capitalised, matched case-insensitively
+# by the RPC.
+CaseType = Literal["Criminal", "Civil", "Administrative"]
 Gender = Literal["gender_male", "gender_female", "gender_unknown"]
 Intoxication = Literal["intox_alcohol", "intox_drugs", "intox_unknown"]
 VictimType = Literal["individual_person", "organisation"]
@@ -92,13 +97,13 @@ AppealOutcome = Literal[
     "outcome_unknown",
 ]
 
-# Core columns deliberately NOT exposed to the NL translator until the data is
-# fixed (docs/reference/APP_STATUS_2026-08-21.md §4: case_type='Civil' on UK
-# criminal appeals, court_level='Crown Court' wrong). Ingestion is fixed in #799;
-# remove this exclusion once scripts/backfill_uk_case_type.py --apply has run on
-# prod (docs/how-to/backfill-uk-case-type.md). Tested in
+# Core columns deliberately NOT exposed to the NL translator. `case_type` was
+# excluded while UK rows carried a wrong value (#799); that is fixed and prod is
+# backfilled (#803, #807), so it is now a filter field. `court_level` stays
+# excluded until 'Appeal Court' (52 UK rows) is normalised to 'Court of Appeal'
+# (6101 rows); see docs/how-to/backfill-uk-case-type.md. Tested in
 # tests/app/test_nl_filter_generator.py and test_nl_filter_prompt_contract.py.
-NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type", "court_level"})
+NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"court_level"})
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +156,14 @@ class BaseSchemaFilter(BaseModel):
         description=(
             "Date the judgment was handed down (judgments.decision_date). Use for "
             "'from 2015 to 2024', 'w latach 2015–2024', 'since 2020', 'po 2020 r.'."
+        ),
+    )
+
+    case_type: list[CaseType] | None = Field(
+        default=None,
+        description=(
+            "Kind of case (judgments.case_type): Criminal ('karne'), Civil "
+            "('cywilne') or Administrative ('administracyjne')."
         ),
     )
 
@@ -277,13 +290,17 @@ You MUST follow these rules:
    - "PL i UK", "both countries", "Polish and English courts", "porównaj PL z
      UK" → ["PL", "UK"]
    A question written in Polish is NOT by itself a reason to set ["PL"].
-9. Case type (civil / criminal / "karne" / "cywilne") and court level are NOT
-   available as filters. Do not try to express them through other fields;
-   leave them out.
+9. `case_type` is the kind of case. Set it only when the user names one:
+   - "criminal", "karne", "karna", "kryminalne" → ["Criminal"]
+   - "civil", "cywilne", "cywilna" → ["Civil"]
+   - "administrative", "administracyjne" → ["Administrative"]
+   Court level (first instance, appeal, supreme, …) is NOT available as a
+   filter. Do not try to express it through other fields; leave it out.
 
 Enum reference (mirror these exactly):
 
 - jurisdiction: PL | UK
+- case_type: Criminal | Civil | Administrative
 - appellant: offender | attorney_general | other
 - plea_point: police_presence | first_court_appearance | before_trial |
   first_day_of_trial | after_first_day_of_trial | dont_know
@@ -341,6 +358,11 @@ user: "kobiety skazane za oszustwo z wyrokiem w zawieszeniu, PL i UK, 2015–202
 user: "English cases since 2020 where the offender was remanded in custody"
 → jurisdiction: ["UK"],
   remand_decision: ["remanded_in_custody"],
+  decision_date: {"from": "2020-01-01"}
+
+user: "wyroki cywilne z Polski od 2020"
+→ case_type: ["Civil"],
+  jurisdiction: ["PL"],
   decision_date: {"from": "2020-01-01"}
 
 Return JSON matching the schema exactly. Set unused fields to null.

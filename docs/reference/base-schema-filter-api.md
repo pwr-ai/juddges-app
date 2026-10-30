@@ -16,6 +16,7 @@ jurisdiction TEXT)`. Always restricted to `base_extraction_status =
 | Key in `p_filters` | Type | Semantics |
 |---|---|---|
 | `jurisdiction` | `["PL" \| "UK", …]` | `judgments.jurisdiction = ANY(...)` |
+| `case_type` | `["Criminal" \| "Civil" \| "Administrative", …]` | `lower(judgments.case_type) = ANY(...)` (since `20261030000001`) |
 | `decision_date` | `{"from","to"}` / `{"min","max"}` / `"YYYY-MM-DD"` | inclusive range / equality on `judgments.decision_date` |
 | `collection_ids` | `["<uuid>", …]` | membership in `collection_judgments` (any of the ids) |
 | 42 `base_*` keys | see `frontend/lib/extractions/base-schema-filter-config.ts` | unchanged (introduced in `20260226000001`, `20260505000001`) |
@@ -617,14 +618,20 @@ pops `text_query` out of the dump, and returns `{"filters": ..., "text_query":
 ...}` — the exact body `POST /extractions/base-schema/filter` and
 `/collections/from-filter` expect.
 
-`NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"case_type",
-"court_level"})` — these two `judgments` columns are deliberately **not**
-modeled on `BaseSchemaFilter` at all (not merely hidden) because the data is
-wrong (`case_type='Civil'` on UK criminal appeals, `court_level='Crown
-Court'` on Court of Appeal; see `docs/reference/APP_STATUS_2026-08-21.md`
-§4). `tests/app/test_nl_filter_prompt_contract.py` pins that neither field
-name appears in the system prompt text or in the model's JSON Schema, so a
-future prompt edit can't reintroduce them silently.
+`case_type: list[Literal["Criminal", "Civil", "Administrative"]] | None` is a
+core `judgments` column filter (the real prod values, PL + UK). The RPC reads
+the `case_type` key of `p_filters` in `list_extracted_filter_matches`
+(migration `20261030000001_extracted_filter_case_type.sql`) and matches
+`lower(j.case_type)` against the lowercased values.
+
+`NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"court_level"})` —
+`court_level` is deliberately **not** modeled on `BaseSchemaFilter` at all (not
+merely hidden) because the data is still inconsistent (`Appeal Court` on 52 UK
+rows vs `Court of Appeal` on 6101). `tests/app/test_nl_filter_prompt_contract.py`
+pins that the name does not appear in the system prompt text or in the model's
+JSON Schema, so a future prompt edit can't reintroduce it silently.
+`case_type` was excluded until the UK data was fixed (#799) and backfilled
+(#803, #807); see `docs/how-to/backfill-uk-case-type.md`.
 
 **Date semantics** (`SYSTEM_PROMPT` rule 4 — Polish and English phrasings
 both map to the same ISO range):
