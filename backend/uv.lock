@@ -1418,7 +1418,7 @@ requires-dist = [
     { name = "juddges-search", editable = "packages/juddges_search" },
     { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-openai", specifier = ">=1.1.14,<2" },
-    { name = "langfuse", specifier = ">=3.2.3,<4" },
+    { name = "langfuse", specifier = ">=3.2.3,<6" },
     { name = "langgraph-checkpoint-postgres", specifier = ">=3.1.3,<4" },
     { name = "langserve", extras = ["server"], specifier = ">=0.3.2,<0.4" },
     { name = "litellm", specifier = ">=1.78.0,!=1.107.0,<2.0.0" },
@@ -1496,7 +1496,7 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.23.0,<5" },
     { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-openai", specifier = ">=1.1.14,<2" },
-    { name = "langfuse", specifier = ">=3.2.3,<4" },
+    { name = "langfuse", specifier = ">=3.2.3,<6" },
     { name = "loguru", specifier = ">=0.7.3,<0.8" },
     { name = "python-dotenv", specifier = ">=1.0.0,<2" },
     { name = "pyyaml", specifier = ">=6.0.2,<7" },
@@ -1810,22 +1810,22 @@ wheels = [
 
 [[package]]
 name = "langfuse"
-version = "3.15.0"
+version = "5.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
     { name = "httpx" },
-    { name = "openai" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "packaging" },
     { name = "pydantic" },
+    { name = "typing-extensions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/be/db/08266f22e1843d4c2743a1d23b7f93828ec6d5f6a4445f7d2ad3074d8b95/langfuse-3.15.0.tar.gz", hash = "sha256:4b6453c82c8159e5f0655ced24b145ed8279b47382a6b4a6d7a57111ef922181", size = 237275, upload-time = "2026-05-21T11:12:59.643Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/b3/6694c5edf351a01f85aae48a867fd34979865062cda808630aae86a99768/langfuse-5.0.4.tar.gz", hash = "sha256:f9f13a7a0bf0aad4d75287411cece3172c717d9440e73b4b84255ffffb549c31", size = 367328, upload-time = "2026-10-21T07:36:07.896Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/5b/1f16b421f5de996abfb10472d47c72bc829a56cbedacfbf908ebf8cc0469/langfuse-3.15.0-py3-none-any.whl", hash = "sha256:66a3c2b75af9402ffc13690fce73181325d6f78e723463e38844b317d37279ac", size = 424191, upload-time = "2026-05-21T11:12:57.493Z" },
+    { url = "https://files.pythonhosted.org/packages/42/f4/de90215c074ddde1849a60a939f75f9ceaf656c019501b5cac7cdb63b2fc/langfuse-5.0.4-py3-none-any.whl", hash = "sha256:6ab4ddcbc4b33efbd9c7f5feb405bfb0060949e7a170f7410f8fcc52984887a7", size = 637544, upload-time = "2026-10-21T07:36:06.457Z" },
 ]
 
 [[package]]
