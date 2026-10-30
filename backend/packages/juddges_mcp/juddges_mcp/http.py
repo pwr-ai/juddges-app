@@ -6,6 +6,7 @@ never see a credential, so a model cannot pass one.
 """
 
 import asyncio
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -14,7 +15,13 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.core.auth_mcp import MCP_KEY_PREFIX, resolve_mcp_principal, touch_key
+from app.core.auth_mcp import (
+    MCP_KEY_PREFIX,
+    THROTTLE_SECONDS,
+    resolve_mcp_principal,
+    should_record_use,
+    touch_key,
+)
 from app.mcp_rate_limit import (
     McpRateLimitExceeded,
     enforce_mcp_rate_limit,
@@ -30,6 +37,12 @@ from juddges_mcp.server import build_server
 # created and dropped can be garbage-collected before it runs.
 _key_use_tasks: set[asyncio.Task] = set()
 
+# key id -> monotonic time a touch was last scheduled. Resolution may be served
+# from a cache, whose principal carries a stale last_used_at for up to the
+# cache TTL; without this, every request in that window would schedule a write.
+_TOUCH_MAX_KEYS = 1024
+_touch_scheduled: dict[str, float] = {}
+
 
 def _key_use_finished(task: asyncio.Task) -> None:
     _key_use_tasks.discard(task)
@@ -39,13 +52,25 @@ def _key_use_finished(task: asyncio.Task) -> None:
         logger.warning(f"Recording MCP key use failed: {task.exception()!r}")
 
 
-def _record_key_use(key_id: str) -> None:
+def _touch_due(key_id: str) -> bool:
+    """True, and remembered, unless a touch for this key was scheduled lately."""
+    now = time.monotonic()
+    previous = _touch_scheduled.get(key_id)
+    if previous is not None and now - previous < THROTTLE_SECONDS:
+        return False
+    if len(_touch_scheduled) >= _TOUCH_MAX_KEYS:
+        _touch_scheduled.clear()
+    _touch_scheduled[key_id] = now
+    return True
+
+
+def _record_key_use(key_id: str, last_used_at: str | None = None) -> None:
     # touch_key is a sync Supabase call, so it goes to a thread rather than
     # stalling the event loop. It is deliberately not awaited, unlike the
     # compliance write in the tools: a dropped audit entry is a compliance
     # failure, whereas a dropped last_used_at is a cosmetic timestamp, and
-    # should_record_use already makes most calls a single cheap select.
-    task = asyncio.create_task(asyncio.to_thread(touch_key, key_id))
+    # the middleware only schedules this for a key that is due a touch.
+    task = asyncio.create_task(asyncio.to_thread(touch_key, key_id, last_used_at))
     _key_use_tasks.add(task)
     task.add_done_callback(_key_use_finished)
 
@@ -117,7 +142,8 @@ class McpAuthMiddleware:
             )(scope, receive, send)
             return
 
-        principal = resolve_mcp_principal(credential)
+        # Sync Supabase call: off the loop so it cannot stall other requests.
+        principal = await asyncio.to_thread(resolve_mcp_principal, credential)
         if principal is None:
             record_mcp_auth_failure(client_ip)
             logger.warning("Rejected an unresolvable MCP key")
@@ -138,7 +164,13 @@ class McpAuthMiddleware:
             except McpRateLimitExceeded as e:
                 await _too_many_requests(str(e), e.retry_after)(scope, receive, send)
                 return
-            _record_key_use(key_id)
+            # Resolution already read last_used_at; a recently used key needs
+            # no write and no extra query.
+            last_used = getattr(principal, "mcp_last_used_at", None)
+            if not isinstance(last_used, str):
+                last_used = None
+            if should_record_use(last_used) and _touch_due(key_id):
+                _record_key_use(key_id, last_used)
 
         # try/finally so a failing tool cannot leave this caller's principal
         # bound for whoever the context serves next.
