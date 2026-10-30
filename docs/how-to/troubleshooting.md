@@ -16,42 +16,43 @@ Common issues and their solutions for Juddges Legal Assistant.
 
 ## Installation Issues
 
-### Python Poetry Installation Fails
+### uv Installation Fails
 
-**Problem:** `curl -sSL https://install.python-poetry.org | python3 -` fails
+**Problem:** `curl -LsSf https://astral.sh/uv/0.13.1/install.sh | sh` fails, or `uv` is not found afterwards
 
 **Solution:**
 ```bash
-# Try with pip instead
-pip install --user poetry
+# Try with pip instead (same pinned version as backend/Dockerfile and CI)
+pip install --user "uv==0.13.1"
 
-# Or use alternative installation
-python3 -m pip install --upgrade pip
-pip3 install poetry
+# Or use pipx
+pipx install "uv==0.13.1"
 
-# Add Poetry to PATH
+# Add the install location to PATH
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-### Poetry Lock File Out of Sync
+Other installers: https://docs.astral.sh/uv/getting-started/installation/
 
-**Problem:** `poetry install` or CI fails with `pyproject.toml changed significantly since poetry.lock was last generated`
+### uv Lock File Out of Sync
+
+**Problem:** `uv sync --locked` (CI) fails with `The lockfile at uv.lock needs to be updated, but --locked was provided`
 
 **Solution:**
 ```bash
 cd backend
 
 # Verify the mismatch
-poetry check --lock
+uv lock --check
 
 # Regenerate the lock against current pyproject.toml ranges
-poetry lock
+uv lock
 
-# Commit BOTH files together
-git add pyproject.toml poetry.lock
+# Commit BOTH files together (plus any member pyproject.toml you changed)
+git add pyproject.toml uv.lock
 ```
 
-`backend/poetry.lock` is committed and CI installs from it, so every change to `backend/pyproject.toml` dependencies must ship with a regenerated lock in the same commit.
+`backend/uv.lock` is committed and CI installs from it with `uv sync --locked`, so every change to dependencies in `backend/pyproject.toml` or `backend/packages/*/pyproject.toml` must ship with a regenerated lock in the same commit. A version bump of the root project also changes the lock; the release script re-locks for you.
 
 ### Node.js Version Mismatch
 
@@ -103,14 +104,14 @@ docker ps
 cd backend
 
 # Reinstall dependencies
-poetry install
+uv sync
 
 # Verify packages are installed
-poetry show
+uv pip list
 
 # If still failing, try fresh install
 rm -rf .venv
-poetry install
+uv sync
 ```
 
 ### FastAPI Server Won't Start
@@ -120,7 +121,7 @@ poetry install
 **Check logs:**
 ```bash
 cd backend
-poetry run uvicorn app.server:app --reload --port 8004
+uv run uvicorn app.server:app --reload --port 8004
 ```
 
 **Common causes:**
@@ -146,7 +147,7 @@ lsof -ti:8004
 lsof -ti:8004 | xargs kill -9
 
 # Or use a different port
-poetry run uvicorn app.server:app --reload --port 8005
+uv run uvicorn app.server:app --reload --port 8005
 ```
 
 3. **Database connection fails:**
@@ -168,11 +169,11 @@ curl https://your-project.supabase.co/rest/v1/ \
 cd backend
 
 # Check Pydantic version
-poetry show pydantic
+uv pip show pydantic
 
 # Should be < 2.11 per pyproject.toml
 # If not, reinstall with constraints
-poetry install
+uv sync
 ```
 
 ### OpenAI API Errors
@@ -578,11 +579,11 @@ module.exports = {
 cd backend
 
 # Run only unit tests (fast, no external deps)
-poetry run pytest tests/ -v -m unit
+uv run pytest tests/ -v -m unit
 
 # If unit tests pass but integration fails
 # Check DB connection, Redis, OpenAI API key
-poetry run pytest tests/ -v -m integration
+uv run pytest tests/ -v -m integration
 ```
 
 2. **Frontend tests:**
@@ -642,7 +643,7 @@ git mergetool
 1. **Enable verbose logging:**
 ```bash
 # Backend
-LOG_LEVEL=debug poetry run uvicorn app.server:app --reload
+LOG_LEVEL=debug uv run uvicorn app.server:app --reload
 
 # Frontend
 DEBUG=* npm run dev
@@ -790,7 +791,7 @@ rm -rf backend/.venv backend/__pycache__
 rm -rf frontend/node_modules frontend/.next
 
 # Reinstall
-cd backend && poetry install && cd ..
+cd backend && uv sync && cd ..
 cd frontend && npm install && cd ..
 
 # Restart

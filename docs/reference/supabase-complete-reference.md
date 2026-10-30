@@ -85,7 +85,7 @@ npm install @supabase/supabase-js @supabase/ssr
 ```bash
 pip install supabase           # v2.28.0+ (as of Feb 2026)
 # or
-poetry add supabase
+uv add supabase
 # or
 uv add supabase
 ```

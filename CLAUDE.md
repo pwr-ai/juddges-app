@@ -23,9 +23,9 @@ Monorepo:
 
 ## Running Locally
 
-Source-of-truth for commands: `frontend/package.json` scripts and `backend/pyproject.toml` `[tool.poe.tasks]`. Use `npm run <task>` or `poetry run poe <task>`.
+Source-of-truth for commands: `frontend/package.json` scripts and `backend/pyproject.toml` `[tool.poe.tasks]`. Use `npm run <task>` or `uv run poe <task>`.
 
-Dependencies are pinned by committed lockfiles: `backend/poetry.lock` and `frontend/package-lock.json`. When changing backend deps, edit `backend/pyproject.toml`, run `poetry lock`, and commit both files — CI installs from the lock and fails if it is out of sync (`poetry check --lock` verifies locally). `poetry.lock` is exempt from the pre-commit large-file check.
+Dependencies are pinned by committed lockfiles: `backend/uv.lock` and `frontend/package-lock.json`. The backend is a uv workspace (uv 0.13.1, pinned in `backend/Dockerfile`, CI and the release script; install from https://docs.astral.sh/uv/getting-started/installation/). When changing backend deps, run `uv add <pkg>` (or edit `backend/pyproject.toml` and run `uv lock`), and commit both files — CI installs with `uv sync --locked` and fails if the lock is out of sync (`uv lock --check` verifies locally). `uv.lock` is exempt from the pre-commit large-file check. See [`docs/contributing/CONTRIBUTING.md`](docs/contributing/CONTRIBUTING.md#managing-dependencies) for upgrades and the workspace layout.
 
 On the frontend, `npm run deps:check` compares `node_modules/.package-lock.json` (what npm actually installed) against `package-lock.json` and fails naming the drifted packages. It runs automatically before `npm run dev` and as the first step of `npm run validate`. A stale local install is invisible otherwise — CI uses `npm ci`, so it stays green while local type errors and test results diverge (see #360). The fix it prints is always `npm ci`.
 
@@ -36,8 +36,8 @@ cd frontend && npm run dev           # Dev server on :3026 (Turbopack)
 npm run validate                     # Lint + type checks
 
 # Backend
-cd backend && poetry run uvicorn app.server:app --reload --port 8004
-poetry run poe check-all             # Lint + format check + tests
+cd backend && uv sync && uv run uvicorn app.server:app --reload --port 8004
+uv run poe check-all                 # Lint + format check + tests
 
 # Docker
 docker compose -f docker-compose.dev.yml up --build   # dev with hot reload
@@ -57,7 +57,7 @@ docker compose up -d                                  # prod (local build)
 - `schema_generator_agent` — LangGraph agent for extracting structured data from legal documents.
 - `juddges_mcp` — read-only MCP server (`search_judgments`, `get_judgment`, `get_extracted_fields`) over the judgment corpus, served over HTTP at `/mcp` and over stdio for local development.
 
-All are installed editable via Poetry (`develop = true`).
+All are uv workspace members (`[tool.uv.workspace]` in `backend/pyproject.toml`), installed editable into the one backend environment by `uv sync`.
 
 ### MCP server (`juddges_mcp`)
 - The tools in `juddges_mcp/tools/` are transport-agnostic and must stay that way: they read the caller from `juddges_mcp.principal` and never take a credential argument. Authentication belongs to the transport (`juddges_mcp/http.py`, `juddges_mcp/stdio.py`).

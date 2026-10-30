@@ -39,13 +39,13 @@ Coding standards and best practices for Juddges Legal Assistant.
 
 ```bash
 # Format code
-poetry run ruff format .
+uv run ruff format .
 
 # Check linting
-poetry run ruff check .
+uv run ruff check .
 
 # Auto-fix issues
-poetry run ruff check . --fix
+uv run ruff check . --fix
 ```
 
 ### Configuration

@@ -22,7 +22,7 @@ Before you begin, ensure you have the following installed:
 
 - **Node.js 20+** and npm
 - **Python 3.12+**
-- **Poetry** (Python package manager): `curl -sSL https://install.python-poetry.org | python3 -`
+- **uv 0.13.1** (Python package manager, the version pinned in `backend/Dockerfile` and CI): `curl -LsSf https://astral.sh/uv/0.13.1/install.sh | sh` (other methods: https://docs.astral.sh/uv/getting-started/installation/)
 - **Docker and Docker Compose**
 - **Git**
 - **Supabase account** (free tier available at https://supabase.com)
@@ -86,9 +86,9 @@ cd ..
 ### 4. Install Dependencies (10 min)
 
 ```bash
-# Backend dependencies (using Poetry)
+# Backend dependencies (using uv)
 cd backend
-poetry install
+uv sync
 cd ..
 
 # Frontend dependencies
@@ -119,7 +119,7 @@ Services will be available at:
 ```bash
 # Terminal 1: Start Backend
 cd backend
-poetry run uvicorn app.server:app --reload --port 8004
+uv run uvicorn app.server:app --reload --port 8004
 
 # Terminal 2: Start Frontend
 cd frontend
@@ -248,10 +248,14 @@ Usage:
 from schema_generator_agent.graph import create_agent_graph
 ```
 
-Both packages are installed in editable mode via Poetry:
+Both packages are uv workspace members, installed in editable mode by `uv sync` (`backend/pyproject.toml`):
 ```toml
-juddges_search = { path = "packages/juddges_search", develop = true }
-schema_generator_agent = { path = "packages/schema_generator_agent", develop = true }
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+juddges-search = { workspace = true }
+schema-generator-agent = { workspace = true }
 ```
 
 ### Database Architecture
@@ -382,13 +386,13 @@ git checkout -b fix/bug-description
 ```bash
 # Backend tests
 cd backend
-poetry run pytest tests/ -v
+uv run pytest tests/ -v
 
 # Backend unit tests only
-poetry run pytest tests/ -v -m unit
+uv run pytest tests/ -v -m unit
 
 # Backend with coverage
-poetry run pytest tests/ --cov=app --cov-report=html
+uv run pytest tests/ --cov=app --cov-report=html
 
 # Frontend unit tests
 cd frontend
@@ -406,8 +410,8 @@ npm run test:watch
 ```bash
 # Backend formatting and linting
 cd backend
-poetry run ruff format .
-poetry run ruff check .
+uv run ruff format .
+uv run ruff check .
 
 # Frontend linting
 cd frontend
@@ -666,7 +670,7 @@ docker compose up backend-worker
 
 # Manual start
 cd backend
-poetry run celery -A app.workers worker --loglevel=info
+uv run celery -A app.workers worker --loglevel=info
 ```
 
 **Monitor tasks:**
@@ -689,39 +693,39 @@ Tasks are defined in `backend/app/workers.py`.
 #### Run All Tests
 ```bash
 cd backend
-poetry run pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 #### Run Specific Test File
 ```bash
-poetry run pytest tests/app/test_documents.py -v
+uv run pytest tests/app/test_documents.py -v
 ```
 
 #### Run Tests by Marker
 ```bash
 # Unit tests only (fast, no external dependencies)
-poetry run pytest tests/ -v -m unit
+uv run pytest tests/ -v -m unit
 
 # Integration tests (require DB, Redis, OpenAI)
-poetry run pytest tests/ -v -m integration
+uv run pytest tests/ -v -m integration
 ```
 
 #### Generate Coverage Report
 ```bash
 # HTML report (opens in browser)
-poetry run pytest tests/ --cov=app --cov-report=html
+uv run pytest tests/ --cov=app --cov-report=html
 open htmlcov/index.html
 
 # Terminal report
-poetry run pytest tests/ --cov=app --cov-report=term-missing
+uv run pytest tests/ --cov=app --cov-report=term-missing
 ```
 
 #### Using Poe Tasks (Shortcuts)
 ```bash
-poetry run poe test           # All tests
-poetry run poe test-unit      # Unit tests only
-poetry run poe test-integration  # Integration tests only
-poetry run poe test-cov       # Tests with coverage
+uv run poe test           # All tests
+uv run poe test-unit      # Unit tests only
+uv run poe test-integration  # Integration tests only
+uv run poe test-cov       # Tests with coverage
 ```
 
 #### Test Structure
@@ -912,7 +916,7 @@ Create `.vscode/launch.json`:
 
 ```bash
 # Backend
-cd backend && poetry install
+cd backend && uv sync
 
 # Frontend
 cd frontend && npm install
@@ -946,7 +950,7 @@ npm run dev
 3. Run only unit tests to isolate issues
 
 ```bash
-poetry run pytest tests/ -v -m unit
+uv run pytest tests/ -v -m unit
 ```
 
 ### Docker issues
