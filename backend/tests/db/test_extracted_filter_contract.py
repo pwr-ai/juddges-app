@@ -205,3 +205,20 @@ def test_wrapper_pagination_is_unchanged(conn, corpus):
     )
     assert len(page1) == 3 and len(page2) == 1
     assert not ({r[0] for r in page1} & {r[0] for r in page2})
+
+
+def test_case_type_filters_case_insensitively(conn, corpus):
+    token, ids = corpus
+    _exec(
+        conn,
+        "UPDATE public.judgments SET case_type = CASE id "
+        "WHEN %s::uuid THEN 'Criminal' WHEN %s::uuid THEN 'Civil' ELSE NULL END "
+        "WHERE id = ANY(%s::uuid[])",
+        (ids["pl_a"], ids["uk_a"], list(ids.values())),
+    )
+    base = {"keywords": [token]}
+    assert _ids(conn, {**base, "case_type": ["Criminal"]}) == {ids["pl_a"]}
+    assert _ids(conn, {**base, "case_type": ["criminal", "Civil"]}) == {
+        ids["pl_a"],
+        ids["uk_a"],
+    }
