@@ -1,30 +1,33 @@
-[tool.poetry]
+[project]
 name = "research_agent"
 version = "0.1.0"
 description = "Legal Research Agent - autonomous multi-step legal research with tool-using LangGraph agent"
-authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
+authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak.com" }]
 readme = "README.md"
-packages = [
-    { include = "research_agent" }
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "langchain-openai>=1.1.14,<2",
+    "langchain-core>=1.2.22,<2",
+    "langgraph>=1.0.10,<2",
+    "juddges-search",
+    "loguru",
+    "pydantic>=2.11.7,<3.0.0",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.14"
-langchain-openai = "^1.1.14"
-langchain-core = "^1.2.22"
-langgraph = "^1.0.10"
-juddges-search = {path = "../juddges_search", develop=true}
-loguru = "*"
-pydantic = ">=2.11.7,<3.0.0"
+[tool.uv.sources]
+juddges-search = { workspace = true }
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.12.8"
-pytest = "^8.4.1"
-pytest-asyncio = "^0.24.0"
+# No [dependency-groups] here: dev tooling (pytest, ruff, ...) lives in the
+# workspace root's `dev` group. uv resolves every member's groups into the one
+# backend/uv.lock, and the old per-package Poetry dev pins (never installed by
+# the root `poetry install`) conflicted with the root's.
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.13.1,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
 
 [tool.ruff]
 line-length = 100

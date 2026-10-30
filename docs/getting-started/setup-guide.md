@@ -146,17 +146,17 @@ Frontend will be available at: **http://localhost:3007**
 ```bash
 cd backend
 
-# Install Poetry (if not installed)
-curl -sSL https://install.python-poetry.org | python3 -
+# Install uv 0.13.1 (if not installed; see https://docs.astral.sh/uv/getting-started/installation/)
+curl -LsSf https://astral.sh/uv/0.13.1/install.sh | sh
 
 # Install dependencies
-poetry install
+uv sync
 
 # Run migrations (if any backend-specific migrations)
-poetry run alembic upgrade head
+uv run alembic upgrade head
 
 # Run development server
-poetry run uvicorn app.server:app --reload --port 8004
+uv run uvicorn app.server:app --reload --port 8004
 ```
 
 Backend API will be available at: **http://localhost:8004**
@@ -259,7 +259,7 @@ supabase db push
 
 ### "Module not found" errors
 - **Frontend**: Run `npm install` in frontend directory
-- **Backend**: Run `poetry install` in backend directory
+- **Backend**: Run `uv sync` in backend directory
 - **Scripts**: Run `pip install -r requirements.txt` in scripts directory
 
 ## 📚 Next Steps

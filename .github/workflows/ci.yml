@@ -100,34 +100,35 @@ jobs:
         with:
           python-version: "3.12"
 
-      - uses: snok/install-poetry@v1
+      # Restores the uv cache only; cache-warm.yml is the one workflow that saves
+      # it. Inputs must match there exactly, or the cache key differs.
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: 1.7.1
-          virtualenvs-in-project: true
+          version: "0.13.1"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          save-cache: false
 
-      - uses: actions/cache/restore@v6
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
-
+      # --locked (not --frozen) also fails when uv.lock is out of sync with the
+      # pyproject.toml files, the check `poetry install` used to make.
       - name: Install dependencies
         working-directory: backend
-        run: poetry install --with dev
+        run: uv sync --locked
 
       - name: Ruff format check
         working-directory: backend
-        run: poetry run ruff format --check .
+        run: uv run ruff format --check .
 
       - name: Ruff lint
         working-directory: backend
-        run: poetry run ruff check .
+        run: uv run ruff check .
 
       - name: Check code complexity
         working-directory: backend
         run: |
-          poetry run radon cc app/ packages/ -a -nc --total-average 2>&1 | tail -5
+          uv run radon cc app/ packages/ -a -nc --total-average 2>&1 | tail -5
           # Fail if any function has complexity grade F (>40)
-          if poetry run radon cc app/ packages/ -nc -n F 2>&1 | grep -q "F "; then
+          if uv run radon cc app/ packages/ -nc -n F 2>&1 | grep -q "F "; then
             echo "ERROR: Functions with Grade F complexity detected"
             exit 1
           fi
@@ -155,19 +156,18 @@ jobs:
           key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
           restore-keys: ${{ runner.os }}-npm-
 
-      - uses: snok/install-poetry@v1
+      # Restores the uv cache only; cache-warm.yml is the one workflow that saves
+      # it. Inputs must match there exactly, or the cache key differs.
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: 1.7.1
-          virtualenvs-in-project: true
-
-      - uses: actions/cache/restore@v6
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+          version: "0.13.1"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          save-cache: false
 
       - name: Install backend dependencies
         working-directory: backend
-        run: poetry install --with dev
+        run: uv sync --locked
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -196,19 +196,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - uses: snok/install-poetry@v1
+      # Restores the uv cache only; cache-warm.yml is the one workflow that saves
+      # it. Inputs must match there exactly, or the cache key differs.
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: 1.7.1
-          virtualenvs-in-project: true
-
-      - uses: actions/cache/restore@v6
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+          version: "0.13.1"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          save-cache: false
 
       - name: Install dependencies
         working-directory: backend
-        run: poetry install --with dev
+        run: uv sync --locked
 
       - name: Run unit tests with coverage
         working-directory: backend
@@ -216,7 +215,7 @@ jobs:
         # (65.39% on 2026-08-13). Raise it when coverage rises; never lower it.
         # It sat at 54 while real coverage was 65, so the gate could only catch
         # a collapse — a change could drop 11 points of coverage and still pass.
-        run: poetry run pytest -v -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=term-missing --cov-report=html --cov-fail-under=64
+        run: uv run pytest -v -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=term-missing --cov-report=html --cov-fail-under=64
 
       # Issue #106 (unit-safe tier): import-check the integration test module so
       # a broken import, syntax error, or missing fixture breaks CI early, but
@@ -226,13 +225,13 @@ jobs:
         env:
           RUN_INTEGRATION_TESTS: ""
         run: |
-          poetry run pytest --collect-only -q tests/integration/test_search_quality.py
-          poetry run pytest -v tests/integration/test_search_quality.py
+          uv run pytest --collect-only -q tests/integration/test_search_quality.py
+          uv run pytest -v tests/integration/test_search_quality.py
 
       # Static sanity: benchmark script must at least parse and show --help.
       - name: Import-check search benchmark script
         working-directory: backend
-        run: poetry run python scripts/search_benchmark.py --help > /dev/null
+        run: uv run python scripts/search_benchmark.py --help > /dev/null
 
       # Only main's report is kept; per-PR HTML reports were never opened.
       - name: Upload coverage report
@@ -276,19 +275,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - uses: snok/install-poetry@v1
+      # Restores the uv cache only; cache-warm.yml is the one workflow that saves
+      # it. Inputs must match there exactly, or the cache key differs.
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: 1.7.1
-          virtualenvs-in-project: true
-
-      - uses: actions/cache/restore@v6
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-venv-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+          version: "0.13.1"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          save-cache: false
 
       - name: Install dependencies
         working-directory: backend
-        run: poetry install --with dev
+        run: uv sync --locked
 
       # The suite applies the migration chain with psql, because the migrations
       # contain dollar-quoted bodies and multi-statement files that a driver
@@ -304,7 +302,7 @@ jobs:
         working-directory: backend
         env:
           DB_CONTRACT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-        run: poetry run pytest -v -m db
+        run: uv run pytest -v -m db
 
   frontend-lint:
     name: Frontend Lint
@@ -722,20 +720,21 @@ jobs:
           python-version: "3.12"
 
       - name: Install tooling
-        run: |
-          pip install poetry pip-audit
-          # Poetry 2.0+ removed `export` from core; the plugin is required.
-          poetry self add poetry-plugin-export
+        run: pip install pip-audit
+
+      # Only `uv export` is needed here, so no dependency cache.
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+          enable-cache: false
 
       - name: Export requirements
         working-directory: backend
         run: |
-          # Strip editable local-path packages (`-e file:///...`) — pip-audit
-          # tries to install them and the absolute paths from `poetry export`
-          # don't exist on the runner. Their deps are already covered by the
-          # exported pinned third-party packages.
-          poetry export -f requirements.txt --without-hashes -o /tmp/requirements.raw.txt
-          grep -v '^-e ' /tmp/requirements.raw.txt > /tmp/requirements.txt
+          # --no-emit-workspace leaves out the root project and the workspace
+          # packages (local sources pip-audit cannot fetch from PyPI); their
+          # third-party deps are all in the export, pinned from uv.lock.
+          uv export --frozen --no-dev --no-emit-workspace --no-hashes -o /tmp/requirements.txt
 
       - name: Audit Python dependencies (blocking on HIGH/CRITICAL)
         id: backend_audit
@@ -867,12 +866,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+          enable-cache: false
       - name: Generate backend SBOM
         working-directory: backend
-        run: |
-          pip install poetry
-          poetry self add poetry-plugin-export
-          poetry export -f requirements.txt --without-hashes -o sbom-backend.txt
+        run: uv export --frozen --no-dev --no-emit-workspace --no-hashes -o sbom-backend.txt
       - name: Generate frontend SBOM
         working-directory: frontend
         run: npm ls --json > sbom-frontend.json 2>/dev/null || true

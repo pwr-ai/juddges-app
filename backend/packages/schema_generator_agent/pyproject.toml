@@ -1,34 +1,36 @@
-[tool.poetry]
+[project]
 name = "schema_generator_agent"
 version = "0.1.0"
 description = "Agentic system enabling automated schema generation for structured information extraction"
-authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
+authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak.com" }]
 readme = "README.md"
-packages = [
-    { include = "schema_generator_agent" }
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "python-dotenv>=1.0.0,<2",
+    "langchain-openai>=1.1.14,<2",
+    "langchain-community>=0.4.1",
+    "langchain-core>=1.2.22,<2",
+    "langchain-text-splitters>=1.1.2,<2",
+    "langgraph>=1.0.10,<2",
+    "langgraph-checkpoint-postgres>=3.1.3,<4",
+    "psycopg-binary>=3.2.10,<4",
+    "juddges-search",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.14"
-python-dotenv = "^1.0.0"
-langchain-openai = "^1.1.14"
-langchain-community = ">=0.4.1"
-langchain-core = "^1.2.22"
-langchain-text-splitters = "^1.1.2"
-langgraph = "^1.0.10"
-langgraph-checkpoint-postgres = "^3.1.3"
-psycopg-binary = "^3.2.10"
-juddges-search = {path = "../juddges_search", develop=true}
+[tool.uv.sources]
+juddges-search = { workspace = true }
 
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^4.3.0"
-ruff = "^0.12.8"
-coverage = "^7.10.3"
-pytest = "^8.4.1"
+# No [dependency-groups] here: dev tooling (pytest, ruff, ...) lives in the
+# workspace root's `dev` group. uv resolves every member's groups into the one
+# backend/uv.lock, and the old per-package Poetry dev pins (never installed by
+# the root `poetry install`) conflicted with the root's.
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.13.1,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
 
 [tool.ruff]
 line-length = 100

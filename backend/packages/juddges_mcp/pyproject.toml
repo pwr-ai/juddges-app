@@ -1,19 +1,19 @@
-[tool.poetry]
+[project]
 name = "juddges_mcp"
 version = "0.1.0"
 description = "MCP server exposing the Juddges judgment corpus"
-authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
+authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak.com" }]
 readme = "README.md"
-packages = [
-    { include = "juddges_mcp" }
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "loguru>=0.7.3,<0.8",
+    "pydantic>=2.0,<3",
+    "mcp==1.30.0",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.14"
-loguru = "^0.7.3"
-pydantic = "^2.0"
-mcp = "1.30.0"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.13.1,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""

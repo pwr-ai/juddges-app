@@ -73,7 +73,7 @@ if (!skipFrontendWebServer) {
 
 if (!skipBackendWebServer) {
   webServers.push({
-    command: 'cd ../backend && poetry run uvicorn app.server:app --port 8004',
+    command: 'cd ../backend && uv run uvicorn app.server:app --port 8004',
     url: BACKEND_BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

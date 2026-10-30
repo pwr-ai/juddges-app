@@ -33,9 +33,9 @@ This repository is a separate, independently deployable codebase from the JuDDGE
 | Async tasks      | Celery with Redis (worker + beat scheduler)                                   |
 | Auth             | Supabase Auth                                                                 |
 | LLM observability | Langfuse (optional)                                                          |
-| Packaging        | Poetry (backend), npm (frontend), Docker Compose for local + production       |
+| Packaging        | uv workspace (backend), npm (frontend), Docker Compose for local + production |
 
-The backend is organized as a monorepo with reusable Poetry packages: `juddges_search` (RAG, vector retrieval, chains), `schema_generator_agent` (LangGraph agent for schema extraction), and `research_agent`.
+The backend is organized as a monorepo with reusable packages, members of one uv workspace: `juddges_search` (RAG, vector retrieval, chains), `schema_generator_agent` (LangGraph agent for schema extraction), and `research_agent`.
 
 ## Quick start
 
@@ -44,6 +44,7 @@ The backend is organized as a monorepo with reusable Poetry packages: `juddges_s
 - Docker with the `docker compose` plugin
 - Node.js 18+ (only needed if running the frontend outside Docker)
 - Python 3.12+ (only needed if running the backend outside Docker)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.1 (same condition; the version pinned in `backend/Dockerfile` and CI)
 - A Supabase project (URL and anon key)
 - An OpenAI API key (for embeddings and chat)
 
@@ -97,8 +98,8 @@ If you prefer to run services natively (outside Docker), see the per-package REA
 ```bash
 # Backend
 cd backend
-poetry install
-poetry run uvicorn app.server:app --reload --port 8004
+uv sync
+uv run uvicorn app.server:app --reload --port 8004
 
 # Frontend
 cd frontend
@@ -113,7 +114,7 @@ juddges-app/
 ├── frontend/              # Next.js 15 application (App Router)
 ├── backend/               # FastAPI application
 │   ├── app/               # API routers, schemas, workers
-│   └── packages/          # Reusable Poetry packages
+│   └── packages/          # Reusable packages (uv workspace members)
 │       ├── juddges_search/          # RAG, retrieval, chains
 │       ├── schema_generator_agent/  # LangGraph schema-extraction agent
 │       └── research_agent/          # Research agent
@@ -196,7 +197,7 @@ Contributions are welcome. Please open an issue to discuss substantial changes b
 1. Fork the repository
 2. Create your branch from **`develop`**: `git checkout develop && git pull && git checkout -b feature/your-feature`
 3. Run the test and lint suites locally:
-   - Backend: `poetry run poe check-all`
+   - Backend: `uv run poe check-all`
    - Frontend: `npm run validate && npm run test`
 4. Commit your changes and open a pull request **into `develop`** (never directly into `main`)
 

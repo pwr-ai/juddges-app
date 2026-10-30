@@ -30,6 +30,10 @@ IMAGES=(
     "backend:backend"         # backend image (also used by backend-worker)
 )
 
+# Pinned uv for re-locking backend/uv.lock after the version bump. Keep the uv
+# version in step with backend/Dockerfile and the CI setup-uv steps.
+UV_IMAGE="ghcr.io/astral-sh/uv:0.13.1-python3.12-trixie-slim"
+
 # ------------------------------------------------------------------------------
 # Color output
 # ------------------------------------------------------------------------------
@@ -134,6 +138,49 @@ resolve_version() {
 }
 
 # ------------------------------------------------------------------------------
+# Set `version` in the [project] table of a pyproject.toml. Anchored to that
+# table: other tables may carry a `version = ...` key of their own. Fails if
+# the table has no version line, rather than committing an unchanged file.
+# ------------------------------------------------------------------------------
+set_pyproject_version() {
+    local pyproject="$1"
+    local version="$2"
+    local updated
+
+    updated=$(awk -v v="${version}" '
+        /^\[/ { in_project = ($0 == "[project]") }
+        in_project && !done && /^version[[:space:]]*=/ {
+            print "version = \"" v "\""
+            done = 1
+            next
+        }
+        { print }
+        END { exit done ? 0 : 1 }
+    ' "${pyproject}") || {
+        err "No version key in the [project] table of ${pyproject}"
+        exit 1
+    }
+    # Write in place (not mv) so the file keeps its mode and inode.
+    printf '%s\n' "${updated}" > "${pyproject}"
+}
+
+# ------------------------------------------------------------------------------
+# Re-lock backend/uv.lock with the pinned uv, in a container: Python tooling
+# never runs on the host. Same uv as backend/Dockerfile and CI.
+# ------------------------------------------------------------------------------
+lock_backend() {
+    docker run --rm \
+        -u "$(id -u):$(id -g)" \
+        -e HOME=/tmp \
+        -e UV_CACHE_DIR=/tmp/uv-cache \
+        -e UV_PYTHON_DOWNLOADS=never \
+        -v "${REPO_ROOT}/backend:/work" \
+        -w /work \
+        "${UV_IMAGE}" \
+        uv lock
+}
+
+# ------------------------------------------------------------------------------
 # Sync version across project files
 # ------------------------------------------------------------------------------
 sync_version() {
@@ -145,11 +192,16 @@ sync_version() {
     echo "${version}" > "${REPO_ROOT}/VERSION"
     ok "  VERSION"
 
-    # 2. backend/pyproject.toml
+    # 2. backend/pyproject.toml ([project] version) + backend/uv.lock
     local pyproject="${REPO_ROOT}/backend/pyproject.toml"
     if [[ -f "${pyproject}" ]]; then
-        sed -i "s/^version = \".*\"/version = \"${version}\"/" "${pyproject}"
+        set_pyproject_version "${pyproject}" "${version}"
         ok "  backend/pyproject.toml"
+        # uv.lock records the root project's version, so CI's
+        # `uv sync --locked` fails until it is re-locked. `uv lock` without
+        # --upgrade keeps every dependency pin as it is.
+        lock_backend
+        ok "  backend/uv.lock"
     else
         warn "  backend/pyproject.toml not found, skipping"
     fi
@@ -381,6 +433,7 @@ main() {
     git add \
         "${REPO_ROOT}/VERSION" \
         "${REPO_ROOT}/backend/pyproject.toml" \
+        "${REPO_ROOT}/backend/uv.lock" \
         "${REPO_ROOT}/frontend/package.json" \
         "${REPO_ROOT}/.env.example" \
         "${notes_file}"
