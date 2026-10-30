@@ -47,7 +47,7 @@ dev = [
     "langchain-cli>=0.0.36",
     "jupyterlab>=4.3.6,<5",
     "ruff>=0.11,<0.18",
-    "pytest>=8.3.4,<9",
+    "pytest>=8.3.4,<10",
     "pytest-asyncio>=0.24,<1.5",
     "pytest-cov>=6,<8",
     # Randomises test order so order-dependent tests fail loudly instead of
