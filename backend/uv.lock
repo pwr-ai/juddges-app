@@ -1352,7 +1352,7 @@ wheels = [
 
 [[package]]
 name = "juddges"
-version = "1.5.29"
+version = "1.5.30"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
