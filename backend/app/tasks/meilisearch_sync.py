@@ -168,16 +168,19 @@ def full_sync_judgments_to_meilisearch(
 
     async def _sync_all() -> int:
         total_synced = 0
-        offset = 0
+        # Keyset pagination on the unique primary key: constant cost per page
+        # and no skipped/duplicated rows (created_at is not unique).
+        last_id: str | None = None
         try:
             while True:
-                resp = (
+                query = (
                     supabase_client.table("judgments")
                     .select(JUDGMENT_SYNC_COLUMNS)
-                    .order("created_at")
-                    .range(offset, offset + batch_size - 1)
-                    .execute()
+                    .order("id")
                 )
+                if last_id is not None:
+                    query = query.gt("id", last_id)
+                resp = query.limit(batch_size).execute()
 
                 rows = resp.data or []
                 if not rows:
@@ -193,7 +196,7 @@ def full_sync_judgments_to_meilisearch(
                     await service.wait_for_task(task_uid, max_wait=120.0)
 
                 total_synced += len(documents)
-                offset += batch_size
+                last_id = str(rows[-1]["id"])
 
                 self.update_state(
                     state="PROGRESS",
