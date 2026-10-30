@@ -33,7 +33,7 @@ dependencies = [
     "litellm>=1.78.0,<2.0.0,!=1.107.0",  # 1.107.0 was a compromised PyPI release (2026-10-21)
     "pandas>=2.2,<4.0",
     "openpyxl>=3.1.0,<4",
-    "strawberry-graphql[fastapi]>=0.291.3,<0.337.0",
+    "strawberry-graphql[fastapi]>=0.291.3,<0.339.0",
     "cachetools>=5.5,<8.0",
     "defusedxml>=0.7.1,<0.8",
     "email-validator>=2.0.0,<3.0.0",
