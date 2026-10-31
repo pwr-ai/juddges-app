@@ -83,7 +83,7 @@ jobs:
 
       # Restores the uv cache only; cache-warm.yml is the one workflow that saves
       # it. Inputs must match there exactly, or the cache key differs.
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           version: "0.13.1"
           enable-cache: true
