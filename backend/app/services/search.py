@@ -26,6 +26,106 @@ _FALLBACK_SENTINEL = "_hybrid_fallback"
 
 SearchMode = Literal["hybrid", "keyword", "keyword_fallback"]
 
+# ── Hybrid fusion (issue #798) ───────────────────────────────────────────────
+#
+# Meilisearch's own ``hybrid.semanticRatio`` merges the keyword and vector
+# lists by comparing their weighted *ranking scores*. Keyword ranking scores
+# sit near 1.0 for every hit that matches all query words, while BGE-M3 cosine
+# scores sit in a narrow band of their own; weighting two near-constant lists
+# gives a step function: below the crossover ratio every keyword hit outscores
+# every semantic hit and vice versa, so the top-k flipped from pure keyword to
+# pure semantic around 0.5 with no blend in between. ``documents_search``
+# therefore fetches both lists separately and fuses them by *rank* (weighted
+# RRF), which is scale-free and moves smoothly with the ratio.
+
+#: RRF damping constant (Cormack et al., 2009). Larger = flatter rank curve.
+RRF_K = 60
+#: Each side fetches ``offset + limit * HYBRID_CANDIDATE_MULTIPLIER`` hits.
+HYBRID_CANDIDATE_MULTIPLIER = 3
+#: Meilisearch ``pagination.maxTotalHits`` on the judgments index.
+HYBRID_MAX_CANDIDATES = 1000
+
+
+def _normalize_case_number(value: Any) -> str:
+    return " ".join(str(value).split()).casefold() if value else ""
+
+
+def reciprocal_rank_fusion(
+    keyword_hits: list[dict[str, Any]],
+    semantic_hits: list[dict[str, Any]],
+    semantic_ratio: float,
+    *,
+    k: int = RRF_K,
+    query: str | None = None,
+) -> list[dict[str, Any]]:
+    """Fuse keyword and semantic hit lists with ratio-weighted Reciprocal Rank Fusion.
+
+    ``score(d) = 1 / (k + rank_kw(d) / (1 - r)) + 1 / (k + rank_sem(d) / r)``
+    with 1-based ranks; a document missing from a list (or a list whose weight
+    is 0) contributes 0 for it.
+
+    The weight scales the *rank*, not the score. Multiplying the score instead
+    (``w / (k + rank)``) is not a blend at ``k = 60``: the 1/(k+rank) curve is
+    so flat that for two disjoint lists the weight alone decides, and at
+    r = 0.6 all of the semantic top-30 outranks keyword #1 — the same flip
+    #798 reported. With scaled ranks, semantic #j beats keyword #i exactly when
+    ``j / r < i / (1 - r)``, so single-list hits interleave in proportion to
+    the ratio (~3 semantic per keyword at 0.75), and a document found by both
+    legs still gets both contributions. The semantic term only grows and the
+    keyword term only shrinks as ``r`` rises, so the blend is monotone.
+
+    When ``query`` exactly equals a keyword hit's ``case_number`` (whitespace-
+    and case-insensitive), that hit is pinned to rank 1: an exact case-number
+    lookup must never be outranked by a vague semantic neighbour.
+
+    Ties break on best rank on either side, then keyword rank, so the output
+    is deterministic. When a document is in both lists the keyword copy is
+    returned (its ``_formatted`` highlights match the query terms).
+    """
+    ratio = min(max(semantic_ratio, 0.0), 1.0)
+    docs: dict[str, dict[str, Any]] = {}
+    scores: dict[str, float] = {}
+    kw_rank: dict[str, int] = {}
+    sem_rank: dict[str, int] = {}
+
+    for weight, hits, ranks in (
+        (1.0 - ratio, keyword_hits, kw_rank),
+        (ratio, semantic_hits, sem_rank),
+    ):
+        for position, hit in enumerate(hits, start=1):
+            if hit.get("id") is None:
+                continue
+            key = str(hit["id"])
+            if key in ranks:
+                continue
+            ranks[key] = position
+            docs.setdefault(key, hit)
+            contribution = 1.0 / (k + position / weight) if weight > 0 else 0.0
+            scores[key] = scores.get(key, 0.0) + contribution
+
+    missing_kw = len(keyword_hits) + 1
+    missing_sem = len(semantic_hits) + 1
+
+    pinned: set[str] = set()
+    target = _normalize_case_number(query)
+    if target:
+        pinned = {
+            str(hit.get("id"))
+            for hit in keyword_hits
+            if _normalize_case_number(hit.get("case_number")) == target
+        }
+
+    ordered = sorted(
+        docs,
+        key=lambda key: (
+            key not in pinned,
+            -scores[key],
+            min(kw_rank.get(key, missing_kw), sem_rank.get(key, missing_sem)),
+            kw_rank.get(key, missing_kw),
+        ),
+    )
+    return [docs[key] for key in ordered]
+
 
 class SearchServiceError(RuntimeError):
     """Raised when autocomplete backend calls fail."""
@@ -265,7 +365,9 @@ class MeiliSearchService:
 
     # ── search ───────────────────────────────────────────────────────────
 
-    async def _search_post(self, payload: dict[str, Any]) -> dict[str, Any]:
+    async def _search_post(
+        self, payload: dict[str, Any], *, keyword_retry: bool = True
+    ) -> dict[str, Any]:
         """POST a payload to Meilisearch's /search, degrading hybrid to keyword on 4xx.
 
         Meilisearch rejects a hybrid request with HTTP 400 when the index has no
@@ -273,6 +375,10 @@ class MeiliSearchService:
         embedder settings task never succeeded because the legacy docs lacked an
         opt-out). Rather than surfacing that as a 502 to the UI, strip ``hybrid``
         + ``vector`` and retry once as keyword-only — the user still gets results.
+
+        ``keyword_retry=False`` skips that retry and returns an empty, flagged
+        result instead — for callers that already run the keyword leg in
+        parallel (the fused hybrid path in ``documents_search``).
 
         5xx and network failures are not retried; they indicate a Meili outage
         the keyword path can't paper over.
@@ -309,6 +415,8 @@ class MeiliSearchService:
                         )
                     except Exception:
                         pass  # sentry_sdk absent or not initialised — structured log is enough
+                    if not keyword_retry:
+                        return {"hits": [], _FALLBACK_SENTINEL: True}
                     keyword_payload = {
                         k: v
                         for k, v in payload.items()
@@ -557,11 +665,17 @@ class MeiliSearchService:
         Wider ``attributesToRetrieve`` than autocomplete so the results page can
         render full cards without an extra Supabase round-trip.
 
-        ``semantic_ratio`` enables Meilisearch hybrid search when > 0 — the
-        query is embedded via TEI and combined with keyword matching at the
-        requested mix (0 = pure keyword, 1 = pure semantic). Caller controls
-        the ratio so the keyword-only ``text`` mode stays cheap and the
-        ``hybrid`` mode opts in explicitly.
+        ``semantic_ratio`` enables hybrid search when > 0 — the query is
+        embedded via TEI and combined with keyword matching at the requested
+        mix (0 = pure keyword, 1 = pure semantic). Caller controls the ratio
+        so the keyword-only ``text`` mode stays cheap and the ``hybrid`` mode
+        opts in explicitly.
+
+        For ``0 < ratio < 1`` the keyword and vector lists are fetched
+        separately (in parallel) and fused here with weighted RRF — see
+        :func:`reciprocal_rank_fusion` and issue #798 for why Meilisearch's
+        score-based ``semanticRatio`` merge is not used. ``ratio == 1`` is a
+        single pure-vector Meilisearch query.
         """
         if not self.configured:
             raise SearchServiceError("Meilisearch is not configured")
@@ -612,21 +726,22 @@ class MeiliSearchService:
         if filters:
             payload["filter"] = filters
 
+        if semantic_ratio > 0 and query.strip() and semantic_ratio < 1.0:
+            return await self._fused_hybrid_search(
+                payload, query=query, limit=limit, offset=offset, ratio=semantic_ratio
+            )
+
         # Track whether we intended hybrid search so we can set search_mode.
         hybrid_requested = False
         if semantic_ratio > 0 and query.strip():
-            try:
-                query_vec = await asyncio.to_thread(embed_texts, query)
+            query_vec = await self._embed_query(query)
+            if query_vec is not None:
                 payload["hybrid"] = {
                     "embedder": EMBEDDER_NAME,
                     "semanticRatio": semantic_ratio,
                 }
                 payload["vector"] = query_vec
                 hybrid_requested = True
-            except Exception:
-                logger.opt(exception=True).warning(
-                    "TEI embedding failed for documents_search — falling back to keyword"
-                )
 
         raw = await self._search_post(payload)
 
@@ -641,6 +756,87 @@ class MeiliSearchService:
 
         raw["search_mode"] = search_mode
         return raw
+
+    @staticmethod
+    async def _embed_query(query: str) -> list[float] | None:
+        """Embed ``query`` via TEI; ``None`` (logged) when the embedder fails."""
+        try:
+            return await asyncio.to_thread(embed_texts, query)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "TEI embedding failed for documents_search — falling back to keyword"
+            )
+            return None
+
+    async def _fused_hybrid_search(
+        self,
+        payload: dict[str, Any],
+        *,
+        query: str,
+        limit: int,
+        offset: int,
+        ratio: float,
+    ) -> dict[str, Any]:
+        """Run keyword + pure-vector legs in parallel and RRF-fuse them (#798).
+
+        The keyword leg starts while the query is still being embedded, so the
+        added latency over a single Meilisearch call is roughly one vector
+        query. Both legs fetch from offset 0 a window deep enough to cover the
+        requested page; the fused list is paginated here.
+        """
+        window = min(
+            offset + limit * HYBRID_CANDIDATE_MULTIPLIER, HYBRID_MAX_CANDIDATES
+        )
+        window = max(window, offset + limit)
+        keyword_payload = {**payload, "limit": window, "offset": 0}
+
+        def _page(source: dict[str, Any], hits: list[dict[str, Any]], mode: str):
+            result = {k: v for k, v in source.items() if k != _FALLBACK_SENTINEL}
+            result["hits"] = hits[offset : offset + limit]
+            result["limit"] = limit
+            result["offset"] = offset
+            result["search_mode"] = mode
+            return result
+
+        keyword_task = asyncio.ensure_future(self._search_post(keyword_payload))
+        try:
+            query_vec = await self._embed_query(query)
+            if query_vec is None:
+                keyword = await keyword_task
+                return _page(keyword, keyword.get("hits", []), "keyword")
+
+            semantic_payload = {
+                **keyword_payload,
+                "hybrid": {"embedder": EMBEDDER_NAME, "semanticRatio": 1.0},
+                "vector": query_vec,
+            }
+            keyword, semantic = await asyncio.gather(
+                keyword_task,
+                self._search_post(semantic_payload, keyword_retry=False),
+            )
+        except BaseException:
+            keyword_task.cancel()
+            raise
+
+        if semantic.get(_FALLBACK_SENTINEL):
+            return _page(keyword, keyword.get("hits", []), "keyword_fallback")
+
+        fused = reciprocal_rank_fusion(
+            keyword.get("hits", []),
+            semantic.get("hits", []),
+            ratio,
+            query=query,
+        )
+        result = _page(keyword, fused, "hybrid")
+        result["estimatedTotalHits"] = max(
+            keyword.get("estimatedTotalHits") or 0,
+            semantic.get("estimatedTotalHits") or 0,
+        )
+        result["processingTimeMs"] = max(
+            keyword.get("processingTimeMs") or 0,
+            semantic.get("processingTimeMs") or 0,
+        )
+        return result
 
     async def search(
         self,
