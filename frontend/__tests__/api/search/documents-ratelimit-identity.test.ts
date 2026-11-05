@@ -12,9 +12,9 @@
  * 60/minute limit added in #570 an app-wide ceiling rather than a per-visitor
  * one.
  *
- * Anonymous traffic deliberately keeps sharing a bucket: there is no
- * unspoofable per-visitor identity for it (the guest cookie is chosen by the
- * caller), so a shared bucket is the honest bound on anonymous compute.
+ * Anonymous traffic gets no identity (the guest cookie is chosen by the
+ * caller); it keys on the visitor's address instead — see
+ * search-client-ip.test.ts.
  */
 
 import { createHash } from 'crypto';
