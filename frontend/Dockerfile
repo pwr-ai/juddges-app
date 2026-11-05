@@ -76,6 +76,8 @@ COPY . .
 # They only seed the inline baseline in prerendered HTML; the running
 # container's values win at request time via /runtime-env.js and the
 # computed lookups in lib/env/server.ts, so the image works without them.
+# Release builds leave NEXT_PUBLIC_API_BASE_URL empty: no browser code reads
+# it, and a dev value would land in every prerendered page (#578).
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -88,6 +90,18 @@ ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 # Build the application with optimizations
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+
+# Guard (#578): refuse an image whose browser-facing output (client chunks,
+# prerendered HTML/RSC) points at localhost/127.0.0.1 -- in a visitor's browser
+# that is their own machine. Catches dev .env values passed as the build args
+# above. Pass --build-arg ALLOW_LOCAL_ORIGINS=1 only for an image that will
+# never leave this machine.
+ARG ALLOW_LOCAL_ORIGINS=0
+RUN if [ "$ALLOW_LOCAL_ORIGINS" = "1" ]; then \
+      echo "WARNING: ALLOW_LOCAL_ORIGINS=1, skipping the local-origin guard"; \
+    else \
+      node scripts/assert-no-local-origins.js .next; \
+    fi
 
 # ==============================================================================
 # Production Target - Optimized Runtime
