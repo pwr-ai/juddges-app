@@ -2,6 +2,8 @@
 
 This guide shows how to measure and analyze search performance in the Juddges App using the automated benchmark tool.
 
+> This measures **latency**. To measure **retrieval quality** (recall@k, nDCG@k, MRR against labelled queries, per search mode), see [Evaluate search quality offline](evaluate-search-quality.md).
+
 ## Prerequisites
 
 - Backend API running (development port 8004 or production port 8002)
