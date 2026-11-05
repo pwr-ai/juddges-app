@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { withClientIp } from "@/app/api/_lib/client-ip";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
@@ -37,6 +38,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
     }
+    // Key anonymous visitors on their own address rather than this
+    // container's (issue #565); a signed-in identity still takes precedence.
+    withClientIp(headers, request);
 
     // Forward the Supabase session so the backend can attribute the analytics
     // row to the logged-in user. Anonymous traffic stays anonymous.

@@ -64,7 +64,12 @@ from app.llm_rate_limit import enforce_llm_rate_limit
 from app.mcp_keys import router as mcp_keys_router
 from app.precedents import router as precedents_router
 from app.publications import router as publications_router
-from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
+from app.rate_limiter import (
+    DEFAULT_RATE_LIMITS,
+    RATE_LIMIT_STORAGE_URI,
+    enforce_default_rate_limits,
+    limiter,
+)
 from app.reasoning_lines import router as reasoning_lines_router
 from app.schemas_pkg import router as schemas_router
 from app.summarization import router as summarization_router
@@ -450,6 +455,10 @@ app = FastAPI(
     title="Juddges Legal Research API",
     description="Backend API for Juddges legal research platform with intelligent search, audit trail, and legal compliance",
     version="0.3.0",
+    # Charges DEFAULT_RATE_LIMITS on include_router-mounted routes, which
+    # SlowAPIMiddleware cannot match (#574). Inert unless
+    # RATE_LIMIT_ROUTER_BACKSTOP=true; see app/rate_limiter.py.
+    dependencies=[Depends(enforce_default_rate_limits)],
     openapi_tags=[
         {
             "name": "deprecated",
@@ -516,9 +525,11 @@ logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 # @limiter.limit-decorated routes are enforced. On the pinned FastAPI, its
 # route lookup only matches routes registered directly on `app` (the
 # LangServe chains, /docs, /openapi.json); routes mounted via include_router
-# — most of this API — are not matched and get NO default-limit coverage
-# (tracked in #574). @limiter.limit decorators are unaffected and enforce
-# regardless of mounting style.
+# — most of this API — are not matched by the middleware. Those are covered
+# by the app-wide enforce_default_rate_limits dependency instead (#574), which
+# is gated by RATE_LIMIT_ROUTER_BACKSTOP until the BFF forwards a per-user
+# rate-limit identity everywhere (#565). @limiter.limit decorators are
+# unaffected and enforce regardless of mounting style.
 #
 # Registered first (innermost) deliberately: Starlette builds the middleware
 # stack in reverse registration order, so the LAST middleware added ends up
