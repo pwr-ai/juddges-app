@@ -94,7 +94,6 @@ TEST_FILES=(
     "frontend/tests/e2e/chat/chat-flow.spec.ts"
     "frontend/tests/e2e/chat/chat-history.spec.ts"
     "backend/tests/app/test_search_metadata.py"
-    "backend/tests/test_query_enhancement.py"
     "backend/tests/packages/schema_generator_agent/test_workflow.py"
 )
 
