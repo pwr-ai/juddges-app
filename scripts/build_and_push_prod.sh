@@ -254,17 +254,32 @@ generate_release_notes() {
     local version="$1"
     local output_file="$2"
 
-    if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-        err "OPENAI_API_KEY not set in .env"
-        err "It is required for automatic release note generation."
-        exit 1
+    # A dead LLM key must not block a release (#546): sync_version has already
+    # rewritten the version files, so aborting here leaves a dirty tree that the
+    # next run refuses. Fall back to notes built from commit subjects, and warn
+    # loudly -- the same key powers every LLM feature in production.
+    if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+        info "Generating release notes for prod-v${version} ..."
+        if python3 "${REPO_ROOT}/scripts/generate_release_notes.py" \
+            --version "${version}" \
+            --output "${output_file}"; then
+            ok "Release notes saved to ${output_file}"
+            return 0
+        fi
+        warn "OpenAI release-note generation FAILED (see the error above)."
+        warn "If this is a 401/403, the OPENAI_API_KEY in .env is rejected; if it"
+        warn "is shared with production, chat, precedents, argumentation and"
+        warn "extraction are down too. Check GET /health/status -> services.llm."
+    else
+        warn "OPENAI_API_KEY not set in .env; skipping LLM release notes."
     fi
 
-    info "Generating release notes for prod-v${version} ..."
+    warn "Falling back to release notes built from commit subjects."
     python3 "${REPO_ROOT}/scripts/generate_release_notes.py" \
         --version "${version}" \
-        --output "${output_file}"
-    ok "Release notes saved to ${output_file}"
+        --output "${output_file}" \
+        --no-llm
+    ok "Fallback release notes saved to ${output_file}"
 }
 
 # ------------------------------------------------------------------------------

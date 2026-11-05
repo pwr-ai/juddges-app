@@ -497,6 +497,35 @@ docker inspect --format='{{range .State.Health.Log}}{{.Output}}{{end}}' juddges-
 |----------|------|---------|
 | `GET /health/healthz` | None | Basic liveness (used by Docker) |
 | `GET /health/status` | API Key | Detailed status with service checks |
+| `POST /health/status/invalidate` | API Key | Drop the status cache (and the LLM probe cache) |
+
+`/health/status` checks redis, postgresql (critical), supabase, celery,
+langfuse, meilisearch and **`llm`** (optional). The `llm` probe calls the
+token-free `GET {base_url}/models` with `OPENAI_API_KEY` against every endpoint
+the backend's LLM resolvers use: OpenAI (`get_llm()`) and, when set,
+`LLM_BASE_URL` (`get_default_llm()`). It reports:
+
+| `services.llm.status` | Meaning |
+|---|---|
+| `healthy` | Every endpoint accepted the key |
+| `unhealthy` | Key missing or rejected (401/403, e.g. `invalid_project`), or an endpoint is unreachable (e.g. `LLM_BASE_URL=http://localhost:11434/v1` inside a container) |
+| `degraded` | 429 (rate limit / `insufficient_quota`) or another unexpected HTTP status |
+
+`services.llm.metadata.targets` has the per-endpoint `http_status`,
+`error_code` and `detail`; the key itself is never included. An unhealthy LLM
+makes the overall status `degraded`, not `unhealthy` -- search keeps working
+without it -- so read `services.llm` rather than the top-level status. The
+probe result is cached for `LLM_HEALTH_CACHE_TTL_SECONDS` (default `300`);
+after rotating the key, call `POST /health/status/invalidate` to re-probe now.
+
+```bash
+curl -s -H "X-API-Key: $BACKEND_API_KEY" http://localhost:8002/health/status | jq '.services.llm'
+```
+
+The release script (`scripts/build_and_push_prod.sh`) uses the same key for
+release notes. If that call fails it prints a warning pointing here and falls
+back to notes built from commit subjects (`generate_release_notes.py --no-llm`)
+rather than aborting the release.
 
 ---
 
