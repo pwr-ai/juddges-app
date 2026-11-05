@@ -33,7 +33,8 @@ export type ClientEventName =
   | "chat_feedback_thumbs_down"
   | "collection_created"
   | "collection_item_added"
-  | "error_boundary_triggered";
+  | "error_boundary_triggered"
+  | "page_viewed";
 
 export type EventProperties = Record<string, unknown>;
 
@@ -209,8 +210,11 @@ export function flush(): void {
   }
 }
 
-/** Sync the active UI locale into the flush envelope (used by useTrackEvent). */
-export function _setLocaleOverride(locale: string | null): void {
+/**
+ * Sync the active UI locale into the flush envelope. Called by LanguageProvider
+ * on every locale change, so events from non-React modules carry it too.
+ */
+export function setTrackLocale(locale: string | null): void {
   localeOverride = locale;
 }
 

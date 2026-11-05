@@ -25,6 +25,7 @@ import {
   persistLocale,
 } from '@/lib/i18n/config';
 import { getTranslations } from '@/lib/i18n/translations';
+import { setTrackLocale } from '@/lib/analytics/track';
 import {
   createTranslator,
   formatNumber,
@@ -113,6 +114,12 @@ export function LanguageProvider({ children, initialLocale }: LanguageProviderPr
         document.documentElement.classList.remove('rtl');
       }
     }
+  }, [locale, isHydrated]);
+
+  // Stamp the active locale on every app_events flush, including events
+  // tracked outside React (lib/api modules) that cannot read this context.
+  useEffect(() => {
+    if (isHydrated) setTrackLocale(locale);
   }, [locale, isHydrated]);
 
   // Set locale and persist

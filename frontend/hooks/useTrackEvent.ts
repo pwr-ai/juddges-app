@@ -1,29 +1,22 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 
-import { useLanguage } from "@/contexts/LanguageContext";
 import {
-  _setLocaleOverride,
   track,
   type ClientEventName,
   type EventProperties,
 } from "@/lib/analytics/track";
 
 /**
- * Component-level product-analytics tracking. Keeps the flush envelope's
- * locale in sync with the active UI language; otherwise a stable wrapper
- * around `track()` (which also works outside React, e.g. in lib/api modules).
+ * Component-level product-analytics tracking: a stable wrapper around
+ * `track()` (which also works outside React, e.g. in lib/api modules). The
+ * flush envelope's locale is kept in sync by LanguageProvider via
+ * `setTrackLocale`, so this hook needs no locale handling of its own.
  */
 export function useTrackEvent(): (
   eventName: ClientEventName,
   properties?: EventProperties
 ) => void {
-  const { locale } = useLanguage();
-
-  useEffect(() => {
-    _setLocaleOverride(locale);
-  }, [locale]);
-
   return useCallback((eventName, properties) => track(eventName, properties), []);
 }

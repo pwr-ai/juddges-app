@@ -7,7 +7,7 @@
 
 import {
   _resetForTests,
-  _setLocaleOverride,
+  setTrackLocale,
   flush,
   track,
 } from "@/lib/analytics/track";
@@ -165,7 +165,7 @@ describe("track()", () => {
   });
 
   it("includes the locale override in the envelope", () => {
-    _setLocaleOverride("pl");
+    setTrackLocale("pl");
     track("judgment_viewed", { document_id: "d1" });
     flush();
 
