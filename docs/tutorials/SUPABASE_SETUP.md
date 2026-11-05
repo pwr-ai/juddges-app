@@ -136,7 +136,6 @@ RLS check requires direct SQL access (assumed enabled)
 
 Step 7: Checking database functions...
 ✓ Function 'search_judgments_by_embedding': exists
-✓ Function 'search_judgments_by_text': exists
 ✓ Function 'search_judgments_hybrid': exists
 ✓ Function 'get_judgment_facets': exists
 
@@ -173,7 +172,6 @@ The Juddges App uses the following database structure:
 #### **Search Functions**
 
 - `search_judgments_by_embedding()` - Semantic/vector search
-- `search_judgments_by_text()` - Full-text search
 - `search_judgments_hybrid()` - Combined vector + text search with 11+ filters
 - `get_judgment_facets()` - Dynamic facet counts for filter UI
 
