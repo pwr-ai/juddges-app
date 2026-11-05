@@ -8,10 +8,12 @@ from app.health.checks import (
     check_all_services,
     check_celery,
     check_langfuse,
+    check_llm,
     check_meilisearch,
     check_postgresql,
     check_redis,
     check_supabase,
+    reset_llm_health_cache,
 )
 from app.health.models import ServiceHealth, ServiceStatus
 
@@ -346,6 +348,130 @@ class TestCheckMeilisearch:
 
 
 # ---------------------------------------------------------------------------
+# check_llm (#546)
+# ---------------------------------------------------------------------------
+
+
+def _llm_client(*responses_or_errors):
+    """AsyncClient mock whose .get returns/raises the given items in order."""
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(side_effect=list(responses_or_errors))
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    return mock_client
+
+
+def _response(status_code, body=None):
+    response = MagicMock()
+    response.status_code = status_code
+    response.json = MagicMock(return_value=body or {})
+    return response
+
+
+@pytest.fixture
+def llm_env(monkeypatch):
+    reset_llm_health_cache()
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-secret")
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.delenv("LLM_HEALTH_CACHE_TTL_SECONDS", raising=False)
+    yield monkeypatch
+    reset_llm_health_cache()
+
+
+@pytest.mark.unit
+class TestCheckLlm:
+    """Tests for the LLM provider probe."""
+
+    @pytest.mark.asyncio
+    async def test_healthy_when_models_endpoint_ok(self, llm_env):
+        client = _llm_client(_response(200, {"data": []}))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.name == "llm"
+        assert result.status == ServiceStatus.HEALTHY
+        url = client.get.call_args.args[0]
+        assert url == "https://api.openai.com/v1/models"
+
+    @pytest.mark.asyncio
+    async def test_invalid_project_401_is_unhealthy_and_names_the_code(self, llm_env):
+        """Regression for #546: a rejected key must not look healthy."""
+        body = {
+            "error": {
+                "code": "invalid_project",
+                "message": "You do not have access to the project tied to the API key.",
+            }
+        }
+        client = _llm_client(_response(401, body))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.status == ServiceStatus.UNHEALTHY
+        assert "invalid_project" in (result.message or "")
+        assert "401" in (result.error or "")
+        assert result.metadata["targets"]["openai"]["error_code"] == "invalid_project"
+        # The key must never leak into the status payload.
+        assert "sk-test-secret" not in result.model_dump_json()
+
+    @pytest.mark.asyncio
+    async def test_quota_429_is_degraded(self, llm_env):
+        body = {"error": {"code": "insufficient_quota"}}
+        client = _llm_client(_response(429, body))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.status == ServiceStatus.DEGRADED
+        assert "insufficient_quota" in (result.message or "")
+
+    @pytest.mark.asyncio
+    async def test_missing_key_is_unhealthy_without_network(self, llm_env):
+        llm_env.delenv("OPENAI_API_KEY")
+        client = _llm_client()
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.status == ServiceStatus.UNHEALTHY
+        assert "OPENAI_API_KEY is not set" in (result.message or "")
+        client.get.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_unreachable_llm_base_url_is_unhealthy(self, llm_env):
+        """get_default_llm() target (e.g. Ollama on container localhost) is probed too."""
+        import httpx
+
+        llm_env.setenv("LLM_BASE_URL", "http://localhost:11434/v1")
+        client = _llm_client(
+            _response(200),
+            httpx.ConnectError("connection refused"),
+        )
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.status == ServiceStatus.UNHEALTHY
+        targets = result.metadata["targets"]
+        assert targets["openai"]["status"] == "healthy"
+        assert targets["default"]["status"] == "unhealthy"
+        assert "localhost:11434" in (result.message or "")
+
+    @pytest.mark.asyncio
+    async def test_result_is_cached_between_calls(self, llm_env):
+        """Polling /health/status must not hit the provider on every request."""
+        client = _llm_client(_response(200))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            first = await check_llm()
+            second = await check_llm()
+        assert first is second
+        assert client.get.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_reset_forces_reprobe(self, llm_env):
+        client = _llm_client(_response(401), _response(200))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            first = await check_llm()
+            reset_llm_health_cache()
+            second = await check_llm()
+        assert first.status == ServiceStatus.UNHEALTHY
+        assert second.status == ServiceStatus.HEALTHY
+
+
+# ---------------------------------------------------------------------------
 # check_all_services -- cascade failure regression
 # ---------------------------------------------------------------------------
 
@@ -391,18 +517,29 @@ class TestCheckAllServices:
                 "app.health.checks.check_meilisearch",
                 return_value=healthy_result,
             ),
+            patch(
+                "app.health.checks.check_llm",
+                return_value=healthy_result,
+            ),
         ):
             services = await check_all_services()
 
-        # All 6 services must be present in the result
-        assert len(services) == 6
+        # All 7 services must be present in the result
+        assert len(services) == 7
 
         # The failing service should be marked unhealthy, not crash the call
         assert services["redis"].status == ServiceStatus.UNHEALTHY
         assert "RuntimeError" in (services["redis"].message or "")
 
         # The remaining services should still report healthy
-        for name in ["postgresql", "supabase", "celery", "langfuse", "meilisearch"]:
+        for name in [
+            "postgresql",
+            "supabase",
+            "celery",
+            "langfuse",
+            "meilisearch",
+            "llm",
+        ]:
             assert services[name].status == ServiceStatus.HEALTHY
 
     @pytest.mark.asyncio
@@ -438,6 +575,10 @@ class TestCheckAllServices:
             ),
             patch(
                 "app.health.checks.check_meilisearch",
+                return_value=healthy_result,
+            ),
+            patch(
+                "app.health.checks.check_llm",
                 return_value=healthy_result,
             ),
         ):
