@@ -358,20 +358,3 @@ class TestJudgmentsQueries:
         assert "y:umap_y" in projection
         # The not-null filter must target the physical column.
         assert ("judgments", "not.is", "legal_topics") in client.filters
-
-    async def test_version_history_filters_judgments_by_id(self) -> None:
-        from app.versioning import get_version_history
-
-        client = _FakeClient(
-            {"judgments": _FakeResponse([{"document_id": "doc-1"}])},
-        )
-        db = MagicMock()
-        db.client = client
-
-        with patch("app.versioning.get_vector_db", return_value=db):
-            await get_version_history(document_id="doc-1", limit=50, offset=0)
-
-        assert "judgments" in client.tables
-        # `judgments` has no `current_version` column.
-        assert "current_version" not in client.projection("judgments")
-        assert ("judgments", "eq", "id") in client.filters

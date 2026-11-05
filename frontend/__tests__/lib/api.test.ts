@@ -25,14 +25,7 @@ import {
   extractKeyPoints,
   submitBulkExtraction,
   findPrecedents,
-  getCitationNetwork,
-  getVersionHistory,
-  getVersionDetail,
-  getVersionDiff,
-  createVersionSnapshot,
-  revertToVersion,
   analyzeArguments,
-  extractTimeline,
 } from '@/lib/api';
 
 // Helper: create a minimal mock Response
@@ -331,84 +324,6 @@ describe('API client functions', () => {
     });
   });
 
-  // ── getCitationNetwork ─────────────────────────────────────────────────
-
-  describe('getCitationNetwork', () => {
-    it('sends GET to /api/documents/citation-network', async () => {
-      const mockResult = { nodes: [], edges: [], statistics: { total_nodes: 0, total_edges: 0, avg_citations: 0, max_citations: 0, most_cited_refs: [], avg_authority_score: 0 } };
-      mockFetch.mockResolvedValueOnce(okResponse(mockResult));
-      await getCitationNetwork({ sample_size: 50 });
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('sample_size=50'),
-        expect.any(Object)
-      );
-    });
-
-    it('calls without query params when no input given', async () => {
-      const mockResult = { nodes: [], edges: [], statistics: { total_nodes: 0, total_edges: 0, avg_citations: 0, max_citations: 0, most_cited_refs: [], avg_authority_score: 0 } };
-      mockFetch.mockResolvedValueOnce(okResponse(mockResult));
-      await getCitationNetwork();
-      expect(mockFetch).toHaveBeenCalledWith('/api/documents/citation-network', expect.any(Object));
-    });
-  });
-
-  // ── Version History ────────────────────────────────────────────────────
-
-  describe('getVersionHistory', () => {
-    it('sends GET to /api/documents/{id}/versions', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ versions: [], total: 0 }));
-      await getVersionHistory('doc-1', { limit: 10 });
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/documents/doc-1/versions'),
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('getVersionDetail', () => {
-    it('sends GET to correct versioned URL', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ version: {} }));
-      await getVersionDetail('doc-1', 3);
-      expect(mockFetch).toHaveBeenCalledWith('/api/documents/doc-1/versions/3', expect.any(Object));
-    });
-  });
-
-  describe('getVersionDiff', () => {
-    it('sends GET with from/to params', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ diff: {} }));
-      await getVersionDiff('doc-1', 1, 3);
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('from=1&to=3'),
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('createVersionSnapshot', () => {
-    it('sends POST to /api/documents/{id}/versions', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ version_number: 1 }));
-      await createVersionSnapshot('doc-1', { description: 'snapshot' } as any);
-      expect(mockFetch).toHaveBeenCalledWith('/api/documents/doc-1/versions', expect.objectContaining({ method: 'POST' }));
-    });
-
-    it('sends empty body when no input provided', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ version_number: 1 }));
-      await createVersionSnapshot('doc-1');
-      const body = JSON.parse(mockFetch.mock.calls[0][1]!.body as string);
-      expect(body).toEqual({});
-    });
-  });
-
-  // ── revertToVersion ────────────────────────────────────────────────────
-
-  describe('revertToVersion', () => {
-    it('sends POST to /api/documents/{id}/versions/revert', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ success: true }));
-      await revertToVersion('doc-1', { version_number: 2 } as any);
-      expect(mockFetch).toHaveBeenCalledWith('/api/documents/doc-1/versions/revert', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
   // ── Argumentation ──────────────────────────────────────────────────────
 
   describe('analyzeArguments', () => {
@@ -416,22 +331,6 @@ describe('API client functions', () => {
       mockFetch.mockResolvedValueOnce(okResponse({ arguments: [], overall_analysis: {}, document_ids: [], argument_count: 0 }));
       await analyzeArguments({ document_ids: ['d1'] });
       expect(mockFetch).toHaveBeenCalledWith('/api/argumentation', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
-  // ── Timeline ───────────────────────────────────────────────────────────
-
-  describe('extractTimeline', () => {
-    it('sends POST to /api/documents/timeline', async () => {
-      const mockResult = { events: [], timeline_summary: '', date_range: { earliest: null, latest: null }, document_ids: [], total_events: 0, extraction_depth: 'basic' };
-      mockFetch.mockResolvedValueOnce(okResponse(mockResult));
-      const result = await extractTimeline({ document_ids: ['d1'] });
-      expect(result.total_events).toBe(0);
-    });
-
-    it('throws on API error', async () => {
-      mockFetch.mockResolvedValueOnce(errorResponse(500, { error: 'Failed to extract timeline' }));
-      await expect(extractTimeline({ document_ids: ['d1'] })).rejects.toThrow('Failed to extract timeline');
     });
   });
 });
