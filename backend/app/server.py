@@ -48,7 +48,6 @@ from app.embeddings_api import router as embeddings_router
 from app.example_questions import router as example_questions_router
 from app.extraction import router as extraction_router
 from app.feedback import router as feedback_router
-from app.graphql_api.router import graphql_router
 
 # Import Day 1 feature routers
 from app.guest_sessions import router as guest_sessions_router
@@ -668,7 +667,6 @@ async def redirect_root_to_docs():
 #            versioning_router, clustering_router
 #            topic_modeling_router, argumentation_router, embeddings_router
 #            timeline_router, search_router
-#            graphql_router — /graphql
 #            health_router — /health/status (sub-route API key guard)
 #
 # USER:      blog_router — API_KEY at router level + JWT per-endpoint for
@@ -770,15 +768,6 @@ app.include_router(admin_router)
 # Health check and status monitoring
 # Note: /health is public, /health/status requires API key (configured in router)
 app.include_router(health_router)
-
-# GraphQL API endpoint (API key authenticated)
-# Provides flexible data querying with subscriptions via WebSocket
-app.include_router(
-    graphql_router,
-    prefix="/graphql",
-    tags=["graphql"],
-    dependencies=[Depends(verify_api_key)],
-)
 
 # MCP server (juddges-mcp). Mounted as a sub-app, deliberately NOT in
 # API_KEY_PROTECTED_ROUTERS: external AI clients do not hold the shared
