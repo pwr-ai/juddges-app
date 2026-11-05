@@ -27,10 +27,29 @@ keyword signal (for example an exact case number) left in the ranking.
 | `0 < r < 1` | keyword query **and** pure-vector query (`semanticRatio: 1.0`), in parallel | fused in the backend |
 | `1` | one pure-vector query | Meilisearch vector order |
 
-For the fused case, both legs fetch hits `0 … offset + 3 × limit` (capped at
-`maxTotalHits = 1000`). The fused list is paginated in the backend. The keyword
-leg starts while the query is still being embedded on TEI, so the added latency
-is about one vector query.
+For the fused case, both legs fetch the top `HYBRID_CANDIDATE_DEPTH = 200` hits
+(from offset 0) on **every** page of a query, and the fused list is paginated in
+the backend. The keyword leg starts while the query is still being embedded on
+TEI, so the added latency is about one vector query.
+
+### Why the candidate depth is fixed
+
+The depth must not depend on `offset`. An earlier version fetched
+`offset + 3 × limit` per leg, so each page fused a deeper slice than the page
+before it. A deeper slice can surface a document that appears in *both* lists
+(for example keyword #35 + semantic #20); it collects two RRF contributions and
+jumps above every single-list hit, landing on a page the user has already
+scrolled past while pushing an already-served hit onto the next page. With
+overlapping lists, 100 hits served over ten pages contained only 77 unique
+documents. A fixed depth gives one fused list per query, and every page slices
+it, so infinite scroll has no duplicates and no gaps
+(`TestHybridPaginationStability`).
+
+The cost is a cap: hybrid mode serves at most the union of the two top-200
+lists (200–400 documents). `estimatedTotalHits` is set to the fused list's
+length, so `has_more` turns false at its end instead of requesting empty pages.
+Users who need the long tail can switch to keyword mode, which pages Meilisearch
+directly.
 
 ## The fusion formula
 
@@ -70,6 +89,9 @@ neighbours.
   embedder is not registered). The keyword leg's results are returned with
   `search_mode = "keyword_fallback"`. The vector leg is not retried as keyword,
   because the keyword leg already ran.
+- In both cases a page that lies past the 200-hit keyword window is fetched
+  with one direct keyword query at the requested offset, and the keyword
+  `estimatedTotalHits` is kept, so keyword paging is not capped.
 - **A 5xx or network error on either leg** gives HTTP 502, the same as before.
 
 ## Response fields
@@ -77,6 +99,7 @@ neighbours.
 The response has the same shape as a single Meilisearch call:
 
 - `hits` holds the fused page.
-- `estimatedTotalHits` and `processingTimeMs` are the larger of the two legs'
-  values.
+- `estimatedTotalHits` is the number of fused candidates (at most 400), which
+  is what hybrid mode can page through.
+- `processingTimeMs` is the larger of the two legs' values.
 - `search_mode` is `"hybrid"`.

@@ -40,10 +40,14 @@ SearchMode = Literal["hybrid", "keyword", "keyword_fallback"]
 
 #: RRF damping constant (Cormack et al., 2009). Larger = flatter rank curve.
 RRF_K = 60
-#: Each side fetches ``offset + limit * HYBRID_CANDIDATE_MULTIPLIER`` hits.
-HYBRID_CANDIDATE_MULTIPLIER = 3
-#: Meilisearch ``pagination.maxTotalHits`` on the judgments index.
-HYBRID_MAX_CANDIDATES = 1000
+#: Each leg fetches this many hits from offset 0, for *every* page of a query.
+#: The depth must not depend on ``offset``: fusing a deeper slice on a later
+#: page lets a document found by both legs deep down (e.g. keyword #35 +
+#: semantic #20) collect two RRF contributions and jump ahead of hits already
+#: served, so consecutive pages would repeat some documents and skip others.
+#: A fixed depth gives one fused list per query that every page slices; the
+#: hybrid result set is therefore capped at the union of the two top-N lists.
+HYBRID_CANDIDATE_DEPTH = 200
 
 
 def _normalize_case_number(value: Any) -> str:
@@ -781,13 +785,13 @@ class MeiliSearchService:
 
         The keyword leg starts while the query is still being embedded, so the
         added latency over a single Meilisearch call is roughly one vector
-        query. Both legs fetch from offset 0 a window deep enough to cover the
-        requested page; the fused list is paginated here.
+        query. Both legs fetch the same fixed top ``HYBRID_CANDIDATE_DEPTH``
+        hits regardless of the requested page, so every page of a query slices
+        one identical fused list: no duplicates or gaps across pages.
+        ``estimatedTotalHits`` is the fused list's length, which is what this
+        mode can serve, so pagination stops at the end of it.
         """
-        window = min(
-            offset + limit * HYBRID_CANDIDATE_MULTIPLIER, HYBRID_MAX_CANDIDATES
-        )
-        window = max(window, offset + limit)
+        window = HYBRID_CANDIDATE_DEPTH
         keyword_payload = {**payload, "limit": window, "offset": 0}
 
         def _page(source: dict[str, Any], hits: list[dict[str, Any]], mode: str):
@@ -798,12 +802,21 @@ class MeiliSearchService:
             result["search_mode"] = mode
             return result
 
+        async def _keyword_only(keyword: dict[str, Any], mode: str):
+            # The window covers the page: slice it. A page past the window
+            # (deep scroll while the vector leg is down) is fetched directly.
+            if offset + limit <= window:
+                return _page(keyword, keyword.get("hits", []), mode)
+            direct = await self._search_post(payload)
+            direct.pop(_FALLBACK_SENTINEL, None)
+            direct["search_mode"] = mode
+            return direct
+
         keyword_task = asyncio.ensure_future(self._search_post(keyword_payload))
         try:
             query_vec = await self._embed_query(query)
             if query_vec is None:
-                keyword = await keyword_task
-                return _page(keyword, keyword.get("hits", []), "keyword")
+                return await _keyword_only(await keyword_task, "keyword")
 
             semantic_payload = {
                 **keyword_payload,
@@ -819,7 +832,7 @@ class MeiliSearchService:
             raise
 
         if semantic.get(_FALLBACK_SENTINEL):
-            return _page(keyword, keyword.get("hits", []), "keyword_fallback")
+            return await _keyword_only(keyword, "keyword_fallback")
 
         fused = reciprocal_rank_fusion(
             keyword.get("hits", []),
@@ -828,10 +841,7 @@ class MeiliSearchService:
             query=query,
         )
         result = _page(keyword, fused, "hybrid")
-        result["estimatedTotalHits"] = max(
-            keyword.get("estimatedTotalHits") or 0,
-            semantic.get("estimatedTotalHits") or 0,
-        )
+        result["estimatedTotalHits"] = len(fused)
         result["processingTimeMs"] = max(
             keyword.get("processingTimeMs") or 0,
             semantic.get("processingTimeMs") or 0,

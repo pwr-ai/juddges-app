@@ -12,6 +12,7 @@ import httpx
 import pytest
 
 from app.services.search import (
+    HYBRID_CANDIDATE_DEPTH,
     MeiliSearchService,
     reciprocal_rank_fusion,
 )
@@ -179,10 +180,10 @@ class TestDocumentsSearchFusion:
         # Meili's own ratio merge is the bug — the vector leg is pure semantic.
         assert sem_call["hybrid"] == {"embedder": "bge-m3", "semanticRatio": 1.0}
         assert sem_call["vector"] == fake_vec
-        # Both legs fetch a window from 0 deep enough for the requested page.
+        # Both legs fetch the same fixed window from 0, whatever the page.
         for call in calls:
             assert call["offset"] == 0
-            assert call["limit"] == 10 + 10 * 3
+            assert call["limit"] == HYBRID_CANDIDATE_DEPTH
 
         expected = reciprocal_rank_fusion(
             KEYWORD_HITS, SEMANTIC_HITS, 0.5, query="burglary"
@@ -190,7 +191,8 @@ class TestDocumentsSearchFusion:
         assert result["hits"] == expected
         assert result["search_mode"] == "hybrid"
         assert result["offset"] == 10 and result["limit"] == 10
-        assert result["estimatedTotalHits"] == 900
+        # The total is what hybrid mode can serve: the fused candidate list.
+        assert result["estimatedTotalHits"] == len(KEYWORD_HITS) + len(SEMANTIC_HITS)
         assert result["processingTimeMs"] == 40
 
     @pytest.mark.asyncio
@@ -252,3 +254,124 @@ class TestDocumentsSearchFusion:
 
         assert len(calls) == 1
         assert calls[0]["limit"] == 10 and calls[0]["offset"] == 20
+
+
+# ── pagination stability with overlapping legs ─────────────────────────────
+#
+# Real keyword and semantic lists overlap, which is why RRF is used at all.
+# With a candidate window that grew with ``offset``, a deeper slice on page N
+# could surface a document present in BOTH legs (two RRF contributions) and
+# push it ahead of hits page N-1 already served: duplicates and gaps across
+# infinite-scroll pages. These fixtures overlap at every depth.
+
+CORPUS = 400
+
+
+def _overlapping_legs() -> tuple[list[dict], list[dict]]:
+    """Two 400-doc rankings of one corpus that agree loosely: the semantic
+    leg is a deterministic shuffle of the keyword leg, so documents shared
+    deep in both lists appear at every window depth."""
+    keyword = [{"id": f"doc-{i}"} for i in range(CORPUS)]
+    semantic = sorted(keyword, key=lambda d: (int(d["id"][4:]) * 7919) % CORPUS)
+    return keyword, semantic
+
+
+def _paging_fake_post(keyword_all, semantic_all, calls):
+    async def fake_post(self_, url, json, headers):
+        calls.append(json)
+        source = semantic_all if "hybrid" in json else keyword_all
+        start = json["offset"]
+        hits = source[start : start + json["limit"]]
+        return _resp(200, {"hits": hits, "estimatedTotalHits": len(source)})
+
+    return fake_post
+
+
+class TestHybridPaginationStability:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("ratio", [0.25, 0.5, 0.75])
+    async def test_consecutive_pages_have_no_duplicates_and_no_gaps(
+        self, service, ratio
+    ):
+        keyword_all, semantic_all = _overlapping_legs()
+        calls: list[dict] = []
+        limit = 10
+        served: list[str] = []
+        offset = 0
+        with (
+            patch("app.services.search.embed_texts", return_value=[0.1] * 1024),
+            patch(
+                "httpx.AsyncClient.post",
+                new=_paging_fake_post(keyword_all, semantic_all, calls),
+            ),
+        ):
+            while True:
+                result = await service.documents_search(
+                    "burglary", limit=limit, offset=offset, semantic_ratio=ratio
+                )
+                served.extend(_ids(result["hits"]))
+                offset += len(result["hits"])
+                # Mirrors the API's has_more: loaded < estimatedTotalHits.
+                if not result["hits"] or offset >= result["estimatedTotalHits"]:
+                    break
+
+        # Every page fused the same candidate depth.
+        assert {c["limit"] for c in calls} == {HYBRID_CANDIDATE_DEPTH}
+        assert {c["offset"] for c in calls} == {0}
+
+        stable = _ids(
+            reciprocal_rank_fusion(
+                keyword_all[:HYBRID_CANDIDATE_DEPTH],
+                semantic_all[:HYBRID_CANDIDATE_DEPTH],
+                ratio,
+                query="burglary",
+            )
+        )
+        assert len(served) == len(set(served)), "a document was served twice"
+        # No gaps: the concatenated pages are exactly the one fused list,
+        # and scrolling terminates at its end.
+        assert served == stable
+
+    @pytest.mark.asyncio
+    async def test_page_past_the_fused_list_is_empty_and_stops_scrolling(self, service):
+        keyword_all, semantic_all = _overlapping_legs()
+        calls: list[dict] = []
+        with (
+            patch("app.services.search.embed_texts", return_value=[0.1] * 1024),
+            patch(
+                "httpx.AsyncClient.post",
+                new=_paging_fake_post(keyword_all, semantic_all, calls),
+            ),
+        ):
+            result = await service.documents_search(
+                "burglary", limit=10, offset=2 * CORPUS, semantic_ratio=0.75
+            )
+        assert result["hits"] == []
+        assert result["estimatedTotalHits"] <= 2 * HYBRID_CANDIDATE_DEPTH
+
+    @pytest.mark.asyncio
+    async def test_keyword_fallback_past_the_window_fetches_the_page_directly(
+        self, service
+    ):
+        keyword_all, _ = _overlapping_legs()
+        calls: list[dict] = []
+
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            start = json["offset"]
+            hits = keyword_all[start : start + json["limit"]]
+            return _resp(200, {"hits": hits, "estimatedTotalHits": CORPUS})
+
+        offset = HYBRID_CANDIDATE_DEPTH + 5
+        with (
+            patch("app.services.search.embed_texts", side_effect=RuntimeError("TEI")),
+            patch("httpx.AsyncClient.post", new=fake_post),
+        ):
+            result = await service.documents_search(
+                "burglary", limit=10, offset=offset, semantic_ratio=0.75
+            )
+
+        assert result["search_mode"] == "keyword"
+        assert _ids(result["hits"]) == _ids(keyword_all[offset : offset + 10])
+        assert result["estimatedTotalHits"] == CORPUS
+        assert calls[-1]["offset"] == offset and calls[-1]["limit"] == 10
