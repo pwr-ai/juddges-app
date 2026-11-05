@@ -76,16 +76,6 @@ class TestUnauthenticatedAccessRejected:
                 "without API key, expected 401"
             )
 
-    async def test_graphql_rejects_missing_api_key(self, client: AsyncClient):
-        """The /graphql endpoint must require API key authentication."""
-        response = await client.post(
-            "/graphql",
-            json={"query": "{ __typename }"},
-        )
-        assert response.status_code == 401, (
-            f"/graphql returned {response.status_code} without API key, expected 401"
-        )
-
 
 # ---------------------------------------------------------------------------
 # Exact API-key, Bearer, and authorization status contracts
@@ -234,19 +224,6 @@ class TestInvalidAPIKeyRejected:
         )
         assert response.status_code == 401, (
             f"/api/search/autocomplete returned {response.status_code} for invalid key"
-        )
-
-    async def test_graphql_rejects_invalid_key(
-        self, client: AsyncClient, invalid_api_headers: dict[str, str]
-    ):
-        """POST /graphql must return 401 for an invalid API key."""
-        response = await client.post(
-            "/graphql",
-            json={"query": "{ __typename }"},
-            headers=invalid_api_headers,
-        )
-        assert response.status_code == 401, (
-            f"/graphql returned {response.status_code} for invalid key"
         )
 
 

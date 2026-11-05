@@ -27,7 +27,7 @@ This repository is a separate, independently deployable codebase from the JuDDGE
 | Layer            | Technology                                                                    |
 | ---------------- | ----------------------------------------------------------------------------- |
 | Frontend         | Next.js 15 (App Router), React 19, Tailwind CSS 4, Zustand, TanStack Query    |
-| Backend API      | FastAPI on Python 3.12+, LangChain, LangServe, LiteLLM, Strawberry GraphQL    |
+| Backend API      | FastAPI on Python 3.12+, LangChain, LangServe, LiteLLM                        |
 | Primary database | PostgreSQL via Supabase, with `pgvector` for embeddings                       |
 | Search           | Meilisearch (full-text) + pgvector (semantic), combined for hybrid retrieval  |
 | Async tasks      | Celery with Redis (worker + beat scheduler)                                   |
