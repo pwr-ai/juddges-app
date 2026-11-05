@@ -12,11 +12,14 @@ from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
 from loguru import logger
 from slowapi import Limiter
+from slowapi.middleware import _should_exempt
 from slowapi.util import get_remote_address
+from starlette.requests import (
+    Request,  # noqa: TC002 - FastAPI resolves the dependency signature at runtime
+)
 
 if TYPE_CHECKING:
     from limits import RateLimitItem
-    from starlette.requests import Request
 
 
 _RATE_LIMIT_IDENTITY_PATTERN = re.compile(r"^[a-f0-9]{64}$")
@@ -172,6 +175,59 @@ limiter = Limiter(
     # Emit X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers.
     headers_enabled=True,
 )
+
+
+def _router_backstop_enabled() -> bool:
+    """Return True when ``RATE_LIMIT_ROUTER_BACKSTOP`` is set to a truthy value."""
+    return os.getenv("RATE_LIMIT_ROUTER_BACKSTOP", "false").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def enforce_default_rate_limits(request: Request) -> None:
+    """Charge ``default_limits`` for routes ``SlowAPIMiddleware`` cannot see (#574).
+
+    On the pinned FastAPI, ``include_router`` registers an ``_IncludedRouter``
+    on ``app.routes`` instead of copying the prefixed routes, and slowapi's
+    middleware route lookup cannot match through it: every router-mounted
+    route was silently exempt from ``DEFAULT_RATE_LIMITS``. A dependency runs
+    after routing, so ``scope["route"]`` already names the real endpoint
+    whatever the mounting style.
+
+    Registered app-wide (``FastAPI(dependencies=...)``), it reaches every
+    ``APIRoute``, including ones the middleware already charged; those are
+    skipped (the middleware leaves ``request.state.view_rate_limit``), as are
+    routes with their own ``@limiter.limit`` (same rule as the middleware: an
+    explicit limit replaces the defaults) and ``@limiter.exempt`` routes.
+
+    Inert unless ``RATE_LIMIT_ROUTER_BACKSTOP=true``: the backstop keys on
+    ``get_client_ip``, and BFF routes that do not yet forward
+    ``X-RateLimit-Identity`` would put every pilot user in the frontend
+    container's single bucket (#565). Enable it once that propagation lands.
+
+    A plain ``def`` on purpose: the limit check is blocking storage I/O
+    (Redis), so FastAPI runs it in the threadpool rather than on the loop.
+    """
+    if not _router_backstop_enabled():
+        return
+
+    app_limiter: Limiter | None = getattr(request.app.state, "limiter", None)
+    if app_limiter is None or not app_limiter.enabled:
+        return
+
+    # Already charged by SlowAPIMiddleware (a route registered directly on app).
+    if getattr(request.state, "view_rate_limit", None) is not None:
+        return
+
+    handler = getattr(request.scope.get("route"), "endpoint", None)
+    if _should_exempt(app_limiter, handler):
+        return
+
+    # Raises RateLimitExceeded -> the app's handler renders the 429.
+    app_limiter._check_request_limit(request, handler, True)
+
 
 # Process-local fallback for the callers below that talk to `limits` directly
 # (LangServe LLM budget, invite-code redemption) rather than through the
