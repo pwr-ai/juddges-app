@@ -51,7 +51,6 @@ REQUIRED_TABLES = [
 
 REQUIRED_FUNCTIONS = [
     "search_judgments_by_embedding",
-    "search_judgments_by_text",
     "search_judgments_hybrid",
     "get_judgment_facets",
     "get_my_profile",
