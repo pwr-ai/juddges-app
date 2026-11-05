@@ -268,7 +268,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 Optional:
 ```env
-TRANSFORMERS_INFERENCE_URL=http://localhost:8080  # For embeddings
+TRANSFORMERS_INFERENCE_URL=<embedding-service-url>  # For embeddings; unset = no embeddings (no localhost default)
 ```
 
 ## Integration with Docker

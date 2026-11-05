@@ -30,8 +30,7 @@ The backend uses reusable packages:
 ### Database Architecture
 **Unified approach**:
 - **PostgreSQL (Supabase)** - Structured data storage
-- **pgvector** - Vector similarity search for semantic search
-- Migrated from Weaviate (used in JuDDGES) to pgvector
+- **pgvector** - Vector similarity search for semantic search (`vector(1024)`, BGE-M3, HNSW)
 
 ### FastAPI Server
 - Router-based architecture (documents, collections, analytics, feedback)
