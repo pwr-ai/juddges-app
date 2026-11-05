@@ -8,6 +8,10 @@ A tool call that fails reaches the client as a tool error (`isError: true`) whos
 
 The tools take no credential argument. The MCP key in the `Authorization` header (or `JUDDGES_MCP_KEY` for stdio) is resolved to its owner before any tool runs, and each call acts as that user.
 
+### Usage events
+
+Every tool call, successful or not, records one `mcp_tool_called` row in `app_events`: the tool name, the key owner's user id, the outcome (`ok` or the exception class), the duration and, for `search_judgments`, the number of hits. The arguments (query text, document ids) are never recorded. The write runs off the call path and cannot fail a call. See [App Events Taxonomy](../explanation/event-taxonomy.md#usage-feature-ranking).
+
 ### Scopes are reserved and not enforced
 
 Every key is created with the scope list `["search:read"]`, the API returns it as `scopes` in key listings, and the resolver attaches it to the request's principal as `mcp_scopes`. **Nothing reads it.** No tool or endpoint checks a scope, so a scope does not restrict, and cannot grant, anything today. This is harmless only because all three tools are read-only and every key has the same scope. Do not rely on a scope to limit what a key can do; if a tool that writes is ever added, enforcement has to be built first.

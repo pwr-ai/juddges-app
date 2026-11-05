@@ -47,6 +47,7 @@ from app.models import (
     SimilarDocumentsResponse,
     validate_id_format,
 )
+from app.services.app_events import emit_app_event_in_background
 from app.services.audit_service import AuditService, audited_principal
 from app.utils import (
     validate_array_size,
@@ -558,7 +559,36 @@ async def search_documents(request: SearchChunksRequest):
     fetch ``facetDistribution`` / ``facetStats`` without paying for the
     full document search.
     """
-    return await run_document_search(request)
+    response = await run_document_search(request)
+    _mirror_search_event(request, response)
+    return response
+
+
+def _mirror_search_event(request: SearchChunksRequest, response: object) -> None:
+    """Record the call in app_events as `search_submitted` (surface='api').
+
+    Makes HTTP-side search volume visible next to the browser's
+    `search_submitted` (surface='web'); MCP calls are counted separately as
+    `mcp_tool_called`. Derived fields only: raw query text belongs in
+    search_analytics, never in app_events. Scheduled off the request path and
+    never raises.
+    """
+    try:
+        query_length = len((request.query or "").strip())
+        chunks = getattr(response, "chunks", None)
+        emit_app_event_in_background(
+            "search_submitted",
+            surface="api",
+            properties={
+                "endpoint": "POST /documents/search",
+                "result_count": len(chunks) if isinstance(chunks, list) else None,
+                "query_length": query_length,
+                "mode": request.mode,
+                "facets_only": bool(request.facets) and query_length == 0,
+            },
+        )
+    except Exception as exc:  # analytics must never break a search
+        logger.debug(f"search usage event failed: {exc}")
 
 
 @router.post(

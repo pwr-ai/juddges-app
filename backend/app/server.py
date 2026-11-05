@@ -67,6 +67,8 @@ from app.publications import router as publications_router
 from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
 from app.reasoning_lines import router as reasoning_lines_router
 from app.schemas_pkg import router as schemas_router
+from app.services.route_rollup import RouteRollupMiddleware
+from app.services.route_rollup import rollup as route_rollup
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
 from app.topic_modeling import router as topic_modeling_router
@@ -340,6 +342,11 @@ async def _app_lifespan(app: FastAPI):
 
     # Cleanup on shutdown
     logger.info("Starting application shutdown sequence...")
+    # Write out the per-route counts still held in memory (api_route_rollup).
+    try:
+        route_rollup.flush_now()
+    except Exception as e:
+        logger.warning(f"Error flushing route rollup: {e}")
     if pool:
         await pool.close()
     # Release the reused embedding httpx connection pools (async TEI provider +
@@ -529,6 +536,13 @@ logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 # caller instead of a readable 429. CORSMiddleware is added last below so it
 # stays outermost and wraps every response, including 429s.
 app.add_middleware(SlowAPIMiddleware)
+
+# Per-route usage counter (api_route_rollup). Pure ASGI, just outside SlowAPI
+# and inside GZip/CORS: it reads the matched route template the router leaves
+# in the scope, costs one dict increment per request and flushes off the
+# request path. A 429 that SlowAPI short-circuits before routing counts as
+# `<unmatched>`. See app/services/route_rollup.py.
+app.add_middleware(RouteRollupMiddleware)
 
 # Add GZip compression middleware for better performance
 app.add_middleware(GZipMiddleware, minimum_size=1000)
