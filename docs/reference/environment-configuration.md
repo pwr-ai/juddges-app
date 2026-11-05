@@ -120,6 +120,18 @@ Rules when touching this code:
 - The build args in `frontend/Dockerfile` and `scripts/build_and_push_prod.sh`
   only seed the inline baseline. An image built without them still works once
   the container has the variables.
+- The inline baseline of a *prerendered* page is whatever the build had, and it
+  is shipped to every visitor. Release builds therefore pass only the Supabase
+  pair; `NEXT_PUBLIC_API_BASE_URL` is runtime-only (no browser code reads it;
+  browser calls go through same-origin `/api/*` BFF routes). Two guards stop a
+  dev value such as `http://localhost:8004` from being baked in (#578):
+  `validate_public_build_env` in `scripts/build_and_push_prod.sh` (before the
+  release commit) and `frontend/scripts/assert-no-local-origins.js` in the
+  Dockerfile builder stage (scans `.next/static/**/*.js` and
+  `.next/server/app/**/*.{html,rsc}`; `ALLOW_LOCAL_ORIGINS=1` opts out for a
+  machine-local image).
+- Browser code must not build backend URLs from `NEXT_PUBLIC_API_BASE_URL`;
+  call the app's own `/api/...` route with a relative path instead.
 - `/runtime-env.js` omits unset keys, so it never overwrites a baseline value
   with an empty string. The service worker bypasses the path explicitly
   (`RUNTIME_ENV_PATH` in `frontend/public/sw.js`).

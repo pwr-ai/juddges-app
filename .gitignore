@@ -7,6 +7,7 @@
 .env.local
 .env.*.local
 .env.production
+.env.release
 .env.secrets
 .env.rls-verify
 .env.bak*

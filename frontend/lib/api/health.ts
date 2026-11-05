@@ -1,33 +1,16 @@
 /**
  * API client functions for health check and status endpoints
  *
- * Note: Most endpoints use Next.js API routes as proxies to avoid
+ * Note: All endpoints use Next.js API routes as proxies to avoid
  * exposing the backend API key in the browser. The API routes handle
  * authentication server-side.
  */
 
-import { BasicHealthResponse, DetailedStatusResponse, DependenciesResponse } from '@/types/health';
+import { DetailedStatusResponse, DependenciesResponse } from '@/types/health';
 
-// For basic health check, we can call backend directly (public endpoint)
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8004';
-
-/**
- * Fetch basic health check status (public endpoint, no auth required)
- */
-export async function getBasicHealth(): Promise<BasicHealthResponse> {
-  const response = await fetch(`${BACKEND_URL}/health`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Health check failed: ${response.statusText}`);
-  }
-
-  return response.json();
-}
+// Every call goes through this app's own BFF routes (`/api/health/*`) with a
+// relative URL. Never call the backend directly from here: this module runs in
+// the browser, where a backend URL would be the build machine's value (#578).
 
 /**
  * Fetch detailed status with all service checks
