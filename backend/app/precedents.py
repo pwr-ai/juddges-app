@@ -29,12 +29,11 @@ PRECEDENTS_RATE_LIMIT = "30/hour"
 # `precedents` slice is still taken from the top `limit` of this same pool, so a
 # wider pool does not change what the LLM sees.
 #
-# Measured against production: `search_judgments_by_embedding` never sets
-# `hnsw.ef_search`, so the index default of 40 caps the result set regardless
-# of `match_count` — requesting 100 or 200 both returned 40 rows. 40 is what
-# actually binds here, not an arbitrary choice; raising it needs an
-# ef_search migration (tracked separately, out of scope for this PR).
-COHORT_MATCH_COUNT = 40
+# `search_judgments_by_embedding` used to leave `hnsw.ef_search` at its default
+# of 40, which capped this pool at 40 rows whatever `match_count` asked for.
+# Migration 20261105000001 (#733) sets ef_search to max(match_count, 100), so
+# the full 100 is reachable once that migration is applied.
+COHORT_MATCH_COUNT = 100
 
 
 # ===== Request/Response Models =====
@@ -184,7 +183,7 @@ class FindPrecedentsResponse(BaseModel):
     )
     cohort: list[PrecedentCohortItem] = Field(
         description=(
-            "Raw vector candidates (up to 40) with the fields the UI groups by, "
+            "Raw vector candidates (up to 100) with the fields the UI groups by, "
             "collected before the AI ranking pass. Present even when the ranking "
             "pass returns nothing."
         ),
