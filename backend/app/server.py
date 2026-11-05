@@ -33,7 +33,6 @@ from app.api.consent import router as consent_router
 from app.api.events import router as events_router
 from app.api.invites import router as invites_router
 from app.api.legal import router as legal_router
-from app.api.research_agent import router as research_agent_v2_router
 from app.api.schema_generator import router as schema_generator_router
 from app.api.search import router as search_router
 from app.argumentation import router as argumentation_router
@@ -726,7 +725,6 @@ API_KEY_PROTECTED_ROUTERS = [
     precedents_router,
     versioning_router,
     clustering_router,
-    research_agent_v2_router,
     topic_modeling_router,
     argumentation_router,
     judge_fingerprint_router,
