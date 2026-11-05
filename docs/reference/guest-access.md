@@ -107,20 +107,38 @@ until every BFF route forwards `X-RateLimit-Identity`: until then most proxied
 traffic keys on the frontend container's address, and a 100/minute ceiling on
 that single bucket would 429 the whole pilot at once.
 
-Two known gaps remain, tracked on #565:
+#### Whose bucket a request lands in
 
-- The search BFF (`frontend/app/api/search/documents/route.ts`) forwards no
-  `X-Forwarded-For`. It does send `X-RateLimit-Identity` for signed-in users
-  (#565), so they each get their own bucket, but **anonymous** traffic sends no
-  identity and keys on the frontend container's address, one bucket shared by
-  every signed-out visitor. Enabling `TRUSTED_PROXY=true` in production
-  (2026-10-22) does not change this: with no `X-Forwarded-For` to read,
-  `get_client_ip` still falls back to the socket address. Closing the gap for
-  guests means forwarding the visitor's address from the BFF, which then has to
-  be trusted only when it arrives with a matching `X-API-Key`.
-- Cookieless anonymous searches still mint one Redis hash each. The per-IP
-  limit now bounds how fast that can happen, but the sessions are not minted
-  lazily at charge time.
+The limiter's key comes from `get_client_ip` (`backend/app/rate_limiter.py`),
+first match wins:
+
+| Caller | Key | Trusted because |
+|---|---|---|
+| Signed-in, via the BFF | `user:<sha256(user id)>` from `X-RateLimit-Identity` | arrives with a matching `X-API-Key` |
+| Signed-out, via the BFF | the visitor's address from `X-RateLimit-Client-IP` (IPv6 bucketed per `/64`) | arrives with a matching `X-API-Key` |
+| Direct, `TRUSTED_PROXY=true` | leftmost `X-Forwarded-For`, else `X-Real-IP` | the gateway overwrites both |
+| Anything else | socket address | — |
+
+The search BFFs (`frontend/app/api/search/{documents,suggest,autocomplete}/route.ts`)
+send `X-RateLimit-Client-IP` through `withClientIp` in
+`frontend/app/api/_lib/client-ip.ts`. It reads the leftmost `X-Forwarded-For`
+entry **only when the frontend container has `TRUSTED_PROXY=true`** — the same
+paired contract as the backend, since that entry is the visitor only while the
+gateway overwrites the header. `X-Real-IP` is never read on this side: Caddy
+passes a client-supplied value through. A malformed value is dropped rather
+than forwarded, and the backend validates it again, so neither side can be
+used to mint arbitrary limiter keys. The guest cookie is never a key: the
+visitor chooses it.
+
+With `TRUSTED_PROXY` unset (the template default) the BFF sends nothing and
+every signed-out visitor shares the frontend container's bucket — one script
+can then 429 search for every guest. That was the state before this fix
+(issue #565); production runs with the flag set in the shared `.env`, which
+both the backend and frontend containers load.
+
+One known gap remains, tracked on #565: cookieless anonymous searches still
+mint one Redis hash each. The per-visitor limit now bounds how fast one
+visitor can do that, but the sessions are not minted lazily at charge time.
 
 ### Semantic search stays behind sign-in
 
