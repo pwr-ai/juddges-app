@@ -29,12 +29,10 @@ PRECEDENTS_RATE_LIMIT = "30/hour"
 # `precedents` slice is still taken from the top `limit` of this same pool, so a
 # wider pool does not change what the LLM sees.
 #
-# Measured against production: `search_judgments_by_embedding` never sets
-# `hnsw.ef_search`, so the index default of 40 caps the result set regardless
-# of `match_count` — requesting 100 or 200 both returned 40 rows. 40 is what
-# actually binds here, not an arbitrary choice; raising it needs an
-# ef_search migration (tracked separately, out of scope for this PR).
-COHORT_MATCH_COUNT = 40
+# Fixed in #733: `search_judgments_by_embedding` now sets `hnsw.ef_search` to 100,
+# allowing it to return more than 40 results when requested. The cohort size is
+# increased from 40 to 100 to match the ef_search setting.
+COHORT_MATCH_COUNT = 100
 
 
 # ===== Request/Response Models =====
