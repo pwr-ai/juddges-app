@@ -18,7 +18,6 @@ const EXACT_PUBLIC_PAGES: ReadonlySet<string> = new Set([
   '/ecosystem',
   '/onboarding',
   '/status',
-  '/offline',
   '/accessibility',
   '/contact',
   '/cookies',
