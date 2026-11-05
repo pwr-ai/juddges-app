@@ -91,11 +91,21 @@ not, and it is checked before the guest allowance.
 
 This was **not** true before issue #565. `DEFAULT_RATE_LIMITS`
 (`100/minute, 1000/hour`) in `backend/app/rate_limiter.py` reads like a global
-floor, but slowapi only applies default limits through `SlowAPIMiddleware`, and
-that middleware is not registered — `backend/app/server.py` installs the limiter
-on `app.state` and its exception handler, nothing more. Between #561 and #565,
-`documents_search` therefore had no limit at all. **Adding a route to the public
-allowlist does not give it a rate limit; the `@limiter.limit` decorator does.**
+floor, but slowapi only applies default limits through `SlowAPIMiddleware`,
+which was not registered at the time. Between #561 and #565, `documents_search`
+therefore had no limit at all. **Adding a route to the public allowlist does not
+give it a rate limit; the `@limiter.limit` decorator does.**
+
+`SlowAPIMiddleware` is registered now, but on the pinned FastAPI it only matches
+routes registered directly on `app` (LangServe chains, `/docs`); every
+`include_router`-mounted route is invisible to it (#574). Those routes are
+covered by the app-wide `enforce_default_rate_limits` dependency, which charges
+`DEFAULT_RATE_LIMITS` after routing, skips routes the middleware already charged,
+routes with their own `@limiter.limit`, and `@limiter.exempt` routes. It is
+**off by default** — `RATE_LIMIT_ROUTER_BACKSTOP=true` turns it on. Leave it off
+until every BFF route forwards `X-RateLimit-Identity`: until then most proxied
+traffic keys on the frontend container's address, and a 100/minute ceiling on
+that single bucket would 429 the whole pilot at once.
 
 Two known gaps remain, tracked on #565:
 
