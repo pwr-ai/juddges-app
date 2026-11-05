@@ -117,9 +117,11 @@ services:
       - REDIS_URL=redis://:${REDIS_AUTH}@redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_AUTH}@redis:6379/0
       - CELERY_BACKEND_URL=redis://:${REDIS_AUTH}@redis:6379/0
-      # Gunicorn worker count. Unset → Dockerfile defaults to (2 * vCPU) + 1.
-      # Override in .env (GUNICORN_WORKERS=...) to pin it for the prod host.
+      # Gunicorn worker count. Unset → (2 * CPUs) + 1 from the cgroup CPU limit
+      # below (not the host core count), capped at GUNICORN_MAX_WORKERS
+      # (default 8). See backend/docker/start-gunicorn.sh (#547).
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-}
+      - GUNICORN_MAX_WORKERS=${GUNICORN_MAX_WORKERS:-8}
     # All other environment variables loaded from env_file
     labels:
       - "com.juddges.service=application"
