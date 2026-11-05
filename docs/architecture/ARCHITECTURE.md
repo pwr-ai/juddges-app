@@ -830,7 +830,6 @@ Juddges is forked from JuDDGES with the following changes:
 ### Legacy References
 
 Some code may still reference JuDDGES patterns:
-- Check for Weaviate imports (should use Supabase)
 - Look for tax-specific terminology
 - Review data transformation logic
 
