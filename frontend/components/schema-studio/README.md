@@ -386,10 +386,7 @@ The Schema Studio follows **shadcn/ui** design patterns:
 
 ### To Install (Phase 1)
 ```bash
-npm install @rjsf/core@5.20.0 \
-            @rjsf/utils@5.20.0 \
-            @rjsf/validator-ajv8@5.20.0 \
-            @dnd-kit/core@6.1.0 \
+npm install @dnd-kit/core@6.1.0 \
             @dnd-kit/sortable@8.0.0 \
             use-debounce@10.0.0
 ```
