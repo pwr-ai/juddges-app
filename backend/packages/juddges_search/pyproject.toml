@@ -6,6 +6,7 @@ authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+    "langchain>=1.0,<2",
     "langchain-community>=0.4.1",
     "langchain-openai>=1.1.14,<2",
     "termcolor>=2.5.0,<3",
