@@ -271,6 +271,8 @@ Optional:
 TRANSFORMERS_INFERENCE_URL=<embedding-service-url>  # For embeddings; unset = no embeddings (no localhost default)
 ```
 
+> **Warning:** this script calls the text2vec-transformers `/vectors` API. A TEI endpoint (`TEI_EMBEDDING_URL`) does not expose that API, so pointing `TRANSFORMERS_INFERENCE_URL` at TEI will not produce embeddings. For TEI-backed ingestion use the Celery task `ingestion.ingest_judgments` instead.
+
 ## Integration with Docker
 
 ```bash
