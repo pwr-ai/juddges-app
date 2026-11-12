@@ -329,6 +329,38 @@ async def test_anonymous_search_is_throttled_by_the_per_ip_limiter(
     assert fake_search_service.calls == allowed_per_window
 
 
+async def test_one_anonymous_visitor_cannot_exhaust_search_for_another(
+    guest_client, fake_search_service, monkeypatch
+):
+    """Per-visitor, not per-container: the BFF's client IP keys the bucket (#565).
+
+    Before this, every BFF-proxied anonymous search shared the frontend
+    container's socket address, so one script could 429 search for everybody.
+    """
+    from app.server import app
+
+    monkeypatch.delenv("REDIS_HOST", raising=False)
+
+    allowed_per_window = int(SEARCH_DOCUMENTS_RATE_LIMIT.split("/")[0])
+    abuser = {"X-RateLimit-Client-IP": "203.0.113.5"}
+    bystander = {"X-RateLimit-Client-IP": "198.51.100.7"}
+    app.state.limiter.reset()
+    app.state.limiter.enabled = True
+    try:
+        for _ in range(allowed_per_window):
+            await guest_client.get("/api/search/documents", headers=abuser)
+        abuser_refused = await guest_client.get("/api/search/documents", headers=abuser)
+        bystander_response = await guest_client.get(
+            "/api/search/documents", headers=bystander
+        )
+    finally:
+        app.state.limiter.enabled = False
+        app.state.limiter.reset()
+
+    assert abuser_refused.status_code == 429
+    assert bystander_response.status_code == 200
+
+
 async def test_signed_in_search_is_not_throttled_by_the_guest_allowance(
     authenticated_client, fake_redis, fake_search_service
 ):

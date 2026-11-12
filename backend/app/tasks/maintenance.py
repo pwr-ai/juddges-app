@@ -210,7 +210,8 @@ def vacuum_analyze_judgments(self: Task) -> dict[str, Any]:
     Keeps HNSW index statistics and query planner costs up to date.
     Designed to run weekly via Celery Beat.
     """
-    import psycopg2
+    # psycopg (v3) — the declared driver; psycopg2 is not a project dependency.
+    import psycopg
 
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -218,8 +219,8 @@ def vacuum_analyze_judgments(self: Task) -> dict[str, Any]:
         return {"status": "skipped", "reason": "no_database_url"}
 
     try:
-        conn = psycopg2.connect(database_url)
-        conn.autocommit = True
+        # VACUUM cannot run inside a transaction block.
+        conn = psycopg.connect(database_url, autocommit=True)
         cur = conn.cursor()
         logger.info("Running VACUUM ANALYZE on judgments table")
         cur.execute("VACUUM ANALYZE public.judgments")
