@@ -37,6 +37,7 @@ dependencies = [
     "cachetools>=5.5,<8.0",
     "defusedxml>=0.7.1,<0.8",
     "email-validator>=2.0.0,<3.0.0",
+    "weaviate-client>=4.16,<5",
 ]
 
 [project.optional-dependencies]

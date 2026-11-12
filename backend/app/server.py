@@ -72,6 +72,7 @@ from app.rate_limiter import (
 )
 from app.reasoning_lines import router as reasoning_lines_router
 from app.schemas_pkg import router as schemas_router
+from app.search_v2 import router as search_v2_router
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
 from app.topic_modeling import router as topic_modeling_router
@@ -745,6 +746,7 @@ API_KEY_PROTECTED_ROUTERS = [
     timeline_router,
     blog_router,
     search_router,
+    search_v2_router,
     reasoning_lines_router,
 ]
 for _router in API_KEY_PROTECTED_ROUTERS:
