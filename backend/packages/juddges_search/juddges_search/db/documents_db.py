@@ -83,6 +83,11 @@ _JUDGMENT_COHORT_COLS = (
     "base_appeal_outcome, base_sentences_received, base_convict_offences"
 )
 
+# Precedents metadata filters (#734): the vector RPC's slim rows carry neither
+# `court_name` nor the cited legislation, so `court_names` / `legal_bases`
+# filters read them from `judgments` (the source of truth) in one batched select.
+_JUDGMENT_FILTER_COLS = "id, court_name, cited_legislation"
+
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -254,6 +259,27 @@ class SupabaseVectorDB(SupabaseClientMixin):
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch cohort fields: {e}")
             return []
+
+    async def get_filter_fields_by_ids(
+        self,
+        document_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        """Fetch the precedents-filter projection for a batch of judgment UUIDs (#734).
+
+        One round trip for the whole candidate pool. Unlike the cohort lookup,
+        a database error is **not** swallowed: an empty result here would make
+        the caller's filter drop every candidate, which is indistinguishable
+        from "nothing matched". The caller turns the error into a 503.
+
+        Returns rows deduplicated by `judgments.id`, in PostgREST's order.
+        """
+        uuid_ids = [i for i in document_ids if _UUID_RE.match(i)]
+        if not uuid_ids:
+            return []
+
+        r = self.client.table("judgments").select(_JUDGMENT_FILTER_COLS).in_("id", uuid_ids).execute()
+        rows_by_id: dict[str, dict[str, Any]] = {row["id"]: row for row in (r.data or [])}
+        return list(rows_by_id.values())
 
     async def get_document_by_case_number(self, case_number: str) -> dict[str, Any] | None:
         """Exact-match lookup on `judgments.case_number` (#724).
