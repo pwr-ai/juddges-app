@@ -511,11 +511,13 @@ the backend's LLM resolvers use: OpenAI (`get_llm()`) and, when set,
 | `unhealthy` | Key missing or rejected (401/403, e.g. `invalid_project`), or an endpoint is unreachable (e.g. `LLM_BASE_URL=http://localhost:11434/v1` inside a container) |
 | `degraded` | 429 (rate limit / `insufficient_quota`) or another unexpected HTTP status |
 
-`services.llm.metadata.targets` has the per-endpoint `http_status`,
+`services.llm.metadata.targets` has the per-endpoint `endpoint` (scheme, host
+and port only -- URL userinfo, path and query are stripped), `http_status`,
 `error_code` and `detail`; the key itself is never included. An unhealthy LLM
 makes the overall status `degraded`, not `unhealthy` -- search keeps working
 without it -- so read `services.llm` rather than the top-level status. The
-probe result is cached for `LLM_HEALTH_CACHE_TTL_SECONDS` (default `300`);
+probe result is cached for `LLM_HEALTH_CACHE_TTL_SECONDS` (default `300`) when
+healthy and for `LLM_HEALTH_FAILURE_CACHE_TTL_SECONDS` (default `30`) when not;
 after rotating the key, call `POST /health/status/invalidate` to re-probe now.
 
 ```bash

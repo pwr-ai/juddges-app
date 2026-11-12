@@ -376,6 +376,7 @@ def llm_env(monkeypatch):
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.delenv("OPENAI_API_BASE", raising=False)
     monkeypatch.delenv("LLM_HEALTH_CACHE_TTL_SECONDS", raising=False)
+    monkeypatch.delenv("LLM_HEALTH_FAILURE_CACHE_TTL_SECONDS", raising=False)
     yield monkeypatch
     reset_llm_health_cache()
 
@@ -469,6 +470,116 @@ class TestCheckLlm:
             second = await check_llm()
         assert first.status == ServiceStatus.UNHEALTHY
         assert second.status == ServiceStatus.HEALTHY
+
+    @pytest.mark.asyncio
+    async def test_url_credentials_never_appear_in_payload(self, llm_env):
+        import httpx
+
+        llm_env.setenv("LLM_BASE_URL", "http://svcuser:s3cretpw@llm.internal:8000/v1")
+        client = _llm_client(_response(200), httpx.ConnectError("refused"))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        payload = result.model_dump_json()
+        assert "s3cretpw" not in payload
+        assert "svcuser" not in payload
+        assert result.metadata["targets"]["default"]["endpoint"] == (
+            "http://llm.internal:8000"
+        )
+        assert "llm.internal:8000" in (result.message or "")
+
+    def test_safe_endpoint_strips_userinfo_path_and_query(self):
+        from app.health.checks import _safe_endpoint
+
+        assert (
+            _safe_endpoint("https://u:p@host.example:9/v1?token=x")
+            == "https://host.example:9"
+        )
+        assert _safe_endpoint("not a url") == "<invalid url>"
+
+    @pytest.mark.asyncio
+    async def test_probe_sends_same_key_as_real_client_to_each_base(self, llm_env):
+        """get_llm/get_default_llm both use OPENAI_API_KEY for their base URL."""
+        llm_env.setenv("LLM_BASE_URL", "http://llm.internal:8000/v1")
+        client = _llm_client(_response(200), _response(200))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            await check_llm()
+        calls = {c.args[0]: c.kwargs["headers"] for c in client.get.call_args_list}
+        assert calls["https://api.openai.com/v1/models"] == {
+            "Authorization": "Bearer sk-test-secret"
+        }
+        assert calls["http://llm.internal:8000/v1/models"] == {
+            "Authorization": "Bearer sk-test-secret"
+        }
+
+    @pytest.mark.asyncio
+    async def test_missing_key_is_unhealthy_for_custom_base_too(self, llm_env):
+        """The real client cannot be built without a key, so nothing is probed."""
+        llm_env.delenv("OPENAI_API_KEY")
+        llm_env.setenv("LLM_BASE_URL", "http://llm.internal:8000/v1")
+        client = _llm_client()
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.status == ServiceStatus.UNHEALTHY
+        assert result.metadata["targets"]["default"]["status"] == "unhealthy"
+        client.get.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_concurrent_cold_polls_probe_once(self, llm_env):
+        import asyncio
+
+        async def slow_get(*args, **kwargs):
+            await asyncio.sleep(0.05)
+            return _response(200)
+
+        client = _llm_client()
+        client.get = AsyncMock(side_effect=slow_get)
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            results = await asyncio.gather(*(check_llm() for _ in range(5)))
+        assert client.get.call_count == 1
+        assert all(r is results[0] for r in results)
+
+    @pytest.mark.asyncio
+    async def test_failure_cached_briefly_healthy_cached_long(self, llm_env):
+        client = _llm_client(_response(401), _response(200), _response(500))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            with patch("app.health.checks.time.monotonic", return_value=1000.0):
+                first = await check_llm()
+            # 10s later: still inside the 30s failure TTL -> cached.
+            with patch("app.health.checks.time.monotonic", return_value=1010.0):
+                assert await check_llm() is first
+            # 31s later: failure expired -> re-probed, now healthy.
+            with patch("app.health.checks.time.monotonic", return_value=1031.0):
+                healthy = await check_llm()
+            assert healthy.status == ServiceStatus.HEALTHY
+            # healthy result is still cached 200s later (TTL 300s).
+            with patch("app.health.checks.time.monotonic", return_value=1231.0):
+                assert await check_llm() is healthy
+            # ...but not after 300s.
+            with patch("app.health.checks.time.monotonic", return_value=1332.0):
+                last = await check_llm()
+        assert last.status == ServiceStatus.DEGRADED
+        assert client.get.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_non_json_401_body_is_still_unhealthy(self, llm_env):
+        response = _response(401)
+        response.json = MagicMock(side_effect=ValueError("not json"))
+        client = _llm_client(response)
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.status == ServiceStatus.UNHEALTHY
+        assert "API key rejected (HTTP 401)" in (result.error or "")
+        assert "error_code" not in result.metadata["targets"]["openai"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status_code", [500, 502, 503])
+    async def test_5xx_is_degraded(self, llm_env, status_code):
+        client = _llm_client(_response(status_code))
+        with patch("app.health.checks.httpx.AsyncClient", return_value=client):
+            result = await check_llm()
+        assert result.status == ServiceStatus.DEGRADED
+        assert f"unexpected HTTP {status_code}" in (result.message or "")
+        assert result.error is None
 
 
 # ---------------------------------------------------------------------------

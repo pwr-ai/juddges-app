@@ -4,6 +4,7 @@ import asyncio
 import os
 import time
 from datetime import UTC, datetime
+from urllib.parse import urlsplit
 
 import httpx
 import redis.asyncio as aioredis
@@ -490,10 +491,15 @@ async def check_meilisearch(timeout: float = 3.0) -> ServiceHealth:
 # ``GET {base_url}/models``: it authenticates the key and proves the endpoint
 # is reachable without generating a single token. The result is cached for
 # ``LLM_HEALTH_CACHE_TTL_SECONDS`` (default 300s) on top of the 30s status
-# cache, so polling ``/health/status`` never hammers the provider.
+# cache, so polling ``/health/status`` never hammers the provider. Non-healthy
+# results are cached for the much shorter ``LLM_HEALTH_FAILURE_CACHE_TTL_SECONDS``
+# (default 30s) so recovery (e.g. a rotated key) shows up quickly. An
+# ``asyncio.Lock`` with a double-checked re-read keeps concurrent cold polls
+# down to a single probe.
 
 _OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1"
-_llm_health_cache: tuple[float, ServiceHealth] | None = None
+_llm_health_cache: tuple[float, float, ServiceHealth] | None = None  # (at, ttl, health)
+_llm_health_lock: asyncio.Lock | None = None
 
 _STATUS_SEVERITY = {
     ServiceStatus.HEALTHY: 0,
@@ -510,10 +516,37 @@ def _llm_health_ttl_seconds() -> float:
         return 300.0
 
 
+def _llm_failure_ttl_seconds() -> float:
+    try:
+        return float(os.getenv("LLM_HEALTH_FAILURE_CACHE_TTL_SECONDS", "30"))
+    except ValueError:
+        return 30.0
+
+
 def reset_llm_health_cache() -> None:
     """Drop the cached LLM probe so the next check re-probes the provider."""
-    global _llm_health_cache
+    global _llm_health_cache, _llm_health_lock
     _llm_health_cache = None
+    _llm_health_lock = None
+
+
+def _safe_endpoint(url: str) -> str:
+    """Reduce a URL to ``scheme://host[:port]`` -- no userinfo, path or query.
+
+    ``LLM_BASE_URL`` may embed credentials (``http://user:pw@host/v1``); the
+    status payload and logs must never carry them.
+    """
+    try:
+        parts = urlsplit(url)
+        host = parts.hostname or ""
+        if ":" in host:  # IPv6 literal
+            host = f"[{host}]"
+        port = f":{parts.port}" if parts.port else ""
+    except ValueError:
+        return "<invalid url>"
+    if not parts.scheme or not host:
+        return "<invalid url>"
+    return f"{parts.scheme}://{host}{port}"
 
 
 def _llm_targets() -> dict[str, str]:
@@ -553,16 +586,23 @@ def _provider_error_code(response: httpx.Response) -> str | None:
 async def _probe_llm_target(
     client: httpx.AsyncClient, name: str, base_url: str, api_key: str | None
 ) -> dict:
-    """Probe one LLM endpoint. Returns a JSON-safe dict; never contains the key."""
-    result: dict = {"base_url": base_url}
-    if name == "openai" and not api_key:
+    """Probe one LLM endpoint. Returns a JSON-safe dict; never contains the key
+    or any URL userinfo.
+
+    Auth mirrors the real client: ``get_llm()`` and ``get_default_llm()`` both
+    build ``ChatOpenAI`` without an explicit ``api_key``, so each sends
+    ``OPENAI_API_KEY`` as a Bearer token to its base URL (``LLM_BASE_URL`` for
+    the default one) and cannot be constructed at all without it.
+    """
+    result: dict = {"endpoint": _safe_endpoint(base_url)}
+    if not api_key:
         result.update(
             status=ServiceStatus.UNHEALTHY.value,
             detail="OPENAI_API_KEY is not set",
         )
         return result
 
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    headers = {"Authorization": f"Bearer {api_key}"}
     try:
         response = await client.get(f"{base_url}/models", headers=headers)
     except httpx.TimeoutException:
@@ -618,12 +658,30 @@ async def check_llm(timeout: float = 5.0) -> ServiceHealth:
         ServiceHealth: UNHEALTHY when a key is rejected (401/403), missing, or
         an endpoint is unreachable; DEGRADED on 429/other errors; else HEALTHY.
     """
+    global _llm_health_lock
+    cached = _llm_cache_lookup()
+    if cached is not None:
+        return cached
+    if _llm_health_lock is None:
+        _llm_health_lock = asyncio.Lock()
+    async with _llm_health_lock:
+        cached = _llm_cache_lookup()  # a concurrent caller may have probed
+        if cached is not None:
+            return cached
+        return await _probe_llm_and_cache(timeout)
+
+
+def _llm_cache_lookup() -> ServiceHealth | None:
+    if _llm_health_cache is None:
+        return None
+    at, ttl, health = _llm_health_cache
+    return health if time.monotonic() - at < ttl else None
+
+
+async def _probe_llm_and_cache(timeout: float) -> ServiceHealth:
     global _llm_health_cache
     ttl = _llm_health_ttl_seconds()
     now = time.monotonic()
-    if _llm_health_cache is not None and now - _llm_health_cache[0] < ttl:
-        return _llm_health_cache[1]
-
     start_time = time.time()
     targets = _llm_targets()
     api_key = os.getenv("OPENAI_API_KEY") or None
@@ -643,7 +701,7 @@ async def check_llm(timeout: float = 5.0) -> ServiceHealth:
         key=_STATUS_SEVERITY.__getitem__,
     )
     failures = [
-        f"{name} ({r['base_url']}): {r['detail']}"
+        f"{name} ({r['endpoint']}): {r['detail']}"
         for name, r in results.items()
         if r["status"] != ServiceStatus.HEALTHY.value
     ]
@@ -665,7 +723,8 @@ async def check_llm(timeout: float = 5.0) -> ServiceHealth:
         last_checked=datetime.now(UTC),
         metadata={"targets": results, "cache_ttl_seconds": ttl},
     )
-    _llm_health_cache = (now, health)
+    entry_ttl = ttl if worst == ServiceStatus.HEALTHY else _llm_failure_ttl_seconds()
+    _llm_health_cache = (now, entry_ttl, health)
     return health
 
 
