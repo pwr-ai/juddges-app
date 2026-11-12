@@ -462,7 +462,7 @@ Need to release a new version?
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
 | `frontend` | `juddges-frontend` | 3006 | Next.js standalone server |
-| `backend` | `juddges-backend` | 8002 | FastAPI with 12 Gunicorn workers |
+| `backend` | `juddges-backend` | 8002 | FastAPI under Gunicorn (worker count below) |
 | `backend-worker` | `juddges-backend` (shared) | — | Celery async task worker |
 | `backend-beat` | `juddges-backend` (shared) | — | Celery periodic task scheduler |
 | `meilisearch` | `getmeili/meilisearch:v1.13` | 7700 | Autocomplete search engine |
@@ -514,12 +514,20 @@ docker inspect --format='{{range .State.Health.Log}}{{.Output}}{{end}}' juddges-
 ### Backend Worker Configuration
 
 ```
-Workers:           12 uvicorn workers
+Workers:           GUNICORN_WORKERS, else min((2 * CPU limit) + 1, GUNICORN_MAX_WORKERS=8)
 Timeout:           120 seconds
 Graceful timeout:  30 seconds
 Keep-alive:        5 seconds
 Max requests:      1000 per worker (with 50 jitter)
 ```
+
+The entrypoint is `backend/docker/start-gunicorn.sh`. When `GUNICORN_WORKERS`
+is unset, the CPU count comes from the container's cgroup quota (the compose
+`cpus: '8'` limit), not `nproc` -- `nproc` reports every host core and spawned
+97 workers on a 48-core host (#547). The result is capped at
+`GUNICORN_MAX_WORKERS` (default 8); an explicit `GUNICORN_WORKERS` is used
+as-is. The log line `start-gunicorn: starting with N workers` records the
+resolved value.
 
 ---
 

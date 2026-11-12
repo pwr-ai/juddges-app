@@ -82,7 +82,7 @@ Provenance matters when you quote a result. Only the `full_text` section of `get
 
 ## 5. Revoke a key
 
-In **Settings > MCP access**, click the bin icon next to the key and confirm. Revocation is checked on every request, so it takes effect immediately and cannot be undone. The row is kept (marked **Revoked**) for the audit trail.
+In **Settings > MCP access**, click the bin icon next to the key and confirm. Revocation takes effect immediately in a fresh process. A backend that already resolved the key may keep accepting a revoked or expired key for up to `MCP_KEY_CACHE_TTL_SECONDS` (default 30 s, `0` disables the cache); it cannot be undone. The row is kept (marked **Revoked**) for the audit trail.
 
 Afterwards a client using that key receives `401 Unauthorized`:
 
@@ -116,7 +116,7 @@ Two limits apply. Both are configured by environment variable on the backend; se
 
     So Caddy replaces a client-supplied value by default and only appends once the immediate peer is a configured trusted proxy. The explicit `header_up` wins either way. That is why it is set: not because the flag was spoofable on this gateway as configured, but so the guarantee stops depending on a `trusted_proxies` line, a Caddy version, or the absence of a CDN. `X-Real-IP` is a separate matter -- Caddy passes it through untouched, it **was** spoofable in that measurement, and `get_client_ip` falls back to it when `X-Forwarded-For` is absent; the gateway overwrites it too.
 
-    Note that `TRUSTED_PROXY` also changes the key of every other IP-based rate limit in the backend, so it is a deployment-wide decision. In this deployment the blast radius is narrow, because the key only changes for requests that reach the backend with an `X-Forwarded-For` header, i.e. those arriving directly through the gateway at `juddges-api.augustyniak.ai`. Browser traffic goes through the frontend BFF, which forwards neither `X-Forwarded-For` nor `X-Real-IP`; signed-in BFF requests key on `X-RateLimit-Identity` and guest BFF requests still key on the frontend container's address, exactly as before.
+    Note that `TRUSTED_PROXY` also changes the key of every other IP-based rate limit in the backend, so it is a deployment-wide decision. In this deployment the blast radius is narrow, because the key only changes for requests that reach the backend with an `X-Forwarded-For` header, i.e. those arriving directly through the gateway at `juddges-api.augustyniak.ai`. Browser traffic goes through the frontend BFF, which forwards neither `X-Forwarded-For` nor `X-Real-IP`; signed-in BFF requests key on `X-RateLimit-Identity`, and guest requests to the search BFFs key on `X-RateLimit-Client-IP`, which the BFF fills from its own `X-Forwarded-For` only when the frontend container also has `TRUSTED_PROXY=true` (see [guest access](../reference/guest-access.md#whose-bucket-a-request-lands-in)).
 
 !!! success "Enabled in production since 2026-10-22"
     Production runs with `TRUSTED_PROXY=true`, paired with `header_up X-Forwarded-For {remote_host}` and `header_up X-Real-IP {remote_host}` on the `juddges-api.augustyniak.ai` site in the caddy-local gateway (`data_stack`: `docker/infra/caddy-local/public-domains.caddyfile`). Caddy is the true edge there -- the DNS record is DNS-only, with no CDN in front -- so `{remote_host}` is the real client address. `X-Real-IP` is overwritten too, because `get_client_ip` falls back to it when `X-Forwarded-For` is absent and would otherwise trust a client-supplied value.

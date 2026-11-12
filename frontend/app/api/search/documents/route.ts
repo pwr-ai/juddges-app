@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 
+import { withClientIp } from "@/app/api/_lib/client-ip";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import {
   GUEST_SEARCHES_REMAINING_HEADER,
@@ -90,6 +91,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
     }
+    // Key anonymous visitors on their own address rather than this
+    // container's (issue #565); a signed-in identity still takes precedence.
+    withClientIp(headers, request);
 
     // Forward the Supabase session so the backend can attribute the analytics
     // row to the logged-in user. Anonymous traffic stays anonymous.
@@ -106,9 +110,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // header arrives with a matching X-API-Key; otherwise it falls back to the
     // socket address, which for BFF-proxied traffic is this container — one
     // bucket shared by every visitor. Hashed so the backend's rate-limit keys
-    // never carry a raw user id. Anonymous traffic sends nothing and keeps
-    // sharing the container bucket: the guest cookie is chosen by the caller,
-    // so it cannot serve as an identity.
+    // never carry a raw user id. Anonymous traffic keys on the visitor's
+    // address instead (withClientIp above), never on the guest cookie: that is
+    // chosen by the caller, so it cannot serve as an identity.
     const userId = sessionData.session?.user?.id;
     if (accessToken && userId) {
       headers["X-RateLimit-Identity"] = createHash("sha256")

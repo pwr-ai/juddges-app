@@ -17,7 +17,9 @@ so it can neither mint nor revoke a key.
 """
 
 import hashlib
+import os
 import secrets
+import time
 from datetime import UTC, datetime, timedelta
 
 from loguru import logger
@@ -29,7 +31,28 @@ THROTTLE_SECONDS = 300
 _KEY_BYTES = 32
 _DISPLAY_PREFIX_LENGTH = 16
 _TABLE = "mcp_api_keys"
-_LOOKUP_COLUMNS = "id, user_id, scopes, expires_at, revoked_at"
+_LOOKUP_COLUMNS = "id, user_id, scopes, expires_at, revoked_at, last_used_at"
+
+
+_CACHE_TTL_ENV = "MCP_KEY_CACHE_TTL_SECONDS"
+_DEFAULT_CACHE_TTL_SECONDS = 30.0
+_CACHE_MAX_ENTRIES = 1024
+
+# token_hash -> (monotonic deadline, principal). Successful resolutions only,
+# keyed on the hash so the plaintext key is never held. A revoked or expired
+# key stays usable for at most the TTL; MCP_KEY_CACHE_TTL_SECONDS=0 disables.
+_principal_cache: dict[str, tuple[float, AuthenticatedUser]] = {}
+
+
+def clear_principal_cache() -> None:
+    _principal_cache.clear()
+
+
+def _cache_ttl() -> float:
+    try:
+        return max(0.0, float(os.getenv(_CACHE_TTL_ENV, _DEFAULT_CACHE_TTL_SECONDS)))
+    except ValueError:
+        return _DEFAULT_CACHE_TTL_SECONDS
 
 
 def generate_mcp_key() -> str:
@@ -70,12 +93,21 @@ def resolve_mcp_principal(token: str) -> AuthenticatedUser | None:
     if not token or not token.startswith(MCP_KEY_PREFIX):
         return None
 
+    token_hash = hash_mcp_key(token)
+    ttl = _cache_ttl()
+    if ttl:
+        cached = _principal_cache.get(token_hash)
+        if cached is not None:
+            if time.monotonic() < cached[0]:
+                return cached[1]
+            _principal_cache.pop(token_hash, None)
+
     try:
         response = (
             get_admin_supabase_client()
             .table(_TABLE)
             .select(_LOOKUP_COLUMNS)
-            .eq("token_hash", hash_mcp_key(token))
+            .eq("token_hash", token_hash)
             .execute()
         )
         rows = response.data or []
@@ -97,6 +129,11 @@ def resolve_mcp_principal(token: str) -> AuthenticatedUser | None:
         )
         user.mcp_scopes = list(row.get("scopes") or [])
         user.mcp_key_id = row["id"]
+        user.mcp_last_used_at = row.get("last_used_at")
+        if ttl:
+            if len(_principal_cache) >= _CACHE_MAX_ENTRIES:
+                _principal_cache.clear()
+            _principal_cache[token_hash] = (time.monotonic() + ttl, user)
         return user
     except Exception as e:
         # Deliberately NOT logger.exception / opt(exception=...): loguru's
@@ -124,20 +161,25 @@ def should_record_use(last_used_at: str | None, now: datetime | None = None) -> 
     return reference - previous >= timedelta(seconds=THROTTLE_SECONDS)
 
 
-def touch_key(key_id: str) -> None:
+def touch_key(key_id: str, last_used_at: str | None = None) -> None:
     """Record a use of `key_id`, at most once per THROTTLE_SECONDS.
+
+    `last_used_at` is what resolution already read; when it is recent no query
+    is made at all. Otherwise a single conditional UPDATE does the throttle
+    server-side, so a race between two requests writes once.
 
     Runs in a background task: a tool call must not wait on this write, and a
     failure here must never fail the call.
     """
+    if last_used_at and not should_record_use(last_used_at):
+        return
     try:
-        client = get_admin_supabase_client()
-        current = client.table(_TABLE).select("last_used_at").eq("id", key_id).execute()
-        rows = current.data or []
-        if rows and not should_record_use(rows[0].get("last_used_at")):
-            return
-        client.table(_TABLE).update({"last_used_at": datetime.now(UTC).isoformat()}).eq(
-            "id", key_id
+        now = datetime.now(UTC)
+        cutoff = (now - timedelta(seconds=THROTTLE_SECONDS)).isoformat()
+        get_admin_supabase_client().table(_TABLE).update(
+            {"last_used_at": now.isoformat()}
+        ).eq("id", key_id).or_(
+            f'last_used_at.is.null,last_used_at.lt."{cutoff}"'
         ).execute()
     except Exception as e:
         logger.warning(

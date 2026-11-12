@@ -297,6 +297,56 @@ class TestIncrementalSyncEmbeds:
         assert sent_docs[0]["_vectors"] == {"bge-m3": fake_vec}
 
 
+class _FakeJudgmentsQuery:
+    """Minimal PostgREST query-builder double supporting keyset pagination only.
+
+    It deliberately has no ``range`` method: offset pagination raises
+    ``AttributeError`` so a regression to ``.range(offset, ...)`` fails loudly.
+    """
+
+    def __init__(self, rows, calls):
+        self._rows = rows
+        self._calls = calls
+        self._order = None
+        self._after = None
+        self._limit = None
+
+    def select(self, *_a, **_k):
+        return self
+
+    def order(self, column, **_k):
+        self._order = column
+        return self
+
+    def gt(self, column, value):
+        assert column == "id"
+        self._after = str(value)
+        return self
+
+    def limit(self, n):
+        self._limit = n
+        return self
+
+    def execute(self):
+        assert self._order == "id"
+        assert self._limit is not None
+        rows = sorted(self._rows, key=lambda r: str(r["id"]))
+        if self._after is not None:
+            rows = [r for r in rows if str(r["id"]) > self._after]
+        page = rows[: self._limit]
+        self._calls.append([r["id"] for r in page])
+        return MagicMock(data=page)
+
+
+def _fake_supabase(rows):
+    """Supabase client double serving ``rows`` through keyset-only queries."""
+    calls = []
+    sb = MagicMock()
+    sb.table.side_effect = lambda _name: _FakeJudgmentsQuery(rows, calls)
+    sb.calls = calls
+    return sb
+
+
 class TestFullSyncEmbeds:
     def test_each_batch_doc_gets_vectors(self):
         from app.tasks.meilisearch_sync import full_sync_judgments_to_meilisearch
@@ -340,11 +390,7 @@ class TestFullSyncEmbeds:
         fake_vec = [0.1] * 1024
         batch_vectors = [fake_vec, fake_vec, fake_vec]
 
-        sb = MagicMock()
-        sb.table().select().order().range().execute.side_effect = [
-            MagicMock(data=rows),
-            MagicMock(data=[]),  # second page empty → loop exits
-        ]
+        sb = _fake_supabase(rows)
 
         service = MagicMock()
         service.admin_configured = True
@@ -410,10 +456,7 @@ class TestFullSyncEmbeds:
         redis_lock = MagicMock()
         redis_lock.set.return_value = True  # lock acquired
 
-        sb = MagicMock()
-        sb.table().select().order().range().execute.side_effect = [
-            MagicMock(data=[]),  # empty first page → loop exits immediately
-        ]
+        sb = _fake_supabase([])  # empty first page → loop exits immediately
 
         with (
             patch("app.tasks.meilisearch_sync.supabase_client", sb),
@@ -426,6 +469,92 @@ class TestFullSyncEmbeds:
 
         assert result["status"] == "completed"
         redis_lock.delete.assert_called_once()
+
+
+@pytest.mark.unit
+class TestFullSyncKeyset:
+    @staticmethod
+    def _rows(n):
+        same_ts = "2026-01-01T00:00:00+00:00"
+        return [
+            {"id": uuid4(), "case_number": f"C{i}", "created_at": same_ts}
+            for i in range(n)
+        ]
+
+    @staticmethod
+    def _run(sb, batch_size, record_failed=None, upsert_side_effect=None):
+        from app.tasks.meilisearch_sync import full_sync_judgments_to_meilisearch
+
+        service = MagicMock()
+        service.admin_configured = True
+        service.aclose = AsyncMock()
+        service.upsert_documents = AsyncMock(
+            return_value={"taskUid": 1}, side_effect=upsert_side_effect
+        )
+        service.wait_for_task = AsyncMock(return_value={"status": "succeeded"})
+        update_state = MagicMock()
+        with (
+            patch("app.tasks.meilisearch_sync.supabase_client", sb),
+            patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+            patch("app.tasks.meilisearch_sync._get_redis", return_value=None),
+            patch(
+                "app.services.meilisearch_embeddings.embed_texts",
+                side_effect=lambda texts, *a, **k: [[0.1] * 4] * len(texts),
+            ),
+            patch("app.tasks.meilisearch_sync.record_sync_completed"),
+            patch(
+                "app.tasks.meilisearch_sync.record_sync_failed",
+                record_failed or MagicMock(),
+            ),
+            patch("asyncio.run", side_effect=lambda c: _run_coro(c)),
+            patch.object(
+                full_sync_judgments_to_meilisearch, "update_state", update_state
+            ),
+        ):
+            try:
+                result = full_sync_judgments_to_meilisearch.run(batch_size=batch_size)
+            except Exception:
+                return service, update_state, None
+        return service, update_state, result
+
+    def test_full_sync_identical_created_at_synced_exactly_once(self):
+        rows = self._rows(7)  # 7 rows sharing one created_at, batch size 3
+        sb = _fake_supabase(rows)
+        service, _, result = self._run(sb, batch_size=3)
+
+        sent_ids = [
+            doc["id"]
+            for call in service.upsert_documents.call_args_list
+            for doc in call.args[0]
+        ]
+        assert sorted(sent_ids) == sorted(str(r["id"]) for r in rows)
+        assert len(sent_ids) == len(set(sent_ids)) == 7
+        assert result == {"status": "completed", "total_synced": 7}
+
+    def test_full_sync_progress_meta_per_batch(self):
+        sb = _fake_supabase(self._rows(5))
+        _, update_state, _ = self._run(sb, batch_size=2)
+
+        metas = [c.kwargs["meta"] for c in update_state.call_args_list]
+        assert metas == [
+            {"synced": 2, "current_batch": 2},
+            {"synced": 4, "current_batch": 2},
+            {"synced": 5, "current_batch": 1},
+        ]
+        assert all(c.kwargs["state"] == "PROGRESS" for c in update_state.call_args_list)
+
+    def test_full_sync_failure_records_and_reraises(self):
+        sb = _fake_supabase(self._rows(3))
+        record_failed = MagicMock()
+        service, _, result = self._run(
+            sb,
+            batch_size=2,
+            record_failed=record_failed,
+            upsert_side_effect=RuntimeError("meili down"),
+        )
+        assert result is None  # exception propagated
+        record_failed.assert_called_once_with("meili down")
+        service.aclose.assert_awaited()
 
 
 class TestMeilisearchIndexSettings:
@@ -790,15 +919,7 @@ class TestSyncTasksSurviveSharedHttpClient:
             service = MeiliSearchService(
                 base_url=fake.url, api_key="k", admin_key="k", index_name="judgments"
             )
-            batches = [
-                [self._row(0), self._row(1)],
-                [self._row(2), self._row(3)],
-                [],
-            ]
-            sb = MagicMock()
-            sb.table().select().order().range().execute.side_effect = [
-                MagicMock(data=b) for b in batches
-            ]
+            sb = _fake_supabase([self._row(i) for i in range(4)])
             embed_mock = MagicMock(
                 side_effect=lambda texts, *a, **k: [[0.1] * 4] * len(texts)
             )

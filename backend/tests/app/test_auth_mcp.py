@@ -8,6 +8,7 @@ import pytest
 from app.core.auth_mcp import (
     MCP_KEY_PREFIX,
     THROTTLE_SECONDS,
+    clear_principal_cache,
     generate_mcp_key,
     hash_mcp_key,
     key_prefix,
@@ -15,6 +16,15 @@ from app.core.auth_mcp import (
     should_record_use,
     touch_key,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolated_principal_cache(monkeypatch):
+    # Cache off unless a test opts in, and never shared between tests.
+    monkeypatch.setenv("MCP_KEY_CACHE_TTL_SECONDS", "0")
+    clear_principal_cache()
+    yield
+    clear_principal_cache()
 
 
 @pytest.mark.unit
@@ -56,7 +66,7 @@ class TestKeyMaterial:
 
 
 @pytest.mark.unit
-class TestResolutionFailureDoesNotLogTheKey:
+class TestResolutionFailureDoesNotLogPlaintext:
     """A traceback annotated with frame locals would write the plaintext key to the log."""
 
     def _capture(self):
@@ -73,7 +83,7 @@ class TestResolutionFailureDoesNotLogTheKey:
         )
         return logger, captured, sink_id
 
-    def test_key_never_reaches_the_log_when_the_backend_is_unconfigured(self):
+    def test_does_not_log_plaintext_when_the_backend_is_unconfigured(self):
         key = f"{MCP_KEY_PREFIX}SUPERSECRETPLAINTEXT1234567890abcdef"
         logger, captured, sink_id = self._capture()
         try:
@@ -93,7 +103,7 @@ class TestResolutionFailureDoesNotLogTheKey:
         assert MCP_KEY_PREFIX not in output
         assert hash_mcp_key(key) not in output
 
-    def test_key_never_reaches_the_log_when_the_query_fails_midway(self):
+    def test_does_not_log_plaintext_when_the_query_fails_midway(self):
         key = f"{MCP_KEY_PREFIX}SUPERSECRETPLAINTEXT1234567890abcdef"
         logger, captured, sink_id = self._capture()
         client = MagicMock()
@@ -265,37 +275,125 @@ class TestLastUsedThrottle:
         assert should_record_use(datetime.now().isoformat()) is True
 
 
-def _touch_client(last_used_at):
-    """A Supabase admin client stub whose select().eq().execute() yields one row."""
-    client = MagicMock()
-    execute = MagicMock()
-    execute.data = [{"last_used_at": last_used_at}]
-    client.table.return_value.select.return_value.eq.return_value.execute.return_value = execute
-    return client
+def _touch_client():
+    """A Supabase admin client stub for the single conditional update."""
+    return MagicMock()
+
+
+def _all_calls(client):
+    return [c[0] for c in client.mock_calls]
 
 
 @pytest.mark.unit
 class TestTouchKey:
-    def test_recent_use_writes_nothing(self):
+    def test_recent_key_no_queries(self):
         recent = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
-        client = _touch_client(recent)
-        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=client):
-            touch_key("key-1")
-        client.table.return_value.update.assert_not_called()
+        client = _touch_client()
+        with patch(
+            "app.core.auth_mcp.get_admin_supabase_client", return_value=client
+        ) as get_client:
+            touch_key("key-1", recent)
+        get_client.assert_not_called()
+        client.table.assert_not_called()
 
-    def test_stale_use_writes_last_used_at(self):
+    def test_stale_key_single_update(self):
         old = (datetime.now(UTC) - timedelta(seconds=THROTTLE_SECONDS + 1)).isoformat()
-        client = _touch_client(old)
+        client = _touch_client()
+        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=client):
+            touch_key("key-1", old)
+        table = client.table.return_value
+        client.table.assert_called_once_with("mcp_api_keys")
+        table.select.assert_not_called()
+        table.update.assert_called_once()
+        assert "last_used_at" in table.update.call_args.args[0]
+        table.update.return_value.eq.assert_called_once_with("id", "key-1")
+
+    def test_never_used_key_single_update(self):
+        client = _touch_client()
         with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=client):
             touch_key("key-1")
-        update = client.table.return_value.update
-        update.assert_called_once()
-        assert "last_used_at" in update.call_args.args[0]
-        update.return_value.eq.assert_called_once_with("id", "key-1")
+        table = client.table.return_value
+        table.select.assert_not_called()
+        table.update.assert_called_once()
 
-    def test_failure_is_swallowed(self):
+    def test_update_is_conditional_on_the_throttle_window(self):
+        # Two requests racing on a stale key must not both write.
+        client = _touch_client()
+        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=client):
+            touch_key("key-1")
+        guarded = client.table.return_value.update.return_value.eq.return_value
+        guarded.or_.assert_called_once()
+        condition = guarded.or_.call_args.args[0]
+        assert "last_used_at.is.null" in condition
+        assert "last_used_at.lt." in condition
+
+    def test_failure_swallowed_and_logged(self):
         # touch_key runs as a background task; it must never raise into the request.
         broken = MagicMock()
         broken.table.side_effect = RuntimeError("supabase down")
-        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=broken):
+        with (
+            patch("app.core.auth_mcp.get_admin_supabase_client", return_value=broken),
+            patch("app.core.auth_mcp.logger") as log,
+        ):
             touch_key("key-1")
+        log.warning.assert_called_once()
+        assert "supabase down" in log.warning.call_args.args[0]
+
+
+@pytest.mark.unit
+class TestLastUsedOnPrincipal:
+    def test_resolution_carries_last_used_at(self):
+        stamp = "2026-01-01T00:00:00+00:00"
+        with patch(
+            "app.core.auth_mcp.get_admin_supabase_client",
+            return_value=_admin_returning([_row(last_used_at=stamp)]),
+        ):
+            user = resolve_mcp_principal("jdg_mcp_valid")
+        assert user.mcp_last_used_at == stamp
+
+
+@pytest.mark.unit
+class TestPrincipalCache:
+    def _resolve(self, client, token="jdg_mcp_cached"):  # noqa: S107
+        with patch("app.core.auth_mcp.get_admin_supabase_client", return_value=client):
+            return resolve_mcp_principal(token)
+
+    def test_ttl_zero_disables_the_cache(self):
+        client = _admin_returning([_row()])
+        self._resolve(client)
+        self._resolve(client)
+        assert client.table.call_count == 2
+
+    def test_hit_within_ttl_skips_the_query(self, monkeypatch):
+        monkeypatch.setenv("MCP_KEY_CACHE_TTL_SECONDS", "30")
+        client = _admin_returning([_row()])
+        first = self._resolve(client)
+        second = self._resolve(client)
+        assert client.table.call_count == 1
+        assert second.mcp_key_id == first.mcp_key_id == "key-1"
+
+    def test_cache_revoked_after_ttl_is_rejected(self, monkeypatch):
+        monkeypatch.setenv("MCP_KEY_CACHE_TTL_SECONDS", "30")
+        now = [1000.0]
+        monkeypatch.setattr("app.core.auth_mcp.time.monotonic", lambda: now[0])
+        assert self._resolve(_admin_returning([_row()])) is not None
+
+        revoked = _admin_returning([_row(revoked_at="2026-01-01T00:00:00+00:00")])
+        # Still within the TTL: revocation has not taken effect yet (documented).
+        now[0] += 29
+        assert self._resolve(revoked) is not None
+        now[0] += 2
+        assert self._resolve(revoked) is None
+
+    def test_cache_never_stores_failures(self, monkeypatch):
+        monkeypatch.setenv("MCP_KEY_CACHE_TTL_SECONDS", "30")
+        assert self._resolve(_admin_returning([])) is None
+        # The key appears afterwards: a cached miss would hide it.
+        assert self._resolve(_admin_returning([_row()])) is not None
+
+    def test_cache_does_not_keep_the_plaintext_key(self, monkeypatch):
+        from app.core import auth_mcp
+
+        monkeypatch.setenv("MCP_KEY_CACHE_TTL_SECONDS", "30")
+        self._resolve(_admin_returning([_row()]), token="jdg_mcp_PLAINTEXTSECRET")
+        assert all("PLAINTEXTSECRET" not in str(k) for k in auth_mcp._principal_cache)

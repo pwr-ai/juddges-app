@@ -89,6 +89,8 @@ class DocumentChunker:
         self.batch_size = batch_size
         self.dry_run = dry_run
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        # Keyset cursor (created_at, id) of the last judgment fetched.
+        self._cursor: tuple[str, str] | None = None
         self.stats = {
             "documents_processed": 0,
             "chunks_created": 0,
@@ -260,82 +262,26 @@ class DocumentChunker:
 
         return all_embeddings
 
-    def _get_existing_chunk_doc_ids(self) -> set[str]:
-        """Get set of document IDs that already have chunks."""
-        try:
-            # Supabase PostgREST returns max 1000 rows by default.
-            # Paginate to get ALL existing chunk document_ids.
-            all_ids: set[str] = set()
-            page_size = 1000
-            offset = 0
-            while True:
-                resp = (
-                    self.supabase.table("document_chunks")
-                    .select("document_id")
-                    .range(offset, offset + page_size - 1)
-                    .execute()
-                )
-                rows = resp.data or []
-                for row in rows:
-                    all_ids.add(row["document_id"])
-                if len(rows) < page_size:
-                    break
-                offset += page_size
-            return all_ids
-        except Exception:
-            return set()
+    def get_judgments_without_chunks(self, limit: int = 50) -> list[dict]:
+        """Fetch the next `limit` judgments that have no chunks yet.
 
-    def get_judgments_without_chunks(
-        self, limit: int = 50, existing_doc_ids: set[str] | None = None
-    ) -> list[dict]:
-        """Fetch judgments that don't have chunks yet.
-
-        Scans through the judgments table in pages, skipping those that
-        already have chunks, until `limit` unchunked judgments are found.
+        One request per call: the `get_unchunked_judgments` RPC runs the
+        anti-join against document_chunks server-side and pages by keyset on
+        (created_at, id). The cursor is carried across calls, so judgments
+        that stay unchunked (no text, failed) are not returned again and the
+        cost per batch does not depend on how many judgments are chunked.
+        Any Supabase error propagates and aborts the run.
         """
-        if existing_doc_ids is None:
-            existing_doc_ids = self._get_existing_chunk_doc_ids()
+        params: dict = {"p_limit": limit}
+        if self._cursor is not None:
+            params["p_after_created_at"], params["p_after_id"] = self._cursor
 
-        needed: list[dict] = []
-        scan_offset = 0
-        # Fetch larger pages (IDs only) to efficiently skip chunked docs
-        scan_page = max(limit * 3, 500)
-
-        while len(needed) < limit:
-            # First fetch just IDs to avoid transferring full_text unnecessarily
-            id_resp = (
-                self.supabase.table("judgments")
-                .select("id")
-                .order("created_at")
-                .range(scan_offset, scan_offset + scan_page - 1)
-                .execute()
-            )
-            id_rows = id_resp.data or []
-            if not id_rows:
-                break  # No more judgments in the table
-
-            # Filter to IDs that don't have chunks
-            unchunked_ids = [
-                r["id"] for r in id_rows if r["id"] not in existing_doc_ids
-            ]
-            scan_offset += scan_page
-
-            if not unchunked_ids:
-                continue  # This page was all chunked, scan further
-
-            # Fetch full data for only the unchunked IDs we need
-            batch_ids = unchunked_ids[: limit - len(needed)]
-            for i in range(0, len(batch_ids), 50):
-                sub_ids = batch_ids[i : i + 50]
-                data_resp = (
-                    self.supabase.table("judgments")
-                    .select("id, case_number, jurisdiction, full_text")
-                    .in_("id", sub_ids)
-                    .execute()
-                )
-                needed.extend(data_resp.data or [])
-
-        return needed[:limit]
+        rows = self.supabase.rpc("get_unchunked_judgments", params).execute().data
+        rows = rows or []
+        if rows:
+            last = rows[-1]
+            self._cursor = (last["sort_created_at"], last["id"])
+        return rows
 
     def save_chunks(self, chunks: list[dict]) -> int:
         """Save chunks to database. Returns number of successful inserts."""
@@ -446,12 +392,6 @@ class DocumentChunker:
         logger.info("Fetching judgments without chunks...")
 
         start_time = time.time()
-        # Fetch existing chunk doc IDs once, then track incrementally
-        existing_ids = self._get_existing_chunk_doc_ids()
-        logger.info(
-            f"Found {len(existing_ids)} judgments already chunked, skipping them"
-        )
-
         has_more = True
         while has_more:
             remaining = (
@@ -461,10 +401,7 @@ class DocumentChunker:
                 has_more = False
                 continue
             batch_limit = min(self.batch_size, remaining)
-            judgments = self.get_judgments_without_chunks(
-                limit=batch_limit,
-                existing_doc_ids=existing_ids,
-            )
+            judgments = self.get_judgments_without_chunks(limit=batch_limit)
 
             if not judgments:
                 logger.info("No more judgments to process")
@@ -472,10 +409,6 @@ class DocumentChunker:
                 continue
 
             await self.process_batch(judgments)
-
-            # Track newly processed IDs so we don't re-fetch them
-            for j in judgments:
-                existing_ids.add(j["id"])
 
             elapsed = time.time() - start_time
             rate = self.stats["documents_processed"] / elapsed if elapsed > 0 else 0
