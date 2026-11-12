@@ -255,9 +255,9 @@ async def _app_lifespan(app: FastAPI):
             )
             await pool.open()
             checkpointer = AsyncPostgresSaver(pool)
-            # Create/migrate the checkpoint tables. No Supabase migration owns
-            # them, so without this every persistent session hits UndefinedTable.
-            # Idempotent: only migrations missing from checkpoint_migrations run.
+            # Supabase migrations pre-create and secure these private tables.
+            # LangGraph still owns its schema upgrades and indexes; setup is
+            # idempotent and only runs missing checkpoint_migrations entries.
             await checkpointer.setup()
             app.state.checkpointer = checkpointer
             logger.info(
