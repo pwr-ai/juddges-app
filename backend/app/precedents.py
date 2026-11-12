@@ -29,12 +29,11 @@ PRECEDENTS_RATE_LIMIT = "30/hour"
 # `precedents` slice is still taken from the top `limit` of this same pool, so a
 # wider pool does not change what the LLM sees.
 #
-# Measured against production: `search_judgments_by_embedding` never sets
-# `hnsw.ef_search`, so the index default of 40 caps the result set regardless
-# of `match_count` — requesting 100 or 200 both returned 40 rows. 40 is what
-# actually binds here, not an arbitrary choice; raising it needs an
-# ef_search migration (tracked separately, out of scope for this PR).
-COHORT_MATCH_COUNT = 40
+# `search_judgments_by_embedding` used to leave `hnsw.ef_search` at its default
+# of 40, which capped this pool at 40 rows whatever `match_count` asked for.
+# Migration 20261105000001 (#733) sets ef_search to max(match_count, 100), so
+# the full 100 is reachable once that migration is applied.
+COHORT_MATCH_COUNT = 100
 
 
 # ===== Request/Response Models =====
@@ -184,7 +183,7 @@ class FindPrecedentsResponse(BaseModel):
     )
     cohort: list[PrecedentCohortItem] = Field(
         description=(
-            "Raw vector candidates (up to 40) with the fields the UI groups by, "
+            "Raw vector candidates (up to 100) with the fields the UI groups by, "
             "collected before the AI ranking pass. Present even when the ranking "
             "pass returns nothing."
         ),
@@ -677,6 +676,9 @@ async def find_precedents(
             if result.get("document_id") != effective_request.document_id
         ]
     if effective_request.filters:
+        similar_results = await _attach_filter_fields(
+            db, similar_results, effective_request.filters
+        )
         similar_results = _apply_filters(similar_results, effective_request.filters)
 
     cohort = await _build_cohort(db, similar_results)
@@ -719,6 +721,43 @@ async def find_precedents(
         cohort=cohort,
         resolved_case=resolved_case,
     )
+
+
+async def _attach_filter_fields(
+    db: Any, results: list[dict[str, Any]], filters: PrecedentFilters
+) -> list[dict[str, Any]]:
+    """Copy `court_name` / `legal_bases` from `judgments` onto vector rows (#734).
+
+    `search_by_vector` returns the RPC's slim shape, which has neither key, so
+    filtering on them without this step dropped every candidate. Only runs when
+    a filter actually needs the fields; `legal_bases` comes from
+    `judgments.cited_legislation`, the same source `_precedent_document` uses.
+    """
+    if not (filters.court_names or filters.legal_bases) or not results:
+        return results
+
+    ids = [r["document_id"] for r in results if r.get("document_id")]
+    try:
+        rows = await db.get_filter_fields_by_ids(ids)
+    except Exception as e:
+        logger.error(f"Precedent filter-field fetch failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Search service temporarily unavailable. Please try again.",
+        )
+    rows_by_id = {row.get("id"): row for row in rows}
+
+    enriched: list[dict[str, Any]] = []
+    for r in results:
+        row = rows_by_id.get(r.get("document_id")) or {}
+        enriched.append(
+            {
+                **r,
+                "court_name": r.get("court_name") or row.get("court_name"),
+                "legal_bases": r.get("legal_bases") or row.get("cited_legislation"),
+            }
+        )
+    return enriched
 
 
 def _apply_filters(
