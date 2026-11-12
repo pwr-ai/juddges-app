@@ -26,7 +26,7 @@ class TestSuggestionModels:
 
         hit = SuggestionHit.model_validate(
             {
-                "id": "phrase:pl:razace_naruszenie_prawa",
+                "id": "phrase-pl-razace_naruszenie_prawa-0123456789abcdef",
                 "term": "rażące naruszenie prawa",
                 "language": "pl",
                 "category": "phrase",

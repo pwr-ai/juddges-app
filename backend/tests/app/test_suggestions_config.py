@@ -10,6 +10,8 @@ Covers:
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from app.services.suggestions_config import (
@@ -90,8 +92,38 @@ class TestIndexSettings:
 class TestMakeSlug:
     def test_folds_accents_and_namespaces(self):
         slug = make_suggestion_slug("Rażące naruszenie prawa", "pl", "phrase")
-        assert slug == "phrase:pl:razace_naruszenie_prawa"
+        assert slug.startswith("phrase-pl-razace_naruszenie_prawa-")
         assert slug.isascii()
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "term",
+        [
+            "sygn",
+            "Rażące naruszenie prawa",
+            "zażółć gęślą jaźń",
+            "II K 123/20",
+            "art. 415 k.c.",
+            "a/b\\c:d",
+            "日本語",
+            "x" * 5000,
+            "ż" * 5000,
+            "",
+        ],
+    )
+    def test_meili_valid_and_deterministic(self, term):
+        slug = make_suggestion_slug(term, "pl", "phrase")
+        assert re.fullmatch(r"[A-Za-z0-9_-]{1,511}", slug)
+        assert slug == make_suggestion_slug(term, "pl", "phrase")
+
+    @pytest.mark.unit
+    def test_distinct_inputs_distinct_ids(self):
+        terms = ["II K 123/20", "II K 123 20", "II K 123-20", "Żaba", "zaba"]
+        ids = {make_suggestion_slug(t, "pl", "phrase") for t in terms}
+        assert len(ids) == len(terms)
+        assert make_suggestion_slug("zaba", "pl", "phrase") != make_suggestion_slug(
+            "zaba", "en", "phrase"
+        )
 
     def test_same_term_distinct_per_category(self):
         a = make_suggestion_slug("Fraud", "en", "keyword")

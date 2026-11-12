@@ -2,18 +2,22 @@
 
 slowapi only applies ``default_limits`` when SlowAPIMiddleware is installed;
 the @limiter.limit decorator path never consults them. Without the
-middleware an undecorated route has no limit whatsoever.
+middleware an undecorated route has no limit whatsoever. The middleware in
+turn cannot see include_router-mounted routes on the pinned FastAPI, which
+the ``enforce_default_rate_limits`` dependency covers (#574).
 """
 
 from __future__ import annotations
 
 import pytest
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+
+from app.rate_limiter import enforce_default_rate_limits
 
 
 @pytest.mark.unit
@@ -125,21 +129,14 @@ def test_production_app_registers_cors_outermost_of_the_rate_limiter():
     )
 
 
-@pytest.mark.unit
-def test_include_router_routes_are_not_covered_by_default_limits():
-    """Characterizes a known gap (#574) — this is NOT desired behaviour.
-
-    On the pinned FastAPI, slowapi's route lookup only matches routes
-    registered directly on ``app``; routes mounted via ``include_router``
-    (most of this API) are not matched and get no default-limit coverage.
-    Pins the gap so nobody assumes the backstop protects routes it does not.
-    """
+def _backstop_app(limit: str, key: str) -> FastAPI:
+    """Mirror app/server.py: middleware for direct routes, dependency for the rest."""
     limiter = Limiter(
-        key_func=lambda request: "fixed-test-key-gap",
-        default_limits=["1 per minute"],
+        key_func=lambda request: key,
+        default_limits=[limit],
         storage_uri="memory://",
     )
-    app = FastAPI()
+    app = FastAPI(dependencies=[Depends(enforce_default_rate_limits)])
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
@@ -148,20 +145,77 @@ def test_include_router_routes_are_not_covered_by_default_limits():
     async def direct():
         return {"ok": True}
 
-    router = APIRouter()
+    router = APIRouter(prefix="/api")
 
     @router.get("/included")
     async def included():
         return {"ok": True}
 
+    @router.get("/decorated")
+    @limiter.limit("3 per minute")
+    async def decorated(request: Request):
+        return {"ok": True}
+
+    @router.get("/exempt")
+    @limiter.exempt
+    async def exempt():
+        return {"ok": True}
+
     app.include_router(router)
+    return app
 
-    client = TestClient(app)
 
-    # Registered directly on `app`: covered by default_limits.
-    assert client.get("/direct").status_code == 200
-    assert client.get("/direct").status_code == 429
+@pytest.mark.unit
+def test_include_router_routes_are_covered_by_default_limits(monkeypatch):
+    """#574: a router-mounted, undecorated route is throttled by default_limits."""
+    monkeypatch.setenv("RATE_LIMIT_ROUTER_BACKSTOP", "true")
+    client = TestClient(_backstop_app("2 per minute", "backstop-included"))
 
-    # Mounted via include_router: NOT covered — the gap tracked in #574.
-    assert client.get("/included").status_code == 200
-    assert client.get("/included").status_code == 200
+    codes = [client.get("/api/included").status_code for _ in range(4)]
+
+    assert codes == [200, 200, 429, 429]
+
+
+@pytest.mark.unit
+def test_direct_routes_are_charged_once_not_twice(monkeypatch):
+    """Middleware and dependency both see a direct route; only one may charge it."""
+    monkeypatch.setenv("RATE_LIMIT_ROUTER_BACKSTOP", "true")
+    client = TestClient(_backstop_app("2 per minute", "backstop-direct"))
+
+    codes = [client.get("/direct").status_code for _ in range(3)]
+
+    assert codes == [200, 200, 429]
+
+
+@pytest.mark.unit
+def test_decorated_and_exempt_router_routes_keep_their_own_rules(monkeypatch):
+    """An explicit @limiter.limit replaces the defaults; @limiter.exempt skips them."""
+    monkeypatch.setenv("RATE_LIMIT_ROUTER_BACKSTOP", "true")
+    client = TestClient(_backstop_app("1 per minute", "backstop-rules"))
+
+    decorated = [client.get("/api/decorated").status_code for _ in range(4)]
+    exempt = [client.get("/api/exempt").status_code for _ in range(3)]
+
+    assert decorated == [200, 200, 200, 429]
+    assert exempt == [200, 200, 200]
+
+
+@pytest.mark.unit
+def test_router_backstop_is_inert_until_enabled(monkeypatch):
+    """Off by default: enabling it before #565 would pool pilot users in one bucket."""
+    monkeypatch.delenv("RATE_LIMIT_ROUTER_BACKSTOP", raising=False)
+    client = TestClient(_backstop_app("1 per minute", "backstop-off"))
+
+    codes = [client.get("/api/included").status_code for _ in range(3)]
+
+    assert codes == [200, 200, 200]
+
+
+@pytest.mark.unit
+def test_production_app_charges_default_limits_on_router_routes():
+    """The real app wires the dependency so a router-mounted route is reachable by it."""
+    from app.server import app
+
+    assert any(
+        dep.dependency is enforce_default_rate_limits for dep in app.router.dependencies
+    ), "enforce_default_rate_limits is not an app-wide dependency (#574)"

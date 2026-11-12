@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import re
 import secrets
@@ -11,30 +12,82 @@ from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
 from loguru import logger
 from slowapi import Limiter
+from slowapi.middleware import _should_exempt
 from slowapi.util import get_remote_address
+from starlette.requests import (
+    Request,  # noqa: TC002 - FastAPI resolves the dependency signature at runtime
+)
 
 if TYPE_CHECKING:
     from limits import RateLimitItem
-    from starlette.requests import Request
 
 
 _RATE_LIMIT_IDENTITY_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+
+# Header the Next.js BFF uses to tell the backend which visitor a proxied
+# anonymous request belongs to (issue #565). Honoured only alongside a matching
+# ``X-API-Key``: without that, anyone could pick their own bucket.
+RATE_LIMIT_CLIENT_IP_HEADER = "X-RateLimit-Client-IP"
+
+# One IPv6 visitor usually holds a whole /64, so keying on the full address
+# would let a single host rotate through 2**64 buckets.
+_IPV6_BUCKET_PREFIX = 64
+
+
+def _has_valid_service_key(request: Request) -> bool:
+    """Return True when the request carries the backend's own API key."""
+    expected_api_key = os.getenv("BACKEND_API_KEY", "")
+    supplied_api_key = request.headers.get("X-API-Key", "")
+    return bool(expected_api_key) and secrets.compare_digest(
+        supplied_api_key, expected_api_key
+    )
 
 
 def _get_verified_identity_key(request: Request) -> str | None:
     """Return a BFF-provided user quota key for an authenticated service call."""
     identity = request.headers.get("X-RateLimit-Identity", "").strip()
-    expected_api_key = os.getenv("BACKEND_API_KEY", "")
-    supplied_api_key = request.headers.get("X-API-Key", "")
 
     if (
         identity
         and _RATE_LIMIT_IDENTITY_PATTERN.fullmatch(identity)
-        and expected_api_key
-        and secrets.compare_digest(supplied_api_key, expected_api_key)
+        and _has_valid_service_key(request)
     ):
         return f"user:{identity}"
     return None
+
+
+def _normalize_client_ip(raw: str) -> str | None:
+    """Parse ``raw`` as an IP address and return its rate-limit bucket key.
+
+    IPv4 addresses key as themselves; IPv6 addresses key on their /64 network.
+    Anything that is not an IP address returns ``None`` so a malformed header
+    cannot mint arbitrary limiter keys.
+    """
+    try:
+        address = ipaddress.ip_address(raw.strip())
+    except ValueError:
+        return None
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped is not None:
+            return str(address.ipv4_mapped)
+        network = ipaddress.IPv6Network((address, _IPV6_BUCKET_PREFIX), strict=False)
+        return str(network)
+    return str(address)
+
+
+def _get_verified_forwarded_client_ip(request: Request) -> str | None:
+    """Return the BFF-asserted visitor address for a proxied service call.
+
+    The BFF resolves the visitor's address from its own reverse proxy (and only
+    does so when that proxy is trusted, see ``frontend/app/api/_lib/client-ip.ts``),
+    then passes it here. Trust rests on the service key, not on
+    ``TRUSTED_PROXY``: the BFF talks to the backend over the internal network,
+    not through the gateway that would rewrite ``X-Forwarded-For``.
+    """
+    raw = request.headers.get(RATE_LIMIT_CLIENT_IP_HEADER, "").strip()
+    if not raw or not _has_valid_service_key(request):
+        return None
+    return _normalize_client_ip(raw)
 
 
 def _is_trusted_proxy() -> bool:
@@ -49,6 +102,11 @@ def get_client_ip(request: Request) -> str:
     identity derived after Supabase authentication. This takes precedence over
     the proxy socket so different signed-in users receive independent quotas.
 
+    The same BFF may instead provide the anonymous visitor's address in
+    ``X-RateLimit-Client-IP`` (again only honoured with a matching
+    ``X-API-Key``), so signed-out visitors get a bucket each rather than
+    sharing the frontend container's.
+
     When ``TRUSTED_PROXY=true`` the leftmost address in ``X-Forwarded-For``
     (the original client) is used.  The leftmost value is chosen because
     each proxy *appends* its own view of the client; only the first entry
@@ -61,6 +119,13 @@ def get_client_ip(request: Request) -> str:
     verified_identity = _get_verified_identity_key(request)
     if verified_identity:
         return verified_identity
+
+    # Anonymous visitors proxied by the BFF (issue #565). Without this they all
+    # key on the frontend container's socket address -- one bucket for every
+    # signed-out visitor, which one script can exhaust for everyone.
+    forwarded_client_ip = _get_verified_forwarded_client_ip(request)
+    if forwarded_client_ip:
+        return forwarded_client_ip
 
     if _is_trusted_proxy():
         forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
@@ -110,6 +175,59 @@ limiter = Limiter(
     # Emit X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers.
     headers_enabled=True,
 )
+
+
+def _router_backstop_enabled() -> bool:
+    """Return True when ``RATE_LIMIT_ROUTER_BACKSTOP`` is set to a truthy value."""
+    return os.getenv("RATE_LIMIT_ROUTER_BACKSTOP", "false").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def enforce_default_rate_limits(request: Request) -> None:
+    """Charge ``default_limits`` for routes ``SlowAPIMiddleware`` cannot see (#574).
+
+    On the pinned FastAPI, ``include_router`` registers an ``_IncludedRouter``
+    on ``app.routes`` instead of copying the prefixed routes, and slowapi's
+    middleware route lookup cannot match through it: every router-mounted
+    route was silently exempt from ``DEFAULT_RATE_LIMITS``. A dependency runs
+    after routing, so ``scope["route"]`` already names the real endpoint
+    whatever the mounting style.
+
+    Registered app-wide (``FastAPI(dependencies=...)``), it reaches every
+    ``APIRoute``, including ones the middleware already charged; those are
+    skipped (the middleware leaves ``request.state.view_rate_limit``), as are
+    routes with their own ``@limiter.limit`` (same rule as the middleware: an
+    explicit limit replaces the defaults) and ``@limiter.exempt`` routes.
+
+    Inert unless ``RATE_LIMIT_ROUTER_BACKSTOP=true``: the backstop keys on
+    ``get_client_ip``, and BFF routes that do not yet forward
+    ``X-RateLimit-Identity`` would put every pilot user in the frontend
+    container's single bucket (#565). Enable it once that propagation lands.
+
+    A plain ``def`` on purpose: the limit check is blocking storage I/O
+    (Redis), so FastAPI runs it in the threadpool rather than on the loop.
+    """
+    if not _router_backstop_enabled():
+        return
+
+    app_limiter: Limiter | None = getattr(request.app.state, "limiter", None)
+    if app_limiter is None or not app_limiter.enabled:
+        return
+
+    # Already charged by SlowAPIMiddleware (a route registered directly on app).
+    if getattr(request.state, "view_rate_limit", None) is not None:
+        return
+
+    handler = getattr(request.scope.get("route"), "endpoint", None)
+    if _should_exempt(app_limiter, handler):
+        return
+
+    # Raises RateLimitExceeded -> the app's handler renders the 429.
+    app_limiter._check_request_limit(request, handler, True)
+
 
 # Process-local fallback for the callers below that talk to `limits` directly
 # (LangServe LLM budget, invite-code redemption) rather than through the
