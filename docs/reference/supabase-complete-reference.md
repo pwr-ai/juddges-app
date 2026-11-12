@@ -739,6 +739,21 @@ SELECT * FROM match_documents(...);
 COMMIT;
 ```
 
+`ef_search` is also a **hard cap on rows**: one HNSW scan yields at most
+`ef_search` rows, so `LIMIT 100` under the default of 40 returns 40. Every
+vector RPC in this repo therefore sets it transaction-locally at the top of its
+body with `PERFORM set_config('hnsw.ef_search', <n>, true)`:
+
+| RPC | `ef_search` |
+|-----|-------------|
+| `search_judgments_by_embedding` | `max(match_count, 100)`, capped at 1000 (#733) |
+| `search_chunks_by_embedding` | 100 |
+| `search_judgments_hybrid` | `max(ef_search_value, 120)` (candidate window) |
+
+A new vector RPC must do the same; `backend/tests/db/test_judgment_vector_rpc_contract.py`
+shows how to assert it against a real index (`SET enable_seqscan = off` so a
+small fixture table still goes through HNSW).
+
 ### 8.7 Distance Operators
 
 | Operator | Metric | Index Class | Best For |

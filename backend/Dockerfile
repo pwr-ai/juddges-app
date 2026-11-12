@@ -103,6 +103,9 @@ COPY --from=builder /opt/venv /opt/venv
 COPY ./packages ./packages
 COPY ./app ./app
 
+# Production entrypoint (resolves the Gunicorn worker count, #547).
+COPY --chmod=0755 ./docker/start-gunicorn.sh /usr/local/bin/start-gunicorn.sh
+
 # Set up Hugging Face cache directories
 ENV HF_HOME=/tmp/hf \
     HF_HUB_CACHE=/tmp/hf/hub \
@@ -125,26 +128,9 @@ EXPOSE 8002
 ARG APP_VERSION=unknown
 ENV APP_VERSION=${APP_VERSION}
 
-# Use gunicorn with uvicorn workers for better process management and monitoring
-# Worker count is env-driven via GUNICORN_WORKERS. When unset it defaults to the
-# gunicorn-recommended (2 * vCPU) + 1, computed from the container's CPU count.
-# On a 2-4 vCPU prod host this yields 5-9 workers instead of a hard-coded 12,
-# which removed needless context-switch overhead.
-# --timeout 120: Request timeout (2 minutes for complex AI/ML operations)
-# --graceful-timeout 30: Graceful shutdown timeout
-# --keep-alive 5: Keep-alive connections
-# --max-requests 1000: Restart workers after 1000 requests (prevents memory leaks)
-# --max-requests-jitter 50: Add randomness to prevent all workers restarting simultaneously
-CMD ["sh", "-c", \
-     "exec gunicorn app.server:app \
-        --worker-class uvicorn.workers.UvicornWorker \
-        --workers \"${GUNICORN_WORKERS:-$(( $(nproc) * 2 + 1 ))}\" \
-        --bind 0.0.0.0:8002 \
-        --timeout 120 \
-        --graceful-timeout 30 \
-        --keep-alive 5 \
-        --max-requests 1000 \
-        --max-requests-jitter 50 \
-        --access-logfile - \
-        --error-logfile - \
-        --log-level info"]
+# Gunicorn with uvicorn workers. Worker count: GUNICORN_WORKERS when set,
+# otherwise (2 * CPUs) + 1 where CPUs is the container's cgroup CPU quota (not
+# the host's `nproc`, which ignores `deploy.resources.limits.cpus` and spawned
+# 97 workers on a 48-core host, #547), capped at GUNICORN_MAX_WORKERS (default
+# 8). See docker/start-gunicorn.sh for the flags.
+CMD ["/usr/local/bin/start-gunicorn.sh"]
