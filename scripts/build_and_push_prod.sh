@@ -274,7 +274,8 @@ FRONTEND_PUBLIC_BUILD_VARS=(
 # Succeeds when the value names a local-only host that a visitor's browser
 # would resolve to its own machine.
 is_local_url() {
-    local value="${1,,}"
+    local value
+    value="$(printf %s "${1}" | tr '[:upper:]' '[:lower:]')"
     [[ "${value}" =~ ^https?://(localhost|127\.[0-9]+\.[0-9]+\.[0-9]+|0\.0\.0\.0|\[::1\])([:/]|$) ]]
 }
 

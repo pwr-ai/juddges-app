@@ -130,6 +130,10 @@ Rules when touching this code:
   Dockerfile builder stage (scans `.next/static/**/*.js` and
   `.next/server/app/**/*.{html,rsc}`; `ALLOW_LOCAL_ORIGINS=1` opts out for a
   machine-local image).
+- The build guard covers the build only, and only the files it scans
+  (`.next/static/**/*.js`, `.next/server/app/**/*.{html,rsc}`). docker-compose
+  `env_file: .env` can still inject a dev `localhost` `NEXT_PUBLIC_API_BASE_URL`
+  at runtime, so deployers must set production values in `.env` as well.
 - Browser code must not build backend URLs from `NEXT_PUBLIC_API_BASE_URL`;
   call the app's own `/api/...` route with a relative path instead.
 - `/runtime-env.js` omits unset keys, so it never overwrites a baseline value
