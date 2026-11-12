@@ -269,6 +269,7 @@ startup. `PYTHON_ENV=production` switches the stricter prod rules on.
 | `MEILISEARCH_URL` / `MEILISEARCH_INDEX_NAME` | Optional | Optional | |
 | `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` | Optional | Optional | Observability only. |
 | `PYTHON_ENV` | Optional | Optional | Selects dev vs prod rules above (`production` enables strict mode). |
+| `GUNICORN_WORKERS` / `GUNICORN_MAX_WORKERS` | n/a | Optional | Prod image only (`backend/docker/start-gunicorn.sh`). Unset workers → `(2 * cgroup CPU limit) + 1`, capped at `GUNICORN_MAX_WORKERS` (default 8). Read by the entrypoint, not `validate_environment_variables`. |
 
 Genuinely-optional misses log at **INFO** in dev (quiet local startup) and
 **WARNING** in prod (so real gaps are visible). Production-required misses are
