@@ -59,6 +59,8 @@ def record_search(
     if client is None:
         return
     try:
+        from langfuse import propagate_attributes
+
         tags = [f"type:{query_type or 'unknown'}"]
         if language:
             tags.append(f"lang:{language}")
@@ -79,7 +81,14 @@ def record_search(
         if error:
             output["error"] = error
 
-        with client.start_as_current_span(name="documents.search") as span:
+        # Langfuse v4+ removed start_as_current_span()/update_trace(): trace-level
+        # tags/name are propagated via propagate_attributes to child observations.
+        with (
+            propagate_attributes(tags=tags, trace_name="documents.search"),
+            client.start_as_current_observation(
+                name="documents.search", as_type="span"
+            ) as span,
+        ):
             span.update(
                 input={"query": query[:500], "chars": len(query)},
                 output=output,
@@ -94,6 +103,5 @@ def record_search(
                     "timing_breakdown": timing_breakdown,
                 },
             )
-            span.update_trace(tags=tags)
     except Exception as e:  # never break search because of telemetry
         logger.warning(f"Langfuse telemetry emit failed: {e}")
