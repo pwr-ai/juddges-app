@@ -17,7 +17,7 @@ This module is deliberately self-contained and free of heavy ML dependencies
 
 Each emitted suggestion is shaped like::
 
-    {"id": "<slug>", "term": "rażące naruszenie prawa", "language": "pl",
+    {"id": "<category>-<lang>-<slug>-<hash>", "term": "rażące naruszenie prawa", "language": "pl",
      "category": "legal_topic", "weight": 1234}
 
 The shape matches the issue sketch (``term`` / ``language`` / ``category`` /
@@ -27,6 +27,7 @@ and re-runs are idempotent.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import unicodedata
 from collections import Counter
@@ -256,17 +257,22 @@ _MAX_TERM_CHARS = 64
 
 
 def make_suggestion_slug(term: str, language: str, category: str) -> str:
-    """Deterministic ASCII slug primary key.
+    """Deterministic Meilisearch-valid primary key.
 
-    Folds accents, lowercases, and joins ``category:language:term`` so the same
-    term in different categories/languages stays distinct and re-runs are
-    idempotent.
+    Meilisearch ids may only contain ``[A-Za-z0-9_-]`` (max 511 bytes). The
+    format is ``<category>-<language>-<ascii slug>-<blake2b hex>``: the slug is
+    for readability only (accents folded, so it is lossy) and the digest of the
+    casefolded raw term keeps distinct terms such as ``"II K 123/20"`` and
+    ``"II K 123 20"`` from colliding. Re-runs are idempotent.
     """
     normalized = unicodedata.normalize("NFD", term)
     normalized = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
     normalized = normalized.encode("ascii", "ignore").decode("ascii").lower()
-    normalized = re.sub(r"[^a-z0-9]+", "_", normalized).strip("_") or "x"
-    return f"{category}:{language}:{normalized}"
+    normalized = re.sub(r"[^a-z0-9]+", "_", normalized).strip("_")[:80] or "x"
+    digest = hashlib.blake2b(term.casefold().encode("utf-8"), digest_size=8).hexdigest()
+    safe_category = re.sub(r"[^A-Za-z0-9_]+", "_", category) or "x"
+    safe_language = re.sub(r"[^A-Za-z0-9_]+", "_", language) or "x"
+    return f"{safe_category}-{safe_language}-{normalized}-{digest}"
 
 
 def _is_meaningful_term(term: str) -> bool:

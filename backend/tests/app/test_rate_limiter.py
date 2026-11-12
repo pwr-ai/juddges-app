@@ -24,6 +24,7 @@ def _make_request(
     real_ip: str | None = None,
     api_key: str | None = None,
     rate_limit_identity: str | None = None,
+    rate_limit_client_ip: str | None = None,
 ) -> MagicMock:
     """Build a minimal Starlette-like Request mock."""
     request = MagicMock()
@@ -39,6 +40,8 @@ def _make_request(
         headers["X-API-Key"] = api_key
     if rate_limit_identity is not None:
         headers["X-RateLimit-Identity"] = rate_limit_identity
+    if rate_limit_client_ip is not None:
+        headers["X-RateLimit-Client-IP"] = rate_limit_client_ip
 
     # Starlette Headers supports .get()
     request.headers = MagicMock()
@@ -92,6 +95,97 @@ class TestVerifiedIdentityQuotaKeys:
             )
 
         assert key == "172.18.0.2"
+
+
+@pytest.mark.unit
+class TestVerifiedForwardedClientIp:
+    """Anonymous BFF traffic must key per visitor, not per frontend container (#565)."""
+
+    @pytest.fixture(autouse=True)
+    def _service_key(self):
+        with (
+            patch.dict(
+                os.environ,
+                {"BACKEND_API_KEY": "server-api-key", "TRUSTED_PROXY": "false"},
+            ),
+            patch("app.rate_limiter.get_remote_address", return_value="172.18.0.2"),
+        ):
+            yield
+
+    def _key(self, **kwargs) -> str:
+        import app.rate_limiter as rl_module
+
+        kwargs.setdefault("client_host", "172.18.0.2")
+        return rl_module.get_client_ip(_make_request(**kwargs))
+
+    def test_two_visitors_behind_the_bff_get_separate_buckets(self):
+        key_a = self._key(api_key="server-api-key", rate_limit_client_ip="203.0.113.5")
+        key_b = self._key(api_key="server-api-key", rate_limit_client_ip="198.51.100.7")
+
+        assert key_a == "203.0.113.5"
+        assert key_b == "198.51.100.7"
+
+    def test_header_is_ignored_without_the_matching_service_key(self):
+        """A direct caller cannot choose its own bucket by sending the header."""
+        assert (
+            self._key(api_key="wrong-key", rate_limit_client_ip="203.0.113.5")
+            == "172.18.0.2"
+        )
+        assert self._key(rate_limit_client_ip="203.0.113.5") == "172.18.0.2"
+
+    def test_header_is_ignored_when_no_service_key_is_configured(self):
+        with patch.dict(os.environ, {"BACKEND_API_KEY": ""}):
+            assert self._key(api_key="", rate_limit_client_ip="203.0.113.5") == (
+                "172.18.0.2"
+            )
+
+    @pytest.mark.parametrize(
+        "value", ["not-an-ip", "203.0.113.5, 10.0.0.1", "user:" + "a" * 64, "  "]
+    )
+    def test_malformed_values_fall_back_to_the_socket(self, value: str):
+        assert self._key(api_key="server-api-key", rate_limit_client_ip=value) == (
+            "172.18.0.2"
+        )
+
+    def test_ipv6_visitors_are_bucketed_by_slash_64(self):
+        key_a = self._key(
+            api_key="server-api-key", rate_limit_client_ip="2001:db8:1:2::1"
+        )
+        key_b = self._key(
+            api_key="server-api-key",
+            rate_limit_client_ip="2001:db8:1:2:ffff:ffff:ffff:ffff",
+        )
+        key_c = self._key(
+            api_key="server-api-key", rate_limit_client_ip="2001:db8:1:3::1"
+        )
+
+        assert key_a == key_b == "2001:db8:1:2::/64"
+        assert key_c != key_a
+
+    def test_ipv4_mapped_ipv6_keys_as_ipv4(self):
+        assert (
+            self._key(
+                api_key="server-api-key", rate_limit_client_ip="::ffff:203.0.113.5"
+            )
+            == "203.0.113.5"
+        )
+
+    def test_signed_in_identity_takes_precedence(self):
+        identity = "c" * 64
+        key = self._key(
+            api_key="server-api-key",
+            rate_limit_identity=identity,
+            rate_limit_client_ip="203.0.113.5",
+        )
+        assert key == f"user:{identity}"
+
+    def test_works_without_trusted_proxy(self):
+        """Trust rests on the service key: the BFF does not go through the gateway."""
+        with patch.dict(os.environ, {"TRUSTED_PROXY": "false"}):
+            assert (
+                self._key(api_key="server-api-key", rate_limit_client_ip="203.0.113.5")
+                == "203.0.113.5"
+            )
 
 
 @pytest.mark.unit
