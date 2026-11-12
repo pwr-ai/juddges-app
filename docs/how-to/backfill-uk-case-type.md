@@ -38,7 +38,7 @@ leaves rows without a recognisable citation unchanged.
   longer in `NL_EXCLUDED_CORE_FIELDS`, and the NL filter translator emits
   `case_type: ["Criminal" | "Civil" | "Administrative"]`. The RPC
   `list_extracted_filter_matches` filters on it (migration
-  `20261030000001_extracted_filter_case_type.sql`, case-insensitive match).
+  `20261112000001_extracted_filter_case_type.sql`, case-insensitive match).
 - `court_level`: still excluded. 52 UK rows carry `Appeal Court` where 6101
   carry `Court of Appeal`; normalise that, then remove `court_level` from
   `NL_EXCLUDED_CORE_FIELDS` in

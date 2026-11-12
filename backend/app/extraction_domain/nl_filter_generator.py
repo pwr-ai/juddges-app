@@ -6,7 +6,7 @@ in supabase/migrations/20260226000001_create_judgment_base_extractions_table.sql
 and extended by 20260505000001_extend_base_schema_filterable_searchable.sql).
 Besides the `base_*` extraction fields, three core `judgments` columns are also
 exposed: `jurisdiction`, `decision_date` and `case_type` (the latter filtered by
-`list_extracted_filter_matches` since 20261030000001).
+`list_extracted_filter_matches` since 20261112000001).
 
 The output is validated by Pydantic; every enum-constrained field uses
 `Literal[...]` mirroring the CHECK constraints in the migration, so an LLM

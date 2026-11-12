@@ -16,7 +16,7 @@ jurisdiction TEXT)`. Always restricted to `base_extraction_status =
 | Key in `p_filters` | Type | Semantics |
 |---|---|---|
 | `jurisdiction` | `["PL" \| "UK", …]` | `judgments.jurisdiction = ANY(...)` |
-| `case_type` | `["Criminal" \| "Civil" \| "Administrative", …]` | `lower(judgments.case_type) = ANY(...)` (since `20261030000001`) |
+| `case_type` | `["Criminal" \| "Civil" \| "Administrative", …]` | `lower(judgments.case_type) = ANY(...)` (since `20261112000001`) |
 | `decision_date` | `{"from","to"}` / `{"min","max"}` / `"YYYY-MM-DD"` | inclusive range / equality on `judgments.decision_date` |
 | `collection_ids` | `["<uuid>", …]` | membership in `collection_judgments` (any of the ids) |
 | 42 `base_*` keys | see `frontend/lib/extractions/base-schema-filter-config.ts` | unchanged (introduced in `20260226000001`, `20260505000001`) |
@@ -621,7 +621,7 @@ pops `text_query` out of the dump, and returns `{"filters": ..., "text_query":
 `case_type: list[Literal["Criminal", "Civil", "Administrative"]] | None` is a
 core `judgments` column filter (the real prod values, PL + UK). The RPC reads
 the `case_type` key of `p_filters` in `list_extracted_filter_matches`
-(migration `20261030000001_extracted_filter_case_type.sql`) and matches
+(migration `20261112000001_extracted_filter_case_type.sql`) and matches
 `lower(j.case_type)` against the lowercased values.
 
 `NL_EXCLUDED_CORE_FIELDS: frozenset[str] = frozenset({"court_level"})` —
