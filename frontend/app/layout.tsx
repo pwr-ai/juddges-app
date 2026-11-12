@@ -196,8 +196,8 @@ export default function RootLayout({
                       {children}
                     </AppLayoutWrapper>
                   </CollectionDetailProvider>
-                    <SonnerToaster />
-                    <PageViewTracker />
+                  <SonnerToaster />
+                  <PageViewTracker />
                 </LanguageProvider>
               </BrandProvider>
             </AuthProvider>

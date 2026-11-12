@@ -90,6 +90,37 @@ class TestEmitInBackground:
         assert seen[0][0] == "page_viewed"
         assert seen[0][1] != threading.main_thread().name
 
+    async def test_drops_events_when_backlog_is_full(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        from app.services import app_events
+
+        gate = threading.Event()
+        started = threading.Event()
+        ran: list[str] = []
+
+        def slow_emit(name: str, **_kw: Any) -> None:
+            started.set()
+            gate.wait(timeout=5)
+            ran.append(name)
+
+        monkeypatch.setattr(app_events, "emit_app_event", slow_emit)
+        monkeypatch.setattr(app_events, "MAX_PENDING_BACKGROUND_EVENTS", 3)
+        monkeypatch.setattr(app_events, "_pending", 0)
+        try:
+            for _ in range(10):
+                emit_app_event_in_background("page_viewed")
+            assert started.wait(timeout=5)
+            assert app_events._pending == 3  # the other 7 were dropped
+        finally:
+            gate.set()
+        for _ in range(100):
+            if len(ran) == 3 and app_events._pending == 0:
+                break
+            await asyncio.sleep(0.05)
+        assert len(ran) == 3
+        assert app_events._pending == 0
+
     def test_without_a_loop_runs_inline(self, monkeypatch: pytest.MonkeyPatch):
         seen: list[str] = []
         monkeypatch.setattr(
@@ -331,3 +362,16 @@ class TestRollAppEventsPartitions:
         monkeypatch.delenv("DATABASE_URL", raising=False)
         result = roll_app_events_partitions.apply().get()
         assert result == {"status": "skipped", "reason": "no_database_url"}
+
+
+class TestServerWiring:
+    async def test_route_rollup_middleware_registered_and_counts_templates(
+        self, client
+    ):
+        from app.services.route_rollup import RouteRollupMiddleware, rollup
+
+        assert any(m.cls is RouteRollupMiddleware for m in app.user_middleware)
+        before = rollup._counts["GET /health"]
+        response = await client.get("/health")
+        assert response.status_code == 200
+        assert rollup._counts["GET /health"] == before + 1

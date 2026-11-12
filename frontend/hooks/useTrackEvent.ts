@@ -13,6 +13,9 @@ import {
  * `track()` (which also works outside React, e.g. in lib/api modules). The
  * flush envelope's locale is kept in sync by LanguageProvider via
  * `setTrackLocale`, so this hook needs no locale handling of its own.
+ *
+ * Documented in docs/how-to/add-event.md as the component-level entry point;
+ * no component calls it yet (PageViewTracker uses `track()` directly).
  */
 export function useTrackEvent(): (
   eventName: ClientEventName,

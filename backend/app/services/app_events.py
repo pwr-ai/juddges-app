@@ -12,6 +12,8 @@ Taxonomy source of truth. Kept in sync with:
 from __future__ import annotations
 
 import asyncio
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from loguru import logger
@@ -107,21 +109,54 @@ def emit_app_event(
     )
 
 
+# Dedicated, bounded pool for background writes. The loop's default executor is
+# shared with everything else that uses run_in_executor, so a slow Supabase
+# must not be able to occupy it. Beyond MAX_PENDING queued writes, events are
+# dropped (and logged) rather than queued without limit.
+_BACKGROUND_WORKERS = 2
+MAX_PENDING_BACKGROUND_EVENTS = 200
+_executor = ThreadPoolExecutor(
+    max_workers=_BACKGROUND_WORKERS, thread_name_prefix="app-events"
+)
+_pending = 0
+_pending_lock = threading.Lock()
+
+
+def _run_and_release(event_name: str, kwargs: dict[str, Any]) -> None:
+    global _pending
+    try:
+        emit_app_event(event_name, **kwargs)
+    finally:
+        with _pending_lock:
+            _pending -= 1
+
+
 def emit_app_event_in_background(event_name: str, **kwargs: Any) -> None:
-    """Schedule emit_app_event on the default thread pool and return at once.
+    """Schedule emit_app_event on a dedicated bounded pool and return at once.
 
     For async code paths with no BackgroundTasks to hand (MCP tools,
     middleware). The Supabase client is synchronous, so calling
     emit_app_event inline would block the event loop for a network round
     trip. Without a running loop (sync callers, scripts) it runs inline.
-    Never raises.
+    When more than MAX_PENDING_BACKGROUND_EVENTS writes are waiting the event
+    is dropped and logged. Never raises.
     """
+    global _pending
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
         emit_app_event(event_name, **kwargs)
         return
+    with _pending_lock:
+        if _pending >= MAX_PENDING_BACKGROUND_EVENTS:
+            logger.warning(
+                f"emit_app_event_in_background: backlog full, dropped {event_name!r}"
+            )
+            return
+        _pending += 1
     try:
-        loop.run_in_executor(None, lambda: emit_app_event(event_name, **kwargs))
+        _executor.submit(_run_and_release, event_name, kwargs)
     except Exception as exc:
+        with _pending_lock:
+            _pending -= 1
         logger.warning(f"emit_app_event_in_background: could not schedule: {exc}")

@@ -36,7 +36,7 @@ excluded from this union — the compiler then blocks `track('auth_...')`.
 - **Backend code paths:** in a route with `BackgroundTasks`, schedule
   `emit_app_event` on it. Elsewhere in async code (MCP tools, middleware),
   call `emit_app_event_in_background`, which runs the synchronous Supabase
-  insert on the thread pool so the event loop never waits. Both never raise.
+  insert on a small dedicated thread pool (bounded backlog, excess events dropped and logged) so the event loop never waits. Both never raise.
 
 Properties rules:
 

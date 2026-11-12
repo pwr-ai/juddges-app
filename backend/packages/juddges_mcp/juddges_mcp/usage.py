@@ -29,6 +29,9 @@ EVENT_NAME = "mcp_tool_called"
 
 
 def _caller_id() -> str | None:
+    # app_events.user_id has an FK to auth.users. A principal whose id is not an
+    # auth.users row (e.g. a non-Supabase principal) makes the insert fail the
+    # FK; record_app_events only logs that, so the tool call is unaffected.
     try:
         return get_principal().id
     except MissingPrincipalError:
