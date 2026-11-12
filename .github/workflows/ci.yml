@@ -431,7 +431,7 @@ jobs:
     needs: [changes]
     if: ${{ (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     container:
-      image: mcr.microsoft.com/playwright:v1.64.0-jammy
+      image: mcr.microsoft.com/playwright:v1.65.0-jammy
     defaults:
       run:
         shell: bash
@@ -509,7 +509,7 @@ jobs:
     # PRE-INSTALLED — no browser download step (that download hung the runner
     # repeatedly). Tag must track the @playwright/test version in package.json.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.0-jammy
+      image: mcr.microsoft.com/playwright:v1.65.0-jammy
     # The container's default shell is `sh` (dash), which doesn't do `{1..60}`
     # brace expansion — force bash (present in the image) for all run steps.
     defaults:
