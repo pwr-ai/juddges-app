@@ -617,11 +617,11 @@ class TestDocumentsSearch:
             patch("app.services.search.embed_texts", return_value=fake_vec),
             patch("httpx.AsyncClient.post", new=fake_post),
         ):
-            await service.documents_search("drugs", semantic_ratio=0.5)
+            await service.documents_search("drugs", semantic_ratio=1.0)
 
         assert captured["payload"]["hybrid"] == {
             "embedder": "bge-m3",
-            "semanticRatio": 0.5,
+            "semanticRatio": 1.0,
         }
         assert captured["payload"]["vector"] == fake_vec
 
@@ -651,7 +651,7 @@ class TestDocumentsSearch:
             patch("app.services.search.embed_texts", return_value=fake_vec),
             patch("httpx.AsyncClient.post", new=fake_post),
         ):
-            result = await service.documents_search("drugs", semantic_ratio=0.5)
+            result = await service.documents_search("drugs", semantic_ratio=1.0)
 
         assert len(calls) == 2
         assert "hybrid" in calls[0] and "vector" in calls[0]
@@ -775,7 +775,7 @@ class TestHybridFallbackSignal:
             patch("app.services.search.embed_texts", return_value=fake_vec),
             patch("httpx.AsyncClient.post", new=fake_post),
         ):
-            result = await svc.documents_search("narkotyki", semantic_ratio=0.5)
+            result = await svc.documents_search("narkotyki", semantic_ratio=1.0)
 
         # (a) keyword results are present
         assert result["hits"] == keyword_hits
