@@ -17,9 +17,16 @@ def celery_eager(monkeypatch):
     """
     from app.workers import celery_app
 
-    monkeypatch.setattr(celery_app.conf, "task_always_eager", True)
-    monkeypatch.setattr(celery_app.conf, "task_eager_propagates", True)
-    yield celery_app
+    # These keys are not attributes of Celery's ``Settings`` view until set, so
+    # ``monkeypatch.setattr`` cannot undo them: pytest 9 fails teardown on the
+    # ``delattr``. Set them as items and restore by hand.
+    overrides = {"task_always_eager": True, "task_eager_propagates": True}
+    previous = {key: celery_app.conf.get(key) for key in overrides}
+    celery_app.conf.update(overrides)
+    try:
+        yield celery_app
+    finally:
+        celery_app.conf.update(previous)
 
 
 @pytest.fixture
