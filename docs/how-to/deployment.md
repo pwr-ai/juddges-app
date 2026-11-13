@@ -178,12 +178,13 @@ git checkout main && git pull                  # always run from clean main
 1. Fetches `origin/main` and tags, and **refuses to run** unless `HEAD` is exactly `origin/main` with a clean working tree. The images are built from the release commit, so anything else would ship code `main` never had.
 2. Reads the latest `prod-v*` git tag to determine current version (legacy `v*` fallback), calculates the next one, and refuses a version whose tag already exists
 3. Confirms with the user before proceeding (skipped with `--yes`)
-4. Loads `.env` and logs into Docker Hub, so missing credentials fail before anything is public
+4. Loads `.env`, then the optional gitignored `.env.release` on top of it, and **refuses** a frontend `NEXT_PUBLIC_*` build arg that points at `localhost` / `127.x` / `0.0.0.0` / `[::1]` (#578); then logs into Docker Hub. Missing credentials or a dev URL fail before anything is public. Put release-only overrides (e.g. a different Supabase project) in `.env.release` rather than editing your dev `.env`. `NEXT_PUBLIC_API_BASE_URL` is not a build arg at all: it is runtime-only.
 5. **Syncs version** across all project files (see table below) and generates release notes
 6. Commits them as `release: prod-v<version>` and **pushes that commit to `main` before building**. If the push is rejected (`main` moved since step 1), the commit is undone locally and the script exits without building or pushing anything — pull and run it again.
 7. Builds and pushes two Docker images from that commit (tagged with version + `latest`):
    - `<username>/juddges-frontend:<version>`
    - `<username>/juddges-backend:<version>`
+   The frontend image build itself fails if its browser-facing output (client chunks, prerendered HTML/RSC) contains a local origin (`frontend/scripts/assert-no-local-origins.js`, run in the Dockerfile builder stage). For an image that never leaves your machine, `--build-arg ALLOW_LOCAL_ORIGINS=1` skips it.
 8. Creates and pushes the annotated tag `prod-v<version>` last, so a tag only exists once its images are on Docker Hub
 
 Why this order: image builds take minutes, and other PRs merge into `main` meanwhile. When the commit was pushed *after* the build, a moved `main` rejected it after the images were already public, leaving images with no tag and no release commit on `main` (prod-v1.5.23 and prod-v1.5.24 both hit this).
@@ -497,6 +498,37 @@ docker inspect --format='{{range .State.Health.Log}}{{.Output}}{{end}}' juddges-
 |----------|------|---------|
 | `GET /health/healthz` | None | Basic liveness (used by Docker) |
 | `GET /health/status` | API Key | Detailed status with service checks |
+| `POST /health/status/invalidate` | API Key | Drop the status cache (and the LLM probe cache) |
+
+`/health/status` checks redis, postgresql (critical), supabase, celery,
+langfuse, meilisearch and **`llm`** (optional). The `llm` probe calls the
+token-free `GET {base_url}/models` with `OPENAI_API_KEY` against every endpoint
+the backend's LLM resolvers use: OpenAI (`get_llm()`) and, when set,
+`LLM_BASE_URL` (`get_default_llm()`). It reports:
+
+| `services.llm.status` | Meaning |
+|---|---|
+| `healthy` | Every endpoint accepted the key |
+| `unhealthy` | Key missing or rejected (401/403, e.g. `invalid_project`), or an endpoint is unreachable (e.g. `LLM_BASE_URL=http://localhost:11434/v1` inside a container) |
+| `degraded` | 429 (rate limit / `insufficient_quota`) or another unexpected HTTP status |
+
+`services.llm.metadata.targets` has the per-endpoint `endpoint` (scheme, host
+and port only -- URL userinfo, path and query are stripped), `http_status`,
+`error_code` and `detail`; the key itself is never included. An unhealthy LLM
+makes the overall status `degraded`, not `unhealthy` -- search keeps working
+without it -- so read `services.llm` rather than the top-level status. The
+probe result is cached for `LLM_HEALTH_CACHE_TTL_SECONDS` (default `300`) when
+healthy and for `LLM_HEALTH_FAILURE_CACHE_TTL_SECONDS` (default `30`) when not;
+after rotating the key, call `POST /health/status/invalidate` to re-probe now.
+
+```bash
+curl -s -H "X-API-Key: $BACKEND_API_KEY" http://localhost:8002/health/status | jq '.services.llm'
+```
+
+The release script (`scripts/build_and_push_prod.sh`) uses the same key for
+release notes. If that call fails it prints a warning pointing here and falls
+back to notes built from commit subjects (`generate_release_notes.py --no-llm`)
+rather than aborting the release.
 
 ---
 

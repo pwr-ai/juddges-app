@@ -7,6 +7,7 @@
 .env.local
 .env.*.local
 .env.production
+.env.release
 .env.secrets
 .env.rls-verify
 .env.bak*
@@ -115,6 +116,8 @@ secrets/
 *.csv
 *.parquet
 *.jsonl
+# Search-eval golden set (#831): a small, versioned fixture, not a dataset
+!backend/evals/search/golden_set.jsonl
 
 # Backups
 *.bak
@@ -169,6 +172,11 @@ cython_debug/
 !.claude/agents/
 .claude/settings.local.json
 .context/
+# Agent-written plans, specs and research notes are per-task scratch work:
+# keep them under .context/ (see CLAUDE.md), not docs/.
+docs/superpowers/
+docs/plans/
+docs/research-notes/
 .codex/
 .playwright-mcp/
 frontend/app/test-supabase/
@@ -230,6 +238,7 @@ skills-lock.json
 .kangentic/
 .claude/settings.local.json
 kangentic.local.json
+kangentic.json
 
 # design-sync (claude.ai/design) machine state - inputs in .design-sync/ are committed
 .ds-sync/

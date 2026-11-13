@@ -327,7 +327,7 @@ CREATE TABLE judgments (
 |----------|-------|------------|--------|
 | OpenAI | `text-embedding-3-small` | 768 | `EMBEDDING_MODEL_ID`, `OPENAI_API_KEY` |
 | Cohere | `embed-multilingual-v3.0` | 768 | `COHERE_API_KEY` |
-| Local | `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` | 768 | Transformers Docker service |
+| TEI (self-hosted) | `BAAI/bge-m3` | 1024 | `TEI_EMBEDDING_URL` (legacy fallback: `TRANSFORMERS_INFERENCE_URL`) |
 
 ### Ingestion Pipeline
 

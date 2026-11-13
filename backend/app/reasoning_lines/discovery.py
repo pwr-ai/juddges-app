@@ -8,9 +8,9 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
-from app.clustering import _compute_pca_2d, _extract_keywords_tfidf, _kmeans
 from app.rate_limiter import limiter
 
+from .cluster_math import _compute_pca_2d, _extract_keywords_tfidf, _kmeans
 from .constants import (
     REASONING_LINES_RATE_LIMIT,
 )
