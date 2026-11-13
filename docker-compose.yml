@@ -33,8 +33,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      # NEXT_PUBLIC_API_BASE_URL is runtime-only (docker-entrypoint.sh,
+      # /runtime-env.js): the dev .env value must not be baked in (#578). The
+      # Dockerfile fails the build if a localhost URL reaches the browser bundle.
       args:
-        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     container_name: juddges-frontend
@@ -134,6 +136,9 @@ services:
     networks:
       - app-network
       - data_stack_network  # Caddy reverse proxy network
+      # Weaviate v2 test stack (POST /search/v2, #867). Backend only: no other
+      # service talks to it. deploy_prod.sh refuses to start if it is missing.
+      - weaviate_v2_network
     # Health check for FastAPI backend using dedicated health endpoint
     # Uses /health/healthz - lightweight check without authentication
     healthcheck:
@@ -492,4 +497,12 @@ networks:
 
   # External Caddy reverse proxy network (shared with caddy-local gateway)
   data_stack_network:
+    external: true
+
+  # External Weaviate v2 test stack (JuDDGES repo, compose project
+  # `juddges_weaviate_v2`). Create an empty one with
+  # `docker network create juddges_weaviate_v2_default` on a host without the
+  # stack; /search/v2 then answers 503.
+  weaviate_v2_network:
+    name: juddges_weaviate_v2_default
     external: true

@@ -1,6 +1,6 @@
 [project]
 name = "juddges"
-version = "1.5.31"
+version = "1.5.32"
 description = "Juddges App - AI-powered judicial decision search for Polish and UK courts"
 authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak.com" }]
 license = "Apache-2.0"
@@ -19,7 +19,6 @@ dependencies = [
     # langserve[server] (sse-starlette<2). Do not bump until LangServe lifts that cap.
     "mcp==1.30.0",
     "langfuse>=3.2.3,<4",
-    "aiohttp>=3.11.14,<4",
     "httpx>=0.27,<0.29",
     "supabase>=2.20.0,<3",
     "langgraph-checkpoint-postgres>=3.1.3,<4",
@@ -34,8 +33,8 @@ dependencies = [
     "openpyxl>=3.1.0,<4",
     "strawberry-graphql[fastapi]>=0.291.3,<0.337.0",
     "cachetools>=5.5,<8.0",
-    "defusedxml>=0.7.1,<0.8",
     "email-validator>=2.0.0,<3.0.0",
+    "weaviate-client>=4.16,<5",
 ]
 
 [project.optional-dependencies]
@@ -107,6 +106,11 @@ ci = ["lint", "format-check"]
 # Search benchmark (live backend required — see scripts/search_benchmark.py)
 bench-search = "python scripts/search_benchmark.py"
 
+# Offline retrieval eval: recall/nDCG/MRR per search mode against the golden set
+# (live Meilisearch + TEI, never prod — see docs/how-to/evaluate-search-quality.md)
+eval-search = "python -m evals.search.run_eval"
+eval-search-build = "python -m evals.search.build_golden"
+
 # Local MCP server over stdio; needs JUDDGES_MCP_KEY and service-role credentials
 mcp-stdio = "python -m juddges_mcp.stdio"
 
@@ -165,7 +169,6 @@ ignore = [
     "S608",    # SQL string concat (only in admin scripts)
     "PTH118",  # os.path.join (sys.path manipulation needs os.path)
     "PTH120",  # os.path.dirname (sys.path manipulation needs os.path)
-    "S314",    # XML parsing (xml_converter uses defusedxml)
     "UP042",   # str+Enum -> StrEnum (TODO: migrate incrementally; ruff 0.16)
     "S104",    # bind all interfaces (intentional for Docker)
 ]

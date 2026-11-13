@@ -352,7 +352,13 @@ def embed(texts: list[str], tei_url: str, verify: bool) -> list[list[float] | No
 
 
 def embedding_text(row: dict) -> str:
-    # Same recipe as scripts/reembed_bge_m3.py so the new rows sit in the same space.
+    # Same recipe the corpus-wide BGE-M3 re-embed used (the since-removed
+    # scripts/reembed_bge_m3.py), so the new rows sit in the same space:
+    # title, summary and full_text[:16000], posted to TEI /embed with
+    # truncate=True, keeping only 1024-dim vectors, saved through the
+    # update_judgment_embedding RPC. That script joined the parts with a single
+    # space; the blank-line join here only adds whitespace between them. For a
+    # maintained re-embed of existing rows, use app.ingestion.embed_documents.
     parts = [row["title"], row["summary"], row["full_text"][:16000]]
     return "\n\n".join(p for p in parts if p)
 

@@ -5504,121 +5504,6 @@
         "title": "DocumentStats",
         "type": "object"
       },
-      "DocumentSummary": {
-        "description": "Document with AI-generated summary.",
-        "properties": {
-          "ai_summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ai Summary"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "document_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Number"
-          },
-          "document_type": {
-            "title": "Document Type",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "issuing_body": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Issuing Body"
-          },
-          "jurisdiction": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jurisdiction"
-          },
-          "key_topics": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Key Topics"
-          },
-          "language": {
-            "title": "Language",
-            "type": "string"
-          },
-          "publication_date": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publication Date"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "document_type",
-          "publication_date",
-          "ai_summary",
-          "key_topics",
-          "jurisdiction",
-          "language",
-          "issuing_body"
-        ],
-        "title": "DocumentSummary",
-        "type": "object"
-      },
       "DocumentType": {
         "description": "Enumeration of supported legal document types.\n\nSearch is judgment-only as of 2026-05-09; the enum is retained as a\none-value placeholder so existing imports keep compiling. See\n``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``\nfor the migration that collapsed the enum.",
         "enum": [
@@ -12802,6 +12687,169 @@
           "id"
         ],
         "title": "SearchQueryEntry",
+        "type": "object"
+      },
+      "SearchV2Chunk": {
+        "properties": {
+          "chunk_idx": {
+            "title": "Chunk Idx",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "chunk_idx"
+        ],
+        "title": "SearchV2Chunk",
+        "type": "object"
+      },
+      "SearchV2Request": {
+        "properties": {
+          "alpha": {
+            "default": 0.25,
+            "description": "0 = BM25 only, 1 = vector only",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Alpha",
+            "type": "number"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchV2Request",
+        "type": "object"
+      },
+      "SearchV2Response": {
+        "properties": {
+          "engine": {
+            "default": "weaviate-v2",
+            "title": "Engine",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchV2Result"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "took_ms": {
+            "title": "Took Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "took_ms"
+        ],
+        "title": "SearchV2Response",
+        "type": "object"
+      },
+      "SearchV2Result": {
+        "properties": {
+          "best_chunk": {
+            "$ref": "#/components/schemas/SearchV2Chunk"
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Date"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "supabase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "judgments.id when the judgment is also in the app database",
+            "title": "Supabase Id"
+          },
+          "thesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesis"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "score",
+          "best_chunk"
+        ],
+        "title": "SearchV2Result",
         "type": "object"
       },
       "SegmentType": {
@@ -21694,61 +21742,6 @@
         ]
       }
     },
-    "/dashboard/featured-examples": {
-      "get": {
-        "description": "Curated featured-example judgments for new users.\n\nArgs:\n    limit: Number of examples to return (1-10)\n\nReturns:\n    List of featured judgments rendered as DocumentSummary.",
-        "operationId": "get_featured_examples_dashboard_featured_examples_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 5,
-              "maximum": 10,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DocumentSummary"
-                  },
-                  "title": "Response Get Featured Examples Dashboard Featured Examples Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get Featured Examples",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
     "/dashboard/health": {
       "get": {
         "description": "Check dashboard data availability.",
@@ -21769,34 +21762,6 @@
           }
         ],
         "summary": "Dashboard Health",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/refresh-stats": {
-      "post": {
-        "description": "Trigger a refresh of precomputed dashboard statistics.\n\nCalls the SQL function to recompute stats and clears all caches so that\nthe next /stats request returns fresh data.\n\nReturns:\n    dict: Status message",
-        "operationId": "refresh_dashboard_stats_dashboard_refresh_stats_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Refresh Dashboard Stats",
         "tags": [
           "dashboard"
         ]
@@ -29121,6 +29086,55 @@
         "summary": "Update Schema",
         "tags": [
           "schemas"
+        ]
+      }
+    },
+    "/search/v2": {
+      "post": {
+        "operationId": "search_v2_search_v2_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchV2Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchV2Response"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test search over the Weaviate v2 corpus (hybrid chunks + MaxP)",
+        "tags": [
+          "Search v2 (test)"
         ]
       }
     },

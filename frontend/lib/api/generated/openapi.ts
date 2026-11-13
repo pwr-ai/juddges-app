@@ -2153,32 +2153,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dashboard/featured-examples": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Featured Examples
-         * @description Curated featured-example judgments for new users.
-         *
-         *     Args:
-         *         limit: Number of examples to return (1-10)
-         *
-         *     Returns:
-         *         List of featured judgments rendered as DocumentSummary.
-         */
-        get: operations["get_featured_examples_dashboard_featured_examples_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/dashboard/health": {
         parameters: {
             query?: never;
@@ -2193,32 +2167,6 @@ export interface paths {
         get: operations["dashboard_health_dashboard_health_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dashboard/refresh-stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Refresh Dashboard Stats
-         * @description Trigger a refresh of precomputed dashboard statistics.
-         *
-         *     Calls the SQL function to recompute stats and clears all caches so that
-         *     the next /stats request returns fresh data.
-         *
-         *     Returns:
-         *         dict: Status message
-         */
-        post: operations["refresh_dashboard_stats_dashboard_refresh_stats_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5371,6 +5319,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/search/v2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test search over the Weaviate v2 corpus (hybrid chunks + MaxP) */
+        post: operations["search_v2_search_v2_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/summarize": {
         parameters: {
             query?: never;
@@ -8119,36 +8084,6 @@ export interface components {
              * @default 0
              */
             total: number;
-        };
-        /**
-         * DocumentSummary
-         * @description Document with AI-generated summary.
-         */
-        DocumentSummary: {
-            /** Ai Summary */
-            ai_summary: string | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Document Number */
-            document_number?: string | null;
-            /** Document Type */
-            document_type: string;
-            /** Id */
-            id: string;
-            /** Issuing Body */
-            issuing_body: {
-                [key: string]: unknown;
-            } | null;
-            /** Jurisdiction */
-            jurisdiction: string | null;
-            /** Key Topics */
-            key_topics: string[] | null;
-            /** Language */
-            language: string;
-            /** Publication Date */
-            publication_date: string | null;
-            /** Title */
-            title: string;
         };
         /**
          * DocumentType
@@ -11563,6 +11498,64 @@ export interface components {
             session_id?: string | null;
             /** User Id */
             user_id?: string | null;
+        };
+        /** SearchV2Chunk */
+        SearchV2Chunk: {
+            /** Chunk Idx */
+            chunk_idx: number;
+            /** Text */
+            text: string;
+        };
+        /** SearchV2Request */
+        SearchV2Request: {
+            /**
+             * Alpha
+             * @description 0 = BM25 only, 1 = vector only
+             * @default 0.25
+             */
+            alpha: number;
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
+            /** Query */
+            query: string;
+        };
+        /** SearchV2Response */
+        SearchV2Response: {
+            /**
+             * Engine
+             * @default weaviate-v2
+             */
+            engine: string;
+            /** Results */
+            results: components["schemas"]["SearchV2Result"][];
+            /** Took Ms */
+            took_ms: number;
+        };
+        /** SearchV2Result */
+        SearchV2Result: {
+            best_chunk: components["schemas"]["SearchV2Chunk"];
+            /** Court Name */
+            court_name?: string | null;
+            /** Decision Date */
+            decision_date?: string | null;
+            /** Judgment Id */
+            judgment_id: string;
+            /** Score */
+            score: number;
+            /** Signature */
+            signature?: string | null;
+            /** Source Id */
+            source_id?: string | null;
+            /**
+             * Supabase Id
+             * @description judgments.id when the judgment is also in the app database
+             */
+            supabase_id?: string | null;
+            /** Thesis */
+            thesis?: string | null;
         };
         /**
          * SegmentType
@@ -16245,58 +16238,7 @@ export interface operations {
             };
         };
     };
-    get_featured_examples_dashboard_featured_examples_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentSummary"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     dashboard_health_dashboard_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    refresh_dashboard_stats_dashboard_refresh_stats_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -20785,6 +20727,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeleteSchemaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_v2_search_v2_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchV2Request"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchV2Response"];
                 };
             };
             /** @description Validation Error */
