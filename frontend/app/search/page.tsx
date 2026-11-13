@@ -25,6 +25,9 @@ import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete';
 import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useOptionalAuth } from '@/contexts/AuthContext';
+import { SearchEngineSelector, type SearchEngine } from '@/components/search/v2/SearchEngineSelector';
+import { SearchV2Panel } from '@/components/search/v2/SearchV2Panel';
 
 /**
  * Typing animation component for header text
@@ -81,6 +84,11 @@ function SearchPageContent(): React.JSX.Element | null {
  const [lastSearchMode, setLastSearchMode] = useState<"thinking" | "rabbit" | null>(null);
  const [hasPerformedSearch, setHasPerformedSearch] = useState(false);
  const [searchTimestamp, setSearchTimestamp] = useState<string>('');
+ // v2 (Weaviate) test engine, signed-in users only (#867). Local state on
+ // purpose: the standard search store, URL and cache never see it.
+ const [engine, setEngine] = useState<SearchEngine>('standard');
+ const signedIn = !!useOptionalAuth()?.user;
+ const useV2 = signedIn && engine === 'v2';
 
  // Store state
  const filters = useSearchStore((state) => state.filters);
@@ -402,8 +410,15 @@ function SearchPageContent(): React.JSX.Element | null {
  chunks={selectedChunks}
  />
 
- <PageContainer width={showExpanded ? 'compact' : 'full'} fillViewport={showExpanded} className="py-6 relative z-10">
- {showExpanded ? (
+ <PageContainer width={showExpanded || useV2 ? 'compact' : 'full'} fillViewport={showExpanded && !useV2} className="py-6 relative z-10">
+ {signedIn && (
+ <div className="mb-6">
+ <SearchEngineSelector value={engine} onChange={setEngine} disabled={isSearching} />
+ </div>
+ )}
+ {useV2 ? (
+ <SearchV2Panel initialQuery={query} />
+ ) : showExpanded ? (
  /* Expanded view - IMPROVED LAYOUT */
  <div className="flex flex-col items-center">
  <div className="w-full space-y-8">
