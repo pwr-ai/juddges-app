@@ -156,8 +156,6 @@ const CLEAN_FILES = [
   'components/schema-studio/FieldCard.tsx',
   'components/schema-studio/FieldEditor.tsx',
   'components/schema-studio/versions/VersionsTab.tsx',
-  'lib/schema-editor/rjsf/custom-widgets/DescriptionWidget.tsx',
-  'lib/schema-editor/rjsf/rjsf-config.ts',
   'types/schema-playground.ts',
   'lib/styles/colors/surfaces.ts',
   'lib/styles/components/buttons.ts',

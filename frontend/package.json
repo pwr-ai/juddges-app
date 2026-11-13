@@ -65,7 +65,6 @@
     "@radix-ui/react-tabs": "^1.2.1",
     "@radix-ui/react-toggle": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
-    "@rjsf/utils": "^6.11.0",
     "@sentry/nextjs": "^11.9.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
