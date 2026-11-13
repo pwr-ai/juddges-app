@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 
 const BACKEND_API_KEY = process.env.BACKEND_API_KEY;
 
@@ -10,7 +11,7 @@ interface RouteContext {
 }
 
 async function getAuthContext(): Promise<
-  | { ok: true; accessToken: string }
+  | { ok: true; accessToken: string; userId: string }
   | { ok: false; response: NextResponse }
 > {
   if (!BACKEND_API_KEY) {
@@ -44,13 +45,14 @@ async function getAuthContext(): Promise<
     };
   }
 
-  return { ok: true, accessToken };
+  return { ok: true, accessToken, userId: userData.user.id };
 }
 
 async function forwardRequest(
   id: string,
   method: "GET" | "PUT" | "DELETE",
   accessToken: string,
+  userId: string,
   body?: unknown
 ): Promise<NextResponse> {
   const response = await fetch(`${getBackendUrl()}/blog/admin/posts/${id}`, {
@@ -59,6 +61,7 @@ async function forwardRequest(
       "Content-Type": "application/json",
       "X-API-Key": BACKEND_API_KEY!,
       Authorization: `Bearer ${accessToken}`,
+      "X-RateLimit-Identity": rateLimitIdentity(userId),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -76,7 +79,7 @@ export async function GET(
     return auth.response;
   }
   const { id } = await context.params;
-  return forwardRequest(id, "GET", auth.accessToken);
+  return forwardRequest(id, "GET", auth.accessToken, auth.userId);
 }
 
 export async function PUT(
@@ -89,7 +92,7 @@ export async function PUT(
   }
   const { id } = await context.params;
   const body = await request.json();
-  return forwardRequest(id, "PUT", auth.accessToken, body);
+  return forwardRequest(id, "PUT", auth.accessToken, auth.userId, body);
 }
 
 export async function DELETE(
@@ -101,5 +104,5 @@ export async function DELETE(
     return auth.response;
   }
   const { id } = await context.params;
-  return forwardRequest(id, "DELETE", auth.accessToken);
+  return forwardRequest(id, "DELETE", auth.accessToken, auth.userId);
 }

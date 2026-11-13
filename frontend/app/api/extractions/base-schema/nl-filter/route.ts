@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 import logger from '@/lib/logger';
 import {
   UnauthorizedError,
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
       },
       body: JSON.stringify({ query }),
     });

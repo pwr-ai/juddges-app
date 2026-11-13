@@ -41,6 +41,7 @@ from app.collection_pairs import router as collection_pairs_router
 from app.collections import router as collections_router
 from app.collections_from_filter import router as collections_from_filter_router
 from app.compare.router import router as compare_router
+from app.core.private_database import PRIVATE_DATABASE_OPTIONS
 from app.dashboard import router as dashboard_router
 from app.embeddings_api import router as embeddings_router
 from app.example_questions import router as example_questions_router
@@ -232,6 +233,7 @@ async def _app_lifespan(app: FastAPI):
                     pg_url,
                     autocommit=True,
                     connect_timeout=10,
+                    options=PRIVATE_DATABASE_OPTIONS,
                 ),
                 timeout=15,
             )
@@ -246,6 +248,7 @@ async def _app_lifespan(app: FastAPI):
                 max_idle=300,  # 5 minutes
                 max_lifetime=3600,  # 1 hour
                 kwargs={
+                    "options": PRIVATE_DATABASE_OPTIONS,
                     "autocommit": True,  # required by saver setup
                     "row_factory": dict_row,  # saver accesses rows by name
                     "prepare_threshold": None,  # avoid _pg3_* prepared stmt collisions
@@ -459,8 +462,8 @@ app = FastAPI(
     description="Backend API for Juddges legal research platform with intelligent search, audit trail, and legal compliance",
     version="0.3.0",
     # Charges DEFAULT_RATE_LIMITS on include_router-mounted routes, which
-    # SlowAPIMiddleware cannot match (#574). Inert unless
-    # RATE_LIMIT_ROUTER_BACKSTOP=true; see app/rate_limiter.py.
+    # SlowAPIMiddleware cannot match (#574). Enabled by default; set
+    # RATE_LIMIT_ROUTER_BACKSTOP=false only for local debugging.
     dependencies=[Depends(enforce_default_rate_limits)],
     openapi_tags=[
         {
@@ -529,9 +532,9 @@ logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 # route lookup only matches routes registered directly on `app` (the
 # LangServe chains, /docs, /openapi.json); routes mounted via include_router
 # — most of this API — are not matched by the middleware. Those are covered
-# by the app-wide enforce_default_rate_limits dependency instead (#574), which
-# is gated by RATE_LIMIT_ROUTER_BACKSTOP until the BFF forwards a per-user
-# rate-limit identity everywhere (#565). @limiter.limit decorators are
+# by the app-wide enforce_default_rate_limits dependency instead (#574). The
+# backstop is enabled by default; authenticated BFF routes forward a hashed
+# per-user identity where user-specific quotas are required (#565). @limiter.limit decorators are
 # unaffected and enforce regardless of mounting style.
 #
 # Registered first (innermost) deliberately: Starlette builds the middleware

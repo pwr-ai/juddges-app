@@ -4,6 +4,7 @@ import { withClientIp } from "@/app/api/_lib/client-ip";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 
 const routeLogger = logger.child("search-autocomplete-api");
 
@@ -46,9 +47,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // row to the logged-in user. Anonymous traffic stays anonymous.
     const supabase = await createClient();
     const { data: sessionData } = await supabase.auth.getSession();
+    const { data: userData } = await supabase.auth.getUser();
     const accessToken = sessionData.session?.access_token;
-    if (accessToken) {
+    if (accessToken && userData.user) {
       headers["Authorization"] = `Bearer ${accessToken}`;
+      headers["X-RateLimit-Identity"] = rateLimitIdentity(userData.user.id);
     }
 
     const response = await fetch(

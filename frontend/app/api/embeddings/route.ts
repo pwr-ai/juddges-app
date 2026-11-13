@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 
 const routeLogger = logger.child("embeddings-api");
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -26,6 +27,7 @@ const FORWARDED_RESPONSE_HEADERS = [
 
 type VerifiedCaller = {
   accessToken: string;
+  userId: string;
   isAdmin: boolean;
 };
 
@@ -54,6 +56,7 @@ async function verifyCaller(): Promise<VerifiedCaller | NextResponse> {
 
   return {
     accessToken,
+    userId: userData.user.id,
     isAdmin:
       userData.user.role === "service_role" ||
       userData.user.app_metadata?.is_admin === true,
@@ -86,6 +89,7 @@ async function proxyRequest(
       Accept: request.headers.get("accept") ?? "application/json",
       Authorization: `Bearer ${caller.accessToken}`,
       "X-API-Key": apiKey,
+      "X-RateLimit-Identity": rateLimitIdentity(caller.userId),
     };
     const contentType = request.headers.get("content-type");
     if (contentType) requestHeaders["Content-Type"] = contentType;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 import { logger } from "@/lib/logger";
 
 const API_BASE_URL = getBackendUrl();
@@ -45,6 +46,7 @@ export async function DELETE(
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
         'Content-Type': 'application/json',
       } as HeadersInit,
     });

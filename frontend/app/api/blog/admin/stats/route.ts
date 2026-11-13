@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 
 const BACKEND_API_KEY = process.env.BACKEND_API_KEY;
 
@@ -29,6 +30,7 @@ export async function GET(): Promise<NextResponse> {
     headers: {
       "X-API-Key": BACKEND_API_KEY,
       Authorization: `Bearer ${accessToken}`,
+      "X-RateLimit-Identity": rateLimitIdentity(userData.user.id),
     },
   });
 

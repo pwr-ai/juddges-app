@@ -13471,7 +13471,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                guest_session_id?: string | null;
+            };
         };
         requestBody: {
             content: {

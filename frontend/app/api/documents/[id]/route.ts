@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '../../utils/backend-url';
 import logger from '@/lib/logger';
@@ -44,6 +45,7 @@ export async function GET(
       headers: {
         'X-API-Key': apiKey,
         'X-User-ID': userData.user.id,
+        'X-RateLimit-Identity': createHash('sha256').update(userData.user.id).digest('hex'),
         'Content-Type': 'application/json',
       } as HeadersInit,
     });

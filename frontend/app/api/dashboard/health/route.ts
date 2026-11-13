@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 import { getBackendUrl } from "../../utils/backend-url";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const backendUrl = getBackendUrl();
     const response = await fetch(`${backendUrl}/dashboard/health`, {
-      headers: { "X-API-Key": process.env.BACKEND_API_KEY || "" },
+      headers: withClientIp({ "X-API-Key": process.env.BACKEND_API_KEY || "" }, request),
       cache: 'no-store',
     });
 

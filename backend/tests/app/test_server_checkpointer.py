@@ -1,9 +1,4 @@
-"""Startup wiring of the LangGraph checkpointer in `_app_lifespan`.
-
-No Supabase migration creates the checkpoint tables, so the lifespan must call
-`AsyncPostgresSaver.setup()` before handing the saver to the app. If that fails
-the app falls back to the in-memory saver instead of refusing to start.
-"""
+"""Startup upgrades the private checkpoint tables before handing them to the app."""
 
 from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -60,6 +55,9 @@ async def test_postgres_checkpointer_runs_setup_before_use():
         async with server._app_lifespan(app):
             saver.setup.assert_awaited_once_with()
             assert app.state.checkpointer is saver
+            assert server.AsyncConnectionPool.call_args.kwargs["kwargs"]["options"] == (
+                "-c search_path=juddges_private"
+            )
 
     pool.close.assert_awaited_once()
 

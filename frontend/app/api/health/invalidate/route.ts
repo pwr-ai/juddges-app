@@ -4,13 +4,14 @@
  * with server-side API key authentication
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withClientIp } from '@/app/api/_lib/client-ip';
 import { logger } from "@/lib/logger";
 
 const BACKEND_URL = process.env.API_BASE_URL || 'http://localhost:8004';
 const API_KEY = process.env.BACKEND_API_KEY;
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     if (!API_KEY) {
       logger.error('BACKEND_API_KEY not configured');
@@ -22,10 +23,10 @@ export async function POST() {
 
     const response = await fetch(`${BACKEND_URL}/health/status/invalidate`, {
       method: 'POST',
-      headers: {
+      headers: withClientIp({
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY,
-      },
+      }, request),
     });
 
     if (!response.ok) {

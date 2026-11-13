@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +18,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
+    withClientIp(headers, request);
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
     }
@@ -27,6 +30,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const accessToken = sessionData.session?.access_token;
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
+      const userId = sessionData.session?.user?.id;
+      if (userId) headers["X-RateLimit-Identity"] = createHash("sha256").update(userId).digest("hex");
     }
 
     const response = await fetch(`${backendUrl}/api/search/topic-click`, {

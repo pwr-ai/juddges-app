@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'node:crypto';
 
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from '@/lib/logger';
@@ -56,6 +57,7 @@ export async function proxyAdminRequest(
         Accept: 'application/json',
         Authorization: `Bearer ${accessToken}`,
         'X-API-Key': apiKey,
+        'X-RateLimit-Identity': createHash('sha256').update(userData.user.id).digest('hex'),
       },
       cache: 'no-store',
     });

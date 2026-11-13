@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withClientIp } from '@/app/api/_lib/client-ip';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from '@/lib/logger';
 import {
@@ -48,10 +49,10 @@ export async function GET(
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
+      headers: withClientIp({
         'Accept': 'application/json',
         'X-API-Key': API_KEY,
-      },
+      }, request),
     });
 
     if (!response.ok) {

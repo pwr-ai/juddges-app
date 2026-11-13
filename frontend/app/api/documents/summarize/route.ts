@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'node:crypto';
 import { getBackendUrl } from '../../utils/backend-url';
 import { createClient } from '@/lib/supabase/server';
 import logger from '@/lib/logger';
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY,
+        'X-RateLimit-Identity': createHash('sha256').update(userId).digest('hex'),
         'X-User-ID': userId,
         'X-Request-ID': requestId,
       } as HeadersInit,

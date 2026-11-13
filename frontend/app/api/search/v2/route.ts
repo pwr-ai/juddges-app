@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 
+import { withClientIp } from "@/app/api/_lib/client-ip";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
@@ -25,11 +27,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body = await request.text();
     const response = await fetch(`${getBackendUrl()}/search/v2`, {
       method: "POST",
-      headers: {
+      headers: withClientIp({
         "Content-Type": "application/json",
         "X-API-Key": process.env.BACKEND_API_KEY || "",
         Authorization: `Bearer ${accessToken}`,
-      },
+        "X-RateLimit-Identity": createHash("sha256")
+          .update(userData.user.id)
+          .digest("hex"),
+      }, request),
       body,
     });
 

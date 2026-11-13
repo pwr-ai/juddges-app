@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import logger from "@/lib/logger";
@@ -40,6 +41,9 @@ export async function proxyToBackend(opts: ProxyToBackendOptions): Promise<NextR
     const headers: Record<string, string> = {
       "X-API-Key": process.env.BACKEND_API_KEY as string,
       Authorization: `Bearer ${accessToken}`,
+      "X-RateLimit-Identity": createHash("sha256")
+        .update(userData.user.id)
+        .digest("hex"),
     };
     if (body !== undefined) headers["Content-Type"] = "application/json";
 

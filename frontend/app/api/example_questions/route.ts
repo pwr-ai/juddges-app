@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 import { logger } from "@/lib/logger";
 
 const BACKEND_URL = process.env.API_BASE_URL || "http://localhost:8000";
@@ -82,10 +83,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const response = await fetch(url, {
       method: "GET",
-      headers: {
+      headers: withClientIp({
         "Content-Type": "application/json",
         "X-API-Key": BACKEND_API_KEY || "",
-      },
+      }, request),
       // Add cache control to backend request
       next: { revalidate: 300 }, // Revalidate every 5 minutes
     });

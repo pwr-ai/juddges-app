@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'node:crypto';
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from '@/lib/logger';
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': apiKey,
+      'X-RateLimit-Identity': createHash('sha256').update(userData.user.id).digest('hex'),
       'X-User-ID': userData.user.id,
     };
 
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': apiKey,
+      'X-RateLimit-Identity': createHash('sha256').update(userData.user.id).digest('hex'),
       'X-User-ID': userData.user.id,
     };
 

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse, NextRequest } from "next/server";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from "@/lib/logger";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 import {
   isValidCollectionId,
   loadCollectionDetail,
@@ -128,6 +129,7 @@ export async function PUT(request: NextRequest) {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: backendRequestBody,
@@ -198,6 +200,7 @@ export async function DELETE(request: NextRequest) {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
         'Content-Type': 'application/json',
       } as HeadersInit,
     });

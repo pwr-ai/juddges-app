@@ -13,6 +13,7 @@ export async function GET(
   const { slug } = await context.params;
   return proxyPublicBlog(
     `/blog/posts/${encodeURIComponent(slug)}`,
+    request,
     request.signal,
   );
 }

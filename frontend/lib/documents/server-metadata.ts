@@ -4,6 +4,7 @@ import { getBackendUrl } from '@/app/api/utils/backend-url';
 import type { DocumentMetadata } from '@/app/documents/[id]/_components/types';
 import { ErrorCode } from '@/lib/errors';
 import { isDocumentMetadata } from '@/lib/documents/metadata-transport';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 
 const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
 
@@ -57,7 +58,8 @@ function isTimeoutFailure(error: unknown, signal: AbortSignal): boolean {
 export async function fetchDocumentMetadata(
   documentId: string,
   userId: string,
-  requestSignal?: AbortSignal
+  requestSignal?: AbortSignal,
+  clientIp?: string | null
 ): Promise<DocumentMetadata> {
   if (!isValidDocumentId(documentId)) {
     throw new DocumentMetadataNotFoundError();
@@ -76,6 +78,8 @@ export async function fetchDocumentMetadata(
           Accept: 'application/json',
           'X-API-Key': process.env.BACKEND_API_KEY ?? '',
           'X-User-ID': userId,
+          ...(userId !== 'anonymous' ? { 'X-RateLimit-Identity': rateLimitIdentity(userId) } : {}),
+          ...(clientIp ? { 'X-RateLimit-Client-IP': clientIp } : {}),
         },
         cache: 'no-store',
         signal,

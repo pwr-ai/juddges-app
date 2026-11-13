@@ -30,7 +30,7 @@ def test_llm_cache_is_unreachable_from_api_roles(conn, table, role, priv):
     with conn.cursor() as cur:
         cur.execute(
             "SELECT has_table_privilege(%s, %s, %s)",
-            (role, f"public.{table}", priv),
+            (role, f"juddges_private.{table}", priv),
         )
         assert cur.fetchone()[0] is False, f"{role} holds {priv} on {table}"
 
@@ -41,7 +41,7 @@ def test_llm_cache_has_rls_enabled(conn, table):
         cur.execute(
             "SELECT relrowsecurity FROM pg_class c "
             "JOIN pg_namespace n ON n.oid = c.relnamespace "
-            "WHERE n.nspname = 'public' AND c.relname = %s",
+            "WHERE n.nspname = 'juddges_private' AND c.relname = %s",
             (table,),
         )
         row = cur.fetchone()

@@ -10,6 +10,7 @@ import { ANONYMOUS_PRINCIPAL } from '@/lib/documents/metadata-transport';
 import { AppError, ErrorCode, ValidationError } from '@/lib/errors';
 import logger from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
+import { getTrustedClientIp } from '@/app/api/_lib/client-ip';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,8 @@ export async function GET(
     const metadata = await fetchDocumentMetadata(
       documentId,
       principal,
-      request.signal
+      request.signal,
+      getTrustedClientIp(request)
     );
 
     return NextResponse.json(metadata, {

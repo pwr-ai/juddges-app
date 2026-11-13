@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { DocumentExtractionResult } from "@/types/search";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 import logger from '@/lib/logger';
 import {
   ValidationError,
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest) {
           headers: {
             'X-API-Key': API_KEY,
             'Authorization': `Bearer ${accessToken}`,
+            'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
           } as HeadersInit,
         });
 
@@ -351,6 +353,7 @@ export async function GET(request: NextRequest) {
           headers: {
             'X-API-Key': API_KEY,
             'Authorization': `Bearer ${accessToken}`,
+            'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
           },
           signal: AbortSignal.timeout(10_000),
         }
@@ -602,6 +605,7 @@ export async function DELETE(request: NextRequest) {
           headers: {
             'X-API-Key': API_KEY,
             'Authorization': `Bearer ${deleteAccessToken}`,
+            'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
           },
           signal: controller.signal
         }

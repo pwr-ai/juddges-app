@@ -9,6 +9,8 @@ from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.checkpoint.postgres import PostgresSaver
 from psycopg.rows import dict_row
 
+from app.core.private_database import PRIVATE_DATABASE_OPTIONS
+
 pytestmark = pytest.mark.db
 
 TABLES = (
@@ -19,7 +21,7 @@ TABLES = (
 )
 MIGRATION = (
     Path(__file__).resolve().parents[3]
-    / "supabase/migrations/20261110000001_secure_langgraph_checkpoints.sql"
+    / "supabase/migrations/20261113000002_move_runtime_state_to_private_schema.sql"
 )
 
 
@@ -37,11 +39,11 @@ def test_checkpoint_tables_deny_api_access(conn, as_role, table, role):
     ):
         assert not conn.execute(
             "SELECT has_table_privilege(%s, %s, %s)",
-            (role, f"public.{table}", privilege),
+            (role, f"juddges_private.{table}", privilege),
         ).fetchone()[0], f"{role} holds {privilege} on {table}"
 
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
-        as_role(role, f"SELECT * FROM public.{table} LIMIT 0")
+        as_role(role, f"SELECT * FROM juddges_private.{table} LIMIT 0")
 
 
 @pytest.mark.parametrize("table", TABLES)
@@ -49,11 +51,11 @@ def test_checkpoint_tables_have_rls_without_api_policies(conn, table):
     assert conn.execute(
         "SELECT relrowsecurity AND NOT relforcerowsecurity FROM pg_class "
         "WHERE oid = %s::regclass",
-        (f"public.{table}",),
+        (f"juddges_private.{table}",),
     ).fetchone()[0]
     assert (
         conn.execute(
-            "SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = %s",
+            "SELECT count(*) FROM pg_policies WHERE schemaname = 'juddges_private' AND tablename = %s",
             (table,),
         ).fetchone()[0]
         == 0
@@ -67,7 +69,10 @@ def test_langgraph_setup_and_state_survive_security_migration(migrated_database)
     Reapplying hardening over populated tables must preserve existing state.
     """
     with psycopg.connect(
-        migrated_database, autocommit=True, row_factory=dict_row
+        migrated_database,
+        autocommit=True,
+        row_factory=dict_row,
+        options=PRIVATE_DATABASE_OPTIONS,
     ) as connection:
         saver = PostgresSaver(connection)
         saver.setup()

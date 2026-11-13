@@ -3,6 +3,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { webcrypto } from "node:crypto";
+
+// Jest's Node environment does not expose Web Crypto on every supported
+// runtime, while the middleware signs its trusted extraction snapshot with
+// crypto.subtle. Use the platform implementation for these unit tests.
+if (!globalThis.crypto?.subtle) {
+  Object.defineProperty(globalThis, "crypto", { value: webcrypto });
+}
 
 const mockUpdateSessionWithAuth = jest.fn();
 
