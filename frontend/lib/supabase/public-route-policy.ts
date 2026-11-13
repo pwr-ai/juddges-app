@@ -18,7 +18,6 @@ const EXACT_PUBLIC_PAGES: ReadonlySet<string> = new Set([
   '/ecosystem',
   '/onboarding',
   '/status',
-  '/offline',
   '/accessibility',
   '/contact',
   '/cookies',
@@ -165,7 +164,6 @@ export function isPublicRequest({
   method,
   searchParams,
 }: PublicRouteRequest): boolean {
-  if (pathname === '/api/graphql') return true;
   if (pathname === '/api/contact' && method === 'POST') return true;
   // Issue #510 — guest activity must reach app_events so `guest_session_id` can
   // be stitched to the account on sign-up. The endpoint records events only; it

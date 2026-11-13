@@ -671,10 +671,17 @@ test.describe.serial('production route status contract', () => {
       await expectWireStatus(anonymous.request, 'GET', '/collections', 307);
       await expectWireStatus(anonymous.request, 'GET', '/history', 307);
       await expectWireStatus(anonymous.request, 'GET', '/reasoning-lines', 307);
+      // The v2 (Weaviate) test engine is for signed-in users only (#867): the
+      // middleware login-redirects a guest before the BFF route (whose own 401
+      // is unit-tested) runs, so the backend never sees the request.
+      const v2 = await expectWireStatus(anonymous.request, 'POST', '/api/search/v2', 307);
+      expect(v2.headers()['location']).toContain('/auth/login');
 
-      expect(
-        domainRequests(await adapterRequests(request)).map(({ path }) => path),
-      ).toContain(`/documents/${IDS.document.known}/metadata`);
+      const domainPaths = domainRequests(await adapterRequests(request)).map(
+        ({ path }) => path,
+      );
+      expect(domainPaths).toContain(`/documents/${IDS.document.known}/metadata`);
+      expect(domainPaths).not.toContain('/search/v2');
     } finally {
       await anonymous.close();
     }

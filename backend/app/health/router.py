@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
 
 from app.auth import verify_api_key
-from app.health.checks import check_all_services
+from app.health.checks import check_all_services, reset_llm_health_cache
 from app.health.models import (
     BasicHealthResponse,
     DependenciesResponse,
@@ -168,7 +168,9 @@ async def detailed_status():
 
     Performs health checks on all critical and optional services:
     - Critical: Redis, PostgreSQL
-    - Optional: Supabase, Celery, Langfuse
+    - Optional: Supabase, Celery, Langfuse, Meilisearch, LLM provider
+      (``llm`` -- token-free ``GET /models`` probe, cached 300s; reports
+      ``unhealthy`` when the key is rejected, e.g. 401 ``invalid_project``)
 
     System status levels:
     - HEALTHY: All critical services are healthy
@@ -300,6 +302,13 @@ async def list_dependencies():
             if os.getenv("MEILISEARCH_URL")
             else None,
         ),
+        "llm": DependencyInfo(
+            name="llm",
+            critical=False,
+            description="LLM provider (OpenAI, or LLM_BASE_URL) for chat, precedents, "
+            "argumentation, schema generation and extraction; search works without it",
+            health_check_url=None,  # Authenticated GET {base_url}/models
+        ),
     }
 
     return DependenciesResponse(
@@ -329,4 +338,5 @@ async def invalidate_cache():
     global _status_cache, _cache_timestamp
     _status_cache = None
     _cache_timestamp = None
+    reset_llm_health_cache()
     logger.info("Status cache manually invalidated")

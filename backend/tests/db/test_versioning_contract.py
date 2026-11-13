@@ -157,9 +157,11 @@ def test_concurrent_callers_get_consecutive_version_numbers(
 def test_duplicate_content_is_rejected_with_the_agreed_sqlstate(
     migrated_database: str,
 ) -> None:
-    """`versioning.py` maps SQLSTATE P0409 back to its existing HTTP 409.
+    """The RPC raises SQLSTATE P0409 on duplicate content.
 
-    A different code — or a plain unique violation — would surface as a 500.
+    The document-versioning router that mapped P0409 to HTTP 409 has been
+    removed; the function stays in the schema until a migration drops it, so
+    its contract is still pinned here.
     """
     psycopg = pytest.importorskip("psycopg")
     document_id = f"doc-{uuid.uuid4().hex[:8]}"

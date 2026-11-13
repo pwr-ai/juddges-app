@@ -13,4 +13,3 @@ export type { MessageProps, MessageVariant } from './chat-message-styles';
 export { ChatInput } from './chat-input';
 export type { ChatInputProps } from './chat-input';
 export { ChatContainer } from './chat-container';
-export { ChatHistory } from './chat-history';
