@@ -213,7 +213,7 @@ juddges-app/
 
 #### Infrastructure
 - **Database**: Supabase (managed PostgreSQL + Auth + Storage)
-- **Vector Database**: pgvector extension (no separate vector store)
+- **Vector Database**: pgvector extension; the experimental `/search/v2` engine (`backend/app/search_v2`, `WEAVIATE_V2_*`) queries a separate Weaviate v2 corpus
 - **Caching**: Redis for sessions and task queue
 - **Deployment**: Docker Compose (dev and prod configurations)
 
