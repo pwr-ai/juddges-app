@@ -115,6 +115,8 @@ secrets/
 *.csv
 *.parquet
 *.jsonl
+# Search-eval golden set (#831): a small, versioned fixture, not a dataset
+!backend/evals/search/golden_set.jsonl
 
 # Backups
 *.bak
