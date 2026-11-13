@@ -130,17 +130,35 @@ class TestBaseSchemaFilterValidation:
         with pytest.raises(ValidationError):
             BaseSchemaFilter.model_validate({"jurisdiction": ["pl"]})
 
-    def test_case_type_is_not_a_filter_field(self):
-        # APP_STATUS_2026-08-21 §4: case_type='Civil' on UK criminal appeals.
+    def test_case_type_is_a_filter_field(self):
+        f = BaseSchemaFilter.model_validate({"case_type": ["Criminal", "Civil"]})
+        assert f.to_rpc_payload() == {
+            "filters": {"case_type": ["Criminal", "Civil"]},
+            "text_query": None,
+        }
+
+    @pytest.mark.parametrize("value", ["Criminal", "Civil", "Administrative"])
+    def test_case_type_accepts_each_real_prod_value(self, value):
+        assert BaseSchemaFilter.model_validate({"case_type": [value]}).case_type == [
+            value
+        ]
+
+    @pytest.mark.parametrize("value", ["criminal", "Commercial", "Family", ""])
+    def test_case_type_rejects_unknown_values(self, value):
+        with pytest.raises(ValidationError):
+            BaseSchemaFilter.model_validate({"case_type": [value]})
+
+    def test_court_level_is_still_not_a_filter_field(self):
+        # 'Appeal Court' (52 UK rows) vs 'Court of Appeal' (6101) not normalised.
         from app.extraction_domain.nl_filter_generator import (
             NL_EXCLUDED_CORE_FIELDS,
         )
 
-        assert {"case_type", "court_level"} <= NL_EXCLUDED_CORE_FIELDS
-        for field in NL_EXCLUDED_CORE_FIELDS:
-            assert field not in BaseSchemaFilter.model_fields
+        assert frozenset({"court_level"}) == NL_EXCLUDED_CORE_FIELDS
+        assert "case_type" in BaseSchemaFilter.model_fields
+        assert "court_level" not in BaseSchemaFilter.model_fields
         with pytest.raises(ValidationError):
-            BaseSchemaFilter.model_validate({"case_type": ["Criminal"]})
+            BaseSchemaFilter.model_validate({"court_level": ["Court of Appeal"]})
 
 
 # ---------------------------------------------------------------------------
