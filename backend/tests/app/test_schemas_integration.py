@@ -3,7 +3,7 @@ Integration tests for schema management and generation endpoints.
 
 Tests the /schemas router with actual HTTP requests.
 
-NOTE: module-level skip. These tests mock ``app.schemas.InformationExtractor``
+NOTE: module-level skip. These tests mock ``app.schemas.InformationExtractor`` (the removed ``app.schemas`` shim)
 which no longer exists in the refactored schemas module — mock.patch raises
 AttributeError at setup before any assertion runs. They were already broken
 prior to 2026-04-19. Un-skip after rewriting mocks against the current

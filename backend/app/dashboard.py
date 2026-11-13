@@ -1,20 +1,18 @@
-"""Dashboard endpoints for home page statistics and recent documents."""
+"""Dashboard endpoints for home page statistics and data-availability health."""
 
 import json
 import os
-import re
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Any, Literal
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from loguru import logger
 from pydantic import BaseModel
 from supabase import Client, PostgrestAPIError, StorageException, create_client
 from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
-from app.core.auth_jwt import AuthenticatedUser, require_admin
 from app.rate_limiter import limiter
 
 # Redis client setup (optional, falls back to in-memory cache)
@@ -43,7 +41,6 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 DASHBOARD_READ_RATE_LIMIT = os.getenv("DASHBOARD_READ_RATE_LIMIT", "100/minute")
 DASHBOARD_HEALTH_RATE_LIMIT = os.getenv("DASHBOARD_HEALTH_RATE_LIMIT", "30/minute")
-DASHBOARD_REFRESH_RATE_LIMIT = os.getenv("DASHBOARD_REFRESH_RATE_LIMIT", "2/hour")
 
 
 def _get_required_env(name: str) -> str:
@@ -132,22 +129,6 @@ class DashboardStats(BaseModel):
     top_legal_domains: list[DistributionItem] | None = None
     top_keywords: list[DistributionItem] = []
     computed_at: str | None = None
-
-
-class DocumentSummary(BaseModel):
-    """Document with AI-generated summary."""
-
-    id: str
-    title: str
-    document_type: str
-    publication_date: str | None
-    ai_summary: str | None
-    key_topics: list[str] | None
-    jurisdiction: str | None
-    language: str
-    issuing_body: dict | None
-    document_number: str | None = None
-    document_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -361,49 +342,6 @@ async def get_dashboard_stats(
         return await _compute_fallback_stats()
 
 
-@router.post("/refresh-stats")
-@limiter.limit(DASHBOARD_REFRESH_RATE_LIMIT)
-async def refresh_dashboard_stats(
-    request: Request,
-    api_key: str = Depends(verify_api_key),
-    admin: AuthenticatedUser = Depends(require_admin),
-):
-    """
-    Trigger a refresh of precomputed dashboard statistics.
-
-    Calls the SQL function to recompute stats and clears all caches so that
-    the next /stats request returns fresh data.
-
-    Returns:
-        dict: Status message
-    """
-    logger.info("Manual dashboard stats refresh triggered")
-
-    try:
-        # Call the SQL function to recompute stats
-        supabase.rpc("refresh_dashboard_stats").execute()
-        logger.info("refresh_dashboard_stats RPC call succeeded")
-    except (PostgrestAPIError, StorageException) as e:
-        logger.exception(f"Error refreshing stats via RPC: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-    # Clear caches regardless of RPC outcome so stale data is not served
-    if REDIS_AVAILABLE and redis_client:
-        try:
-            await redis_client.delete(
-                DASHBOARD_STATS_CACHE_KEY, LEGACY_DASHBOARD_STATS_CACHE_KEY
-            )
-            logger.info("Cleared Redis cache")
-        except Exception as e:
-            # Broad catch: redis.exceptions.RedisError and connection errors
-            # can't be imported at module level without redis being installed.
-            logger.warning(f"Could not clear Redis cache: {e}")
-
-    _clear_stats_cache()
-
-    return {"status": "ok", "message": "Stats refreshed"}
-
-
 @router.get("/health")
 @limiter.limit(DASHBOARD_HEALTH_RATE_LIMIT)
 async def dashboard_health(
@@ -435,135 +373,3 @@ async def dashboard_health(
             "status": "unhealthy",
             "error": str(e),
         }
-
-
-_PL_DOCKET_PATTERN = re.compile(
-    r"Sygn\.?\s*akt[:\s]+([IVX]+\s+[A-Z]+\s+\d+/\d+)", re.IGNORECASE
-)
-_UK_CASE_PATTERN = re.compile(r"Case No[:\s]+(\d{4}/\d+[A-Z]*\d*)", re.IGNORECASE)
-_NEUTRAL_CITATION_PATTERN = re.compile(
-    r"\[(\d{4})\]\s+([A-Z]+)\s+([A-Za-z]+)[\.\s]+(\d+)", re.IGNORECASE
-)
-_COURT_PATTERNS = [
-    re.compile(r"(Sąd\s+(?:Okręgowy|Rejonowy|Apelacyjny)\s+w\s+\w+)", re.IGNORECASE),
-    re.compile(r"(COURT OF APPEAL[^\n]*)", re.IGNORECASE),
-    re.compile(r"(Crown Court at\s+\w+)", re.IGNORECASE),
-]
-
-
-def _truncate_with_ellipsis(text: str, max_len: int) -> str:
-    """Truncate text for display and append ellipsis if needed."""
-    return text[:max_len] + "..." if len(text) > max_len else text
-
-
-def _extract_docket_number(text_preview: str) -> str:
-    """Extract docket or case reference from free text preview."""
-    pl_match = _PL_DOCKET_PATTERN.search(text_preview)
-    if pl_match:
-        return pl_match.group(1)
-
-    uk_match = _UK_CASE_PATTERN.search(text_preview)
-    if uk_match:
-        return uk_match.group(1)
-
-    neutral_match = _NEUTRAL_CITATION_PATTERN.search(text_preview)
-    if neutral_match:
-        return (
-            f"[{neutral_match.group(1)}] {neutral_match.group(2)} "
-            f"{neutral_match.group(3)} {neutral_match.group(4)}"
-        )
-    return ""
-
-
-def _extract_court_name(text_preview: str) -> str:
-    """Extract court name from text using known patterns."""
-    for pattern in _COURT_PATTERNS:
-        court_match = pattern.search(text_preview)
-        if court_match:
-            return court_match.group(1).strip()
-    return ""
-
-
-def _derive_featured_title(doc: dict[str, Any]) -> str:
-    """Build a fallback title for a judgment row when `title` is missing."""
-    title = doc.get("title")
-    if title:
-        return title
-
-    full_text = doc.get("full_text", "")
-    case_number = doc.get("case_number", "")
-    court_name = doc.get("court_name", "")
-    decision_date = doc.get("decision_date", "")
-
-    if full_text and not case_number:
-        text_preview = full_text[:500]
-        case_number = _extract_docket_number(text_preview)
-        if not court_name:
-            court_name = _extract_court_name(text_preview)
-
-    if case_number:
-        if court_name:
-            return f"{_truncate_with_ellipsis(court_name, 40)}: {case_number}"
-        return f"Case {case_number}"
-
-    if court_name and decision_date:
-        return f"{_truncate_with_ellipsis(court_name, 40)} - {str(decision_date)[:10]}"
-
-    return f"Judgment {doc.get('id', 'N/A')[:8]}"
-
-
-def _to_document_summary(doc: dict[str, Any]) -> DocumentSummary:
-    """Convert a raw judgments row to a dashboard DocumentSummary."""
-    jurisdiction = doc.get("jurisdiction")
-    language = "en" if jurisdiction == "UK" else "pl"
-    court_name = doc.get("court_name")
-    return DocumentSummary(
-        id=doc.get("id", ""),
-        title=_derive_featured_title(doc),
-        document_type="judgment",
-        publication_date=str(
-            doc.get("decision_date") or doc.get("publication_date") or ""
-        )
-        or None,
-        ai_summary=None,
-        key_topics=None,
-        jurisdiction=jurisdiction,
-        language=language,
-        issuing_body={"name": court_name} if court_name else None,
-    )
-
-
-@router.get("/featured-examples", response_model=list[DocumentSummary])
-@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
-async def get_featured_examples(
-    request: Request,
-    response: Response,
-    limit: int = Query(default=5, ge=1, le=10),
-    api_key: str = Depends(verify_api_key),
-):
-    """Curated featured-example judgments for new users.
-
-    Args:
-        limit: Number of examples to return (1-10)
-
-    Returns:
-        List of featured judgments rendered as DocumentSummary.
-    """
-    try:
-        response = (
-            supabase.table("judgments")
-            .select(
-                "id, title, case_number, court_name, "
-                "decision_date, publication_date, jurisdiction, full_text"
-            )
-            .not_.is_("title", "null")
-            .order("decision_date", desc=True, nullsfirst=False)
-            .limit(limit * 3)
-            .execute()
-        )
-
-        return [_to_document_summary(doc) for doc in (response.data or [])[:limit]]
-
-    except (PostgrestAPIError, StorageException) as e:
-        logger.exception(f"Error fetching featured examples: {e}")
-        return []

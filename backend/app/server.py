@@ -33,7 +33,6 @@ from app.api.consent import router as consent_router
 from app.api.events import router as events_router
 from app.api.invites import router as invites_router
 from app.api.legal import router as legal_router
-from app.api.research_agent import router as research_agent_v2_router
 from app.api.schema_generator import router as schema_generator_router
 from app.api.search import router as search_router
 from app.argumentation import router as argumentation_router
@@ -47,7 +46,6 @@ from app.embeddings_api import router as embeddings_router
 from app.example_questions import router as example_questions_router
 from app.extraction import router as extraction_router
 from app.feedback import router as feedback_router
-from app.graphql_api.router import graphql_router
 
 # Import Day 1 feature routers
 from app.guest_sessions import router as guest_sessions_router
@@ -71,6 +69,7 @@ from app.rate_limiter import (
 )
 from app.reasoning_lines import router as reasoning_lines_router
 from app.schemas_pkg import router as schemas_router
+from app.search_v2 import router as search_v2_router
 from app.summarization import router as summarization_router
 from app.topic_modeling import router as topic_modeling_router
 
@@ -252,9 +251,9 @@ async def _app_lifespan(app: FastAPI):
             )
             await pool.open()
             checkpointer = AsyncPostgresSaver(pool)
-            # Create/migrate the checkpoint tables. No Supabase migration owns
-            # them, so without this every persistent session hits UndefinedTable.
-            # Idempotent: only migrations missing from checkpoint_migrations run.
+            # Supabase migrations pre-create and secure these private tables.
+            # LangGraph still owns its schema upgrades and indexes; setup is
+            # idempotent and only runs missing checkpoint_migrations entries.
             await checkpointer.setup()
             app.state.checkpointer = checkpointer
             logger.info(
@@ -675,7 +674,6 @@ async def redirect_root_to_docs():
 #            dashboard_router, summarization_router, precedents_router
 #            topic_modeling_router, argumentation_router, embeddings_router
 #            search_router
-#            graphql_router — /graphql
 #            health_router — /health/status (sub-route API key guard)
 #
 # USER:      blog_router — API_KEY at router level + JWT per-endpoint for
@@ -731,13 +729,13 @@ API_KEY_PROTECTED_ROUTERS = [
     dashboard_router,
     summarization_router,
     precedents_router,
-    research_agent_v2_router,
     topic_modeling_router,
     argumentation_router,
     judge_fingerprint_router,
     embeddings_router,
     blog_router,
     search_router,
+    search_v2_router,
     reasoning_lines_router,
 ]
 for _router in API_KEY_PROTECTED_ROUTERS:
@@ -774,15 +772,6 @@ app.include_router(admin_router)
 # Health check and status monitoring
 # Note: /health is public, /health/status requires API key (configured in router)
 app.include_router(health_router)
-
-# GraphQL API endpoint (API key authenticated)
-# Provides flexible data querying with subscriptions via WebSocket
-app.include_router(
-    graphql_router,
-    prefix="/graphql",
-    tags=["graphql"],
-    dependencies=[Depends(verify_api_key)],
-)
 
 # MCP server (juddges-mcp). Mounted as a sub-app, deliberately NOT in
 # API_KEY_PROTECTED_ROUTERS: external AI clients do not hold the shared

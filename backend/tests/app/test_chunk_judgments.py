@@ -571,3 +571,17 @@ class TestUnchunkedSelection:
         assert stats["chunks_created"] == 0
         assert stats["documents_processed"] == 0
         chunker.save_chunks.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_second_run_on_same_chunker_starts_from_the_beginning(self):
+        data = _judgments(8)
+        chunker = _make_chunker()
+        chunker.supabase = _FakeRpcSupabase(data, set())
+        while chunker.get_judgments_without_chunks(limit=5):
+            pass  # leave the cursor past every row
+        chunker.process_batch = AsyncMock(return_value=0)
+
+        await chunker.run()
+
+        first_batch = chunker.process_batch.await_args_list[0].args[0]
+        assert [j["id"] for j in first_batch] == sorted(j["id"] for j in data)

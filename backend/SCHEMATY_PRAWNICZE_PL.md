@@ -353,25 +353,22 @@ Analiza podatkowa transakcji kryptowalutowych - DeFi, NFT, staking.
 - 🛡️ **Bezpieczeństwo:** proaktywne wykrywanie ryzyk
 - 📊 **Przejrzystość:** jasne prognozy i benchmarki
 
-## Pliki wygenerowane
+## Pliki
 
-1. **`scripts/generate_lawyer_schemas_pl.py`** - Główny skrypt generujący schematy (PL)
-2. **`lawyer_schemas_pl.json`** - JSON ze wszystkimi 15 schematami (PL)
-3. **`scripts/bulk_insert_schemas_pl.py`** - Generator SQL INSERT (PL)
-4. **`bulk_insert_pl.sql`** - Gotowe instrukcje SQL do wykonania (PL)
+- **`scripts/bulk_insert_pl.sql`** - Gotowe instrukcje SQL ze wszystkimi 15 schematami (PL). To jedyne źródło tych schematów: jednorazowe generatory (`generate_lawyer_schemas*.py`, `bulk_insert_schemas*.py`) i pośrednie pliki JSON zostały usunięte, bo przy każdym uruchomieniu generowały nowe UUID i nie odtwarzały tego pliku.
 
 ## Jak wstawić do Supabase
 
 ### Metoda 1: Supabase Dashboard (Zalecana)
 1. Otwórz Supabase Dashboard
 2. Przejdź do SQL Editor
-3. Skopiuj zawartość pliku `bulk_insert_pl.sql`
+3. Skopiuj zawartość pliku `scripts/bulk_insert_pl.sql`
 4. Wykonaj SQL
 5. Sprawdź tabelę `extraction_schemas`
 
 ### Metoda 2: Supabase CLI
 ```bash
-supabase db execute -f bulk_insert_pl.sql
+supabase db execute -f backend/scripts/bulk_insert_pl.sql
 ```
 
 ### Metoda 3: Backend application

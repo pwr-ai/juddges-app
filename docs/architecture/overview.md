@@ -154,7 +154,7 @@ juddges-app/
 
 **Search Functions**:
 1. `search_judgments_by_embedding()`: Semantic search with vectors
-2. `search_judgments_by_text()`: Full-text search with ranking
+2. `search_judgments_hybrid()`: Combined vector + full-text search with filters
 
 ---
 
@@ -323,7 +323,7 @@ python ingest_judgments.py --uk 3000
 - **Real-time**: WebSocket support for live updates
 - **Free Tier**: Generous limits for development
 
-### 2. Why pgvector over Weaviate?
+### 2. Why pgvector instead of a separate vector database?
 - **Simplicity**: Single database for all data
 - **Cost**: No separate vector DB instance
 - **Performance**: Good enough for <1M vectors

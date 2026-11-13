@@ -2129,32 +2129,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dashboard/featured-examples": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Featured Examples
-         * @description Curated featured-example judgments for new users.
-         *
-         *     Args:
-         *         limit: Number of examples to return (1-10)
-         *
-         *     Returns:
-         *         List of featured judgments rendered as DocumentSummary.
-         */
-        get: operations["get_featured_examples_dashboard_featured_examples_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/dashboard/health": {
         parameters: {
             query?: never;
@@ -2169,32 +2143,6 @@ export interface paths {
         get: operations["dashboard_health_dashboard_health_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dashboard/refresh-stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Refresh Dashboard Stats
-         * @description Trigger a refresh of precomputed dashboard statistics.
-         *
-         *     Calls the SQL function to recompute stats and clears all caches so that
-         *     the next /stats request returns fresh data.
-         *
-         *     Returns:
-         *         dict: Status message
-         */
-        post: operations["refresh_dashboard_stats_dashboard_refresh_stats_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3396,24 +3344,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/graphql": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Handle Http Get */
-        get: operations["handle_http_get_graphql_get"];
-        put?: never;
-        /** Handle Http Post */
-        post: operations["handle_http_post_graphql_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/health": {
         parameters: {
             query?: never;
@@ -4526,110 +4456,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/research-agent/sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List user's research sessions
-         * @description List research sessions for the current user.
-         */
-        get: operations["list_sessions_research_agent_sessions_get"];
-        put?: never;
-        /**
-         * Start a new research session
-         * @description Create a research session and launch the agent in the background.
-         */
-        post: operations["start_session_research_agent_sessions_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/research-agent/sessions/{session_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get session status and results
-         * @description Read a research session by ID.
-         */
-        get: operations["get_session_research_agent_sessions__session_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/research-agent/sessions/{session_id}/message": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Send user input to a decision point
-         * @description Placeholder for interrupt-resume: accepts user input at a decision point.
-         */
-        post: operations["send_message_research_agent_sessions__session_id__message_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/research-agent/sessions/{session_id}/stop": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Stop a running research session
-         * @description Cancel the running agent task and mark the session as stopped.
-         */
-        post: operations["stop_session_research_agent_sessions__session_id__stop_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/research-agent/sessions/{session_id}/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * SSE stream of session progress events
-         * @description Return an SSE stream that emits progress events for the given session.
-         */
-        get: operations["stream_session_research_agent_sessions__session_id__stream_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/schema-generator/chat": {
         parameters: {
             query?: never;
@@ -5357,6 +5183,23 @@ export interface paths {
          *         ```
          */
         delete: operations["delete_schema_schemas__schema_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/v2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test search over the Weaviate v2 corpus (hybrid chunks + MaxP) */
+        post: operations["search_v2_search_v2_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7944,36 +7787,6 @@ export interface components {
              * @default 0
              */
             total: number;
-        };
-        /**
-         * DocumentSummary
-         * @description Document with AI-generated summary.
-         */
-        DocumentSummary: {
-            /** Ai Summary */
-            ai_summary: string | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Document Number */
-            document_number?: string | null;
-            /** Document Type */
-            document_type: string;
-            /** Id */
-            id: string;
-            /** Issuing Body */
-            issuing_body: {
-                [key: string]: unknown;
-            } | null;
-            /** Jurisdiction */
-            jurisdiction: string | null;
-            /** Key Topics */
-            key_topics: string[] | null;
-            /** Language */
-            language: string;
-            /** Publication Date */
-            publication_date: string | null;
-            /** Title */
-            title: string;
         };
         /**
          * DocumentType
@@ -11341,20 +11154,70 @@ export interface components {
             /** User Id */
             user_id?: string | null;
         };
+        /** SearchV2Chunk */
+        SearchV2Chunk: {
+            /** Chunk Idx */
+            chunk_idx: number;
+            /** Text */
+            text: string;
+        };
+        /** SearchV2Request */
+        SearchV2Request: {
+            /**
+             * Alpha
+             * @description 0 = BM25 only, 1 = vector only
+             * @default 0.25
+             */
+            alpha: number;
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
+            /** Query */
+            query: string;
+        };
+        /** SearchV2Response */
+        SearchV2Response: {
+            /**
+             * Engine
+             * @default weaviate-v2
+             */
+            engine: string;
+            /** Results */
+            results: components["schemas"]["SearchV2Result"][];
+            /** Took Ms */
+            took_ms: number;
+        };
+        /** SearchV2Result */
+        SearchV2Result: {
+            best_chunk: components["schemas"]["SearchV2Chunk"];
+            /** Court Name */
+            court_name?: string | null;
+            /** Decision Date */
+            decision_date?: string | null;
+            /** Judgment Id */
+            judgment_id: string;
+            /** Score */
+            score: number;
+            /** Signature */
+            signature?: string | null;
+            /** Source Id */
+            source_id?: string | null;
+            /**
+             * Supabase Id
+             * @description judgments.id when the judgment is also in the app database
+             */
+            supabase_id?: string | null;
+            /** Thesis */
+            thesis?: string | null;
+        };
         /**
          * SegmentType
          * @description Enumeration of supported document segment types.
          * @enum {string}
          */
         SegmentType: "paragraph" | "section" | "heading" | "footnote" | "citation";
-        /** SendMessageRequest */
-        SendMessageRequest: {
-            /**
-             * Message
-             * @description User message
-             */
-            message: string;
-        };
         /**
          * ServiceHealth
          * @description Health information for a single service.
@@ -11425,41 +11288,6 @@ export interface components {
          * @enum {string}
          */
         ServiceStatus: "healthy" | "degraded" | "unhealthy" | "unknown";
-        /** SessionResponse */
-        SessionResponse: {
-            /** Created At */
-            created_at: string;
-            /**
-             * Current Step
-             * @default 0
-             */
-            current_step: number;
-            /** Decision Points */
-            decision_points?: {
-                [key: string]: unknown;
-            }[];
-            /** Findings */
-            findings?: {
-                [key: string]: unknown;
-            }[];
-            /** Id */
-            id: string;
-            /** Initial Query */
-            initial_query: string;
-            /** Mode */
-            mode: string;
-            /**
-             * Progress
-             * @default 0
-             */
-            progress: number;
-            /** Report */
-            report?: {
-                [key: string]: unknown;
-            } | null;
-            /** Status */
-            status: string;
-        };
         /**
          * SetActiveModelRequest
          * @description Request to set the active embedding model.
@@ -11705,36 +11533,6 @@ export interface components {
              * @description Whether generation succeeded
              */
             success: boolean;
-        };
-        /** StartSessionRequest */
-        StartSessionRequest: {
-            /**
-             * Max Iterations
-             * @description Maximum research iterations
-             * @default 10
-             */
-            max_iterations: number;
-            /**
-             * Mode
-             * @description Research mode
-             * @default guided
-             * @enum {string}
-             */
-            mode: "guided" | "exploratory" | "case_preparation";
-            /**
-             * Query
-             * @description Research query
-             */
-            query: string;
-        };
-        /** StartSessionResponse */
-        StartSessionResponse: {
-            /** Message */
-            message: string;
-            /** Session Id */
-            session_id: string;
-            /** Status */
-            status: string;
         };
         /**
          * SuggestResponse
@@ -15840,58 +15638,7 @@ export interface operations {
             };
         };
     };
-    get_featured_examples_dashboard_featured_examples_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentSummary"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     dashboard_health_dashboard_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    refresh_dashboard_stats_dashboard_refresh_stats_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -17752,53 +17499,6 @@ export interface operations {
             };
         };
     };
-    handle_http_get_graphql_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The GraphiQL integrated development environment. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Not found if GraphiQL or query via GET are not enabled. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    handle_http_post_graphql_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
     health_check_health_get: {
         parameters: {
             query?: never;
@@ -19493,205 +19193,6 @@ export interface operations {
             };
         };
     };
-    list_sessions_research_agent_sessions_get: {
-        parameters: {
-            query?: {
-                /** @description Max sessions to return */
-                limit?: number;
-                /** @description Pagination offset */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionResponse"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    start_session_research_agent_sessions_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StartSessionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StartSessionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_session_research_agent_sessions__session_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    send_message_research_agent_sessions__session_id__message_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SendMessageRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    stop_session_research_agent_sessions__session_id__stop_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    stream_session_research_agent_sessions__session_id__stream_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     schema_chat_schema_generator_chat_post: {
         parameters: {
             query?: never;
@@ -20398,6 +19899,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeleteSchemaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_v2_search_v2_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchV2Request"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchV2Response"];
                 };
             };
             /** @description Validation Error */
