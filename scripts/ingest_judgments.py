@@ -91,7 +91,9 @@ class JudgmentIngestionPipeline:
             batch_size: Number of documents to process in each batch
         """
         self.supabase: Client = create_client(supabase_url, supabase_key)
-        self.transformers_url = transformers_url or os.getenv("TRANSFORMERS_INFERENCE_URL", "http://localhost:8080")
+        # No localhost fallback: the old :8080 default pointed at the retired
+        # t2v-transformers container. Unset means "skip embeddings".
+        self.transformers_url = transformers_url or os.getenv("TRANSFORMERS_INFERENCE_URL")
         self.batch_size = batch_size
 
         # Statistics tracking
@@ -813,12 +815,12 @@ def main():
     # Get credentials from environment
     supabase_url = os.getenv('SUPABASE_URL')
     supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')  # Need service role for writes
-    transformers_url = os.getenv('TRANSFORMERS_INFERENCE_URL', 'http://localhost:8080') if not args.no_embeddings else None
+    transformers_url = os.getenv('TRANSFORMERS_INFERENCE_URL') if not args.no_embeddings else None
 
     if not supabase_url or not supabase_key:
         console.print("[red]❌ Error: Missing required environment variables[/red]")
         console.print("Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY")
-        console.print("Optional: TRANSFORMERS_INFERENCE_URL (for embeddings, default: http://localhost:8080)")
+        console.print("Optional: TRANSFORMERS_INFERENCE_URL (for embeddings; unset skips them)")
         sys.exit(1)
 
     # Initialize pipeline
@@ -833,7 +835,7 @@ def main():
     console.print("\n[bold blue]Juddges Ingestion Pipeline[/bold blue]")
     console.print(f"Batch size: {args.batch_size}")
     console.print(f"Resume mode: {'Yes' if args.resume else 'No'}")
-    console.print(f"Embeddings: {'Disabled' if args.no_embeddings else 'Enabled'}")
+    console.print(f"Embeddings: {'Enabled' if transformers_url else 'Disabled'}")
 
     # Run ingestion
     total_ingested = 0

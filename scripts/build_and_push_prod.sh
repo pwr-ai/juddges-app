@@ -230,10 +230,14 @@ sync_version() {
 }
 
 # ------------------------------------------------------------------------------
-# Load .env for frontend build args
+# Load .env for frontend build args, then the optional .env.release overlay.
+# .env is the developer's local file (dev ports, localhost URLs); .env.release
+# (gitignored) holds release-only overrides so the artifact does not depend on
+# whose machine built it (#578).
 # ------------------------------------------------------------------------------
 load_env() {
     local env_file="${REPO_ROOT}/.env"
+    local release_env_file="${REPO_ROOT}/.env.release"
     if [[ -f "${env_file}" ]]; then
         info "Loading build args from .env"
         set -a
@@ -245,6 +249,53 @@ load_env() {
         err "Copy .env.example to .env and fill in values."
         exit 1
     fi
+    if [[ -f "${release_env_file}" ]]; then
+        info "Applying release overrides from .env.release"
+        set -a
+        # shellcheck disable=SC1090
+        source "${release_env_file}"
+        set +a
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# NEXT_PUBLIC_* values passed to the frontend image build. They seed the inline
+# window.__env baseline of prerendered pages, i.e. they reach every visitor's
+# browser. NEXT_PUBLIC_API_BASE_URL is deliberately absent: no browser code
+# reads it, and the container sets it at runtime (docker-entrypoint.sh,
+# /runtime-env.js), so the dev .env value (http://localhost:8004) must not be
+# baked in (#578).
+# ------------------------------------------------------------------------------
+FRONTEND_PUBLIC_BUILD_VARS=(
+    NEXT_PUBLIC_SUPABASE_URL
+    NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
+
+# Succeeds when the value names a local-only host that a visitor's browser
+# would resolve to its own machine.
+is_local_url() {
+    local value
+    value="$(printf %s "${1}" | tr '[:upper:]' '[:lower:]')"
+    [[ "${value}" =~ ^https?://(localhost|127\.[0-9]+\.[0-9]+\.[0-9]+|0\.0\.0\.0|\[::1\])([:/]|$) ]]
+}
+
+# Abort before any release commit if a frontend build arg points at a local
+# host. The Dockerfile repeats the check on the built output as a backstop.
+validate_public_build_env() {
+    local name value bad=0
+    for name in "${FRONTEND_PUBLIC_BUILD_VARS[@]}"; do
+        value="${!name:-}"
+        if is_local_url "${value}"; then
+            err "${name}=${value} points at a local host; it would be baked into"
+            err "  the production frontend and fail in every visitor's browser."
+            bad=1
+        fi
+    done
+    if [[ "${bad}" -ne 0 ]]; then
+        err "Set the production values in ${REPO_ROOT}/.env.release (overrides .env)."
+        exit 1
+    fi
+    ok "Frontend NEXT_PUBLIC_* build args point at public origins"
 }
 
 # ------------------------------------------------------------------------------
@@ -254,17 +305,32 @@ generate_release_notes() {
     local version="$1"
     local output_file="$2"
 
-    if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-        err "OPENAI_API_KEY not set in .env"
-        err "It is required for automatic release note generation."
-        exit 1
+    # A dead LLM key must not block a release (#546): sync_version has already
+    # rewritten the version files, so aborting here leaves a dirty tree that the
+    # next run refuses. Fall back to notes built from commit subjects, and warn
+    # loudly -- the same key powers every LLM feature in production.
+    if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+        info "Generating release notes for prod-v${version} ..."
+        if python3 "${REPO_ROOT}/scripts/generate_release_notes.py" \
+            --version "${version}" \
+            --output "${output_file}"; then
+            ok "Release notes saved to ${output_file}"
+            return 0
+        fi
+        warn "OpenAI release-note generation FAILED (see the error above)."
+        warn "If this is a 401/403, the OPENAI_API_KEY in .env is rejected; if it"
+        warn "is shared with production, chat, precedents, argumentation and"
+        warn "extraction are down too. Check GET /health/status -> services.llm."
+    else
+        warn "OPENAI_API_KEY not set in .env; skipping LLM release notes."
     fi
 
-    info "Generating release notes for prod-v${version} ..."
+    warn "Falling back to release notes built from commit subjects."
     python3 "${REPO_ROOT}/scripts/generate_release_notes.py" \
         --version "${version}" \
-        --output "${output_file}"
-    ok "Release notes saved to ${output_file}"
+        --output "${output_file}" \
+        --no-llm
+    ok "Fallback release notes saved to ${output_file}"
 }
 
 # ------------------------------------------------------------------------------
@@ -282,11 +348,11 @@ build_and_push() {
 
     local build_args=()
     if [[ "${context_dir}" == "frontend" ]]; then
-        build_args=(
-            --build-arg "NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-}"
-            --build-arg "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}"
-            --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
-        )
+        local name
+        build_args=()
+        for name in "${FRONTEND_PUBLIC_BUILD_VARS[@]}"; do
+            build_args+=(--build-arg "${name}=${!name:-}")
+        done
     else
         build_args=(--build-arg "APP_VERSION=${version}")
     fi
@@ -414,6 +480,7 @@ main() {
 
     # Load .env for build args, Docker credentials, and OpenAI release notes
     load_env
+    validate_public_build_env
 
     # Fail on Docker credentials now, not after the release commit is public.
     ensure_docker_login
