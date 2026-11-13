@@ -110,6 +110,11 @@ ci = ["lint", "format-check"]
 # Search benchmark (live backend required — see scripts/search_benchmark.py)
 bench-search = "python scripts/search_benchmark.py"
 
+# Offline retrieval eval: recall/nDCG/MRR per search mode against the golden set
+# (live Meilisearch + TEI, never prod — see docs/how-to/evaluate-search-quality.md)
+eval-search = "python -m evals.search.run_eval"
+eval-search-build = "python -m evals.search.build_golden"
+
 # Local MCP server over stdio; needs JUDDGES_MCP_KEY and service-role credentials
 mcp-stdio = "python -m juddges_mcp.stdio"
 
