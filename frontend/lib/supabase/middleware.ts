@@ -38,6 +38,12 @@ import {
 import { isCanonicalUuid } from "@/lib/validation/canonical-uuid";
 import type { CollectionWithDocuments } from "@/types/collection";
 
+async function quotaIdentity(userId: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(userId));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+
 const COLLECTION_DETAIL_PATH = /^\/collections\/([^/]+)$/;
 const DEFAULT_COLLECTION_PREFLIGHT_TIMEOUT_MS = 10_000;
 const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
@@ -468,6 +474,7 @@ export async function updateSessionWithAuth(
           headers: {
             "X-API-Key": process.env.BACKEND_API_KEY as string,
             Authorization: `Bearer ${collectionAccessToken}`,
+            "X-RateLimit-Identity": await quotaIdentity(userId),
             "Content-Type": "application/json",
           },
           signal: AbortSignal.timeout(collectionPreflightTimeoutMs()),
