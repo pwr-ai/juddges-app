@@ -671,10 +671,14 @@ test.describe.serial('production route status contract', () => {
       await expectWireStatus(anonymous.request, 'GET', '/collections', 307);
       await expectWireStatus(anonymous.request, 'GET', '/history', 307);
       await expectWireStatus(anonymous.request, 'GET', '/reasoning-lines', 307);
+      // The v2 (Weaviate) test engine is for signed-in users only (#867).
+      await expectWireStatus(anonymous.request, 'POST', '/api/search/v2', 401);
 
-      expect(
-        domainRequests(await adapterRequests(request)).map(({ path }) => path),
-      ).toContain(`/documents/${IDS.document.known}/metadata`);
+      const domainPaths = domainRequests(await adapterRequests(request)).map(
+        ({ path }) => path,
+      );
+      expect(domainPaths).toContain(`/documents/${IDS.document.known}/metadata`);
+      expect(domainPaths).not.toContain('/search/v2');
     } finally {
       await anonymous.close();
     }
