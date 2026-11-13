@@ -12,7 +12,10 @@ jest.mock("@/lib/logger", () => ({
 }));
 
 const mockGetSession = jest.fn(async () => ({ data: { session: null } }));
-const mockGetUser = jest.fn(async () => ({ data: { user: null }, error: null }));
+const mockGetUser = jest.fn(async () => ({
+  data: { user: null as { id: string } | null },
+  error: null,
+}));
 jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(async () => ({
     auth: { getSession: mockGetSession, getUser: mockGetUser },

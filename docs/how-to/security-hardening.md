@@ -15,6 +15,7 @@ are moved with their existing data and indexes, not copied or recreated.
 3. Build and smoke-test the new production images from merged `main` using the
    repository release process before interrupting running services.
 4. Stop the backend, both workers and beat during the private-schema move.
+   Include any development backend or worker using the same `DATABASE_URL`.
    Old code must not run library setup while the tables move, because it still
    targets `public`. The frontend may remain up, but backend requests will be
    briefly unavailable.
