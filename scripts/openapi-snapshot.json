@@ -25090,55 +25090,6 @@
         ]
       }
     },
-    "/graphql": {
-      "get": {
-        "operationId": "handle_http_get_graphql_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "The GraphiQL integrated development environment."
-          },
-          "404": {
-            "description": "Not found if GraphiQL or query via GET are not enabled."
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Handle Http Get",
-        "tags": [
-          "graphql"
-        ]
-      },
-      "post": {
-        "operationId": "handle_http_post_graphql_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Handle Http Post",
-        "tags": [
-          "graphql"
-        ]
-      }
-    },
     "/health": {
       "get": {
         "description": "Simple health check endpoint for load balancers and monitoring systems. Always returns 200 OK if the API is running.",

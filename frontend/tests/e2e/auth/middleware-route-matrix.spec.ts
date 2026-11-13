@@ -106,6 +106,7 @@ const LOOKALIKE_REQUESTS = [
   '/api/blogger',
   '/api/publications-private',
   '/api/contact-form',
+  '/api/graphql',
   '/api/graphql/nested',
 ] as const;
 
@@ -203,15 +204,6 @@ test.describe.parallel('public APIs — anonymous', () => {
     expect(await response.json()).toEqual(
       expect.objectContaining({ error: 'VALIDATION_ERROR' }),
     );
-  });
-
-  test('POST /api/graphql reaches the retired route 404', async ({ request }) => {
-    const response = await request.post('/api/graphql', {
-      data: {},
-      maxRedirects: 0,
-    });
-    expect(response.status()).toBe(404);
-    expect(response.headers().location).toBeUndefined();
   });
 });
 

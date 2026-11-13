@@ -70,7 +70,6 @@ Quick reference (as registered in server.py):
         embeddings_router
         timeline_router
         search_router
-        graphql_router          — /graphql
         health_router           — /health/status (API key protected sub-route)
 
     API_KEY + USER (JWT for writes):
