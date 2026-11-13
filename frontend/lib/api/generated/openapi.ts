@@ -5475,6 +5475,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/search/v2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test search over the Weaviate v2 corpus (hybrid chunks + MaxP) */
+        post: operations["search_v2_search_v2_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/summarize": {
         parameters: {
             query?: never;
@@ -11667,6 +11684,64 @@ export interface components {
             session_id?: string | null;
             /** User Id */
             user_id?: string | null;
+        };
+        /** SearchV2Chunk */
+        SearchV2Chunk: {
+            /** Chunk Idx */
+            chunk_idx: number;
+            /** Text */
+            text: string;
+        };
+        /** SearchV2Request */
+        SearchV2Request: {
+            /**
+             * Alpha
+             * @description 0 = BM25 only, 1 = vector only
+             * @default 0.25
+             */
+            alpha: number;
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
+            /** Query */
+            query: string;
+        };
+        /** SearchV2Response */
+        SearchV2Response: {
+            /**
+             * Engine
+             * @default weaviate-v2
+             */
+            engine: string;
+            /** Results */
+            results: components["schemas"]["SearchV2Result"][];
+            /** Took Ms */
+            took_ms: number;
+        };
+        /** SearchV2Result */
+        SearchV2Result: {
+            best_chunk: components["schemas"]["SearchV2Chunk"];
+            /** Court Name */
+            court_name?: string | null;
+            /** Decision Date */
+            decision_date?: string | null;
+            /** Judgment Id */
+            judgment_id: string;
+            /** Score */
+            score: number;
+            /** Signature */
+            signature?: string | null;
+            /** Source Id */
+            source_id?: string | null;
+            /**
+             * Supabase Id
+             * @description judgments.id when the judgment is also in the app database
+             */
+            supabase_id?: string | null;
+            /** Thesis */
+            thesis?: string | null;
         };
         /**
          * SegmentType
@@ -21161,6 +21236,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeleteSchemaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_v2_search_v2_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchV2Request"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchV2Response"];
                 };
             };
             /** @description Validation Error */

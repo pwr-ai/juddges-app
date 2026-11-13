@@ -72,6 +72,7 @@ from app.rate_limiter import (
 )
 from app.reasoning_lines import router as reasoning_lines_router
 from app.schemas_pkg import router as schemas_router
+from app.search_v2 import router as search_v2_router
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
 from app.topic_modeling import router as topic_modeling_router
@@ -255,9 +256,9 @@ async def _app_lifespan(app: FastAPI):
             )
             await pool.open()
             checkpointer = AsyncPostgresSaver(pool)
-            # Create/migrate the checkpoint tables. No Supabase migration owns
-            # them, so without this every persistent session hits UndefinedTable.
-            # Idempotent: only migrations missing from checkpoint_migrations run.
+            # Supabase migrations pre-create and secure these private tables.
+            # LangGraph still owns its schema upgrades and indexes; setup is
+            # idempotent and only runs missing checkpoint_migrations entries.
             await checkpointer.setup()
             app.state.checkpointer = checkpointer
             logger.info(
@@ -745,6 +746,7 @@ API_KEY_PROTECTED_ROUTERS = [
     timeline_router,
     blog_router,
     search_router,
+    search_v2_router,
     reasoning_lines_router,
 ]
 for _router in API_KEY_PROTECTED_ROUTERS:

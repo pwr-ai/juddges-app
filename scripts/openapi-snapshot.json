@@ -12804,6 +12804,169 @@
         "title": "SearchQueryEntry",
         "type": "object"
       },
+      "SearchV2Chunk": {
+        "properties": {
+          "chunk_idx": {
+            "title": "Chunk Idx",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "chunk_idx"
+        ],
+        "title": "SearchV2Chunk",
+        "type": "object"
+      },
+      "SearchV2Request": {
+        "properties": {
+          "alpha": {
+            "default": 0.25,
+            "description": "0 = BM25 only, 1 = vector only",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Alpha",
+            "type": "number"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchV2Request",
+        "type": "object"
+      },
+      "SearchV2Response": {
+        "properties": {
+          "engine": {
+            "default": "weaviate-v2",
+            "title": "Engine",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchV2Result"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "took_ms": {
+            "title": "Took Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "took_ms"
+        ],
+        "title": "SearchV2Response",
+        "type": "object"
+      },
+      "SearchV2Result": {
+        "properties": {
+          "best_chunk": {
+            "$ref": "#/components/schemas/SearchV2Chunk"
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Date"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "supabase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "judgments.id when the judgment is also in the app database",
+            "title": "Supabase Id"
+          },
+          "thesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesis"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "score",
+          "best_chunk"
+        ],
+        "title": "SearchV2Result",
+        "type": "object"
+      },
       "SegmentType": {
         "description": "Enumeration of supported document segment types.",
         "enum": [
@@ -29607,6 +29770,55 @@
         "summary": "Update Schema",
         "tags": [
           "schemas"
+        ]
+      }
+    },
+    "/search/v2": {
+      "post": {
+        "operationId": "search_v2_search_v2_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchV2Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchV2Response"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test search over the Weaviate v2 corpus (hybrid chunks + MaxP)",
+        "tags": [
+          "Search v2 (test)"
         ]
       }
     },
