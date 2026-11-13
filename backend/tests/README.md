@@ -8,8 +8,8 @@ This directory contains the test suite for the Juddges backend application.
 tests/
 ├── __init__.py                    # Test suite documentation
 ├── conftest.py                    # Pytest configuration and fixtures
-├── test_weaviate_search.py        # Weaviate search functionality tests
-├── test_language_search.py        # Multi-language search tests
+├── app/                           # Tests for backend/app (routers, services)
+├── packages/                      # Tests for the backend/packages workspace members
 └── README.md                      # This file
 ```
 
@@ -166,8 +166,8 @@ Mark tests that require external services:
 ```python
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_weaviate_search():
-    # Test that requires Weaviate database
+async def test_semantic_search():
+    # Test that requires Supabase (pgvector) and the TEI embedding service
     pass
 ```
 
@@ -191,7 +191,7 @@ uv run poe test -vv
 ### Run Specific Tests
 ```bash
 # Run specific test function
-pytest tests/test_weaviate_search.py::test_search_documents_copyright_infringement -v
+pytest tests/app/test_embedding_dimension_contract.py -v
 
 # Run tests matching pattern
 pytest tests/ -k "language" -v

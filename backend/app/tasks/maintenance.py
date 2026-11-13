@@ -137,7 +137,7 @@ def refresh_dashboard_stats(self: Task) -> dict[str, Any]:
 
     `/statistics` reads `dashboard_precomputed_stats` rather than aggregating
     12k judgments per request. Nothing refreshed that table on a schedule: the
-    only trigger was the manual `POST /dashboard/refresh-stats`, so the numbers
+    only trigger was a manual endpoint (since removed), so the numbers
     drifted for three months until a migration happened to recompute them.
 
     Note the freshness this can guarantee is bounded by the read-side cache.

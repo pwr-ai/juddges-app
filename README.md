@@ -35,7 +35,7 @@ This repository is a separate, independently deployable codebase from the JuDDGE
 | LLM observability | Langfuse (optional)                                                          |
 | Packaging        | uv workspace (backend), npm (frontend), Docker Compose for local + production |
 
-The backend is organized as a monorepo with reusable packages, members of one uv workspace: `juddges_search` (RAG, vector retrieval, chains), `schema_generator_agent` (LangGraph agent for schema extraction), and `research_agent`.
+The backend is organized as a monorepo with reusable packages, members of one uv workspace: `juddges_search` (RAG, vector retrieval, chains), `schema_generator_agent` (LangGraph agent for schema extraction), and `juddges_mcp` (read-only MCP server over the judgment corpus).
 
 ## Quick start
 
@@ -117,7 +117,7 @@ juddges-app/
 │   └── packages/          # Reusable packages (uv workspace members)
 │       ├── juddges_search/          # RAG, retrieval, chains
 │       ├── schema_generator_agent/  # LangGraph schema-extraction agent
-│       └── research_agent/          # Research agent
+│       └── juddges_mcp/             # Read-only MCP server
 ├── supabase/              # Database migrations and Supabase config
 ├── scripts/               # Data ingestion, deployment, evaluation
 ├── docs/                  # Documentation (Diataxis-organized)

@@ -5504,121 +5504,6 @@
         "title": "DocumentStats",
         "type": "object"
       },
-      "DocumentSummary": {
-        "description": "Document with AI-generated summary.",
-        "properties": {
-          "ai_summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ai Summary"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "document_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Number"
-          },
-          "document_type": {
-            "title": "Document Type",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "issuing_body": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Issuing Body"
-          },
-          "jurisdiction": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jurisdiction"
-          },
-          "key_topics": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Key Topics"
-          },
-          "language": {
-            "title": "Language",
-            "type": "string"
-          },
-          "publication_date": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publication Date"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "document_type",
-          "publication_date",
-          "ai_summary",
-          "key_topics",
-          "jurisdiction",
-          "language",
-          "issuing_body"
-        ],
-        "title": "DocumentSummary",
-        "type": "object"
-      },
       "DocumentType": {
         "description": "Enumeration of supported legal document types.\n\nSearch is judgment-only as of 2026-05-09; the enum is retained as a\none-value placeholder so existing imports keep compiling. See\n``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``\nfor the migration that collapsed the enum.",
         "enum": [
@@ -12804,6 +12689,169 @@
         "title": "SearchQueryEntry",
         "type": "object"
       },
+      "SearchV2Chunk": {
+        "properties": {
+          "chunk_idx": {
+            "title": "Chunk Idx",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "chunk_idx"
+        ],
+        "title": "SearchV2Chunk",
+        "type": "object"
+      },
+      "SearchV2Request": {
+        "properties": {
+          "alpha": {
+            "default": 0.25,
+            "description": "0 = BM25 only, 1 = vector only",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Alpha",
+            "type": "number"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchV2Request",
+        "type": "object"
+      },
+      "SearchV2Response": {
+        "properties": {
+          "engine": {
+            "default": "weaviate-v2",
+            "title": "Engine",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchV2Result"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "took_ms": {
+            "title": "Took Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "took_ms"
+        ],
+        "title": "SearchV2Response",
+        "type": "object"
+      },
+      "SearchV2Result": {
+        "properties": {
+          "best_chunk": {
+            "$ref": "#/components/schemas/SearchV2Chunk"
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Date"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "supabase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "judgments.id when the judgment is also in the app database",
+            "title": "Supabase Id"
+          },
+          "thesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesis"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "score",
+          "best_chunk"
+        ],
+        "title": "SearchV2Result",
+        "type": "object"
+      },
       "SegmentType": {
         "description": "Enumeration of supported document segment types.",
         "enum": [
@@ -12860,22 +12908,6 @@
           "documents"
         ],
         "title": "SemanticCluster",
-        "type": "object"
-      },
-      "SendMessageRequest": {
-        "properties": {
-          "message": {
-            "description": "User message",
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "title": "SendMessageRequest",
         "type": "object"
       },
       "ServiceHealth": {
@@ -13022,77 +13054,6 @@
         ],
         "title": "ServiceStatus",
         "type": "string"
-      },
-      "SessionResponse": {
-        "properties": {
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "current_step": {
-            "default": 0,
-            "title": "Current Step",
-            "type": "integer"
-          },
-          "decision_points": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Decision Points",
-            "type": "array"
-          },
-          "findings": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Findings",
-            "type": "array"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "initial_query": {
-            "title": "Initial Query",
-            "type": "string"
-          },
-          "mode": {
-            "title": "Mode",
-            "type": "string"
-          },
-          "progress": {
-            "default": 0.0,
-            "title": "Progress",
-            "type": "number"
-          },
-          "report": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Report"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "mode",
-          "initial_query",
-          "status",
-          "created_at"
-        ],
-        "title": "SessionResponse",
-        "type": "object"
       },
       "SetActiveModelRequest": {
         "description": "Request to set the active embedding model.",
@@ -13542,64 +13503,6 @@
           "generated_prompt"
         ],
         "title": "SimpleSchemaGenerationResponse",
-        "type": "object"
-      },
-      "StartSessionRequest": {
-        "properties": {
-          "max_iterations": {
-            "default": 10,
-            "description": "Maximum research iterations",
-            "maximum": 20.0,
-            "minimum": 1.0,
-            "title": "Max Iterations",
-            "type": "integer"
-          },
-          "mode": {
-            "default": "guided",
-            "description": "Research mode",
-            "enum": [
-              "guided",
-              "exploratory",
-              "case_preparation"
-            ],
-            "title": "Mode",
-            "type": "string"
-          },
-          "query": {
-            "description": "Research query",
-            "maxLength": 5000,
-            "minLength": 5,
-            "title": "Query",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query"
-        ],
-        "title": "StartSessionRequest",
-        "type": "object"
-      },
-      "StartSessionResponse": {
-        "properties": {
-          "message": {
-            "title": "Message",
-            "type": "string"
-          },
-          "session_id": {
-            "title": "Session Id",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "session_id",
-          "status",
-          "message"
-        ],
-        "title": "StartSessionResponse",
         "type": "object"
       },
       "SuggestResponse": {
@@ -21839,61 +21742,6 @@
         ]
       }
     },
-    "/dashboard/featured-examples": {
-      "get": {
-        "description": "Curated featured-example judgments for new users.\n\nArgs:\n    limit: Number of examples to return (1-10)\n\nReturns:\n    List of featured judgments rendered as DocumentSummary.",
-        "operationId": "get_featured_examples_dashboard_featured_examples_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 5,
-              "maximum": 10,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DocumentSummary"
-                  },
-                  "title": "Response Get Featured Examples Dashboard Featured Examples Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get Featured Examples",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
     "/dashboard/health": {
       "get": {
         "description": "Check dashboard data availability.",
@@ -21914,34 +21762,6 @@
           }
         ],
         "summary": "Dashboard Health",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/refresh-stats": {
-      "post": {
-        "description": "Trigger a refresh of precomputed dashboard statistics.\n\nCalls the SQL function to recompute stats and clears all caches so that\nthe next /stats request returns fresh data.\n\nReturns:\n    dict: Status message",
-        "operationId": "refresh_dashboard_stats_dashboard_refresh_stats_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Refresh Dashboard Stats",
         "tags": [
           "dashboard"
         ]
@@ -28066,347 +27886,6 @@
         ]
       }
     },
-    "/research-agent/sessions": {
-      "get": {
-        "description": "List research sessions for the current user.",
-        "operationId": "list_sessions_research_agent_sessions_get",
-        "parameters": [
-          {
-            "description": "Max sessions to return",
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "description": "Max sessions to return",
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Pagination offset",
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "description": "Pagination offset",
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SessionResponse"
-                  },
-                  "title": "Response List Sessions Research Agent Sessions Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List user's research sessions",
-        "tags": [
-          "research-agent-v2"
-        ]
-      },
-      "post": {
-        "description": "Create a research session and launch the agent in the background.",
-        "operationId": "start_session_research_agent_sessions_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StartSessionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StartSessionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Start a new research session",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}": {
-      "get": {
-        "description": "Read a research session by ID.",
-        "operationId": "get_session_research_agent_sessions__session_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get session status and results",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}/message": {
-      "post": {
-        "description": "Placeholder for interrupt-resume: accepts user input at a decision point.",
-        "operationId": "send_message_research_agent_sessions__session_id__message_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SendMessageRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Send Message Research Agent Sessions  Session Id  Message Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Send user input to a decision point",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}/stop": {
-      "post": {
-        "description": "Cancel the running agent task and mark the session as stopped.",
-        "operationId": "stop_session_research_agent_sessions__session_id__stop_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Stop Session Research Agent Sessions  Session Id  Stop Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Stop a running research session",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}/stream": {
-      "get": {
-        "description": "Return an SSE stream that emits progress events for the given session.",
-        "operationId": "stream_session_research_agent_sessions__session_id__stream_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "SSE stream of session progress events",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
     "/schema-generator/chat": {
       "post": {
         "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs scoped to the authenticated user.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n    user: Authenticated user (from Bearer JWT)\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"judgment\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
@@ -29558,6 +29037,55 @@
         "summary": "Update Schema",
         "tags": [
           "schemas"
+        ]
+      }
+    },
+    "/search/v2": {
+      "post": {
+        "operationId": "search_v2_search_v2_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchV2Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchV2Response"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test search over the Weaviate v2 corpus (hybrid chunks + MaxP)",
+        "tags": [
+          "Search v2 (test)"
         ]
       }
     },

@@ -1,7 +1,6 @@
 /**
  * Persona flows — the single source of truth for the signed-in sidebar
- * groups and the FlowStepper (spec: docs/superpowers/specs/
- * 2026-09-20-persona-flows-design.md §4, issue #690).
+ * groups and the FlowStepper (issue #690).
  *
  * Four flows, each an ordered list of steps that map 1:1 onto existing
  * routes. Adding a route to the sidebar means adding a step here — nothing
