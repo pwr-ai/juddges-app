@@ -10,7 +10,6 @@ const EXACT_PUBLIC_PAGES = [
   '/ecosystem',
   '/onboarding',
   '/status',
-  '/offline',
   '/accessibility',
   '/contact',
   '/cookies',

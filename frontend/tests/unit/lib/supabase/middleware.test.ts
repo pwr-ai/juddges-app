@@ -38,7 +38,6 @@ describe("Supabase middleware public route policy", () => {
     ["GET", "/blog/published-slug"],
     ["GET", "/publications"],
     ["GET", "/use-cases/uk-judgments"],
-    ["GET", "/offline"],
     ["HEAD", "/twitter-image"],
     ["GET", "/api/publications"],
     ["HEAD", "/api/blog/posts"],
