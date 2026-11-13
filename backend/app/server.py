@@ -37,7 +37,6 @@ from app.api.schema_generator import router as schema_generator_router
 from app.api.search import router as search_router
 from app.argumentation import router as argumentation_router
 from app.auth import verify_api_key
-from app.clustering import router as clustering_router
 from app.collection_pairs import router as collection_pairs_router
 from app.collections import router as collections_router
 from app.collections_from_filter import router as collections_from_filter_router
@@ -72,9 +71,7 @@ from app.reasoning_lines import router as reasoning_lines_router
 from app.schemas_pkg import router as schemas_router
 from app.search_v2 import router as search_v2_router
 from app.summarization import router as summarization_router
-from app.timeline_extraction import router as timeline_router
 from app.topic_modeling import router as topic_modeling_router
-from app.versioning import router as versioning_router
 
 # Suppress SSL ResourceWarnings from httpx/supabase/langchain clients
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ssl.SSLSocket.*")
@@ -675,9 +672,8 @@ async def redirect_root_to_docs():
 #            extraction_router, schemas_router, schema_generator_router
 #            example_questions_router
 #            dashboard_router, summarization_router, precedents_router
-#            versioning_router, clustering_router
 #            topic_modeling_router, argumentation_router, embeddings_router
-#            timeline_router, search_router
+#            search_router
 #            health_router — /health/status (sub-route API key guard)
 #
 # USER:      blog_router — API_KEY at router level + JWT per-endpoint for
@@ -733,13 +729,10 @@ API_KEY_PROTECTED_ROUTERS = [
     dashboard_router,
     summarization_router,
     precedents_router,
-    versioning_router,
-    clustering_router,
     topic_modeling_router,
     argumentation_router,
     judge_fingerprint_router,
     embeddings_router,
-    timeline_router,
     blog_router,
     search_router,
     search_v2_router,

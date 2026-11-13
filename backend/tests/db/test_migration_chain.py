@@ -108,7 +108,8 @@ EXPECTED_RPC_ARGS = {
         "p_accepted",
         "p_version",
     ],
-    # backend/app/versioning.py, both call sites
+    # No caller since the /documents/{id}/versions router was removed; the
+    # function stays in the schema until a migration drops it.
     "create_document_version": [
         "p_document_id",
         "p_title",

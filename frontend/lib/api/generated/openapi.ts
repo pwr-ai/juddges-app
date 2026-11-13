@@ -1900,30 +1900,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/clustering/semantic-clusters": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cluster documents by semantic similarity
-         * @description Cluster documents using their embedding vectors.
-         *
-         *     Uses K-Means clustering on existing document embeddings and PCA for
-         *     2D visualization coordinates. Extracts representative keywords per
-         *     cluster using TF-IDF on document titles and summaries.
-         */
-        post: operations["get_semantic_clusters_clustering_semantic_clusters_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/collections": {
         parameters: {
             query?: never;
@@ -2470,95 +2446,6 @@ export interface paths {
          * @description Find documents similar to a specific document using vector similarity.
          */
         get: operations["get_similar_to_document_endpoint_documents__document_id__similar_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get version history for a document
-         * @description Get the version history of a document, ordered by version number descending.
-         */
-        get: operations["get_version_history_documents__document_id__versions_get"];
-        put?: never;
-        /**
-         * Create a manual version snapshot
-         * @description Create a manual version snapshot of the current document state.
-         */
-        post: operations["create_version_snapshot_documents__document_id__versions_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/versions/revert": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revert document to a previous version
-         * @description Revert a document to a specific previous version.
-         *
-         *     This creates a new version snapshot of the current state before reverting,
-         *     then updates the document with the content from the target version.
-         */
-        post: operations["revert_to_version_documents__document_id__versions_revert_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/versions/{from_version}/diff/{to_version}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get diff between two versions
-         * @description Generate a diff between two versions of a document.
-         *
-         *     If to_version equals the current version, the current document content is used.
-         */
-        get: operations["get_version_diff_documents__document_id__versions__from_version__diff__to_version__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/versions/{version_number}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get a specific version of a document
-         * @description Get full content of a specific version.
-         */
-        get: operations["get_version_detail_documents__document_id__versions__version_number__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5358,26 +5245,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/timeline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Extract timeline from legal documents
-         * @description Extract chronological events and dates from one or more legal documents to create an interactive timeline. Uses AI to identify temporal relationships and sequence events in legal proceedings.
-         */
-        post: operations["extract_timeline_timeline_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/topic-modeling/analyze": {
         parameters: {
             query?: never;
@@ -6360,134 +6227,6 @@ export interface components {
              */
             year?: number | null;
         };
-        /**
-         * ClusterDocument
-         * @description A document within a cluster.
-         */
-        ClusterDocument: {
-            /** Date Issued */
-            date_issued?: string | null;
-            /** Document Id */
-            document_id: string;
-            /** Document Type */
-            document_type?: string | null;
-            /**
-             * Similarity To Centroid
-             * @description Cosine similarity to cluster centroid
-             */
-            similarity_to_centroid: number;
-            /** Title */
-            title?: string | null;
-        };
-        /**
-         * ClusterEdge
-         * @description Edge between documents in the same cluster.
-         */
-        ClusterEdge: {
-            /** Similarity */
-            similarity: number;
-            /** Source */
-            source: string;
-            /** Target */
-            target: string;
-        };
-        /**
-         * ClusterNode
-         * @description Node in the cluster visualization.
-         */
-        ClusterNode: {
-            /**
-             * Cluster Id
-             * @description Cluster assignment
-             */
-            cluster_id: number;
-            /**
-             * Document Type
-             * @description Type of document
-             */
-            document_type: string;
-            /**
-             * Id
-             * @description Document ID
-             */
-            id: string;
-            /**
-             * Title
-             * @description Document title
-             */
-            title: string;
-            /**
-             * X
-             * @description X coordinate for visualization
-             */
-            x: number;
-            /**
-             * Y
-             * @description Y coordinate for visualization
-             */
-            y: number;
-            /**
-             * Year
-             * @description Year of document issuance
-             */
-            year?: number | null;
-        };
-        /**
-         * ClusteringRequest
-         * @description Request to perform semantic clustering on documents.
-         */
-        ClusteringRequest: {
-            /**
-             * Document Types
-             * @description Optional filter by document types
-             */
-            document_types?: string[] | null;
-            /**
-             * Num Clusters
-             * @description Number of clusters to create
-             * @default 5
-             */
-            num_clusters: number;
-            /**
-             * Sample Size
-             * @description Number of documents to cluster
-             * @default 100
-             */
-            sample_size: number;
-        };
-        /**
-         * ClusteringResponse
-         * @description Response from semantic clustering.
-         */
-        ClusteringResponse: {
-            /** Clusters */
-            clusters: components["schemas"]["SemanticCluster"][];
-            /** Edges */
-            edges: components["schemas"]["ClusterEdge"][];
-            /** Nodes */
-            nodes: components["schemas"]["ClusterNode"][];
-            statistics: components["schemas"]["ClusteringStatistics"];
-        };
-        /**
-         * ClusteringStatistics
-         * @description Statistics about the clustering result.
-         */
-        ClusteringStatistics: {
-            /** Avg Cluster Size */
-            avg_cluster_size: number;
-            /** Avg Coherence */
-            avg_coherence: number;
-            /** Clustering Time Ms */
-            clustering_time_ms: number;
-            /** Max Cluster Size */
-            max_cluster_size: number;
-            /** Min Cluster Size */
-            min_cluster_size: number;
-            /** Num Clusters */
-            num_clusters: number;
-            /** Total Documents */
-            total_documents: number;
-        };
         /** Collection */
         Collection: {
             /** Created At */
@@ -7066,24 +6805,6 @@ export interface components {
              * @description Unique identifier for the schema (alphanumeric, underscore, hyphen only)
              */
             schema_id: string;
-        };
-        /**
-         * CreateVersionRequest
-         * @description Request to create a manual version snapshot.
-         */
-        CreateVersionRequest: {
-            /**
-             * Change Description
-             * @description Description of what changed
-             */
-            change_description?: string | null;
-            /**
-             * Change Type
-             * @description Type of change: initial, amendment, correction, consolidation, repeal
-             * @default amendment
-             * @enum {string}
-             */
-            change_type: "initial" | "amendment" | "correction" | "consolidation" | "repeal";
         };
         /** CreatedCollection */
         CreatedCollection: {
@@ -8078,38 +7799,6 @@ export interface components {
          * @enum {string}
          */
         DocumentType: "judgment";
-        /**
-         * DocumentVersion
-         * @description A single version entry for a document.
-         */
-        DocumentVersion: {
-            /** Change Description */
-            change_description?: string | null;
-            /** Change Type */
-            change_type: string;
-            /** Content Hash */
-            content_hash: string;
-            /** Created At */
-            created_at: string;
-            /**
-             * Created By
-             * @default system
-             */
-            created_by: string;
-            /** Document Id */
-            document_id: string;
-            /**
-             * Has Extracted Data
-             * @default false
-             */
-            has_extracted_data: boolean;
-            /** Id */
-            id: string;
-            /** Title */
-            title?: string | null;
-            /** Version Number */
-            version_number: number;
-        };
         /**
          * DriftAnalysisResponse
          * @description Response from the language drift detection analysis.
@@ -10634,22 +10323,6 @@ export interface components {
             /** Retention Period Description */
             retention_period_description: string;
         };
-        /**
-         * RevertVersionRequest
-         * @description Request to revert a document to a specific version.
-         */
-        RevertVersionRequest: {
-            /**
-             * Change Description
-             * @description Description of why reverting
-             */
-            change_description?: string | null;
-            /**
-             * Version Number
-             * @description Version number to revert to
-             */
-            version_number: number;
-        };
         /** RewrittenQueryEnvelope */
         RewrittenQueryEnvelope: {
             /**
@@ -11546,34 +11219,6 @@ export interface components {
          */
         SegmentType: "paragraph" | "section" | "heading" | "footnote" | "citation";
         /**
-         * SemanticCluster
-         * @description A single semantic cluster.
-         */
-        SemanticCluster: {
-            /** Cluster Id */
-            cluster_id: number;
-            /**
-             * Coherence Score
-             * @description Average intra-cluster similarity
-             */
-            coherence_score: number;
-            /**
-             * Documents
-             * @description Documents in this cluster
-             */
-            documents: components["schemas"]["ClusterDocument"][];
-            /**
-             * Keywords
-             * @description Top keywords representing this cluster
-             */
-            keywords: string[];
-            /**
-             * Size
-             * @description Number of documents in this cluster
-             */
-            size: number;
-        };
-        /**
          * ServiceHealth
          * @description Health information for a single service.
          * @example {
@@ -12080,128 +11725,6 @@ export interface components {
              * @description Prevalence of this topic in this period
              */
             topic_weight: number;
-        };
-        /**
-         * TimelineDateRange
-         * @description Date range of the timeline.
-         */
-        TimelineDateRange: {
-            /**
-             * Earliest
-             * @description Earliest date
-             */
-            earliest?: string | null;
-            /**
-             * Latest
-             * @description Latest date
-             */
-            latest?: string | null;
-        };
-        /**
-         * TimelineEvent
-         * @description A single event in the timeline.
-         */
-        TimelineEvent: {
-            /**
-             * Category
-             * @description Category of the event
-             * @enum {string}
-             */
-            category: "filing" | "decision" | "deadline" | "hearing" | "appeal" | "enforcement" | "procedural" | "legislative" | "other";
-            /**
-             * Date
-             * @description Date in YYYY-MM-DD, YYYY-MM, or YYYY format
-             */
-            date: string;
-            /**
-             * Date Precision
-             * @description Precision of the date
-             * @enum {string}
-             */
-            date_precision: "day" | "month" | "year";
-            /**
-             * Description
-             * @description Detailed description of the event
-             */
-            description: string;
-            /**
-             * Importance
-             * @description Importance level of the event
-             * @default medium
-             * @enum {string}
-             */
-            importance: "high" | "medium" | "low";
-            /**
-             * Legal References
-             * @description Legal references associated
-             */
-            legal_references?: string[];
-            /**
-             * Parties
-             * @description Parties or entities involved
-             */
-            parties?: string[];
-            /**
-             * Title
-             * @description Short event title
-             */
-            title: string;
-        };
-        /**
-         * TimelineExtractionRequest
-         * @description Request model for timeline extraction.
-         */
-        TimelineExtractionRequest: {
-            /**
-             * Document Ids
-             * @description List of document IDs to extract timeline from
-             */
-            document_ids: string[];
-            /**
-             * Extraction Depth
-             * @description Depth of extraction: 'basic' for key dates only, 'detailed' for all events with context, 'comprehensive' for full temporal analysis
-             * @default detailed
-             * @enum {string}
-             */
-            extraction_depth: "basic" | "detailed" | "comprehensive";
-            /**
-             * Focus Areas
-             * @description Optional focus areas (e.g., 'deadlines', 'court hearings', 'filings')
-             */
-            focus_areas?: string[] | null;
-        };
-        /**
-         * TimelineExtractionResponse
-         * @description Response model for timeline extraction.
-         */
-        TimelineExtractionResponse: {
-            /** @description Date range of the timeline */
-            date_range: components["schemas"]["TimelineDateRange"];
-            /**
-             * Document Ids
-             * @description Document IDs that were analyzed
-             */
-            document_ids: string[];
-            /**
-             * Events
-             * @description Extracted timeline events
-             */
-            events: components["schemas"]["TimelineEvent"][];
-            /**
-             * Extraction Depth
-             * @description Extraction depth used
-             */
-            extraction_depth: string;
-            /**
-             * Timeline Summary
-             * @description Summary of the chronological narrative
-             */
-            timeline_summary: string;
-            /**
-             * Total Events
-             * @description Total number of events extracted
-             */
-            total_events: number;
         };
         /**
          * TimelinePoint
@@ -12752,78 +12275,6 @@ export interface components {
             version_a: number;
             /** Version B */
             version_b: number;
-        };
-        /**
-         * VersionDetailResponse
-         * @description Detailed version with full content.
-         */
-        VersionDetailResponse: {
-            /** Change Description */
-            change_description?: string | null;
-            /** Change Type */
-            change_type: string;
-            /** Content Hash */
-            content_hash: string;
-            /** Created At */
-            created_at: string;
-            /** Created By */
-            created_by: string;
-            /** Document Id */
-            document_id: string;
-            /** Extracted Data */
-            extracted_data?: {
-                [key: string]: unknown;
-            };
-            /** Full Text */
-            full_text: string;
-            /** Id */
-            id: string;
-            /** Summary */
-            summary?: string | null;
-            /** Title */
-            title?: string | null;
-            /** Version Number */
-            version_number: number;
-        };
-        /**
-         * VersionDiffResponse
-         * @description Diff between two versions.
-         */
-        VersionDiffResponse: {
-            /** Diff Html */
-            diff_html: string;
-            /** Diff Stats */
-            diff_stats: {
-                [key: string]: number;
-            };
-            /** Document Id */
-            document_id: string;
-            /** From Created At */
-            from_created_at?: string | null;
-            /** From Title */
-            from_title?: string | null;
-            /** From Version */
-            from_version: number;
-            /** To Created At */
-            to_created_at?: string | null;
-            /** To Title */
-            to_title?: string | null;
-            /** To Version */
-            to_version: number;
-        };
-        /**
-         * VersionHistoryResponse
-         * @description Response for version history of a document.
-         */
-        VersionHistoryResponse: {
-            /** Current Version */
-            current_version: number;
-            /** Document Id */
-            document_id: string;
-            /** Total Versions */
-            total_versions: number;
-            /** Versions */
-            versions: components["schemas"]["DocumentVersion"][];
         };
         /** YearlyDecisionCount */
         YearlyDecisionCount: {
@@ -15647,39 +15098,6 @@ export interface operations {
             };
         };
     };
-    get_semantic_clusters_clustering_semantic_clusters_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ClusteringRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClusteringResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     list_collections_collections_get: {
         parameters: {
             query?: never;
@@ -16710,187 +16128,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SimilarDocumentsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_version_history_documents__document_id__versions_get: {
-        parameters: {
-            query?: {
-                /** @description Max versions to return */
-                limit?: number;
-                /** @description Pagination offset */
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                /** @description Document ID */
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VersionHistoryResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_version_snapshot_documents__document_id__versions_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Document ID */
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateVersionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentVersion"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    revert_to_version_documents__document_id__versions_revert_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Document ID */
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RevertVersionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_version_diff_documents__document_id__versions__from_version__diff__to_version__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Document ID */
-                document_id: string;
-                /** @description Source version number */
-                from_version: number;
-                /** @description Target version number */
-                to_version: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VersionDiffResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_version_detail_documents__document_id__versions__version_number__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Document ID */
-                document_id: string;
-                /** @description Version number */
-                version_number: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VersionDetailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -20761,39 +19998,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KeyPointsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_timeline_timeline_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TimelineExtractionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TimelineExtractionResponse"];
                 };
             };
             /** @description Validation Error */
