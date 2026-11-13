@@ -83,6 +83,7 @@ const LOOKALIKE_CASES = [
   '/api/blogger',
   '/api/publications-private',
   '/api/contact-form',
+  '/api/graphql',
   '/api/graphql/',
   '/api/graphql/nested',
   '/api/chats/not-a-uuid/messages',
@@ -364,13 +365,6 @@ describe('isPublicRequest', () => {
   it('allows only exact POST /api/contact as public ingress', () => {
     expect(isPublicRequest({ pathname: '/api/contact', method: 'POST' })).toBe(true);
   });
-
-  it.each(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])(
-    'lets exact retired GraphQL %s reach the router',
-    (method) => {
-      expect(isPublicRequest({ pathname: '/api/graphql', method })).toBe(true);
-    },
-  );
 
   it('requires canonical uppercase read methods', () => {
     expect(isPublicRequest({ pathname: '/api/publications', method: 'get' })).toBe(false);

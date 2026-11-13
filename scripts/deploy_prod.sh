@@ -26,6 +26,9 @@ DEPLOY_LOG="${REPO_ROOT}/.deploy-history"
 # Expected services that must be running after deploy
 REQUIRED_SERVICES=("frontend" "backend" "meilisearch" "backend-worker" "backend-worker-maintenance" "backend-beat")
 
+# External networks declared in docker-compose.yml (must exist before `up`)
+EXTERNAL_NETWORKS=("data_stack_network" "juddges_weaviate_v2_default")
+
 # ------------------------------------------------------------------------------
 # Color output
 # ------------------------------------------------------------------------------
@@ -52,6 +55,26 @@ preflight_checks() {
         exit 1
     fi
     ok "Docker daemon is running"
+
+    # External networks docker-compose.yml attaches to. `up` fails on a missing
+    # one only after `down` has already stopped everything, so check up front.
+    local net missing=false
+    for net in "${EXTERNAL_NETWORKS[@]}"; do
+        if docker network inspect "${net}" >/dev/null 2>&1; then
+            ok "External network present: ${net}"
+        else
+            err "External network missing: ${net}"
+            missing=true
+        fi
+    done
+    if [[ "${missing}" == true ]]; then
+        err "docker-compose.yml needs these networks before deploy:"
+        err "  data_stack_network          - caddy-local gateway (data_stack repo)"
+        err "  juddges_weaviate_v2_default - Weaviate v2 test stack (JuDDGES repo, weaviate/v2);"
+        err "                                without the stack, 'docker network create juddges_weaviate_v2_default'"
+        err "                                is enough: /search/v2 then answers 503"
+        exit 1
+    fi
 
     # Check available disk space (warn if < 5GB free)
     local avail_kb

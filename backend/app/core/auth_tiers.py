@@ -63,14 +63,10 @@ Quick reference (as registered in server.py):
         dashboard_router
         summarization_router
         precedents_router
-        versioning_router
-        clustering_router
         topic_modeling_router
         argumentation_router
         embeddings_router
-        timeline_router
         search_router
-        graphql_router          — /graphql
         health_router           — /health/status (API key protected sub-route)
 
     API_KEY + USER (JWT for writes):

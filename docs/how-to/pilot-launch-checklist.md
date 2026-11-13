@@ -2,9 +2,7 @@
 
 Run this before every production deploy while the ~15-user pilot is live. It
 covers what no automated test covers today: dashboard toggles, manual
-env vars, and operational risks a green CI run does not catch. See
-`docs/superpowers/plans/2026-09-02-pilot-safety-gate.md` for why each item
-exists.
+env vars, and operational risks a green CI run does not catch.
 
 ## One-time setup (do before the first pilot user is invited)
 

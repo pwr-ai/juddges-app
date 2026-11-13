@@ -42,7 +42,6 @@ describe("Supabase middleware public route policy", () => {
     ["GET", "/api/publications"],
     ["HEAD", "/api/blog/posts"],
     ["POST", "/api/contact"],
-    ["POST", "/api/graphql"],
     ["GET", `/api/extractions?job_id=${EXTRACTION_ID}`],
     ["HEAD", `/api/extractions?job_id=${EXTRACTION_ID}`],
     // Issue #510 — guests may search and read judgments.
@@ -116,6 +115,11 @@ describe("Supabase middleware public route policy", () => {
       "POST",
       "/api/contact/nested",
       "http://localhost/auth/login?next=%2Fapi%2Fcontact%2Fnested",
+    ],
+    [
+      "POST",
+      "/api/graphql",
+      "http://localhost/auth/login?next=%2Fapi%2Fgraphql",
     ],
     [
       "POST",

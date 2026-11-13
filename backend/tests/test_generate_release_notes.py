@@ -137,3 +137,33 @@ def test_render_markdown_includes_sections_and_source_commits():
     assert "## Features" in markdown
     assert "## Source Commits" in markdown
     assert "`abc1234` feat: add export endpoint" in markdown
+
+
+@pytest.mark.unit
+def test_fallback_payload_renders_without_openai(monkeypatch):
+    """#546: notes must still render when the LLM key is dead."""
+    module = load_module()
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("fallback must not call OpenAI")
+
+    monkeypatch.setattr(module, "OpenAI", boom)
+
+    context = module.ReleaseContext(
+        version="0.1.3",
+        previous_tag="prod-v0.1.2",
+        to_ref="HEAD",
+        commit_entries=[
+            module.CommitEntry(short_hash="abc1234", subject="feat: add export"),
+            module.CommitEntry(short_hash="def5678", subject="fix: harden auth"),
+        ],
+    )
+
+    markdown = module.render_markdown(
+        context, module.fallback_release_notes_payload(context)
+    )
+
+    assert "# prod-v0.1.3" in markdown
+    assert "2 commits since prod-v0.1.2" in markdown
+    assert "`abc1234` feat: add export" in markdown
+    assert "`def5678` fix: harden auth" in markdown

@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-# Polish + English stopwords (same set used in clustering.py for consistency)
+# Polish + English stopwords (same set used in cluster_math.py for consistency)
 _DRIFT_STOPWORDS: set[str] = {
     "w",
     "z",
