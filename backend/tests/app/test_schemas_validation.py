@@ -1,4 +1,4 @@
-"""Unit tests for app.schemas — Pydantic models, validation, and helper functions.
+"""Unit tests for app.schemas_pkg — Pydantic models, validation, and helper functions.
 
 Tests the schema validation logic, request/response models, and utility functions
 WITHOUT hitting any external services (Supabase, file system, AI agents).
@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import (
+from app.schemas_pkg import (
     SCHEMA_NAME_ALLOWED_PATTERN,
     SYSTEM_SCHEMAS,
     CreateSchemaRequest,
@@ -334,27 +334,29 @@ class TestConstants:
 
 @pytest.mark.skip(
     reason=(
-        "Patches app.schemas.InformationExtractor which no longer exists; "
+        "Patches the old app.schemas module internals; "
         "tests mock the old schema module internals and need rewriting."
     )
 )
 @pytest.mark.unit
 class TestHelperFunctions:
-    @patch("app.schemas.InformationExtractor")
+    @patch("app.schemas_pkg.storage.InformationExtractor")
     def test_get_schema_directory_creates_dir(self, mock_extractor, tmp_path):
         mock_extractor.SCHEMA_DIR = "test_schemas"
-        with patch("app.schemas.Path") as mock_path_cls:
+        with patch("app.schemas_pkg.storage.Path") as mock_path_cls:
             mock_base = MagicMock()
             mock_path_cls.return_value = mock_base
             mock_path_cls.__file__ = "fake"
             # We need to patch __file__ indirectly
-            with patch("app.schemas.__file__", str(tmp_path / "schemas.py")):
+            with patch(
+                "app.schemas_pkg.storage.__file__", str(tmp_path / "schemas.py")
+            ):
                 result = _get_schema_directory()
                 # The function should create the directory
                 assert result is not None
 
     def test_get_schema_metadata_path(self):
-        with patch("app.schemas._get_schema_directory") as mock_dir:
+        with patch("app.schemas_pkg.storage._get_schema_directory") as mock_dir:
             mock_dir.return_value = Path("/fake/schemas")
             result = _get_schema_metadata_path("my_schema")
             assert result == Path("/fake/schemas/my_schema.meta.json")
@@ -367,7 +369,9 @@ class TestHelperFunctions:
         )
         meta_path = tmp_path / "save_test.meta.json"
 
-        with patch("app.schemas._get_schema_metadata_path", return_value=meta_path):
+        with patch(
+            "app.schemas_pkg.storage._get_schema_metadata_path", return_value=meta_path
+        ):
             _save_schema_metadata(meta)
 
         assert meta_path.exists()
@@ -384,7 +388,9 @@ class TestHelperFunctions:
         meta_path = tmp_path / "load_test.meta.json"
         meta_path.write_text(json.dumps(meta_data))
 
-        with patch("app.schemas._get_schema_metadata_path", return_value=meta_path):
+        with patch(
+            "app.schemas_pkg.storage._get_schema_metadata_path", return_value=meta_path
+        ):
             result = _load_schema_metadata("load_test")
 
         assert result is not None
@@ -392,7 +398,9 @@ class TestHelperFunctions:
 
     def test_load_schema_metadata_file_not_found(self, tmp_path):
         meta_path = tmp_path / "nonexistent.meta.json"
-        with patch("app.schemas._get_schema_metadata_path", return_value=meta_path):
+        with patch(
+            "app.schemas_pkg.storage._get_schema_metadata_path", return_value=meta_path
+        ):
             result = _load_schema_metadata("nonexistent")
         assert result is None
 
@@ -400,7 +408,9 @@ class TestHelperFunctions:
         meta_path = tmp_path / "bad.meta.json"
         meta_path.write_text("not valid json {{{")
 
-        with patch("app.schemas._get_schema_metadata_path", return_value=meta_path):
+        with patch(
+            "app.schemas_pkg.storage._get_schema_metadata_path", return_value=meta_path
+        ):
             result = _load_schema_metadata("bad")
         assert result is None
 
