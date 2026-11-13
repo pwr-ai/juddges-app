@@ -107,11 +107,12 @@ SELECT * FROM search_judgments_by_embedding(
 Search judgments using PostgreSQL full-text search:
 
 ```sql
-SELECT * FROM search_judgments_by_text(
-  'criminal appeal tax liability',  -- Search query
-  'UK',  -- Filter by jurisdiction (optional)
-  20     -- Number of results
-);
+SELECT id, case_number, title, jurisdiction, decision_date
+FROM judgments
+WHERE jurisdiction = 'UK'  -- Filter by jurisdiction (optional)
+  AND to_tsvector('english', coalesce(title, '') || ' ' || coalesce(summary, ''))
+      @@ plainto_tsquery('english', 'criminal appeal tax liability')
+LIMIT 20;
 ```
 
 ### Example 6: Get Recent Judgments

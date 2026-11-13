@@ -2,15 +2,12 @@
  * AI Disclaimer Badge Component
  * Reusable badge for displaying AI-generated content disclaimer
  * Used in message components and other places where AI content is shown
- *
- * Uses centralized color definitions from lib/styles/colors/badge.ts
  */
 
 import * as React from 'react';
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// Color definitions are in lib/styles/colors/badge.ts for reference
 // Using static Tailwind classes for JIT compiler compatibility
 
 export interface AIDisclaimerBadgeProps {

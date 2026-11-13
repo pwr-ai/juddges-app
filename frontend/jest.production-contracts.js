@@ -10,11 +10,6 @@ const productionContracts = [
     tsconfigPath: 'tsconfig.contract-collections-detail.json',
   },
   {
-    file: 'tests/unit/api/graphql/route-contract.test.ts',
-    buildDirectory: '.next-contract-graphql-route',
-    tsconfigPath: 'tsconfig.contract-graphql-route.json',
-  },
-  {
     file: 'tests/unit/app/extractions/http-status-contract.test.ts',
     buildDirectory: '.next-contract-extractions-detail',
     tsconfigPath: 'tsconfig.contract-extractions-detail.json',

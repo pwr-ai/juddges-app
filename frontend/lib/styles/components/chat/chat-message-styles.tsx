@@ -1,8 +1,6 @@
 /**
  * Message component
  * Provides consistent message styling for chat interfaces
- *
- * Uses centralized color definitions from lib/styles/colors/message.ts
  */
 
 import * as React from 'react';
@@ -10,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { RotateCcw } from 'lucide-react';
 import { ErrorCard } from '../error-card';
 import { VariantButton } from '../variant-button';
-// Color definitions are in lib/styles/colors/message.ts for reference
 // Using static Tailwind classes for JIT compiler compatibility
 
 /**

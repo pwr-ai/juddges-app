@@ -120,6 +120,22 @@ Rules when touching this code:
 - The build args in `frontend/Dockerfile` and `scripts/build_and_push_prod.sh`
   only seed the inline baseline. An image built without them still works once
   the container has the variables.
+- The inline baseline of a *prerendered* page is whatever the build had, and it
+  is shipped to every visitor. Release builds therefore pass only the Supabase
+  pair; `NEXT_PUBLIC_API_BASE_URL` is runtime-only (no browser code reads it;
+  browser calls go through same-origin `/api/*` BFF routes). Two guards stop a
+  dev value such as `http://localhost:8004` from being baked in (#578):
+  `validate_public_build_env` in `scripts/build_and_push_prod.sh` (before the
+  release commit) and `frontend/scripts/assert-no-local-origins.js` in the
+  Dockerfile builder stage (scans `.next/static/**/*.js` and
+  `.next/server/app/**/*.{html,rsc}`; `ALLOW_LOCAL_ORIGINS=1` opts out for a
+  machine-local image).
+- The build guard covers the build only, and only the files it scans
+  (`.next/static/**/*.js`, `.next/server/app/**/*.{html,rsc}`). docker-compose
+  `env_file: .env` can still inject a dev `localhost` `NEXT_PUBLIC_API_BASE_URL`
+  at runtime, so deployers must set production values in `.env` as well.
+- Browser code must not build backend URLs from `NEXT_PUBLIC_API_BASE_URL`;
+  call the app's own `/api/...` route with a relative path instead.
 - `/runtime-env.js` omits unset keys, so it never overwrites a baseline value
   with an empty string. The service worker bypasses the path explicitly
   (`RUNTIME_ENV_PATH` in `frontend/public/sw.js`).
@@ -286,16 +302,22 @@ DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supab
   server-side prepared statements or session-scoped state — e.g. if
   `langgraph-checkpoint-postgres` is ever run without `prepare_threshold=None`.
   Keep that on a separate URL rather than downgrading the shared `DATABASE_URL`.
-- **Checkpoint tables are created at startup.** No Supabase migration owns the
-  LangGraph tables (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`,
-  `checkpoint_migrations`); the lifespan in `server.py` calls
-  `AsyncPostgresSaver.setup()` on every boot, which applies only the
-  migrations not yet recorded in `checkpoint_migrations` (v0–9 on
-  `langgraph-checkpoint-postgres` 3.x), so restarts are no-ops. The role behind
-  `DATABASE_URL` therefore needs `CREATE` on the `public` schema, and three
-  migrations use `CREATE INDEX CONCURRENTLY`. If `setup()` fails, startup logs
-  `PostgreSQL connection failed: ...` and falls back to the in-memory
-  checkpointer — sessions then survive only until the next restart.
+- **Checkpoint tables are pre-created and locked down by a migration.**
+  `20261110000001_secure_langgraph_checkpoints.sql` creates the LangGraph tables
+  (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`,
+  `checkpoint_migrations`), enables RLS with no policies and revokes all
+  privileges from `PUBLIC`, `anon`, `authenticated` and `service_role`, so agent
+  state is not reachable through PostgREST. It leaves `checkpoint_migrations`
+  empty on purpose: the lifespan in `server.py` still calls
+  `AsyncPostgresSaver.setup()` on every boot, which applies the migrations not
+  yet recorded there (v0–9 on `langgraph-checkpoint-postgres` 3.x) and is a
+  no-op afterwards. The backend connects as the owning role from `DATABASE_URL`,
+  which keeps access. That role needs `CREATE` on the `public` schema, and three
+  of the library's migrations use `CREATE INDEX CONCURRENTLY`. If a library
+  upgrade adds a table, extend the migration (guarded by
+  `backend/tests/db/test_checkpoint_privileges.py`). If `setup()` fails, startup
+  logs `PostgreSQL connection failed: ...` and falls back to the in-memory
+  checkpointer; sessions then survive only until the next restart.
 
 > Verify in your deployment: the running backend's `DATABASE_URL` host contains
 > `pooler.supabase.com` and the port is `6543`. If it points at `db.<ref>...:5432`

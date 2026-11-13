@@ -7,8 +7,6 @@ The signed-in sidebar is rendered from one config,
 current page belongs to. This page mirrors that config; a Jest test
 (`frontend/__tests__/docs/sidebar-map.test.ts`) fails when the two drift.
 
-Design: `docs/superpowers/specs/2026-09-20-persona-flows-design.md` §2, §4.
-
 | Item | Route | What it does |
 |---|---|---|
 | **Dashboard** | `/` | Corpus statistics, recent work, entry points to every flow (#646). |
