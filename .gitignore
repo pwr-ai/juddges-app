@@ -172,6 +172,11 @@ cython_debug/
 !.claude/agents/
 .claude/settings.local.json
 .context/
+# Agent-written plans, specs and research notes are per-task scratch work:
+# keep them under .context/ (see CLAUDE.md), not docs/.
+docs/superpowers/
+docs/plans/
+docs/research-notes/
 .codex/
 .playwright-mcp/
 frontend/app/test-supabase/
