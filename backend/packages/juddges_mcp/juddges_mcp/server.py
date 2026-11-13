@@ -5,6 +5,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 from juddges_mcp.tools.judgment import get_extracted_fields, get_judgment
 from juddges_mcp.tools.search import search_judgments
+from juddges_mcp.usage import instrumented
 
 INSTRUCTIONS = (
     "Search Polish and UK court judgments in the Juddges corpus. "
@@ -39,7 +40,9 @@ def build_server() -> FastMCP:
             enable_dns_rebinding_protection=False
         ),
     )
-    server.tool()(search_judgments)
-    server.tool()(get_judgment)
-    server.tool()(get_extracted_fields)
+    # `instrumented` records one `mcp_tool_called` app event per call (tool,
+    # caller, outcome, duration; never the arguments) off the call path.
+    server.tool()(instrumented(search_judgments))
+    server.tool()(instrumented(get_judgment))
+    server.tool()(instrumented(get_extracted_fields))
     return server

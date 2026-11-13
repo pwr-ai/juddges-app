@@ -14,7 +14,9 @@ Covers:
 
 from __future__ import annotations
 
+import asyncio
 import os
+import threading
 from typing import Any
 
 import pytest
@@ -33,6 +35,8 @@ from app.services.app_events import (
     API_EVENT_ALLOWLIST,
     DB_TRIGGER_ONLY_EVENTS,
     EVENT_ALLOWLIST,
+    SERVER_ONLY_EVENTS,
+    emit_app_event_in_background,
 )
 
 
@@ -61,6 +65,70 @@ class TestTaxonomyConstants:
         assert DB_TRIGGER_ONLY_EVENTS <= EVENT_ALLOWLIST
         assert not (DB_TRIGGER_ONLY_EVENTS & API_EVENT_ALLOWLIST)
         assert "auth_signed_out" in API_EVENT_ALLOWLIST
+
+    def test_server_only_usage_events_excluded_from_api_allowlist(self):
+        assert {"mcp_tool_called", "api_route_rollup"} == SERVER_ONLY_EVENTS
+        assert SERVER_ONLY_EVENTS <= EVENT_ALLOWLIST
+        assert not (SERVER_ONLY_EVENTS & API_EVENT_ALLOWLIST)
+        assert "page_viewed" in API_EVENT_ALLOWLIST
+
+
+class TestEmitInBackground:
+    async def test_runs_off_the_event_loop(self, monkeypatch: pytest.MonkeyPatch):
+        seen: list[tuple[str, str]] = []
+        done = asyncio.Event()
+        loop = asyncio.get_running_loop()
+
+        def fake_emit(event_name: str, **_kwargs: Any) -> None:
+            seen.append((event_name, threading.current_thread().name))
+            loop.call_soon_threadsafe(done.set)
+
+        monkeypatch.setattr("app.services.app_events.emit_app_event", fake_emit)
+        emit_app_event_in_background("page_viewed", properties={"route": "/"})
+        await asyncio.wait_for(done.wait(), timeout=5)
+
+        assert seen[0][0] == "page_viewed"
+        assert seen[0][1] != threading.main_thread().name
+
+    async def test_drops_events_when_backlog_is_full(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        from app.services import app_events
+
+        gate = threading.Event()
+        started = threading.Event()
+        ran: list[str] = []
+
+        def slow_emit(name: str, **_kw: Any) -> None:
+            started.set()
+            gate.wait(timeout=5)
+            ran.append(name)
+
+        monkeypatch.setattr(app_events, "emit_app_event", slow_emit)
+        monkeypatch.setattr(app_events, "MAX_PENDING_BACKGROUND_EVENTS", 3)
+        monkeypatch.setattr(app_events, "_pending", 0)
+        try:
+            for _ in range(10):
+                emit_app_event_in_background("page_viewed")
+            assert started.wait(timeout=5)
+            assert app_events._pending == 3  # the other 7 were dropped
+        finally:
+            gate.set()
+        for _ in range(100):
+            if len(ran) == 3 and app_events._pending == 0:
+                break
+            await asyncio.sleep(0.05)
+        assert len(ran) == 3
+        assert app_events._pending == 0
+
+    def test_without_a_loop_runs_inline(self, monkeypatch: pytest.MonkeyPatch):
+        seen: list[str] = []
+        monkeypatch.setattr(
+            "app.services.app_events.emit_app_event",
+            lambda name, **_kw: seen.append(name),
+        )
+        emit_app_event_in_background("api_route_rollup", properties={})
+        assert seen == ["api_route_rollup"]
 
 
 class TestTrackEventsEndpoint:
@@ -97,6 +165,18 @@ class TestTrackEventsEndpoint:
         response = await client.post(
             "/api/events",
             json=_payload("made_up_event"),
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 422
+        assert captured_rows == []
+
+    @pytest.mark.parametrize("event_name", sorted(SERVER_ONLY_EVENTS))
+    async def test_server_only_usage_events_rejected_from_api(
+        self, client, valid_api_headers, captured_rows, event_name
+    ):
+        response = await client.post(
+            "/api/events",
+            json=_payload(event_name),
             headers=valid_api_headers,
         )
         assert response.status_code == 422
@@ -282,3 +362,16 @@ class TestRollAppEventsPartitions:
         monkeypatch.delenv("DATABASE_URL", raising=False)
         result = roll_app_events_partitions.apply().get()
         assert result == {"status": "skipped", "reason": "no_database_url"}
+
+
+class TestServerWiring:
+    async def test_route_rollup_middleware_registered_and_counts_templates(
+        self, client
+    ):
+        from app.services.route_rollup import RouteRollupMiddleware, rollup
+
+        assert any(m.cls is RouteRollupMiddleware for m in app.user_middleware)
+        before = rollup._counts["GET /health"]
+        response = await client.get("/health")
+        assert response.status_code == 200
+        assert rollup._counts["GET /health"] == before + 1

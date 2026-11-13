@@ -16,8 +16,9 @@ Background and PII rules: [App Events Taxonomy](../explanation/event-taxonomy.md
 
 Add the name to `EVENT_ALLOWLIST` in `backend/app/services/app_events.py`.
 If it is server-only *and* emitted by a DB trigger, also add it to
-`DB_TRIGGER_ONLY_EVENTS` (that automatically removes it from
-`API_EVENT_ALLOWLIST`).
+`DB_TRIGGER_ONLY_EVENTS`; if it is emitted only by backend code (MCP tools,
+middleware), add it to `SERVER_ONLY_EVENTS`. Both sets are subtracted from
+`API_EVENT_ALLOWLIST`, so `POST /api/events` rejects them.
 
 ## 3. Frontend type (client-emittable events only)
 
@@ -28,12 +29,14 @@ excluded from this union — the compiler then blocks `track('auth_...')`.
 ## 4. Instrument
 
 - **Component code:** `const trackEvent = useTrackEvent()` from
-  `frontend/hooks/useTrackEvent.ts` (keeps locale in sync), then
+  `frontend/hooks/useTrackEvent.ts` (locale is stamped by `LanguageProvider`), then
   `trackEvent('my_event', { ... })`.
 - **Non-React modules** (`lib/api/*` etc.): import `track` from
   `@/lib/analytics/track` directly.
-- **Backend code paths:** `from app.services.app_events import emit_app_event`
-  and call it fire-and-forget (it never raises).
+- **Backend code paths:** in a route with `BackgroundTasks`, schedule
+  `emit_app_event` on it. Elsewhere in async code (MCP tools, middleware),
+  call `emit_app_event_in_background`, which runs the synchronous Supabase
+  insert on a small dedicated thread pool (bounded backlog, excess events dropped and logged) so the event loop never waits. Both never raise.
 
 Properties rules:
 

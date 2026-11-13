@@ -32,8 +32,8 @@ Each row carries the identity envelope of the batch it arrived in:
 | `user_id` | Stamped by the backend from the Supabase JWT | Never accepted from the request body (`extra="forbid"`). FK to `auth.users` with `ON DELETE SET NULL` — deleting an account anonymizes events but keeps volume metrics. |
 | `guest_session_id` | Device-scoped UUID minted by `track()` in localStorage (`juddges-guest-id`), with the HttpOnly `guest_session_id` cookie as backend fallback | Sent even when authenticated, so pre/post-signup funnels can be stitched. |
 | `session_id` | Tab-scoped UUID in sessionStorage (`juddges-session-id`) | |
-| `surface` | `web` (browser via `track()`) or `api` (server-emitted) | |
-| `locale` | Active UI locale (`preferred-locale`) | |
+| `surface` | `web` (browser via `track()`), `api` (server-emitted) or `mcp` (MCP tool calls) | |
+| `locale` | Active UI locale, pushed into `track()` by `LanguageProvider` via `setTrackLocale` (falls back to the stored `preferred-locale`) | |
 | `app_version` | `NEXT_PUBLIC_APP_VERSION` (from `frontend/package.json`) | |
 
 ## Event list
@@ -59,7 +59,7 @@ API-key callers — those two can only originate from the DB triggers.
 
 | Event | Emitted from | Properties |
 |---|---|---|
-| `search_submitted` | `frontend/hooks/useSearchResults.ts` after first page lands | `result_count`, `query_length`, `mode` |
+| `search_submitted` | `frontend/hooks/useSearchResults.ts` after first page lands (`surface='web'`); also server-side from `POST /documents/search` (`surface='api'`, `backend/app/judgments_pkg/__init__.py`) | `result_count`, `query_length`, `mode`; API rows add `endpoint`, `facets_only` |
 | `search_zero_results` | Same, when zero hits | `query_length`, `mode` |
 | `search_result_clicked` | `frontend/lib/styles/components/search-document-card.tsx` | `document_id`, `position` |
 
@@ -104,6 +104,35 @@ stable when the feature lands.
 |---|---|---|
 | `error_boundary_triggered` | `frontend/components/errors/ErrorBoundary.tsx` `componentDidCatch` | `error_name`, `message` (truncated to 200 chars) |
 
+### Usage (feature ranking)
+
+These exist to rank features by real use before pruning them; the read-only
+reports live in [How to rank features by usage](../how-to/rank-features-by-usage.md).
+
+| Event | Emitted from | Properties |
+|---|---|---|
+| `page_viewed` | `frontend/components/analytics/PageViewTracker.tsx` (mounted in the root layout) on every pathname change | `route` — the route template from `normalizeRoute()` (`/documents/[id]`), never the concrete path or query string |
+| `mcp_tool_called` | `backend/packages/juddges_mcp/juddges_mcp/usage.py` (`instrumented()`, applied where `server.py` registers the tools) | `tool`, `outcome` (`ok` or the exception class), `duration_ms`, `result_count` for list results. Never the tool arguments. `user_id` is the MCP key's owner |
+| `api_route_rollup` | `backend/app/services/route_rollup.py` (`RouteRollupMiddleware`), one row per worker per 15-minute window and on shutdown | `counts` (`{"GET /documents/{document_id}": n, ...}`, route templates only, unmatched requests lumped as `<unmatched>`), `window_start`, `window_end`, `total` |
+
+**Server-only.** `mcp_tool_called` and `api_route_rollup` are in
+`SERVER_ONLY_EVENTS`: `POST /api/events` rejects them (422) even from API-key
+callers, so the usage numbers cannot be inflated from outside. They are not in
+`ClientEventName`.
+
+**Cost.** None of the three adds a request or blocks one: `page_viewed` rides
+the existing `track()` batch; the backend events go through
+`emit_app_event_in_background`, which hands the synchronous Supabase insert to
+the thread pool. The rollup middleware costs one dict increment per request.
+`API_ROUTE_ROLLUP_ENABLED=false` turns the rollup off;
+`API_ROUTE_ROLLUP_INTERVAL_SECONDS` changes the window.
+
+**Privacy.** There is no cookie-consent banner or analytics opt-out in the
+frontend today; these events follow exactly the same identity rules as every
+other first-party event above (device-scoped guest id in localStorage, no
+third-party cookies, no PII). If a consent gate is added later, gate `track()`
+itself and all of these follow.
+
 ## PII rules
 
 `properties` must never contain personal data:
@@ -114,8 +143,8 @@ stable when the feature lands.
 - **No raw query content.** The `query` key is on the same denylist — use
   derived fields (`query_length`) instead; full queries already live in
   `search_analytics`.
-- Server-side callers of `emit_app_event()` must follow the same rules —
-  there is no server-side stripping.
+- Server-side callers of `emit_app_event()` / `emit_app_event_in_background()`
+  must follow the same rules — there is no server-side stripping.
 - Additional caps: max 20 events per batch, max 8 KB serialized `properties`
   per event.
 
@@ -127,6 +156,8 @@ track() (browser, batched ≤20 / 5s, sendBeacon on page-hide)
     → POST /api/events (FastAPI: allowlist + caps, stamps user_id from JWT)
       → BackgroundTasks → record_app_events() → Supabase app_events
 auth.users triggers ────────────────────────────────────────────┘
+backend code (MCP tools, route rollup, POST /documents/search)
+  → emit_app_event_in_background() → thread pool → record_app_events()
 ```
 
 Writes never sit on a request's critical path (`BackgroundTasks`), and every

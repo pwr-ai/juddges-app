@@ -16,6 +16,7 @@ import { siteMetadataBase } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteStructuredData } from "@/lib/structured-data";
 import { CollectionDetailProvider } from "@/contexts/CollectionDetailContext";
+import { PageViewTracker } from "@/components/analytics/PageViewTracker";
 import { getPublicRuntimeEnv, serializeForInlineScript } from "@/lib/env/server";
 
 const geistSans = localFont({
@@ -195,7 +196,8 @@ export default function RootLayout({
                       {children}
                     </AppLayoutWrapper>
                   </CollectionDetailProvider>
-                    <SonnerToaster />
+                  <SonnerToaster />
+                  <PageViewTracker />
                 </LanguageProvider>
               </BrandProvider>
             </AuthProvider>
