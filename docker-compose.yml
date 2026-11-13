@@ -33,8 +33,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      # NEXT_PUBLIC_API_BASE_URL is runtime-only (docker-entrypoint.sh,
+      # /runtime-env.js): the dev .env value must not be baked in (#578). The
+      # Dockerfile fails the build if a localhost URL reaches the browser bundle.
       args:
-        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     container_name: juddges-frontend
