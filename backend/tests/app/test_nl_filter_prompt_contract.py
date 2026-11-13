@@ -3,7 +3,8 @@
 The prompt is data, not code, so we pin the parts the spec depends on:
 - jurisdiction + decision_date rules exist, with Polish and English phrasings;
 - default date field is decision_date (both jurisdictions have it);
-- case_type / court_level never appear (data defect, APP_STATUS §4).
+- case_type is documented with its real values (Criminal | Civil | Administrative);
+- court_level never appears (data still unnormalised).
 """
 
 from __future__ import annotations
@@ -70,6 +71,23 @@ def test_prompt_has_a_polish_example_with_both_jurisdictions_and_a_year_range():
 
 
 def test_excluded_core_fields_never_reach_the_llm():
+    assert frozenset({"court_level"}) == NL_EXCLUDED_CORE_FIELDS
     for field in NL_EXCLUDED_CORE_FIELDS:
         assert field not in SYSTEM_PROMPT, f"{field} leaked into the prompt"
         assert field not in BaseSchemaFilter.model_json_schema()["properties"]
+
+
+def test_prompt_documents_case_type_values():
+    assert "case_type: Criminal | Civil | Administrative" in SYSTEM_PROMPT
+
+
+@pytest.mark.parametrize("phrase", ["karne", "cywilne", "administracyjne", "civil"])
+def test_prompt_lists_case_type_phrasings(phrase: str):
+    assert phrase in SYSTEM_PROMPT
+
+
+def test_case_type_is_in_the_model_schema_but_court_level_is_not():
+    props = BaseSchemaFilter.model_json_schema()["properties"]
+    assert "case_type" in props
+    assert "court_level" not in props
+    assert "case_type" not in NL_EXCLUDED_CORE_FIELDS

@@ -204,6 +204,42 @@ def test_blog_rpcs_exist(conn) -> None:
         ), f"{function} is missing"
 
 
+# Dropped by 20261106000001_drop_unused_rpcs.sql: no caller anywhere in the repo.
+DROPPED_RPCS = (
+    "search_judgments_by_text",
+    "get_judgment_full_text",
+    "get_base_schema_umap_points",
+)
+
+
+@pytest.mark.parametrize("function", DROPPED_RPCS)
+def test_unused_rpc_is_dropped(conn, function: str) -> None:
+    count = _scalar(
+        conn,
+        "SELECT count(*) FROM pg_proc p JOIN pg_namespace n "
+        "ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname=%s",
+        (function,),
+    )
+    assert count == 0, (
+        f"{function} should have been dropped; {count} overload(s) remain"
+    )
+
+
+def test_schema_version_trigger_still_has_its_diff_helper(conn) -> None:
+    """The A16 prune kept schema_field_snapshot_diff on purpose.
+
+    tg_extraction_schemas_create_version() and rollback_to_version() call it
+    from PL/pgSQL bodies, which pg_depend does not track, so a DROP would
+    succeed and every schema save would then fail. Saving a schema exercises
+    the trigger end to end in test_versioning_contract.py; this pins the name.
+    """
+    assert _scalar(
+        conn,
+        "SELECT to_regprocedure('public.schema_field_snapshot_diff(jsonb, jsonb)') "
+        "IS NOT NULL",
+    ), "schema_field_snapshot_diff(jsonb, jsonb) is missing"
+
+
 EXPECTED_FKS = [
     # PostgREST resolves embedded resources through real foreign keys; without
     # these the publications endpoints answer 400, not an empty list.
