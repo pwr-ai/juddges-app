@@ -154,7 +154,7 @@ juddges-app/
 
 **Search Functions**:
 1. `search_judgments_by_embedding()`: Semantic search with vectors
-2. `search_judgments_by_text()`: Full-text search with ranking
+2. `search_judgments_hybrid()`: Combined vector + full-text search with filters
 
 ---
 

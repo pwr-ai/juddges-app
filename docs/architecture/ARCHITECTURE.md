@@ -431,37 +431,9 @@ BEGIN
   LIMIT match_count;
 END;
 $$;
-
--- Full-text search with ranking
-CREATE OR REPLACE FUNCTION search_judgments_by_text(
-  search_query text,
-  match_count int DEFAULT 10
-)
-RETURNS TABLE (
-  id uuid,
-  case_number text,
-  title text,
-  rank float
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    j.id,
-    j.case_number,
-    j.title,
-    ts_rank(
-      to_tsvector('english', j.full_text),
-      plainto_tsquery('english', search_query)
-    ) as rank
-  FROM judgments j
-  WHERE to_tsvector('english', j.full_text) @@ plainto_tsquery('english', search_query)
-  ORDER BY rank DESC
-  LIMIT match_count;
-END;
-$$;
 ```
+
+Full-text and combined search go through `search_judgments_hybrid()` and Meilisearch; the standalone `search_judgments_by_text()` RPC was dropped in `20261106000001_drop_unused_rpcs.sql`.
 
 ### Vector Search Strategy
 

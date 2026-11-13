@@ -35,7 +35,6 @@ dependencies = [
     "openpyxl>=3.1.0,<4",
     "strawberry-graphql[fastapi]>=0.291.3,<0.337.0",
     "cachetools>=5.5,<8.0",
-    "defusedxml>=0.7.1,<0.8",
     "email-validator>=2.0.0,<3.0.0",
     "weaviate-client>=4.16,<5",
 ]
@@ -173,7 +172,6 @@ ignore = [
     "S608",    # SQL string concat (only in admin scripts)
     "PTH118",  # os.path.join (sys.path manipulation needs os.path)
     "PTH120",  # os.path.dirname (sys.path manipulation needs os.path)
-    "S314",    # XML parsing (xml_converter uses defusedxml)
     "UP042",   # str+Enum -> StrEnum (TODO: migrate incrementally; ruff 0.16)
     "S104",    # bind all interfaces (intentional for Docker)
 ]

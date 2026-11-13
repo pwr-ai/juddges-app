@@ -153,8 +153,8 @@ System prompt sections, in order:
 
 Model: `gpt-5-mini` via `juddges_search.llms.get_default_llm(use_mini_model=True)`,
 with `reasoning_effort="minimal"` (same setting as today's enhancer —
-see `backend/packages/juddges_search/juddges_search/chains/query_enhancement.py`
-for the precedent) and a 6 s server-side timeout.
+the precedent was `juddges_search/chains/query_enhancement.py`, since removed
+as unused) and a 6 s server-side timeout.
 
 ## 5. Validation rules (`FacetValidator`)
 
