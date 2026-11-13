@@ -391,6 +391,9 @@ class DocumentChunker:
         """Run the chunking process."""
         logger.info("Fetching judgments without chunks...")
 
+        # The keyset cursor belongs to one pass: a second run() on the same
+        # chunker must rescan from the start, not skip everything before it.
+        self._cursor = None
         start_time = time.time()
         has_more = True
         while has_more:

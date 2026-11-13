@@ -149,6 +149,24 @@ def generate_release_notes_payload(
     return payload
 
 
+def fallback_release_notes_payload(context: ReleaseContext) -> ReleaseNotesPayload:
+    """Notes built from commit subjects alone -- no LLM call.
+
+    Used when the LLM provider is unavailable (e.g. a rejected key, #546) so a
+    dead key cannot block or half-finish a release. ``render_markdown`` still
+    lists every source commit.
+    """
+    count = len(context.commit_entries)
+    return ReleaseNotesPayload(
+        headline=f"prod-v{context.version}",
+        overview=(
+            f"{count} commit{'' if count == 1 else 's'} since "
+            f"{context.comparison_label}. Summary generated without an LLM; "
+            "see Source Commits below."
+        ),
+    )
+
+
 def render_markdown(context: ReleaseContext, payload: ReleaseNotesPayload) -> str:
     lines = [
         f"# prod-v{context.version}",
@@ -228,6 +246,11 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_MODEL,
         help=f"OpenAI model to use. Defaults to {DEFAULT_MODEL}.",
     )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Skip OpenAI and build the notes from commit subjects only.",
+    )
     return parser.parse_args()
 
 
@@ -240,7 +263,10 @@ def main() -> int:
         previous_tag=args.from_ref,
         to_ref=args.to_ref,
     )
-    payload = generate_release_notes_payload(context, model=args.model)
+    if args.no_llm:
+        payload = fallback_release_notes_payload(context)
+    else:
+        payload = generate_release_notes_payload(context, model=args.model)
     markdown = render_markdown(context, payload)
     write_output(markdown, args.output)
     return 0
