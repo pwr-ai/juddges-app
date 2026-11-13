@@ -14,7 +14,6 @@ dependencies = [
     "langchain-openai>=1.1.14,<2",
     "juddges-search",
     "schema-generator-agent",
-    "research-agent",
     "juddges-mcp",
     # Exact pin below 2.x: mcp>=2 requires sse-starlette>=3, which conflicts with
     # langserve[server] (sse-starlette<2). Do not bump until LangServe lifts that cap.
@@ -69,7 +68,6 @@ members = ["packages/*"]
 [tool.uv.sources]
 juddges-search = { workspace = true }
 schema-generator-agent = { workspace = true }
-research-agent = { workspace = true }
 juddges-mcp = { workspace = true }
 
 [tool.uv.build-backend]
