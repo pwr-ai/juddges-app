@@ -102,7 +102,7 @@ Both lockfiles are committed and are the source of truth for installed versions:
 The backend is a single uv workspace with one lock and one environment:
 
 - `backend/pyproject.toml` is the workspace root and the `juddges` project itself (the `app/` package). It lists the members under `[tool.uv.workspace]` (`members = ["packages/*"]`) and maps each one to the workspace in `[tool.uv.sources]`.
-- `backend/packages/*` (`juddges_search`, `schema_generator_agent`, `research_agent`, `juddges_mcp`) are workspace members, installed editable — a change under `packages/` is live without reinstalling.
+- `backend/packages/*` (`juddges_search`, `schema_generator_agent`, `juddges_mcp`) are workspace members, installed editable — a change under `packages/` is live without reinstalling.
 - `backend/uv.lock` covers the root and every member. Members never get their own lockfile (`.gitignore` excludes stray `backend/packages/*/uv.lock`).
 
 The sub-packages have **no dev groups of their own**: all dev tooling (pytest, ruff, mypy, poethepoet, ...) lives in the root `dev` group. uv resolves every member's groups into the one lock, so separate per-package dev pins would only add a second set of constraints that can conflict with the root's.

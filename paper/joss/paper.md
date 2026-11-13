@@ -136,8 +136,8 @@ decision-trend slices are pre-computed and rendered as interactive
 charts, providing a corpus-level overview that complements the
 case-level search and chat surfaces.
 
-The backend is shipped as three reusable Poetry packages — `juddges_search`,
-`schema_generator_agent`, and `research_agent` — each documented with its
+The backend is shipped as reusable uv workspace packages — `juddges_search`,
+`schema_generator_agent`, and `juddges_mcp` — each documented with its
 own `README` so that the retrieval, extraction, and agent components can
 be embedded into other legal-NLP applications without taking on the full
 web frontend. Production releases are tagged `prod-v<semver>` and shipped

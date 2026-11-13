@@ -1870,263 +1870,6 @@
         "title": "CitationNode",
         "type": "object"
       },
-      "ClusterDocument": {
-        "description": "A document within a cluster.",
-        "properties": {
-          "date_issued": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Date Issued"
-          },
-          "document_id": {
-            "title": "Document Id",
-            "type": "string"
-          },
-          "document_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Type"
-          },
-          "similarity_to_centroid": {
-            "description": "Cosine similarity to cluster centroid",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Similarity To Centroid",
-            "type": "number"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          }
-        },
-        "required": [
-          "document_id",
-          "similarity_to_centroid"
-        ],
-        "title": "ClusterDocument",
-        "type": "object"
-      },
-      "ClusterEdge": {
-        "description": "Edge between documents in the same cluster.",
-        "properties": {
-          "similarity": {
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Similarity",
-            "type": "number"
-          },
-          "source": {
-            "title": "Source",
-            "type": "string"
-          },
-          "target": {
-            "title": "Target",
-            "type": "string"
-          }
-        },
-        "required": [
-          "source",
-          "target",
-          "similarity"
-        ],
-        "title": "ClusterEdge",
-        "type": "object"
-      },
-      "ClusterNode": {
-        "description": "Node in the cluster visualization.",
-        "properties": {
-          "cluster_id": {
-            "description": "Cluster assignment",
-            "title": "Cluster Id",
-            "type": "integer"
-          },
-          "document_type": {
-            "description": "Type of document",
-            "title": "Document Type",
-            "type": "string"
-          },
-          "id": {
-            "description": "Document ID",
-            "title": "Id",
-            "type": "string"
-          },
-          "title": {
-            "description": "Document title",
-            "title": "Title",
-            "type": "string"
-          },
-          "x": {
-            "description": "X coordinate for visualization",
-            "title": "X",
-            "type": "number"
-          },
-          "y": {
-            "description": "Y coordinate for visualization",
-            "title": "Y",
-            "type": "number"
-          },
-          "year": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Year of document issuance",
-            "title": "Year"
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "document_type",
-          "x",
-          "y",
-          "cluster_id"
-        ],
-        "title": "ClusterNode",
-        "type": "object"
-      },
-      "ClusteringRequest": {
-        "description": "Request to perform semantic clustering on documents.",
-        "properties": {
-          "document_types": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional filter by document types",
-            "title": "Document Types"
-          },
-          "num_clusters": {
-            "default": 5,
-            "description": "Number of clusters to create",
-            "maximum": 20.0,
-            "minimum": 2.0,
-            "title": "Num Clusters",
-            "type": "integer"
-          },
-          "sample_size": {
-            "default": 100,
-            "description": "Number of documents to cluster",
-            "maximum": 500.0,
-            "minimum": 10.0,
-            "title": "Sample Size",
-            "type": "integer"
-          }
-        },
-        "title": "ClusteringRequest",
-        "type": "object"
-      },
-      "ClusteringResponse": {
-        "description": "Response from semantic clustering.",
-        "properties": {
-          "clusters": {
-            "items": {
-              "$ref": "#/components/schemas/SemanticCluster"
-            },
-            "title": "Clusters",
-            "type": "array"
-          },
-          "edges": {
-            "items": {
-              "$ref": "#/components/schemas/ClusterEdge"
-            },
-            "title": "Edges",
-            "type": "array"
-          },
-          "nodes": {
-            "items": {
-              "$ref": "#/components/schemas/ClusterNode"
-            },
-            "title": "Nodes",
-            "type": "array"
-          },
-          "statistics": {
-            "$ref": "#/components/schemas/ClusteringStatistics"
-          }
-        },
-        "required": [
-          "clusters",
-          "nodes",
-          "edges",
-          "statistics"
-        ],
-        "title": "ClusteringResponse",
-        "type": "object"
-      },
-      "ClusteringStatistics": {
-        "description": "Statistics about the clustering result.",
-        "properties": {
-          "avg_cluster_size": {
-            "title": "Avg Cluster Size",
-            "type": "number"
-          },
-          "avg_coherence": {
-            "title": "Avg Coherence",
-            "type": "number"
-          },
-          "clustering_time_ms": {
-            "title": "Clustering Time Ms",
-            "type": "number"
-          },
-          "max_cluster_size": {
-            "title": "Max Cluster Size",
-            "type": "integer"
-          },
-          "min_cluster_size": {
-            "title": "Min Cluster Size",
-            "type": "integer"
-          },
-          "num_clusters": {
-            "title": "Num Clusters",
-            "type": "integer"
-          },
-          "total_documents": {
-            "title": "Total Documents",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "total_documents",
-          "num_clusters",
-          "avg_cluster_size",
-          "min_cluster_size",
-          "max_cluster_size",
-          "avg_coherence",
-          "clustering_time_ms"
-        ],
-        "title": "ClusteringStatistics",
-        "type": "object"
-      },
       "Collection": {
         "properties": {
           "created_at": {
@@ -3478,39 +3221,6 @@
           "schema_definition"
         ],
         "title": "CreateSchemaRequest",
-        "type": "object"
-      },
-      "CreateVersionRequest": {
-        "description": "Request to create a manual version snapshot.",
-        "properties": {
-          "change_description": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Description of what changed",
-            "title": "Change Description"
-          },
-          "change_type": {
-            "default": "amendment",
-            "description": "Type of change: initial, amendment, correction, consolidation, repeal",
-            "enum": [
-              "initial",
-              "amendment",
-              "correction",
-              "consolidation",
-              "repeal"
-            ],
-            "title": "Change Type",
-            "type": "string"
-          }
-        },
-        "title": "CreateVersionRequest",
         "type": "object"
       },
       "CreatedCollection": {
@@ -5504,121 +5214,6 @@
         "title": "DocumentStats",
         "type": "object"
       },
-      "DocumentSummary": {
-        "description": "Document with AI-generated summary.",
-        "properties": {
-          "ai_summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ai Summary"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "document_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Number"
-          },
-          "document_type": {
-            "title": "Document Type",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "issuing_body": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Issuing Body"
-          },
-          "jurisdiction": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jurisdiction"
-          },
-          "key_topics": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Key Topics"
-          },
-          "language": {
-            "title": "Language",
-            "type": "string"
-          },
-          "publication_date": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publication Date"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "document_type",
-          "publication_date",
-          "ai_summary",
-          "key_topics",
-          "jurisdiction",
-          "language",
-          "issuing_body"
-        ],
-        "title": "DocumentSummary",
-        "type": "object"
-      },
       "DocumentType": {
         "description": "Enumeration of supported legal document types.\n\nSearch is judgment-only as of 2026-05-09; the enum is retained as a\none-value placeholder so existing imports keep compiling. See\n``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``\nfor the migration that collapsed the enum.",
         "enum": [
@@ -5626,77 +5221,6 @@
         ],
         "title": "DocumentType",
         "type": "string"
-      },
-      "DocumentVersion": {
-        "description": "A single version entry for a document.",
-        "properties": {
-          "change_description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Change Description"
-          },
-          "change_type": {
-            "title": "Change Type",
-            "type": "string"
-          },
-          "content_hash": {
-            "title": "Content Hash",
-            "type": "string"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by": {
-            "default": "system",
-            "title": "Created By",
-            "type": "string"
-          },
-          "document_id": {
-            "title": "Document Id",
-            "type": "string"
-          },
-          "has_extracted_data": {
-            "default": false,
-            "title": "Has Extracted Data",
-            "type": "boolean"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "version_number": {
-            "title": "Version Number",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "document_id",
-          "version_number",
-          "content_hash",
-          "change_type",
-          "created_at"
-        ],
-        "title": "DocumentVersion",
-        "type": "object"
       },
       "DriftAnalysisResponse": {
         "description": "Response from the language drift detection analysis.",
@@ -11173,35 +10697,6 @@
         "title": "RetentionPolicyInfo",
         "type": "object"
       },
-      "RevertVersionRequest": {
-        "description": "Request to revert a document to a specific version.",
-        "properties": {
-          "change_description": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Description of why reverting",
-            "title": "Change Description"
-          },
-          "version_number": {
-            "description": "Version number to revert to",
-            "minimum": 1.0,
-            "title": "Version Number",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "version_number"
-        ],
-        "title": "RevertVersionRequest",
-        "type": "object"
-      },
       "RewrittenQueryEnvelope": {
         "properties": {
           "degraded": {
@@ -12804,6 +12299,169 @@
         "title": "SearchQueryEntry",
         "type": "object"
       },
+      "SearchV2Chunk": {
+        "properties": {
+          "chunk_idx": {
+            "title": "Chunk Idx",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "chunk_idx"
+        ],
+        "title": "SearchV2Chunk",
+        "type": "object"
+      },
+      "SearchV2Request": {
+        "properties": {
+          "alpha": {
+            "default": 0.25,
+            "description": "0 = BM25 only, 1 = vector only",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Alpha",
+            "type": "number"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchV2Request",
+        "type": "object"
+      },
+      "SearchV2Response": {
+        "properties": {
+          "engine": {
+            "default": "weaviate-v2",
+            "title": "Engine",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchV2Result"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "took_ms": {
+            "title": "Took Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "took_ms"
+        ],
+        "title": "SearchV2Response",
+        "type": "object"
+      },
+      "SearchV2Result": {
+        "properties": {
+          "best_chunk": {
+            "$ref": "#/components/schemas/SearchV2Chunk"
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Date"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "supabase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "judgments.id when the judgment is also in the app database",
+            "title": "Supabase Id"
+          },
+          "thesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesis"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "score",
+          "best_chunk"
+        ],
+        "title": "SearchV2Result",
+        "type": "object"
+      },
       "SegmentType": {
         "description": "Enumeration of supported document segment types.",
         "enum": [
@@ -12815,68 +12473,6 @@
         ],
         "title": "SegmentType",
         "type": "string"
-      },
-      "SemanticCluster": {
-        "description": "A single semantic cluster.",
-        "properties": {
-          "cluster_id": {
-            "title": "Cluster Id",
-            "type": "integer"
-          },
-          "coherence_score": {
-            "description": "Average intra-cluster similarity",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Coherence Score",
-            "type": "number"
-          },
-          "documents": {
-            "description": "Documents in this cluster",
-            "items": {
-              "$ref": "#/components/schemas/ClusterDocument"
-            },
-            "title": "Documents",
-            "type": "array"
-          },
-          "keywords": {
-            "description": "Top keywords representing this cluster",
-            "items": {
-              "type": "string"
-            },
-            "title": "Keywords",
-            "type": "array"
-          },
-          "size": {
-            "description": "Number of documents in this cluster",
-            "title": "Size",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "cluster_id",
-          "size",
-          "keywords",
-          "coherence_score",
-          "documents"
-        ],
-        "title": "SemanticCluster",
-        "type": "object"
-      },
-      "SendMessageRequest": {
-        "properties": {
-          "message": {
-            "description": "User message",
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "title": "SendMessageRequest",
-        "type": "object"
       },
       "ServiceHealth": {
         "description": "Health information for a single service.",
@@ -13022,77 +12618,6 @@
         ],
         "title": "ServiceStatus",
         "type": "string"
-      },
-      "SessionResponse": {
-        "properties": {
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "current_step": {
-            "default": 0,
-            "title": "Current Step",
-            "type": "integer"
-          },
-          "decision_points": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Decision Points",
-            "type": "array"
-          },
-          "findings": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Findings",
-            "type": "array"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "initial_query": {
-            "title": "Initial Query",
-            "type": "string"
-          },
-          "mode": {
-            "title": "Mode",
-            "type": "string"
-          },
-          "progress": {
-            "default": 0.0,
-            "title": "Progress",
-            "type": "number"
-          },
-          "report": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Report"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "mode",
-          "initial_query",
-          "status",
-          "created_at"
-        ],
-        "title": "SessionResponse",
-        "type": "object"
       },
       "SetActiveModelRequest": {
         "description": "Request to set the active embedding model.",
@@ -13544,64 +13069,6 @@
         "title": "SimpleSchemaGenerationResponse",
         "type": "object"
       },
-      "StartSessionRequest": {
-        "properties": {
-          "max_iterations": {
-            "default": 10,
-            "description": "Maximum research iterations",
-            "maximum": 20.0,
-            "minimum": 1.0,
-            "title": "Max Iterations",
-            "type": "integer"
-          },
-          "mode": {
-            "default": "guided",
-            "description": "Research mode",
-            "enum": [
-              "guided",
-              "exploratory",
-              "case_preparation"
-            ],
-            "title": "Mode",
-            "type": "string"
-          },
-          "query": {
-            "description": "Research query",
-            "maxLength": 5000,
-            "minLength": 5,
-            "title": "Query",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query"
-        ],
-        "title": "StartSessionRequest",
-        "type": "object"
-      },
-      "StartSessionResponse": {
-        "properties": {
-          "message": {
-            "title": "Message",
-            "type": "string"
-          },
-          "session_id": {
-            "title": "Session Id",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "session_id",
-          "status",
-          "message"
-        ],
-        "title": "StartSessionResponse",
-        "type": "object"
-      },
       "SuggestResponse": {
         "description": "Corpus-derived autocomplete suggestions (issue #153).\n\nPhrase-level hits from the Meilisearch ``suggestions`` index, mined from the\nPL + EN judgment corpus.  ``suggestion_hits`` is an empty list when the\nsuggestions index is unavailable (graceful fallback for the frontend).",
         "properties": {
@@ -13942,216 +13409,6 @@
           "topic_weight"
         ],
         "title": "TimePeriod",
-        "type": "object"
-      },
-      "TimelineDateRange": {
-        "description": "Date range of the timeline.",
-        "properties": {
-          "earliest": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Earliest date",
-            "title": "Earliest"
-          },
-          "latest": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Latest date",
-            "title": "Latest"
-          }
-        },
-        "title": "TimelineDateRange",
-        "type": "object"
-      },
-      "TimelineEvent": {
-        "description": "A single event in the timeline.",
-        "properties": {
-          "category": {
-            "description": "Category of the event",
-            "enum": [
-              "filing",
-              "decision",
-              "deadline",
-              "hearing",
-              "appeal",
-              "enforcement",
-              "procedural",
-              "legislative",
-              "other"
-            ],
-            "title": "Category",
-            "type": "string"
-          },
-          "date": {
-            "description": "Date in YYYY-MM-DD, YYYY-MM, or YYYY format",
-            "title": "Date",
-            "type": "string"
-          },
-          "date_precision": {
-            "description": "Precision of the date",
-            "enum": [
-              "day",
-              "month",
-              "year"
-            ],
-            "title": "Date Precision",
-            "type": "string"
-          },
-          "description": {
-            "description": "Detailed description of the event",
-            "title": "Description",
-            "type": "string"
-          },
-          "importance": {
-            "default": "medium",
-            "description": "Importance level of the event",
-            "enum": [
-              "high",
-              "medium",
-              "low"
-            ],
-            "title": "Importance",
-            "type": "string"
-          },
-          "legal_references": {
-            "description": "Legal references associated",
-            "items": {
-              "type": "string"
-            },
-            "title": "Legal References",
-            "type": "array"
-          },
-          "parties": {
-            "description": "Parties or entities involved",
-            "items": {
-              "type": "string"
-            },
-            "title": "Parties",
-            "type": "array"
-          },
-          "title": {
-            "description": "Short event title",
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "date",
-          "date_precision",
-          "title",
-          "description",
-          "category"
-        ],
-        "title": "TimelineEvent",
-        "type": "object"
-      },
-      "TimelineExtractionRequest": {
-        "description": "Request model for timeline extraction.",
-        "properties": {
-          "document_ids": {
-            "description": "List of document IDs to extract timeline from",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 10,
-            "minItems": 1,
-            "title": "Document Ids",
-            "type": "array"
-          },
-          "extraction_depth": {
-            "default": "detailed",
-            "description": "Depth of extraction: 'basic' for key dates only, 'detailed' for all events with context, 'comprehensive' for full temporal analysis",
-            "enum": [
-              "basic",
-              "detailed",
-              "comprehensive"
-            ],
-            "title": "Extraction Depth",
-            "type": "string"
-          },
-          "focus_areas": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "maxItems": 5,
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional focus areas (e.g., 'deadlines', 'court hearings', 'filings')",
-            "title": "Focus Areas"
-          }
-        },
-        "required": [
-          "document_ids"
-        ],
-        "title": "TimelineExtractionRequest",
-        "type": "object"
-      },
-      "TimelineExtractionResponse": {
-        "description": "Response model for timeline extraction.",
-        "properties": {
-          "date_range": {
-            "$ref": "#/components/schemas/TimelineDateRange",
-            "description": "Date range of the timeline"
-          },
-          "document_ids": {
-            "description": "Document IDs that were analyzed",
-            "items": {
-              "type": "string"
-            },
-            "title": "Document Ids",
-            "type": "array"
-          },
-          "events": {
-            "description": "Extracted timeline events",
-            "items": {
-              "$ref": "#/components/schemas/TimelineEvent"
-            },
-            "title": "Events",
-            "type": "array"
-          },
-          "extraction_depth": {
-            "description": "Extraction depth used",
-            "title": "Extraction Depth",
-            "type": "string"
-          },
-          "timeline_summary": {
-            "description": "Summary of the chronological narrative",
-            "title": "Timeline Summary",
-            "type": "string"
-          },
-          "total_events": {
-            "description": "Total number of events extracted",
-            "title": "Total Events",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "events",
-          "timeline_summary",
-          "date_range",
-          "document_ids",
-          "total_events",
-          "extraction_depth"
-        ],
-        "title": "TimelineExtractionResponse",
         "type": "object"
       },
       "TimelinePoint": {
@@ -15439,206 +14696,6 @@
           "modified_fields"
         ],
         "title": "VersionComparisonResponse",
-        "type": "object"
-      },
-      "VersionDetailResponse": {
-        "description": "Detailed version with full content.",
-        "properties": {
-          "change_description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Change Description"
-          },
-          "change_type": {
-            "title": "Change Type",
-            "type": "string"
-          },
-          "content_hash": {
-            "title": "Content Hash",
-            "type": "string"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by": {
-            "title": "Created By",
-            "type": "string"
-          },
-          "document_id": {
-            "title": "Document Id",
-            "type": "string"
-          },
-          "extracted_data": {
-            "additionalProperties": true,
-            "title": "Extracted Data",
-            "type": "object"
-          },
-          "full_text": {
-            "title": "Full Text",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Summary"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "version_number": {
-            "title": "Version Number",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "document_id",
-          "version_number",
-          "full_text",
-          "content_hash",
-          "change_type",
-          "created_by",
-          "created_at"
-        ],
-        "title": "VersionDetailResponse",
-        "type": "object"
-      },
-      "VersionDiffResponse": {
-        "description": "Diff between two versions.",
-        "properties": {
-          "diff_html": {
-            "title": "Diff Html",
-            "type": "string"
-          },
-          "diff_stats": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Diff Stats",
-            "type": "object"
-          },
-          "document_id": {
-            "title": "Document Id",
-            "type": "string"
-          },
-          "from_created_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "From Created At"
-          },
-          "from_title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "From Title"
-          },
-          "from_version": {
-            "title": "From Version",
-            "type": "integer"
-          },
-          "to_created_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "To Created At"
-          },
-          "to_title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "To Title"
-          },
-          "to_version": {
-            "title": "To Version",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "document_id",
-          "from_version",
-          "to_version",
-          "diff_html",
-          "diff_stats"
-        ],
-        "title": "VersionDiffResponse",
-        "type": "object"
-      },
-      "VersionHistoryResponse": {
-        "description": "Response for version history of a document.",
-        "properties": {
-          "current_version": {
-            "title": "Current Version",
-            "type": "integer"
-          },
-          "document_id": {
-            "title": "Document Id",
-            "type": "string"
-          },
-          "total_versions": {
-            "title": "Total Versions",
-            "type": "integer"
-          },
-          "versions": {
-            "items": {
-              "$ref": "#/components/schemas/DocumentVersion"
-            },
-            "title": "Versions",
-            "type": "array"
-          }
-        },
-        "required": [
-          "document_id",
-          "current_version",
-          "versions",
-          "total_versions"
-        ],
-        "title": "VersionHistoryResponse",
         "type": "object"
       },
       "YearlyDecisionCount": {
@@ -20913,53 +19970,6 @@
         "summary": "Create Feedback From Token"
       }
     },
-    "/clustering/semantic-clusters": {
-      "post": {
-        "description": "Cluster documents using their embedding vectors.\n\nUses K-Means clustering on existing document embeddings and PCA for\n2D visualization coordinates. Extracts representative keywords per\ncluster using TF-IDF on document titles and summaries.",
-        "operationId": "get_semantic_clusters_clustering_semantic_clusters_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClusteringRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClusteringResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Cluster documents by semantic similarity",
-        "tags": [
-          "clustering"
-        ]
-      }
-    },
     "/collections": {
       "get": {
         "operationId": "list_collections_collections_get",
@@ -21839,61 +20849,6 @@
         ]
       }
     },
-    "/dashboard/featured-examples": {
-      "get": {
-        "description": "Curated featured-example judgments for new users.\n\nArgs:\n    limit: Number of examples to return (1-10)\n\nReturns:\n    List of featured judgments rendered as DocumentSummary.",
-        "operationId": "get_featured_examples_dashboard_featured_examples_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 5,
-              "maximum": 10,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DocumentSummary"
-                  },
-                  "title": "Response Get Featured Examples Dashboard Featured Examples Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get Featured Examples",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
     "/dashboard/health": {
       "get": {
         "description": "Check dashboard data availability.",
@@ -21914,34 +20869,6 @@
           }
         ],
         "summary": "Dashboard Health",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/refresh-stats": {
-      "post": {
-        "description": "Trigger a refresh of precomputed dashboard statistics.\n\nCalls the SQL function to recompute stats and clears all caches so that\nthe next /stats request returns fresh data.\n\nReturns:\n    dict: Status message",
-        "operationId": "refresh_dashboard_stats_dashboard_refresh_stats_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Refresh Dashboard Stats",
         "tags": [
           "dashboard"
         ]
@@ -22779,339 +21706,6 @@
         "summary": "Find similar documents to one document",
         "tags": [
           "documents"
-        ]
-      }
-    },
-    "/documents/{document_id}/versions": {
-      "get": {
-        "description": "Get the version history of a document, ordered by version number descending.",
-        "operationId": "get_version_history_documents__document_id__versions_get",
-        "parameters": [
-          {
-            "description": "Document ID",
-            "in": "path",
-            "name": "document_id",
-            "required": true,
-            "schema": {
-              "description": "Document ID",
-              "title": "Document Id",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Max versions to return",
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "description": "Max versions to return",
-              "maximum": 200,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Pagination offset",
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "description": "Pagination offset",
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VersionHistoryResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get version history for a document",
-        "tags": [
-          "versioning"
-        ]
-      },
-      "post": {
-        "description": "Create a manual version snapshot of the current document state.",
-        "operationId": "create_version_snapshot_documents__document_id__versions_post",
-        "parameters": [
-          {
-            "description": "Document ID",
-            "in": "path",
-            "name": "document_id",
-            "required": true,
-            "schema": {
-              "description": "Document ID",
-              "title": "Document Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateVersionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentVersion"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Create a manual version snapshot",
-        "tags": [
-          "versioning"
-        ]
-      }
-    },
-    "/documents/{document_id}/versions/revert": {
-      "post": {
-        "description": "Revert a document to a specific previous version.\n\nThis creates a new version snapshot of the current state before reverting,\nthen updates the document with the content from the target version.",
-        "operationId": "revert_to_version_documents__document_id__versions_revert_post",
-        "parameters": [
-          {
-            "description": "Document ID",
-            "in": "path",
-            "name": "document_id",
-            "required": true,
-            "schema": {
-              "description": "Document ID",
-              "title": "Document Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RevertVersionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Revert To Version Documents  Document Id  Versions Revert Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Revert document to a previous version",
-        "tags": [
-          "versioning"
-        ]
-      }
-    },
-    "/documents/{document_id}/versions/{from_version}/diff/{to_version}": {
-      "get": {
-        "description": "Generate a diff between two versions of a document.\n\nIf to_version equals the current version, the current document content is used.",
-        "operationId": "get_version_diff_documents__document_id__versions__from_version__diff__to_version__get",
-        "parameters": [
-          {
-            "description": "Document ID",
-            "in": "path",
-            "name": "document_id",
-            "required": true,
-            "schema": {
-              "description": "Document ID",
-              "title": "Document Id",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Source version number",
-            "in": "path",
-            "name": "from_version",
-            "required": true,
-            "schema": {
-              "description": "Source version number",
-              "minimum": 1,
-              "title": "From Version",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Target version number",
-            "in": "path",
-            "name": "to_version",
-            "required": true,
-            "schema": {
-              "description": "Target version number",
-              "minimum": 1,
-              "title": "To Version",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VersionDiffResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get diff between two versions",
-        "tags": [
-          "versioning"
-        ]
-      }
-    },
-    "/documents/{document_id}/versions/{version_number}": {
-      "get": {
-        "description": "Get full content of a specific version.",
-        "operationId": "get_version_detail_documents__document_id__versions__version_number__get",
-        "parameters": [
-          {
-            "description": "Document ID",
-            "in": "path",
-            "name": "document_id",
-            "required": true,
-            "schema": {
-              "description": "Document ID",
-              "title": "Document Id",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Version number",
-            "in": "path",
-            "name": "version_number",
-            "required": true,
-            "schema": {
-              "description": "Version number",
-              "minimum": 1,
-              "title": "Version Number",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VersionDetailResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get a specific version of a document",
-        "tags": [
-          "versioning"
         ]
       }
     },
@@ -25267,55 +23861,6 @@
         "summary": "Export extraction results",
         "tags": [
           "extraction"
-        ]
-      }
-    },
-    "/graphql": {
-      "get": {
-        "operationId": "handle_http_get_graphql_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "The GraphiQL integrated development environment."
-          },
-          "404": {
-            "description": "Not found if GraphiQL or query via GET are not enabled."
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Handle Http Get",
-        "tags": [
-          "graphql"
-        ]
-      },
-      "post": {
-        "operationId": "handle_http_post_graphql_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Handle Http Post",
-        "tags": [
-          "graphql"
         ]
       }
     },
@@ -28115,347 +26660,6 @@
         ]
       }
     },
-    "/research-agent/sessions": {
-      "get": {
-        "description": "List research sessions for the current user.",
-        "operationId": "list_sessions_research_agent_sessions_get",
-        "parameters": [
-          {
-            "description": "Max sessions to return",
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "description": "Max sessions to return",
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Pagination offset",
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "description": "Pagination offset",
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SessionResponse"
-                  },
-                  "title": "Response List Sessions Research Agent Sessions Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List user's research sessions",
-        "tags": [
-          "research-agent-v2"
-        ]
-      },
-      "post": {
-        "description": "Create a research session and launch the agent in the background.",
-        "operationId": "start_session_research_agent_sessions_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StartSessionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StartSessionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Start a new research session",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}": {
-      "get": {
-        "description": "Read a research session by ID.",
-        "operationId": "get_session_research_agent_sessions__session_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get session status and results",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}/message": {
-      "post": {
-        "description": "Placeholder for interrupt-resume: accepts user input at a decision point.",
-        "operationId": "send_message_research_agent_sessions__session_id__message_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SendMessageRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Send Message Research Agent Sessions  Session Id  Message Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Send user input to a decision point",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}/stop": {
-      "post": {
-        "description": "Cancel the running agent task and mark the session as stopped.",
-        "operationId": "stop_session_research_agent_sessions__session_id__stop_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Stop Session Research Agent Sessions  Session Id  Stop Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Stop a running research session",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
-    "/research-agent/sessions/{session_id}/stream": {
-      "get": {
-        "description": "Return an SSE stream that emits progress events for the given session.",
-        "operationId": "stream_session_research_agent_sessions__session_id__stream_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "SSE stream of session progress events",
-        "tags": [
-          "research-agent-v2"
-        ]
-      }
-    },
     "/schema-generator/chat": {
       "post": {
         "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs scoped to the authenticated user.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n    user: Authenticated user (from Bearer JWT)\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"judgment\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
@@ -29610,6 +27814,55 @@
         ]
       }
     },
+    "/search/v2": {
+      "post": {
+        "operationId": "search_v2_search_v2_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchV2Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchV2Response"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test search over the Weaviate v2 corpus (hybrid chunks + MaxP)",
+        "tags": [
+          "Search v2 (test)"
+        ]
+      }
+    },
     "/summarize": {
       "post": {
         "description": "Generate a concise summary of one or more legal documents using GPT-4. Supports executive summaries, key findings extraction, and multi-document synthesis.",
@@ -29701,53 +27954,6 @@
         "summary": "Extract key arguments, holdings, and legal principles",
         "tags": [
           "summarization"
-        ]
-      }
-    },
-    "/timeline": {
-      "post": {
-        "description": "Extract chronological events and dates from one or more legal documents to create an interactive timeline. Uses AI to identify temporal relationships and sequence events in legal proceedings.",
-        "operationId": "extract_timeline_timeline_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TimelineExtractionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TimelineExtractionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Extract timeline from legal documents",
-        "tags": [
-          "timeline"
         ]
       }
     },
