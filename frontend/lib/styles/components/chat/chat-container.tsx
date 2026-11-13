@@ -16,9 +16,6 @@ interface ChatContainerProps {
  * Chat Container
  * Provides consistent styling for chat input containers
  *
- * Uses centralized color definitions from the color system.
- * Colors are defined in lib/styles/colors/chat.ts for easy maintenance.
- *
  * @example
  * <ChatContainer>
  * <Textarea placeholder="Type your message..."/>

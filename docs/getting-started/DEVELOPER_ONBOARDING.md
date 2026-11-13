@@ -213,7 +213,7 @@ juddges-app/
 
 #### Infrastructure
 - **Database**: Supabase (managed PostgreSQL + Auth + Storage)
-- **Vector Database**: pgvector extension (replaces Weaviate from JuDDGES)
+- **Vector Database**: pgvector extension; the experimental `/search/v2` engine (`backend/app/search_v2`, `WEAVIATE_V2_*`) queries a separate Weaviate v2 corpus
 - **Caching**: Redis for sessions and task queue
 - **Deployment**: Docker Compose (dev and prod configurations)
 
@@ -264,17 +264,16 @@ schema-generator-agent = { workspace = true }
 
 1. **PostgreSQL (via Supabase)**: Main database for structured data
    - `judgments` table: Stores court decisions with metadata
-   - Includes `embedding` column (vector(768)) for semantic search
+   - Includes `embedding` column (`vector(1024)`, BGE-M3) for semantic search
    - Full-text search using PostgreSQL GIN indexes
    - RLS (Row Level Security) for access control
 
 2. **Vector Search**: Uses Supabase pgvector extension
-   - JuDDGES originally used Weaviate (migration complete)
-   - Juddges uses native PostgreSQL pgvector
+   - Native PostgreSQL pgvector; query embeddings come from the TEI service (`TEI_EMBEDDING_URL`)
    - Vector similarity search using HNSW index
    - Supports hybrid search (vector + full-text + filters)
 
-**Important**: When working with vector search, older code may reference Weaviate (legacy from JuDDGES fork). All vector operations now use Supabase pgvector.
+**Important**: All vector operations use Supabase pgvector. `EMBEDDER_DIMENSIONS` in `backend/app/services/meilisearch_embeddings.py` is the single source of truth for the embedding dimension.
 
 ### FastAPI Server Structure
 

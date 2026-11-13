@@ -136,7 +136,7 @@ class TopicModelingResponse(BaseModel):
 # ===== Utility Functions =====
 
 
-# Polish + English stopwords (shared with clustering module)
+# Polish + English stopwords (same set as app.reasoning_lines.cluster_math)
 STOPWORDS = {
     "w",
     "z",

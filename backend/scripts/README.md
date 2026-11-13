@@ -4,18 +4,6 @@ Collection of utility scripts for the Juddges backend.
 
 ## Available Scripts
 
-### fix_weaviate_schema.py
-
-**Legacy script from JuDDGES** - Utility for Weaviate schema configurations.
-
-**Note**: Juddges uses Supabase pgvector, so this script is not used in the current implementation.
-
-**Usage (legacy):**
-
-```bash
-python scripts/fix_weaviate_schema.py
-```
-
 ### setup_langchain_cache_db.sh
 
 Setup script for creating the LangChain cache database in the Supabase PostgreSQL instance.

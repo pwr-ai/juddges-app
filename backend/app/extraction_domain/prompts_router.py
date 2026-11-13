@@ -301,7 +301,7 @@ async def delete_prompt(
 
 # ===== Schemas Management Endpoints =====
 # DEPRECATED: These endpoints are maintained for backward compatibility.
-# Use /schemas endpoints instead (see app/schemas.py)
+# Use /schemas endpoints instead (see app/schemas_pkg/)
 
 
 @router.get(
