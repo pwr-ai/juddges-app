@@ -97,53 +97,8 @@ This will create:
 
 ### 6. Verify Setup
 
-Run the verification script to ensure everything is configured correctly:
-
-```bash
-# Install dependencies first (if not done)
-cd backend
-uv sync
-cd ..
-
-# Run verification
-python scripts/verify_supabase_setup.py
-```
-
-Expected output:
-
-```
-🔍 Supabase Setup Verification
-
-Step 1: Checking environment variables...
-✓ All required environment variables are set
-
-Step 2: Creating Supabase client...
-✓ Supabase client created successfully
-
-Step 3: Testing database connection...
-✓ Connected successfully (judgments count: 0)
-
-Step 4: Checking PostgreSQL extensions...
-✓ Extension 'vector': installed
-✓ Extension 'pg_trgm': installed
-
-Step 5: Checking required tables...
-✓ Table 'judgments': exists
-✓ Table 'profiles': exists
-
-Step 6: Checking Row Level Security...
-RLS check requires direct SQL access (assumed enabled)
-
-Step 7: Checking database functions...
-✓ Function 'search_judgments_by_embedding': exists
-✓ Function 'search_judgments_hybrid': exists
-✓ Function 'get_judgment_facets': exists
-
-Step 8: Checking Supabase Auth...
-✓ Auth schema initialized (0 users)
-
-✅ All checks passed! Supabase is properly configured.
-```
+Follow the [manual verification steps](#manual-verification-steps) below to
+confirm the tables, extensions, RLS policies and auth are in place.
 
 ---
 
@@ -172,6 +127,7 @@ The Juddges App uses the following database structure:
 #### **Search Functions**
 
 - `search_judgments_by_embedding()` - Semantic/vector search
+- `search_judgments_by_text()` - Full-text search
 - `search_judgments_hybrid()` - Combined vector + text search with 11+ filters
 - `get_judgment_facets()` - Dynamic facet counts for filter UI
 
@@ -271,22 +227,6 @@ npx supabase auth signup --email test@example.com --password testpassword123
 ```
 
 Then verify in **Authentication** → **Users** dashboard.
-
-### Automated Verification
-
-Run the Python verification script:
-
-```bash
-python scripts/verify_supabase_setup.py
-```
-
-This checks:
-- ✅ Environment variables
-- ✅ Database connectivity
-- ✅ Extensions
-- ✅ Tables existence
-- ✅ Functions availability
-- ✅ Auth schema
 
 ---
 
