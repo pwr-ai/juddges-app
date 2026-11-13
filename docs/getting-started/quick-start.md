@@ -12,39 +12,7 @@ You'll need:
 - `SUPABASE_SERVICE_ROLE_KEY` (starts with `eyJ...`)
 - `DATABASE_URL` (optional, for direct PostgreSQL access)
 
-## Option 1: Automated Setup (Recommended)
-
-### Step 1: Configure Environment
-
-```bash
-# Copy example file
-cp .env.example .env
-
-# Edit .env and set your credentials
-nano .env  # or use your preferred editor
-```
-
-Required variables in `.env`:
-```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJI...
-DATABASE_URL=postgresql://postgres:[PASSWORD]@db.your-project.supabase.co:5432/postgres
-```
-
-### Step 2: Run Setup Script
-
-```bash
-./scripts/setup_and_migrate.sh
-```
-
-This script will:
-- ✓ Check your environment configuration
-- ✓ Test database connection
-- ✓ Apply the migration
-- ✓ Verify the migration succeeded
-- ✓ Run automated tests
-
-## Option 2: Manual Migration
+## Option 1: Manual Migration
 
 ### Step 1: Configure Environment
 
@@ -94,17 +62,7 @@ FROM get_judgment_facets()
 LIMIT 10;
 ```
 
-### Step 4: Run Verification Script
-
-```bash
-# Install dependencies
-pip install supabase loguru requests
-
-# Run verification
-python3 scripts/verify_filtering_implementation.py
-```
-
-## Option 3: Docker-based Migration
+## Option 2: Docker-based Migration
 
 If you're using Docker:
 
@@ -257,8 +215,6 @@ After successful migration:
 
 - **Documentation**: `FILTERING_IMPLEMENTATION_SUMMARY.md`
 - **Detailed Checklist**: `MIGRATION_CHECKLIST.md`
-- **Verification Script**: `scripts/verify_filtering_implementation.py`
-- **Setup Script**: `scripts/setup_and_migrate.sh`
 
 ## Rollback
 
