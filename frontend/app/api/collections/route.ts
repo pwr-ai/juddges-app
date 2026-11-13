@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import { logger } from "@/lib/logger";
@@ -33,6 +34,7 @@ export async function GET() {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': createHash('sha256').update(userData.user.id).digest('hex'),
         'Content-Type': 'application/json',
       } as HeadersInit,
     });
@@ -97,6 +99,7 @@ export async function POST(request: Request) {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': createHash('sha256').update(userData.user.id).digest('hex'),
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: backendRequestBody,

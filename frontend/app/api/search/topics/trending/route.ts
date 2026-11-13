@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import logger from "@/lib/logger";
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
+    withClientIp(headers, request);
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
     }

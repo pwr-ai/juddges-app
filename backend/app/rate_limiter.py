@@ -44,7 +44,12 @@ def _has_valid_service_key(request: Request) -> bool:
 
 
 def _get_verified_identity_key(request: Request) -> str | None:
-    """Return a BFF-provided user quota key for an authenticated service call."""
+    """Return a BFF-provided user quota key for an authenticated service call.
+
+    The identity header is accepted only alongside the backend service key, so
+    a direct caller cannot choose another user's bucket. Routes that have a
+    verified Supabase session must set this header after calling ``getUser``.
+    """
     identity = request.headers.get("X-RateLimit-Identity", "").strip()
 
     if (
@@ -53,6 +58,7 @@ def _get_verified_identity_key(request: Request) -> str | None:
         and _has_valid_service_key(request)
     ):
         return f"user:{identity}"
+
     return None
 
 
@@ -178,8 +184,15 @@ limiter = Limiter(
 
 
 def _router_backstop_enabled() -> bool:
-    """Return True when ``RATE_LIMIT_ROUTER_BACKSTOP`` is set to a truthy value."""
-    return os.getenv("RATE_LIMIT_ROUTER_BACKSTOP", "false").strip().lower() in (
+    """Return True unless explicitly disabled for a local/development stack.
+
+    Every route registered through ``include_router`` must receive a default
+    limit.  Leaving this off in production made those routes unlimited because
+    SlowAPI cannot match the nested router on the pinned FastAPI version.  A
+    development override is retained for local debugging, but production must
+    opt out explicitly rather than silently running without the backstop.
+    """
+    return os.getenv("RATE_LIMIT_ROUTER_BACKSTOP", "true").strip().lower() in (
         "1",
         "true",
         "yes",
@@ -202,10 +215,10 @@ def enforce_default_rate_limits(request: Request) -> None:
     routes with their own ``@limiter.limit`` (same rule as the middleware: an
     explicit limit replaces the defaults) and ``@limiter.exempt`` routes.
 
-    Inert unless ``RATE_LIMIT_ROUTER_BACKSTOP=true``: the backstop keys on
-    ``get_client_ip``, and BFF routes that do not yet forward
-    ``X-RateLimit-Identity`` would put every pilot user in the frontend
-    container's single bucket (#565). Enable it once that propagation lands.
+    Enabled by default. The backstop keys on ``get_client_ip``; authenticated
+    BFF routes forward ``X-RateLimit-Identity`` and anonymous BFF routes use
+    the verified client-IP header where available. Set
+    ``RATE_LIMIT_ROUTER_BACKSTOP=false`` only for local debugging.
 
     A plain ``def`` on purpose: the limit check is blocking storage I/O
     (Redis), so FastAPI runs it in the threadpool rather than on the loop.

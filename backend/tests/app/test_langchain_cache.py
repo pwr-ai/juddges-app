@@ -46,7 +46,8 @@ class TestSetupLangchainCache:
         setup_langchain_cache()
 
         mock_engine.assert_called_once_with(
-            "postgresql+psycopg://user:pass@localhost:5432/mydb"
+            "postgresql+psycopg://user:pass@localhost:5432/mydb",
+            connect_args={"options": "-c search_path=juddges_private"},
         )
         mock_cache_cls.assert_called_once_with(mock_engine_instance)
         mock_set_cache.assert_called_once_with(mock_cache_instance)
@@ -98,7 +99,8 @@ class TestLangchainCacheDatabaseUrlFallback:
         setup_langchain_cache()
 
         mock_engine.assert_called_once_with(
-            "postgresql+psycopg://u:p@localhost:5432/main"
+            "postgresql+psycopg://u:p@localhost:5432/main",
+            connect_args={"options": "-c search_path=juddges_private"},
         )
         mock_set.assert_called_once()
 
@@ -118,7 +120,8 @@ class TestLangchainCacheDatabaseUrlFallback:
         setup_langchain_cache()
 
         mock_engine.assert_called_once_with(
-            "postgresql+psycopg://u:p@cache-host:5432/cache"
+            "postgresql+psycopg://u:p@cache-host:5432/cache",
+            connect_args={"options": "-c search_path=juddges_private"},
         )
 
 

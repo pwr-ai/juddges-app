@@ -4,6 +4,13 @@
 
 global.fetch = jest.fn();
 
+// `loadPublicBlogPost` runs in an SSR request context and forwards the
+// incoming headers to the bounded BFF proxy. Unit tests provide that context
+// explicitly rather than relying on Next's request AsyncLocalStorage.
+jest.mock('next/headers', () => ({
+  headers: jest.fn(async () => new Headers()),
+}));
+
 import {
   loadPublicBlogPost,
 } from '@/lib/blog/public-api';

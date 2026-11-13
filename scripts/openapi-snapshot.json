@@ -17122,6 +17122,24 @@
       "post": {
         "description": "Convert guest session to registered user account.\n\nMigrates search history and resets usage limits.\nCalled after successful user registration.\n\nArgs:\n    request: Conversion request with session_id and new user_id\n\nReturns:\n    ConvertGuestResponse with migration status",
         "operationId": "convert_guest_to_user_api_guest_convert_post",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "guest_session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Guest Session Id"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -17154,6 +17172,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Convert Guest To User",
         "tags": [
           "Guest Sessions"

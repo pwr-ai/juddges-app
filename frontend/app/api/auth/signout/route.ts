@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 
 const routeLogger = logger.child("auth-signout-api");
 
@@ -18,6 +19,7 @@ export async function POST(): Promise<NextResponse> {
   try {
     const supabase = await createClient();
     const { data: sessionData } = await supabase.auth.getSession();
+    const { data: userData } = await supabase.auth.getUser();
     // Capture identity BEFORE signOut invalidates the session.
     const accessToken = sessionData.session?.access_token;
 
@@ -28,6 +30,7 @@ export async function POST(): Promise<NextResponse> {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "X-RateLimit-Identity": rateLimitIdentity(userData.user?.id ?? "signed-out"),
       };
       if (apiKey) {
         headers["X-API-Key"] = apiKey;

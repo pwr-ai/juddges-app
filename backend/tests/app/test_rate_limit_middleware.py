@@ -129,10 +129,10 @@ def test_production_app_registers_cors_outermost_of_the_rate_limiter():
     )
 
 
-def _backstop_app(limit: str, key: str) -> FastAPI:
+def _backstop_app(limit: str, key: str, key_func=None) -> FastAPI:
     """Mirror app/server.py: middleware for direct routes, dependency for the rest."""
     limiter = Limiter(
-        key_func=lambda request: key,
+        key_func=key_func or (lambda request: key),
         default_limits=[limit],
         storage_uri="memory://",
     )
@@ -201,9 +201,9 @@ def test_decorated_and_exempt_router_routes_keep_their_own_rules(monkeypatch):
 
 
 @pytest.mark.unit
-def test_router_backstop_is_inert_until_enabled(monkeypatch):
-    """Off by default: enabling it before #565 would pool pilot users in one bucket."""
-    monkeypatch.delenv("RATE_LIMIT_ROUTER_BACKSTOP", raising=False)
+def test_router_backstop_can_be_explicitly_disabled(monkeypatch):
+    """Only a deliberate development override disables router protection."""
+    monkeypatch.setenv("RATE_LIMIT_ROUTER_BACKSTOP", "false")
     client = TestClient(_backstop_app("1 per minute", "backstop-off"))
 
     codes = [client.get("/api/included").status_code for _ in range(3)]
@@ -219,3 +219,51 @@ def test_production_app_charges_default_limits_on_router_routes():
     assert any(
         dep.dependency is enforce_default_rate_limits for dep in app.router.dependencies
     ), "enforce_default_rate_limits is not an app-wide dependency (#574)"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "identity_header", ["X-RateLimit-Identity", "X-RateLimit-Client-IP"]
+)
+def test_real_429_limits_are_isolated_for_verified_visitors(
+    monkeypatch, identity_header
+):
+    from app.rate_limiter import get_client_ip
+
+    monkeypatch.delenv("RATE_LIMIT_ROUTER_BACKSTOP", raising=False)
+    monkeypatch.setenv("BACKEND_API_KEY", "bff-service-key")
+    client = TestClient(_backstop_app("1 per minute", "unused", key_func=get_client_ip))
+    visitors = (
+        ("a" * 64, "b" * 64)
+        if identity_header.endswith("Identity")
+        else ("192.0.2.1", "192.0.2.2")
+    )
+    first = {"X-API-Key": "bff-service-key", identity_header: visitors[0]}
+    second = {"X-API-Key": "bff-service-key", identity_header: visitors[1]}
+
+    assert client.get("/api/included", headers=first).status_code == 200
+    assert client.get("/api/included", headers=first).status_code == 429
+    assert client.get("/api/included", headers=second).status_code == 200
+    assert client.get("/api/included", headers=second).status_code == 429
+
+
+@pytest.mark.unit
+def test_spoofed_identity_cannot_rotate_the_rate_limit_bucket(monkeypatch):
+    from app.rate_limiter import get_client_ip
+
+    monkeypatch.delenv("RATE_LIMIT_ROUTER_BACKSTOP", raising=False)
+    monkeypatch.setenv("BACKEND_API_KEY", "bff-service-key")
+    monkeypatch.setenv("TRUSTED_PROXY", "false")
+    client = TestClient(_backstop_app("1 per minute", "unused", key_func=get_client_ip))
+    assert (
+        client.get(
+            "/api/included", headers={"X-RateLimit-Identity": "a" * 64}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            "/api/included", headers={"X-RateLimit-Identity": "b" * 64}
+        ).status_code
+        == 429
+    )

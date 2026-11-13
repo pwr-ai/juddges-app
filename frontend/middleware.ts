@@ -47,6 +47,19 @@ const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/([^/]+)$/;
 // detail preflight below would otherwise rewrite it to the not-found page.
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/(?!base$)([^/]+)$/;
 
+async function rateLimitIdentity(principal: string): Promise<string> {
+  const bytes = new TextEncoder().encode(principal);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function trustedClientIp(request: Request): string | null {
+  const enabled = /^(1|true|yes)$/i.test(process.env.TRUSTED_PROXY ?? "false");
+  if (!enabled) return null;
+  const value = request.headers.get("x-forwarded-for")?.split(",", 1)[0]?.trim();
+  return value || null;
+}
+
 type DocumentPreflight =
   | { kind: "not-document" }
   | { kind: "metadata"; value: string; documentId: string }
@@ -134,6 +147,12 @@ async function preflightDocumentPage(
           Accept: "application/json",
           "X-API-Key": process.env.BACKEND_API_KEY ?? "",
           "X-User-ID": principal,
+          ...(principal !== ANONYMOUS_PRINCIPAL
+            ? { "X-RateLimit-Identity": await rateLimitIdentity(principal) }
+            : {}),
+          ...(trustedClientIp(request)
+            ? { "X-RateLimit-Client-IP": trustedClientIp(request)! }
+            : {}),
         },
         cache: "no-store",
         signal: timeoutSignal,
@@ -401,6 +420,7 @@ export async function middleware(incomingRequest: NextRequest) {
             Accept: "application/json",
             "X-API-Key": process.env.BACKEND_API_KEY ?? "",
             Authorization: `Bearer ${accessToken}`,
+            "X-RateLimit-Identity": await rateLimitIdentity(userId!),
           },
           signal: AbortSignal.timeout(extractionTimeoutMs()),
         }

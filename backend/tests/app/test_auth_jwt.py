@@ -385,7 +385,8 @@ class TestGetCurrentUser:
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(creds)
         assert exc_info.value.status_code == 401
-        assert "network down" in str(exc_info.value.detail)
+        assert exc_info.value.detail == "Failed to authenticate"
+        assert "network down" not in str(exc_info.value.detail)
 
 
 # ===== get_optional_user tests =====

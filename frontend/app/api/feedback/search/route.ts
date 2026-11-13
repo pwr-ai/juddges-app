@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
@@ -26,12 +28,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
+    withClientIp(headers, request);
 
     const supabase = await createClient();
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
+      const userId = sessionData.session?.user?.id;
+      if (userId) headers["X-RateLimit-Identity"] = createHash("sha256").update(userId).digest("hex");
     }
 
     const response = await fetch(`${getBackendUrl()}/api/feedback/search`, {

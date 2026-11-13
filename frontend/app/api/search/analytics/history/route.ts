@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 
 const routeLogger = logger.child("search-analytics-history-api");
 
@@ -20,6 +21,10 @@ async function authHeaders(): Promise<
   // The backend filters by the authenticated user server-side, so the
   // Supabase session MUST be forwarded. Anonymous callers get 401.
   const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { unauthorized: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
+  }
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) {
@@ -31,6 +36,7 @@ async function authHeaders(): Promise<
     };
   }
   headers["Authorization"] = `Bearer ${accessToken}`;
+  headers["X-RateLimit-Identity"] = rateLimitIdentity(userData.user.id);
 
   return { headers };
 }

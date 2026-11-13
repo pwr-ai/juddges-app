@@ -16,10 +16,11 @@
 import { NextRequest } from 'next/server';
 
 const mockGetSession = jest.fn();
+const mockGetUser = jest.fn();
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(async () => ({
-    auth: { getSession: mockGetSession },
+    auth: { getSession: mockGetSession, getUser: mockGetUser },
   })),
 }));
 
@@ -71,6 +72,7 @@ describe('search BFFs — anonymous client IP forwarding (#565)', () => {
     process.env.BACKEND_API_KEY = 'test-api-key';
     process.env.TRUSTED_PROXY = 'true';
     mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
     (global.fetch as jest.Mock).mockImplementation(
       async () =>
         new Response(JSON.stringify({ hits: [] }), {

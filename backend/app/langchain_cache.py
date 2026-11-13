@@ -13,6 +13,8 @@ from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 
+from app.core.private_database import PRIVATE_DATABASE_OPTIONS
+
 
 def setup_langchain_cache() -> None:
     """
@@ -57,7 +59,9 @@ def setup_langchain_cache() -> None:
                 "postgresql://", "postgresql+psycopg://", 1
             )
 
-        engine = create_engine(database_url)
+        engine = create_engine(
+            database_url, connect_args={"options": PRIVATE_DATABASE_OPTIONS}
+        )
 
         # Every gunicorn worker runs this at boot, so the CREATE TABLE inside
         # SQLAlchemyMd5Cache races its siblings and the losers get a unique

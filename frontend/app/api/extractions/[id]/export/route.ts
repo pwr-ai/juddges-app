@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 import logger from '@/lib/logger';
 
 const apiLogger = logger.child('extractions-export-api');
@@ -57,6 +58,7 @@ export async function GET(
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
       },
     });
 

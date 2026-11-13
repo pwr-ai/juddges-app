@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withClientIp } from '@/app/api/_lib/client-ip';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 
 interface RedeemInviteBody {
@@ -23,10 +24,10 @@ export async function POST(request: Request) {
 
   const response = await fetch(`${getBackendUrl()}/auth/invites/redeem`, {
     method: 'POST',
-    headers: {
+    headers: withClientIp({
       'Content-Type': 'application/json',
       'X-API-Key': process.env.BACKEND_API_KEY ?? '',
-    },
+    }, request),
     body: JSON.stringify({
       code: body.code,
       email: body.email,

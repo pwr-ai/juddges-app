@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase/server';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import { logger } from "@/lib/logger";
 
@@ -101,6 +102,7 @@ export async function POST(request: Request) {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: JSON.stringify(body),

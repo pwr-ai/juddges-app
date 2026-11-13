@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
@@ -28,12 +29,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // The backend filters by the authenticated user server-side, so the
     // Supabase session MUST be forwarded. Anonymous callers get 401.
     const supabase = await createClient();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
     headers["Authorization"] = `Bearer ${accessToken}`;
+    headers["X-RateLimit-Identity"] = createHash("sha256")
+      .update(userData.user.id)
+      .digest("hex");
 
     const response = await fetch(
       `${backendUrl}/api/search/topics/my-clicks?${params.toString()}`,

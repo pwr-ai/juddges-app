@@ -24,6 +24,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const query = forwarded.toString();
   return proxyPublicBlog(
     `/blog/posts${query ? `?${query}` : ""}`,
+    request,
     request.signal,
   );
 }

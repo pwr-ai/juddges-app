@@ -249,7 +249,7 @@ async def get_current_user(
         logger.error(f"Authentication error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Failed to authenticate: {e!s}",
+            detail="Failed to authenticate",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

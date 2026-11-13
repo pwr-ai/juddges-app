@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 
 const BACKEND_API_KEY = process.env.BACKEND_API_KEY;
 
 async function getAuthContext(): Promise<
-  | { ok: true; accessToken: string }
+  | { ok: true; accessToken: string; userId: string }
   | { ok: false; response: NextResponse }
 > {
   if (!BACKEND_API_KEY) {
@@ -40,7 +41,7 @@ async function getAuthContext(): Promise<
     };
   }
 
-  return { ok: true, accessToken };
+  return { ok: true, accessToken, userId: userData.user.id };
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -57,6 +58,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     headers: {
       "X-API-Key": BACKEND_API_KEY!,
       Authorization: `Bearer ${auth.accessToken}`,
+      "X-RateLimit-Identity": rateLimitIdentity(auth.userId),
     },
   });
 
@@ -77,6 +79,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       "Content-Type": "application/json",
       "X-API-Key": BACKEND_API_KEY!,
       Authorization: `Bearer ${auth.accessToken}`,
+      "X-RateLimit-Identity": rateLimitIdentity(auth.userId),
     },
     body: JSON.stringify(body),
   });

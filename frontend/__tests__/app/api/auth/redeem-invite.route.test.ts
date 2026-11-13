@@ -81,4 +81,23 @@ describe('POST /api/auth/redeem-invite', () => {
 
     expect(await response.text()).not.toContain('test-backend-key');
   });
+
+  it('attributes public invite attempts to the trusted visitor IP', async () => {
+    const previous = process.env.TRUSTED_PROXY;
+    process.env.TRUSTED_PROXY = 'true';
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: 'created' }), { status: 201 })
+    );
+    const incoming = request({ code: 'PILOT', email: 'a@example.org', password: 'password' });
+    incoming.headers.set('x-forwarded-for', '192.0.2.10, 10.0.0.1');
+    incoming.headers.set('x-ratelimit-client-ip', '198.51.100.99');
+    try {
+      await POST(incoming);
+      const headers = (global.fetch as jest.Mock).mock.calls[0][1].headers;
+      expect(headers['X-RateLimit-Client-IP']).toBe('192.0.2.10');
+    } finally {
+      if (previous === undefined) delete process.env.TRUSTED_PROXY;
+      else process.env.TRUSTED_PROXY = previous;
+    }
+  });
 });

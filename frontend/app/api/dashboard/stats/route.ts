@@ -1,17 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 import { getBackendUrl } from "../../utils/backend-url";
 import { logger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const backendUrl = getBackendUrl();
 
     const response = await fetch(
       `${backendUrl}/dashboard/stats`,
       {
-        headers: {
+        headers: withClientIp({
           "X-API-Key": process.env.BACKEND_API_KEY || "",
-        },
+        }, request),
         // Disable cache temporarily to get fresh data
         cache: 'no-store'
       }

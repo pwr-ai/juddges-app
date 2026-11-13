@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withClientIp } from '@/app/api/_lib/client-ip';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from '@/lib/logger';
 import { AppError, ErrorCode } from '@/lib/errors';
@@ -57,10 +58,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const upstream = await fetch(`${API_BASE_URL}/documents/search/rewrite`, {
       method: 'POST',
-      headers: {
+      headers: withClientIp({
         'Content-Type': 'application/json',
         'X-API-Key': process.env.BACKEND_API_KEY ?? '',
-      },
+      }, request),
       body: JSON.stringify(validated),
     });
 

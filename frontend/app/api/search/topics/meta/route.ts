@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import logger from "@/lib/logger";
 
 const routeLogger = logger.child("search-topics-meta-api");
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const backendUrl = getBackendUrl();
     const apiKey = process.env.BACKEND_API_KEY || "";
@@ -13,6 +14,7 @@ export async function GET(): Promise<NextResponse> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
+    withClientIp(headers, request);
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
     }

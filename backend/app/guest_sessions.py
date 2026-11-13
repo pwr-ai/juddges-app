@@ -14,9 +14,11 @@ from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
 import redis.asyncio as redis
-from fastapi import APIRouter, Cookie, HTTPException, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from loguru import logger
 from pydantic import BaseModel, Field
+
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 
 # Environment detection for secure cookies
 IS_PRODUCTION = os.getenv("PYTHON_ENV", "development") == "production"
@@ -313,7 +315,11 @@ async def get_guest_usage_endpoint(
 
 
 @router.post("/convert", response_model=ConvertGuestResponse)
-async def convert_guest_to_user(request: ConvertGuestRequest):
+async def convert_guest_to_user(
+    request: ConvertGuestRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+    guest_cookie: str | None = Cookie(None, alias="guest_session_id"),
+):
     """
     Convert guest session to registered user account.
 
@@ -326,6 +332,20 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
     Returns:
         ConvertGuestResponse with migration status
     """
+    if not guest_cookie or request.session_id != guest_cookie:
+        raise HTTPException(
+            status_code=403,
+            detail="Guest session cookie does not match the conversion request",
+        )
+
+    # Retain these fields for wire compatibility, but never trust them as the
+    # destination identity. The verified Supabase user is authoritative.
+    if request.user_id != user.id or request.email != user.email:
+        raise HTTPException(
+            status_code=403,
+            detail="Guest conversion identity does not match the authenticated user",
+        )
+
     try:
         client = get_redis_client()
         session_key = f"guest:session:{request.session_id}"
@@ -335,7 +355,7 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
         if not exists:
             return ConvertGuestResponse(
                 status="session_not_found",
-                user_id=request.user_id,
+                user_id=user.id,
                 searches_migrated=0,
                 message="Guest session not found or expired. No data to migrate.",
             )
@@ -352,7 +372,7 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
 
         # For now, just log the migration
         logger.info(
-            f"Converting guest session {request.session_id} to user {request.user_id}. "
+            f"Converting guest session {request.session_id} to user {user.id}. "
             f"Migrating {searches_used} searches."
         )
 
@@ -361,7 +381,7 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
 
         return ConvertGuestResponse(
             status="success",
-            user_id=request.user_id,
+            user_id=user.id,
             searches_migrated=searches_used,
             message=f"Successfully converted guest to user. Migrated {searches_used} searches.",
         )
@@ -370,9 +390,9 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
         logger.error(f"Failed to convert guest to user: {e}")
         return ConvertGuestResponse(
             status="failed",
-            user_id=request.user_id,
+            user_id=user.id,
             searches_migrated=0,
-            message=f"Failed to convert guest session: {e!s}",
+            message="Failed to convert guest session. Please try again later.",
         )
 
 

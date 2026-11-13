@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
@@ -53,6 +55,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
     }
+    withClientIp(headers, request);
 
     // Forward the Supabase session so the backend stamps user_id from the
     // JWT (identity claims in the body are rejected by the backend).
@@ -61,6 +64,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const accessToken = sessionData.session?.access_token;
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
+      const userId = sessionData.session?.user?.id;
+      if (userId) headers["X-RateLimit-Identity"] = createHash("sha256").update(userId).digest("hex");
     }
 
     // Forward the HttpOnly guest-session cookie for anonymous attribution.

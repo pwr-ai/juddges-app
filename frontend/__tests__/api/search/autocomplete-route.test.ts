@@ -12,9 +12,13 @@ jest.mock("@/lib/logger", () => ({
 }));
 
 const mockGetSession = jest.fn(async () => ({ data: { session: null } }));
+const mockGetUser = jest.fn(async () => ({
+  data: { user: null as { id: string } | null },
+  error: null,
+}));
 jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(async () => ({
-    auth: { getSession: mockGetSession },
+    auth: { getSession: mockGetSession, getUser: mockGetUser },
   })),
 }));
 
@@ -29,6 +33,7 @@ describe("GET /api/search/autocomplete", () => {
     process.env.API_BASE_URL = "http://backend:8000";
     process.env.BACKEND_API_KEY = "test-api-key";
     mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
   });
 
   it("forwards query params to backend autocomplete endpoint", async () => {
@@ -77,6 +82,7 @@ describe("GET /api/search/autocomplete", () => {
     mockGetSession.mockResolvedValueOnce({
       data: { session: { access_token: "user-jwt-123" } as never },
     });
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: "user-1" } }, error: null });
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       status: 200,

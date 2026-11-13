@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 
+import { createHash } from "node:crypto";
 import { NextRequest } from "next/server";
 
 const mockGetUser = jest.fn();
@@ -435,6 +436,8 @@ describe("Supabase middleware public route policy", () => {
 
     expect(response.status).toBe(200);
     expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect((global.fetch as jest.Mock).mock.calls[0][1].headers["X-RateLimit-Identity"])
+      .toBe(createHash("sha256").update("user-1").digest("hex"));
     const snapshot = response.headers.get(
       "x-middleware-request-x-juddges-collection-snapshot"
     );

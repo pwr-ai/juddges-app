@@ -25,6 +25,7 @@ def _make_request(
     api_key: str | None = None,
     rate_limit_identity: str | None = None,
     rate_limit_client_ip: str | None = None,
+    authorization: str | None = None,
 ) -> MagicMock:
     """Build a minimal Starlette-like Request mock."""
     request = MagicMock()
@@ -42,6 +43,8 @@ def _make_request(
         headers["X-RateLimit-Identity"] = rate_limit_identity
     if rate_limit_client_ip is not None:
         headers["X-RateLimit-Client-IP"] = rate_limit_client_ip
+    if authorization is not None:
+        headers["Authorization"] = authorization
 
     # Starlette Headers supports .get()
     request.headers = MagicMock()
@@ -95,6 +98,40 @@ class TestVerifiedIdentityQuotaKeys:
             )
 
         assert key == "172.18.0.2"
+
+    def test_bearer_claims_cannot_select_a_bucket_without_verified_identity(self):
+        import app.rate_limiter as rl_module
+
+        with (
+            patch.dict(os.environ, {"BACKEND_API_KEY": "server-api-key"}),
+            patch("app.rate_limiter.get_remote_address", return_value="172.18.0.2"),
+        ):
+            assert (
+                rl_module.get_client_ip(
+                    _make_request(
+                        api_key="server-api-key",
+                        authorization="Bearer forged.claims.signature",
+                    )
+                )
+                == "172.18.0.2"
+            )
+
+
+@pytest.mark.unit
+def test_router_backstop_is_enabled_by_default(monkeypatch):
+    """Nested FastAPI routers must not silently bypass the default limits."""
+    import app.rate_limiter as rl_module
+
+    monkeypatch.delenv("RATE_LIMIT_ROUTER_BACKSTOP", raising=False)
+    assert rl_module._router_backstop_enabled() is True
+
+
+@pytest.mark.unit
+def test_router_backstop_can_be_disabled_only_explicitly(monkeypatch):
+    import app.rate_limiter as rl_module
+
+    monkeypatch.setenv("RATE_LIMIT_ROUTER_BACKSTOP", "false")
+    assert rl_module._router_backstop_enabled() is False
 
 
 @pytest.mark.unit

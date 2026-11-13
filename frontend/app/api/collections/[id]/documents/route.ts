@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse, NextRequest } from "next/server";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
         'Content-Type': 'application/json',
       } as HeadersInit,
     });
@@ -118,6 +120,7 @@ export async function POST(request: NextRequest) {
         headers: {
           'X-API-Key': API_KEY,
           'Authorization': `Bearer ${accessToken}`,
+          'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
           'Content-Type': 'application/json',
         } as HeadersInit,
         body: JSON.stringify({ document_ids }),
@@ -149,6 +152,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: JSON.stringify({ document_id, collection_id }),
@@ -222,6 +226,7 @@ export async function DELETE(request: NextRequest) {
       headers: {
         'X-API-Key': API_KEY,
         'Authorization': `Bearer ${accessToken}`,
+        'X-RateLimit-Identity': rateLimitIdentity(userData.user.id),
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: JSON.stringify({ document_id: documentId }),

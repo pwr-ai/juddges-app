@@ -147,7 +147,7 @@ async def test_upstream_expiration_rejection_blocks_collection_access(
         headers={**valid_api_headers, "Authorization": f"Bearer {expired_token}"},
     )
 
-    assert_auth_error(response, "Failed to authenticate: JWT expired", "Bearer")
+    assert_auth_error(response, "Failed to authenticate", "Bearer")
     auth_boundary.upstream.auth.get_user.assert_called_once_with(expired_token)
     assert_no_collection_reads(auth_boundary)
 

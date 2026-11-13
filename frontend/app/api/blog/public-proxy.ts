@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withClientIp } from "@/app/api/_lib/client-ip";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import logger from "@/lib/logger";
@@ -16,8 +17,15 @@ const SAFE_RESPONSE_HEADERS = [
 
 export async function proxyPublicBlog(
   path: string,
-  downstreamSignal: AbortSignal,
+  requestOrSignal: Request | AbortSignal,
+  signal?: AbortSignal,
 ): Promise<Response> {
+  // Keep the server-only loader compatible while route handlers pass the
+  // incoming request so trusted proxy IP metadata can be forwarded.
+  const request = requestOrSignal instanceof Request ? requestOrSignal : undefined;
+  const downstreamSignal: AbortSignal = request
+    ? signal ?? request.signal
+    : requestOrSignal as AbortSignal;
   const apiKey = process.env.BACKEND_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -42,7 +50,10 @@ export async function proxyPublicBlog(
   try {
     const response = await fetch(`${getBackendUrl().replace(/\/$/, "")}${path}`, {
       method: "GET",
-      headers: {
+      headers: request ? withClientIp({
+        Accept: "application/json",
+        "X-API-Key": apiKey,
+      }, request) : {
         Accept: "application/json",
         "X-API-Key": apiKey,
       },

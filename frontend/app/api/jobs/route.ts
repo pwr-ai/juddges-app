@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from '@/lib/logger';
@@ -10,7 +11,8 @@ const API_KEY = process.env.BACKEND_API_KEY as string;
 // Helper to refresh job status from backend
 async function refreshJobStatusFromBackend(
   jobId: string,
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
 ): Promise<void> {
   try {
     if (!jobId) {
@@ -22,7 +24,8 @@ async function refreshJobStatusFromBackend(
       `${API_BASE_URL}/extractions/${jobId}`,
       {
         headers: {
-          'X-API-Key': API_KEY
+          'X-API-Key': API_KEY,
+          'X-RateLimit-Identity': createHash('sha256').update(userId).digest('hex'),
         }
       }
     );
@@ -181,7 +184,7 @@ export async function GET() {
       try {
         // Refresh in parallel - use Promise.allSettled to not fail if individual refreshes fail
         await Promise.allSettled(
-          jobsToRefresh.map((job: any) => refreshJobStatusFromBackend(job.job_id, supabase))
+          jobsToRefresh.map((job: any) => refreshJobStatusFromBackend(job.job_id, supabase, userData.user.id))
         );
 
         // Re-fetch jobs from Supabase after refresh to get updated statuses

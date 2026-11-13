@@ -17,8 +17,10 @@ jest.mock('@/lib/logger', () => ({
 }));
 
 import { GET } from '@/app/api/publications/route';
+import { POST } from '@/app/api/publications/route';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
 
 describe('GET /api/publications', () => {
   const originalFetch = global.fetch;
@@ -124,5 +126,78 @@ describe('GET /api/publications', () => {
     await expect(response.json()).resolves.toEqual({
       error: 'Publications service is unavailable',
     });
+  });
+});
+
+describe('POST /api/publications authentication and rate-limit identity', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.BACKEND_API_KEY = 'test-api-key';
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('forwards the hash of the verified user id', async () => {
+    const userId = 'verified-admin-user';
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: userId, app_metadata: { is_admin: true } } },
+          error: null,
+        }),
+        getSession: jest.fn().mockResolvedValue({
+          data: { session: { access_token: 'verified-token' } },
+          error: null,
+        }),
+      },
+    });
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({ id: 'publication-1' }), { status: 201 }),
+    ) as typeof global.fetch;
+
+    const response = await POST(
+      new Request('http://localhost/api/publications', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'A publication' }),
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.headers['X-RateLimit-Identity']).toBe(rateLimitIdentity(userId));
+    expect(init.headers['X-RateLimit-Identity']).not.toContain('spoofed');
+  });
+
+  it('rejects a session token when getUser cannot verify its principal', async () => {
+    const getSession = jest.fn().mockResolvedValue({
+      data: { session: { access_token: 'caller-supplied-token' } },
+    });
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('token could not be verified'),
+        }),
+        getSession,
+      },
+    });
+    global.fetch = jest.fn() as typeof global.fetch;
+
+    const response = await POST(
+      new Request('http://localhost/api/publications', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'A publication' }),
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(getSession).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

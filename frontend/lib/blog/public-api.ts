@@ -1,4 +1,5 @@
 import { proxyPublicBlog } from "@/app/api/blog/public-proxy";
+import { headers } from "next/headers";
 
 export interface PublicBlogAuthor {
   id: string | null;
@@ -98,9 +99,12 @@ function isPublicPostDetail(value: unknown): value is PublicBlogPostDetail {
 export async function loadPublicBlogPost(
   slug: string,
 ): Promise<PublicBlogPostDetail | null> {
+  const incomingHeaders = await headers();
+  const request = new Request("http://internal", { headers: incomingHeaders });
   const response = await proxyPublicBlog(
     `/blog/posts/${encodeURIComponent(slug)}`,
-    new AbortController().signal,
+    request,
+    request.signal,
   );
 
   if (response.status === 404) return null;

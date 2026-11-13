@@ -12,6 +12,7 @@ const fetchMock = jest.fn();
 global.fetch = fetchMock;
 
 import { GET } from '@/app/api/dashboard/stats/route';
+import { NextRequest } from 'next/server';
 
 describe('GET /api/dashboard/stats', () => {
   beforeEach(() => {
@@ -30,7 +31,7 @@ describe('GET /api/dashboard/stats', () => {
       }),
     );
 
-    const response = await GET();
+    const response = await GET(new NextRequest('http://localhost/api/dashboard/stats'));
 
     expect(response.status).toBe(503);
     expect(response.headers.get('Content-Type')).toBe(
@@ -43,7 +44,7 @@ describe('GET /api/dashboard/stats', () => {
   it('returns a non-cacheable bad gateway response when the backend cannot be reached', async () => {
     fetchMock.mockRejectedValue(new TypeError('fetch failed'));
 
-    const response = await GET();
+    const response = await GET(new NextRequest('http://localhost/api/dashboard/stats'));
 
     expect(response.status).toBe(502);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
@@ -61,7 +62,7 @@ describe('GET /api/dashboard/stats', () => {
       }),
     );
 
-    const response = await GET();
+    const response = await GET(new NextRequest('http://localhost/api/dashboard/stats'));
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe(

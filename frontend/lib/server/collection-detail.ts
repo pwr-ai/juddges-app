@@ -1,5 +1,6 @@
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimitIdentity } from "@/app/api/utils/rate-limit-identity";
 import type { CollectionWithDocuments } from "@/types/collection";
 import {
   isUnauthenticatedAuthError,
@@ -125,6 +126,7 @@ export async function loadCollectionDetail(
         headers: {
           "X-API-Key": API_KEY,
           Authorization: `Bearer ${accessToken}`,
+          "X-RateLimit-Identity": rateLimitIdentity(user.id),
           "Content-Type": "application/json",
         },
         signal: AbortSignal.timeout(COLLECTION_REQUEST_TIMEOUT_MS),

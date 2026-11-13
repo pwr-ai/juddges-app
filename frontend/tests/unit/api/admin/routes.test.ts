@@ -3,6 +3,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { createHash } from 'node:crypto';
 
 const mockGetUser = jest.fn();
 const mockGetSession = jest.fn();
@@ -126,6 +127,7 @@ describe('platform admin BFF routes', () => {
           Accept: 'application/json',
           Authorization: 'Bearer verified-jwt',
           'X-API-Key': 'server-api-key',
+          'X-RateLimit-Identity': createHash('sha256').update('admin-1').digest('hex'),
         },
         cache: 'no-store',
       }),
@@ -145,6 +147,35 @@ describe('platform admin BFF routes', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ detail: 'Authentication required' });
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('uses a different opaque rate-limit identity for a different verified user', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    await getStats(requestFor('/api/admin/stats'));
+    const firstHeaders = (global.fetch as jest.Mock).mock.calls[0][1].headers;
+
+    jest.clearAllMocks();
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'admin-2' } },
+      error: null,
+    });
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    await getStats(requestFor('/api/admin/stats'));
+    const secondHeaders = (global.fetch as jest.Mock).mock.calls[0][1].headers;
+
+    expect(firstHeaders['X-RateLimit-Identity']).toBe(
+      createHash('sha256').update('admin-1').digest('hex'),
+    );
+    expect(secondHeaders['X-RateLimit-Identity']).toBe(
+      createHash('sha256').update('admin-2').digest('hex'),
+    );
+    expect(firstHeaders['X-RateLimit-Identity']).not.toBe(
+      secondHeaders['X-RateLimit-Identity'],
+    );
   });
 
   it.each(routes)('preserves an upstream 403 response for $name', async ({
