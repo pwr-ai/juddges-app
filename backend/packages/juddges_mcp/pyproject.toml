@@ -6,7 +6,7 @@ authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "loguru>=0.7.3,<0.8",
+    "loguru>=0.7.3,<0.9",
     "pydantic>=2.0,<3",
     "mcp==1.30.0",
 ]
