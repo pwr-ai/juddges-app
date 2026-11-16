@@ -117,7 +117,7 @@
     "yaml": "^2.9.1",
     "zod": "^4.6.7",
     "zundo": "^2.3.0",
-    "zustand": "^5.0.16"
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
@@ -125,7 +125,7 @@
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.8",
+    "@testing-library/user-event": "^14.6.10",
     "@types/jest": "^30.0.0",
     "@types/node": "^26",
     "@types/react": "^19",
