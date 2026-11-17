@@ -375,7 +375,13 @@ async def list_users(
                     email=u_dict.get("email"),
                     created_at=str(u_dict.get("created_at", "")) or None,
                     last_sign_in_at=str(u_dict.get("last_sign_in_at", "")) or None,
-                    email_confirmed_at=str(confirmed_at) if confirmed_at else None,
+                    email_confirmed_at=(
+                        confirmed_at.isoformat()
+                        if isinstance(confirmed_at, datetime)
+                        else str(confirmed_at)
+                        if confirmed_at
+                        else None
+                    ),
                     app_metadata=u_dict.get("app_metadata") or {},
                 )
             )

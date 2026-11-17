@@ -258,6 +258,34 @@ class TestListUsers:
         assert data["users"][0]["email_confirmed_at"] == "2024-01-02T10:00:00+00:00"
 
     @patch("app.api.admin.get_admin_supabase_client")
+    async def test_list_users_datetime_email_confirmed_at_is_iso(
+        self, mock_get_client, admin_app
+    ):
+        from datetime import UTC, datetime
+
+        mock_user = MagicMock()
+        mock_user.model_dump.return_value = {
+            "id": "u1",
+            "email": "a@b.com",
+            "email_confirmed_at": datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
+        }
+        mock_client = MagicMock()
+        mock_client.auth.admin.list_users.return_value = [mock_user]
+        mock_get_client.return_value = mock_client
+
+        async with AsyncClient(
+            transport=ASGITransport(app=admin_app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/admin/users",
+                headers={"Authorization": "Bearer fake"},
+            )
+        assert (
+            response.json()["users"][0]["email_confirmed_at"]
+            == "2024-01-02T10:00:00+00:00"
+        )
+
+    @patch("app.api.admin.get_admin_supabase_client")
     async def test_list_users_unconfirmed_has_null_email_confirmed_at(
         self, mock_get_client, admin_app
     ):
