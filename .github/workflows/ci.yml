@@ -805,12 +805,14 @@ jobs:
         working-directory: frontend
         continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
         run: |
-          # The human-readable report lists everything (MEDIUM/LOW included);
-          # the gate then fails on HIGH/CRITICAL advisories unless they are in
-          # npm-audit-allowlist.json with a reason and an unexpired date.
+          # Print the full human-readable report (MEDIUM/LOW included), then let
+          # the gate decide: it fails on HIGH/CRITICAL advisories not listed in
+          # npm-audit-allowlist.json with a reason and an unexpired date, and
+          # fails closed when npm audit itself errors. npm audit exits non-zero
+          # whenever anything is found, so its exit codes are ignored here.
           set +e
-          npm audit --production
-          npm audit --production --json > /tmp/npm-audit.json
+          npm audit --omit=dev
+          npm audit --omit=dev --json > /tmp/npm-audit.json
           set -e
           node scripts/npm-audit-gate.js /tmp/npm-audit.json npm-audit-allowlist.json
 

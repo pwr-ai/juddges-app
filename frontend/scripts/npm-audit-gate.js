@@ -38,6 +38,22 @@ function blockingAdvisories(report) {
 }
 
 /**
+ * Reason the report cannot be trusted, or null when it is a usable audit.
+ * A failed `npm audit` (registry/network error, ENOAUDIT) still prints JSON,
+ * so an error object or a missing summary must fail closed, not pass as clean.
+ */
+function reportProblem(report) {
+  if (!report || typeof report !== 'object' || Array.isArray(report)) return 'report is not a JSON object';
+  if (report.error) return `npm audit failed: ${JSON.stringify(report.error)}`;
+  const vulns = report.vulnerabilities;
+  if (!vulns || typeof vulns !== 'object' || Array.isArray(vulns)) return 'report has no vulnerabilities object';
+  if (!report.metadata || typeof report.metadata !== 'object') return 'report has no metadata';
+  return null;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
  * Split advisories into blocking and allowed.
  * @param today ISO date (YYYY-MM-DD); an entry is valid through its expiry date.
  */
@@ -47,7 +63,8 @@ function evaluate(advisories, allowlist, today) {
   const allowed = [];
   for (const adv of advisories) {
     const entry = byId.get(adv.id);
-    if (entry && entry.reason && entry.expires && entry.expires >= today) {
+    const valid = entry && entry.reason && ISO_DATE.test(entry.expires || '') && entry.expires >= today;
+    if (valid) {
       allowed.push({ ...adv, reason: entry.reason, expires: entry.expires });
     } else {
       blocking.push({ ...adv, expired: Boolean(entry) });
@@ -70,7 +87,18 @@ function main() {
     console.error('npm audit produced no output - failing closed');
     process.exit(1);
   }
-  const report = JSON.parse(raw);
+  let report;
+  try {
+    report = JSON.parse(raw);
+  } catch (err) {
+    console.error(`npm audit output is not JSON - failing closed: ${err.message}`);
+    process.exit(1);
+  }
+  const problem = reportProblem(report);
+  if (problem) {
+    console.error(`${problem} - failing closed`);
+    process.exit(1);
+  }
   const allowlist = fs.existsSync(allowPath) ? JSON.parse(fs.readFileSync(allowPath, 'utf8')) : [];
   const today = new Date().toISOString().slice(0, 10);
   const { blocking, allowed, stale } = evaluate(blockingAdvisories(report), allowlist, today);
@@ -92,7 +120,7 @@ function main() {
   console.log('No blocking HIGH/CRITICAL npm vulnerabilities');
 }
 
-module.exports = { advisoryId, blockingAdvisories, evaluate };
+module.exports = { advisoryId, blockingAdvisories, evaluate, reportProblem };
 
 if (require.main === module) {
   main();

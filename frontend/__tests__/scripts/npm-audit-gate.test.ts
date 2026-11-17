@@ -3,11 +3,12 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { blockingAdvisories, evaluate } = require('../../scripts/npm-audit-gate');
+const { blockingAdvisories, evaluate, reportProblem } = require('../../scripts/npm-audit-gate');
 
 export {};
 
 const report = {
+  metadata: { vulnerabilities: { high: 1 } },
   vulnerabilities: {
     picomatch: {
       via: [
@@ -71,5 +72,37 @@ describe('evaluate', () => {
   it('reports allowlist entries that match no advisory as stale', () => {
     const result = evaluate([], [entry], '2026-11-17');
     expect(result.stale).toEqual(['GHSA-fc5q-39xc-vjpf']);
+  });
+});
+
+describe('reportProblem', () => {
+  it('accepts a normal audit report', () => {
+    expect(reportProblem(report)).toBeNull();
+  });
+
+  it('fails closed on an empty object', () => {
+    expect(reportProblem({})).toMatch(/no vulnerabilities/);
+  });
+
+  it('fails closed when npm audit reports an error', () => {
+    const failed = { error: { code: 'ENOAUDIT', summary: 'audit endpoint returned an error' } };
+    expect(reportProblem(failed)).toMatch(/npm audit failed.*ENOAUDIT/);
+  });
+
+  it('fails closed when metadata is missing', () => {
+    expect(reportProblem({ vulnerabilities: {} })).toMatch(/no metadata/);
+  });
+
+  it('fails closed on non-object JSON', () => {
+    expect(reportProblem(null)).not.toBeNull();
+    expect(reportProblem([])).not.toBeNull();
+  });
+});
+
+describe('evaluate expiry format', () => {
+  it('blocks an entry whose expiry is not YYYY-MM-DD', () => {
+    const advisories = blockingAdvisories(report);
+    const entry = { id: 'GHSA-fc5q-39xc-vjpf', reason: 'x', expires: '2099' };
+    expect(evaluate(advisories, [entry], '2026-11-17').blocking).toHaveLength(1);
   });
 });
