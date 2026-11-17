@@ -15,6 +15,7 @@ from fastapi import (
     Path,
     Query,
     Request,
+    Response,
     status,
 )
 from loguru import logger
@@ -614,6 +615,7 @@ def _count_processed_documents(results: list[dict]) -> int | None:
 @limiter.limit(EXTRACTION_SUBMIT_RATE_LIMIT)
 async def create_extraction_job(
     request: Request,
+    response: Response,
     payload: DocumentExtractionRequest | SimpleExtractionRequest,
     background_tasks: BackgroundTasks,
     user: AuthenticatedUser = Depends(get_current_user),
@@ -705,6 +707,7 @@ async def create_extraction_job(
 @limiter.limit(EXTRACTION_SUBMIT_RATE_LIMIT)
 async def create_extraction_job_db(
     request: Request,
+    response: Response,
     payload: DocumentExtractionRequest | SimpleExtractionRequest,
     background_tasks: BackgroundTasks,
     user: AuthenticatedUser = Depends(get_current_user),
@@ -836,6 +839,7 @@ async def create_extraction_job_db(
 @limiter.limit(EXTRACTION_SUBMIT_RATE_LIMIT)
 async def create_bulk_extraction(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     payload: BulkExtractionRequest = Body(...),
     user: AuthenticatedUser = Depends(get_current_user),
