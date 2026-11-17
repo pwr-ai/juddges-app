@@ -508,16 +508,6 @@ class TestGetDocumentStats:
                 ]
                 m.select.return_value.execute.return_value = resp
             elif call_idx["n"] == 3:
-                # country
-                resp = MagicMock()
-                resp.data = [{"country": "PL"}, {"country": "UK"}, {"country": "PL"}]
-                m.select.return_value.execute.return_value = resp
-            elif call_idx["n"] == 4:
-                # language
-                resp = MagicMock()
-                resp.data = [{"language": "pl"}, {"language": "en"}]
-                m.select.return_value.execute.return_value = resp
-            elif call_idx["n"] == 5:
                 # added this week
                 resp = MagicMock()
                 resp.count = 10
@@ -525,6 +515,14 @@ class TestGetDocumentStats:
             return m
 
         mock_client.table.side_effect = table_side
+        breakdown = MagicMock()
+        breakdown.data = [
+            {"dimension": "country", "key": "PL", "doc_count": 250000},
+            {"dimension": "country", "key": "UK", "doc_count": 90000},
+            {"dimension": "language", "key": "pl", "doc_count": 250000},
+            {"dimension": "language", "key": None, "doc_count": 90000},
+        ]
+        mock_client.rpc.return_value.execute.return_value = breakdown
         mock_get_client.return_value = mock_client
 
         async with AsyncClient(
@@ -539,6 +537,11 @@ class TestGetDocumentStats:
         assert data["total"] == 100
         # TOTAL should be filtered out from by_type
         assert "TOTAL" not in data["by_type"]
+        # Breakdowns come from a server-side aggregate, not a capped row scan
+        mock_client.rpc.assert_called_once_with("get_admin_document_breakdown", {})
+        assert data["by_country"] == {"PL": 250000, "UK": 90000}
+        assert data["by_language"] == {"pl": 250000, "unknown": 90000}
+        assert data["added_this_week"] == 10
 
 
 # ===== System health endpoint tests =====

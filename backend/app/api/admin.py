@@ -550,31 +550,20 @@ async def get_document_stats(
     except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch doc_type_stats: {e}")
 
-    # Counts by country (return as dict)
+    # Country / language breakdown: aggregated in SQL over the whole table.
+    # Selecting rows through PostgREST would silently cap at 1000 rows.
     by_country: dict[str, int] = {}
-    try:
-        # `judgments.jurisdiction` (PL/UK) is the country dimension.
-        country_response = (
-            client.table("judgments").select("country:jurisdiction").execute()
-        )
-        for row in country_response.data or []:
-            country = row.get("country") or "unknown"
-            by_country[country] = by_country.get(country, 0) + 1
-    except Exception as e:
-        logger.warning(f"Admin doc stats: could not fetch country breakdown: {e}")
-
-    # Counts by language (return as dict)
     by_language: dict[str, int] = {}
     try:
-        # `judgments` has no scalar language column; it lives in metadata JSONB.
-        lang_response = (
-            client.table("judgments").select("language:metadata->>language").execute()
-        )
-        for row in lang_response.data or []:
-            lang = row.get("language") or "unknown"
-            by_language[lang] = by_language.get(lang, 0) + 1
+        # `judgments.jurisdiction` (PL/UK) is the country dimension; language
+        # lives in metadata JSONB (no scalar column).
+        breakdown_response = client.rpc("get_admin_document_breakdown", {}).execute()
+        for row in breakdown_response.data or []:
+            key = row.get("key") or "unknown"
+            target = by_country if row.get("dimension") == "country" else by_language
+            target[key] = target.get(key, 0) + int(row.get("doc_count") or 0)
     except Exception as e:
-        logger.warning(f"Admin doc stats: could not fetch language breakdown: {e}")
+        logger.warning(f"Admin doc stats: could not fetch country/language: {e}")
 
     # Recent additions
     added_this_week = 0
