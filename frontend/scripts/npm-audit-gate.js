@@ -8,7 +8,10 @@
  *
  * Usage: node scripts/npm-audit-gate.js <audit.json> [allowlist.json]
  */
+/* eslint-disable no-console -- CLI gate: stdout is its report */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require('fs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require('path');
 
 const BLOCKING = new Set(['high', 'critical']);
