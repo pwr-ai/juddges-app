@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { logger } from "@/lib/logger";
 
 export interface ChangelogEntry {
   version: string;
@@ -50,7 +51,10 @@ export async function loadChangelogEntries(): Promise<ChangelogEntry[]> {
   let files: string[];
   try {
     files = await fs.readdir(dir);
-  } catch {
+  } catch (error) {
+    // Loud, not silent: a missing directory means the release notes were not
+    // shipped with the build (#879) and /changelog would look merely empty.
+    logger.error("Changelog directory is not readable", { dir, error });
     return [];
   }
   const mdFiles = files.filter((f) => FILENAME_VERSION.test(f));
