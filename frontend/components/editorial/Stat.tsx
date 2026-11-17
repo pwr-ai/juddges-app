@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/format-stats";
 
 interface StatProps {
   /**
@@ -30,8 +31,8 @@ interface StatProps {
 function formatStat(n: number | string): string {
   if (typeof n === "string") return n;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${Math.floor(n / 1_000).toLocaleString()}K`;
-  return n.toLocaleString();
+  if (n >= 1_000) return `${formatNumber(Math.floor(n / 1_000))}K`;
+  return formatNumber(n);
 }
 
 /**
