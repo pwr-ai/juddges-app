@@ -3,9 +3,9 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const gate = require('../../scripts/npm-audit-gate');
+const { blockingAdvisories, evaluate } = require('../../scripts/npm-audit-gate');
 
-const { blockingAdvisories, evaluate } = gate;
+export {};
 
 const report = {
   vulnerabilities: {
