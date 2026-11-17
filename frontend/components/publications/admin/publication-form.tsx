@@ -40,6 +40,12 @@ import {
  unlinkExtractionJob,
 } from "@/lib/api/publications";
 import { logger } from "@/lib/logger";
+import {
+ type AvailableExtractionJob,
+ jobLabel,
+ mapJobsResponse,
+ resolveResourceName,
+} from "@/lib/publications/resource-names";
 
 interface AvailableSchema {
  id: string;
@@ -51,14 +57,6 @@ interface AvailableCollection {
  id: string;
  name: string;
  description?: string;
-}
-
-interface AvailableExtractionJob {
- id: string;
- job_id: string;
- schema_name?: string;
- status: string;
- created_at: string;
 }
 
 interface PublicationFormProps {
@@ -138,10 +136,10 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  }
 
  // Fetch extraction jobs
- const jobsRes = await fetch("/api/extractions");
+ const jobsRes = await fetch("/api/jobs");
  if (jobsRes.ok) {
  const jobsData = await jobsRes.json();
- setAvailableJobs(jobsData);
+ setAvailableJobs(mapJobsResponse(jobsData));
  }
  } catch (err) {
  logger.error("Failed to fetch resources: ", err);
@@ -267,7 +265,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  setResourceLoading(true);
  try {
  await linkExtractionJob(publication.id, selectedJobId, jobDescription || undefined);
- const job = availableJobs.find((j) => j.id === selectedJobId);
+ const job = availableJobs.find((j) => j.job_id === selectedJobId);
  setLinkedJobs([
  ...linkedJobs,
  {
@@ -366,7 +364,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  (c) => !linkedCollections.some((lc) => lc.collectionId === c.id)
  );
  const unlinkedJobs = availableJobs.filter(
- (j) => !linkedJobs.some((lj) => lj.jobId === j.id)
+ (j) => !linkedJobs.some((lj) => lj.jobId === j.job_id)
  );
 
  return (
@@ -611,7 +609,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  className="flex items-center justify-between p-3 bg-parchment-deep border border-rule rounded-none"
  >
  <div>
- <span className="font-medium">{schema.schemaName || schema.schemaId}</span>
+ <span className="font-medium">{resolveResourceName(schema.schemaId, schema.schemaName, availableSchemas)}</span>
  {schema.description && (
  <p className="text-sm text-muted-foreground">{schema.description}</p>
  )}
@@ -682,7 +680,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  >
  <div>
  <span className="font-medium">
- {collection.collectionName || collection.collectionId}
+ {resolveResourceName(collection.collectionId, collection.collectionName, availableCollections)}
  </span>
  {collection.description && (
  <p className="text-sm text-muted-foreground">{collection.description}</p>
@@ -753,7 +751,9 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  className="flex items-center justify-between p-3 bg-parchment-deep border border-rule rounded-none"
  >
  <div>
- <span className="font-medium">{job.jobId}</span>
+ <span className="font-medium" title={job.jobId}>
+ {jobLabel(job.jobId, availableJobs.find((j) => j.job_id === job.jobId))}
+ </span>
  <div className="flex items-center gap-2">
  {job.jobStatus && (
  <Badge variant="outline"className="text-xs">
@@ -789,8 +789,8 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  </SelectTrigger>
  <SelectContent>
  {unlinkedJobs.map((job) => (
- <SelectItem key={job.id} value={job.id}>
- {job.schema_name || job.job_id} ({job.status})
+ <SelectItem key={job.job_id} value={job.job_id}>
+ {jobLabel(job.job_id, job)} ({job.status})
  </SelectItem>
  ))}
  </SelectContent>
