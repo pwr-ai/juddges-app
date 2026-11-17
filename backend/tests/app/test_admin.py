@@ -238,6 +238,7 @@ class TestListUsers:
             "email": "user@example.com",
             "created_at": "2024-01-01",
             "last_sign_in_at": "2024-06-01",
+            "email_confirmed_at": "2024-01-02T10:00:00+00:00",
             "app_metadata": {"plan": "pro"},
         }
         mock_client.auth.admin.list_users.return_value = [mock_user]
@@ -254,6 +255,29 @@ class TestListUsers:
         data = response.json()
         assert len(data["users"]) == 1
         assert data["users"][0]["email"] == "user@example.com"
+        assert data["users"][0]["email_confirmed_at"] == "2024-01-02T10:00:00+00:00"
+
+    @patch("app.api.admin.get_admin_supabase_client")
+    async def test_list_users_unconfirmed_has_null_email_confirmed_at(
+        self, mock_get_client, admin_app
+    ):
+        mock_client = MagicMock()
+        mock_client.auth.admin.list_users.return_value = [
+            {"id": "u1", "email": "a@b.com", "email_confirmed_at": None},
+            {"id": "u2", "email": "c@d.com", "confirmed_at": "2024-02-01"},
+        ]
+        mock_get_client.return_value = mock_client
+
+        async with AsyncClient(
+            transport=ASGITransport(app=admin_app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/admin/users",
+                headers={"Authorization": "Bearer fake"},
+            )
+        users = response.json()["users"]
+        assert users[0]["email_confirmed_at"] is None
+        assert users[1]["email_confirmed_at"] == "2024-02-01"
 
     @patch("app.api.admin.get_admin_supabase_client")
     async def test_list_users_handles_dict_users(self, mock_get_client, admin_app):

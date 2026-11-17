@@ -48,6 +48,7 @@ class UserListItem(BaseModel):
     email: str | None = None
     created_at: str | None = None
     last_sign_in_at: str | None = None
+    email_confirmed_at: str | None = None
     app_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -340,7 +341,8 @@ async def list_users(
     List all platform users with pagination.
 
     Uses the Supabase Auth Admin API, which bypasses RLS.
-    Returns user id, email, created_at, last_sign_in_at, and app_metadata.
+    Returns user id, email, created_at, last_sign_in_at, email_confirmed_at
+    (None while the address is unconfirmed), and app_metadata.
     """
     client = get_admin_supabase_client()
 
@@ -363,12 +365,17 @@ async def list_users(
             else:
                 u_dict = dict(u)
 
+            confirmed_at = u_dict.get("email_confirmed_at") or u_dict.get(
+                "confirmed_at"
+            )
+
             users.append(
                 UserListItem(
                     id=str(u_dict.get("id", "")),
                     email=u_dict.get("email"),
                     created_at=str(u_dict.get("created_at", "")) or None,
                     last_sign_in_at=str(u_dict.get("last_sign_in_at", "")) or None,
+                    email_confirmed_at=str(confirmed_at) if confirmed_at else None,
                     app_metadata=u_dict.get("app_metadata") or {},
                 )
             )
