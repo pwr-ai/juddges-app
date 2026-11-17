@@ -805,18 +805,14 @@ jobs:
         working-directory: frontend
         continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
         run: |
-          # `npm audit --audit-level=high` exits non-zero only when a HIGH or
-          # CRITICAL is present - MEDIUM/LOW are still listed but don't fail.
+          # The human-readable report lists everything (MEDIUM/LOW included);
+          # the gate then fails on HIGH/CRITICAL advisories unless they are in
+          # npm-audit-allowlist.json with a reason and an unexpired date.
           set +e
+          npm audit --production
           npm audit --production --json > /tmp/npm-audit.json
-          npm audit --production --audit-level=high
-          rc=$?
           set -e
-          if [ $rc -ne 0 ]; then
-            echo "HIGH/CRITICAL npm vulnerability detected - failing build"
-            exit 1
-          fi
-          echo "No HIGH/CRITICAL npm vulnerabilities"
+          node scripts/npm-audit-gate.js /tmp/npm-audit.json npm-audit-allowlist.json
 
   secret-detection:
     name: Secret Detection
