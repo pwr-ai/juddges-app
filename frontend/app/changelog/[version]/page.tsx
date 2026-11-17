@@ -9,6 +9,13 @@ interface PageProps {
   params: Promise<{ version: string }>;
 }
 
+// Unknown versions go straight to the app-wide 404. With on-demand rendering
+// the not-found response is the generic `__next_error__` shell: the root
+// layout's <script src="/runtime-env.js"> is then client-rendered, so the
+// Supabase browser client has no config and the error boundary replaces the
+// 404 page (#881).
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   const entries = await loadChangelogEntries();
   return entries.map((e) => ({ version: e.slug }));

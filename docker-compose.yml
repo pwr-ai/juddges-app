@@ -33,6 +33,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      # /changelog reads release-notes/, which lives outside ./frontend (#879)
+      additional_contexts:
+        release-notes: ./release-notes
       # NEXT_PUBLIC_API_BASE_URL is runtime-only (docker-entrypoint.sh,
       # /runtime-env.js): the dev .env value must not be baked in (#578). The
       # Dockerfile fails the build if a localhost URL reaches the browser bundle.

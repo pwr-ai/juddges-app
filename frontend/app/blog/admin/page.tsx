@@ -34,7 +34,7 @@ import {
 import type { BlogPost } from "@/types/blog";
 import {
   deleteAdminPost,
-  fetchAdminPosts,
+  fetchAllAdminPosts,
   fetchAdminStats,
   type BlogStats,
 } from "@/lib/blog/admin-api";
@@ -56,13 +56,13 @@ export default function AdminBlogPage(): React.JSX.Element {
     const loadBlogAdminData = async (): Promise<void> => {
       try {
         setLoading(true);
-        const [postsResponse, statsResponse] = await Promise.all([
-          fetchAdminPosts({ page: 1, limit: 200 }),
+        const [allPosts, statsResponse] = await Promise.all([
+          fetchAllAdminPosts(),
           fetchAdminStats(),
         ]);
 
-        setPosts(postsResponse.data);
-        setFilteredPosts(postsResponse.data);
+        setPosts(allPosts);
+        setFilteredPosts(allPosts);
         setStats(statsResponse);
       } catch (error) {
         logger.error("Error fetching blog admin data: ", error);

@@ -140,6 +140,16 @@ Rules when touching this code:
   with an empty string. The service worker bypasses the path explicitly
   (`RUNTIME_ENV_PATH` in `frontend/public/sw.js`).
 
+## `CHANGELOG_DIR`
+
+Directory of `prod-v<semver>.md` release notes read by `/changelog`, its RSS feed
+and `/changelog/[version]` (`frontend/lib/changelog.ts`). Default:
+`<cwd>/../release-notes`. The frontend image sets it to `/app/release-notes`
+(copied from the `release-notes` build context, which the build requires; see
+the deployment how-to). The pages are prerendered at build time, so the
+variable matters for `next build`, not only for the running container. A missing
+directory is logged once per process and `/changelog` renders empty.
+
 ## Best Practices
 
 ### DO

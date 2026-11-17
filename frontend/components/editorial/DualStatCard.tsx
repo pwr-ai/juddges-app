@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/format-stats";
 
 interface DualStatCardProps {
   /** Small-caps mono label rendered above the values. */
@@ -37,7 +38,7 @@ export function DualStatCard({
   className,
 }: DualStatCardProps) {
   const fmt = (v: string | number) =>
-    typeof v === "number" ? v.toLocaleString() : v;
+    typeof v === "number" ? formatNumber(v) : v;
 
   return (
     <div className={cn("editorial-card flex flex-col p-4", className)}>
