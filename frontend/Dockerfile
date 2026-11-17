@@ -7,7 +7,7 @@
 #
 # Usage:
 #   Development: docker build --target development -t frontend:dev .
-#   Production:  docker build --target production -t frontend:prod .
+#   Production:  docker build --target production --build-context release-notes=../release-notes -t frontend:prod .
 # ==============================================================================
 
 # ==============================================================================
