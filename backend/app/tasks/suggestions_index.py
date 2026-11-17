@@ -139,6 +139,30 @@ async def _rebuild_suggestions_index(
             )
             return {"status": "failed", "reason": "staging_upsert"}
 
+    # Meilisearch's swap requires both indexes to exist. On the very first run
+    # the live index has never been created, so create it (empty) first; the
+    # swap then moves the staging index's documents and settings under the live
+    # name, and the cleanup below drops the empty leftover.
+    live_svc = _admin_service(live_index)
+    if not await live_svc.index_exists():
+        logger.info(f"Live suggestions index '{live_index}' missing — creating it")
+        try:
+            create_resp = await live_svc.create_index(primary_key="id")
+            create_uid = create_resp.get("taskUid")
+            if create_uid is not None:
+                create_task = await live_svc.wait_for_task(create_uid, max_wait=30.0)
+                if create_task.get("status") != "succeeded":
+                    logger.error(
+                        f"Suggestions live index create task {create_uid} did not "
+                        f"succeed: {create_task.get('error')}"
+                    )
+                    return {"status": "failed", "reason": "create_live_index"}
+        except Exception:
+            logger.opt(exception=True).error(
+                f"Could not create live suggestions index '{live_index}'"
+            )
+            return {"status": "failed", "reason": "create_live_index"}
+
     swap_resp = await staging_svc.swap_indexes(live_index, staging_index)
     swap_uid = swap_resp.get("taskUid")
     if swap_uid is not None:
