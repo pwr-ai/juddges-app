@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useMemo, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useSearchStore } from '@/lib/store/searchStore';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
@@ -26,8 +26,17 @@ import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOptionalAuth } from '@/contexts/AuthContext';
-import { SearchEngineSelector, type SearchEngine } from '@/components/search/v2/SearchEngineSelector';
+import { SearchEngineSelector, ENGINE_RESULTS_LABEL } from '@/components/search/v2/SearchEngineSelector';
 import { SearchV2Panel } from '@/components/search/v2/SearchV2Panel';
+import { Eyebrow } from '@/components/editorial';
+import {
+ ENGINE_PARAM,
+ curatedOnlyReasons,
+ curatedOnlyStateFromUrl,
+ parseEngineParam,
+ resolveEngine,
+ type SearchEngine,
+} from '@/lib/search/engine';
 
 /**
  * Typing animation component for header text
@@ -84,11 +93,17 @@ function SearchPageContent(): React.JSX.Element | null {
  const [lastSearchMode, setLastSearchMode] = useState<"thinking" | "rabbit" | null>(null);
  const [hasPerformedSearch, setHasPerformedSearch] = useState(false);
  const [searchTimestamp, setSearchTimestamp] = useState<string>('');
- // v2 (Weaviate) test engine, signed-in users only (#867). Local state on
- // purpose: the standard search store, URL and cache never see it.
- const [engine, setEngine] = useState<SearchEngine>('standard');
- const signedIn = !!useOptionalAuth()?.user;
- const useV2 = signedIn && engine === 'v2';
+ // Engine (#867): `full` (Weaviate v2, whole PL corpus) is the default for
+ // signed-in users, `curated` (Supabase/Meili) for guests and for searches that
+ // use curated-only features. Kept in `?engine=`; see lib/search/engine.ts.
+ const searchParams = useSearchParams();
+ const auth = useOptionalAuth();
+ const signedIn = !!auth?.user;
+ const authLoading = auth?.loading ?? false;
+ const [engineChoice, setEngineChoice] = useState<SearchEngine | null>(null);
+ const [autoCuratedReasons, setAutoCuratedReasons] = useState<string[]>([]);
+ const engine: SearchEngine = signedIn ? (engineChoice ?? 'full') : 'curated';
+ const useV2 = engine === 'full';
 
  // Store state
  const filters = useSearchStore((state) => state.filters);
@@ -232,7 +247,49 @@ function SearchPageContent(): React.JSX.Element | null {
  setUrlParamsProcessed,
  hasPerformedSearch,
  isSearching,
+ engine: engineChoice ?? undefined,
  });
+
+ const liveCuratedReasons = useMemo(
+ () =>
+ curatedOnlyReasons({
+ selectedLanguages,
+ jurisdictions: filters.jurisdictions,
+ baseFilters,
+ customMetadata: filters.customMetadata,
+ }),
+ [selectedLanguages, filters.jurisdictions, filters.customMetadata, baseFilters]
+ );
+
+ // Resolve the engine once the session is known, so a signed-in user never
+ // sees one engine flash before the other. Read from the URL itself (merged
+ // with the persisted store), not from the store after the URL sync. Frozen
+ // afterwards: clearing a filter never flips engines.
+ useEffect(() => {
+ if (!mounted || authLoading || engineChoice !== null) return;
+ const explicit = parseEngineParam(searchParams.get(ENGINE_PARAM));
+ const reasons = curatedOnlyReasons(
+ curatedOnlyStateFromUrl(searchParams, {
+ selectedLanguages,
+ jurisdictions: filters.jurisdictions,
+ baseFilters,
+ customMetadata: filters.customMetadata,
+ })
+ );
+ const resolved = resolveEngine({ signedIn, explicit, reasons });
+ setEngineChoice(resolved);
+ if (signedIn && !explicit && resolved === 'curated') {
+ setAutoCuratedReasons(reasons);
+ }
+ }, [mounted, authLoading, engineChoice, searchParams, signedIn, selectedLanguages, filters.jurisdictions, filters.customMetadata, baseFilters]);
+
+ const changeEngine = (next: SearchEngine): void => {
+ setEngineChoice(next);
+ setAutoCuratedReasons([]);
+ const params = new URLSearchParams(window.location.search);
+ params.set(ENGINE_PARAM, next);
+ router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+ };
 
  // State hydration from localStorage is handled by the store's persist
  // middleware (#143) — no manual loadState()/useEffect race here anymore.
@@ -397,9 +454,46 @@ function SearchPageContent(): React.JSX.Element | null {
  // Until the client has hydrated we cannot read the persisted search state, so
  // render the search-page skeleton rather than a blank screen. The skeleton has
  // the same layout as the real page, so nothing jumps when it swaps in.
- if (!mounted) {
+ if (!mounted || engineChoice === null) {
  return <SearchPageSkeleton />;
  }
+
+ const engineHint =
+ engine === 'curated' && autoCuratedReasons.length > 0 ? (
+ <p>
+ Wybrano bazę kuratorowaną, bo wyszukiwanie używa: {autoCuratedReasons.join(', ')}. Pełna
+ baza obejmuje tylko polskie orzeczenia bez ekstrakcji.{' '}
+ <button
+ type="button"
+ onClick={() => changeEngine('full')}
+ className="font-medium text-[color:var(--oxblood)] underline underline-offset-4"
+ >
+ Przełącz na pełną bazę
+ </button>
+ </p>
+ ) : engine === 'full' && liveCuratedReasons.length > 0 ? (
+ <p>
+ Pełna baza nie obsługuje: {liveCuratedReasons.join(', ')}. Te ustawienia działają tylko w
+ bazie kuratorowanej.{' '}
+ <button
+ type="button"
+ onClick={() => changeEngine('curated')}
+ className="font-medium text-[color:var(--oxblood)] underline underline-offset-4"
+ >
+ Przełącz na bazę kuratorowaną
+ </button>
+ </p>
+ ) : undefined;
+
+ const engineSwitch = (
+ <SearchEngineSelector
+ value={engine}
+ onChange={changeEngine}
+ disabled={isSearching}
+ fullUnavailableReason={signedIn ? undefined : 'Dostępna po zalogowaniu.'}
+ hint={engineHint}
+ />
+ );
 
  return (
  <>
@@ -411,13 +505,11 @@ function SearchPageContent(): React.JSX.Element | null {
  />
 
  <PageContainer width={showExpanded || useV2 ? 'compact' : 'full'} fillViewport={showExpanded && !useV2} className="py-6 relative z-10">
- {signedIn && (
- <div className="mb-6">
- <SearchEngineSelector value={engine} onChange={setEngine} disabled={isSearching} />
- </div>
- )}
  {useV2 ? (
- <SearchV2Panel initialQuery={query} />
+ <div className="w-full space-y-6">
+ {engineSwitch}
+ <SearchV2Panel initialQuery={query} onSubmitQuery={setQuery} />
+ </div>
  ) : showExpanded ? (
  /* Expanded view - IMPROVED LAYOUT */
  <div className="flex flex-col items-center">
@@ -432,6 +524,8 @@ function SearchPageContent(): React.JSX.Element | null {
  Judgments and legal decisions in seconds.
  </p>
  </div>
+
+ {engineSwitch}
 
  {/* PRIMARY ELEMENT: Search Input - Made more prominent */}
  <SearchForm
@@ -484,7 +578,8 @@ function SearchPageContent(): React.JSX.Element | null {
  <div className="flex flex-col gap-6 w-full"data-search-results>
  {/* Compact search bar at top - PRIMARY element first */}
  <div className="w-full space-y-4">
- {/* Search form - PRIMARY action, always first */}
+ {engineSwitch}
+ {/* Search form - PRIMARY action */}
  <SearchForm
  ref={searchInputRef}
  query={query}
@@ -548,6 +643,12 @@ function SearchPageContent(): React.JSX.Element | null {
  </VariantButton>
  {query && <SaveSearchDialog />}
  </div>
+ )}
+
+ {searchMetadata.length > 0 && (
+ <Eyebrow as="p" tone="oxblood" className="mb-3">
+ {ENGINE_RESULTS_LABEL.curated}
+ </Eyebrow>
  )}
 
  <GuestLimitBanner allowance={guestAllowance} />
