@@ -118,7 +118,16 @@ describe("HomePage dashboard", () => {
     expect(screen.getByText("03 · Analyze")).toBeInTheDocument();
 
     const searchLinks = screen.getAllByRole("link", { name: /search judgments/i });
-    expect(searchLinks[0]).toHaveAttribute("href", "/search");
+    expect(searchLinks[0]).toHaveAttribute("href", "/search?engine=full");
+    // Both search modes are offered on the dashboard
+    expect(screen.getByRole("link", { name: /Search the full corpus/ })).toHaveAttribute(
+      "href",
+      "/search?engine=full",
+    );
+    expect(screen.getByRole("link", { name: /Compare jurisdictions/ })).toHaveAttribute(
+      "href",
+      "/search?engine=curated",
+    );
     expect(screen.getByRole("link", { name: /duty of care/i })).toHaveAttribute(
       "href",
       "/search?q=duty%20of%20care",
