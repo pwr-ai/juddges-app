@@ -1,0 +1,8 @@
+[
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "reason": "ReDoS via attacker-controlled glob patterns. No patched release exists (affects <=4.0.7, the latest). Reached only through @sentry/nextjs -> @rollup/plugin-commonjs at build time with globs from our own config, never user input.",
+    "expires": "2027-01-31"
+  }
+]

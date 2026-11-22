@@ -8,7 +8,7 @@ multi-document synthesis.
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from juddges_search.prompts.summarization import (
@@ -168,7 +168,7 @@ def _format_document_for_summary(doc: dict[str, Any]) -> str:
 )
 @limiter.limit(SUMMARIZATION_RATE_LIMIT)
 async def summarize_documents(
-    request: Request, summarize_request: SummarizeRequest
+    request: Request, response: Response, summarize_request: SummarizeRequest
 ) -> SummarizeResponse:
     """Generate an AI summary of legal documents."""
     logger.info(
@@ -340,7 +340,7 @@ class KeyPointsResponse(BaseModel):
 )
 @limiter.limit(SUMMARIZATION_RATE_LIMIT)
 async def extract_key_points(
-    request: Request, key_points_request: KeyPointsRequest
+    request: Request, response: Response, key_points_request: KeyPointsRequest
 ) -> KeyPointsResponse:
     """Extract structured key points from a legal document."""
     logger.info(

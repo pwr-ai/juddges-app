@@ -14438,6 +14438,17 @@
             ],
             "title": "Email"
           },
+          "email_confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Confirmed At"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -16273,7 +16284,7 @@
     },
     "/api/admin/users": {
       "get": {
-        "description": "List all platform users with pagination.\n\nUses the Supabase Auth Admin API, which bypasses RLS.\nReturns user id, email, created_at, last_sign_in_at, and app_metadata.",
+        "description": "List all platform users with pagination.\n\nUses the Supabase Auth Admin API, which bypasses RLS.\nReturns user id, email, created_at, last_sign_in_at, email_confirmed_at\n(None while the address is unconfirmed), and app_metadata.",
         "operationId": "list_users_api_admin_users_get",
         "parameters": [
           {
