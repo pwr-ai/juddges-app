@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from limits import RateLimitItem, parse
 from limits.storage import storage_from_string
 from limits.strategies import MovingWindowRateLimiter
@@ -58,7 +58,9 @@ class InviteRedemptionRequest(BaseModel):
 
 @router.post("/redeem", status_code=status.HTTP_201_CREATED)
 @limiter.limit(INVITE_REDEEM_RATE_LIMIT)
-async def redeem_invite(request: Request, payload: InviteRedemptionRequest) -> dict:
+async def redeem_invite(
+    request: Request, response: Response, payload: InviteRedemptionRequest
+) -> dict:
     """Consume an invite code and create the corresponding account."""
     normalized_email = payload.email.strip().lower()
     if not hit_with_fallback(
