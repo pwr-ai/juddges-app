@@ -1,6 +1,6 @@
 {
   "name": "juddges-frontend",
-  "version": "1.5.34",
+  "version": "1.5.35",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
