@@ -619,8 +619,10 @@ class MeiliSearchService:
             "attributesToHighlight": ["term"],
             "highlightPreTag": "<mark>",
             "highlightPostTag": "</mark>",
-            "sort": ["weight:desc"],
         }
+        # No ``sort`` param: Meili rejects it (400 invalid_search_sort) unless
+        # ``sort`` is listed in rankingRules. Ordering by weight is already done
+        # by the ``weight:desc`` custom ranking rule on the suggestions index.
         if filter_clauses:
             payload["filter"] = " AND ".join(filter_clauses)
 

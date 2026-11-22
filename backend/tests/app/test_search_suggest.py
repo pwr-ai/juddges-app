@@ -286,6 +286,35 @@ class TestSuggestService:
         _, kwargs = mock_client.post.call_args
         sent = kwargs["json"]
         assert sent["filter"] == 'language = "en" AND category = "keyword"'
+        # Meili rejects ``sort`` unless it is in rankingRules; weight ordering
+        # comes from the ``weight:desc`` ranking rule instead.
+        assert "sort" not in sent
+
+    @pytest.mark.anyio
+    async def test_filter_400_retries_without_filter(self, service):
+        self._mock_suggestions_svc(service)
+        req = httpx.Request("POST", "http://test")
+        bad = httpx.Response(400, json={"code": "invalid_search_filter"}, request=req)
+        ok = httpx.Response(
+            200,
+            json={"hits": [{"term": "fraud"}], "query": "fra"},
+            request=req,
+        )
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.post = AsyncMock(side_effect=[bad, ok])
+            mock_cls.return_value = mock_client
+
+            result = await service.suggest("fra", language="en")
+
+        assert len(result["suggestion_hits"]) == 1
+        first, second = mock_client.post.call_args_list
+        assert "filter" in first.kwargs["json"]
+        assert "filter" not in second.kwargs["json"]
+        assert "sort" not in first.kwargs["json"]
+        assert "sort" not in second.kwargs["json"]
 
     @pytest.mark.anyio
     async def test_unavailable_index_returns_empty(self, service):
