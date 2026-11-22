@@ -29,12 +29,25 @@ export interface AdminUsersResponse {
 }
 
 /** Raw shape from backend (app_metadata dict instead of flat fields) */
-interface RawAdminUser {
+export interface RawAdminUser {
   id: string;
   email: string | null;
   created_at: string | null;
   last_sign_in_at: string | null;
+  email_confirmed_at?: string | null;
   app_metadata: Record<string, unknown>;
+}
+
+/** Flatten the backend user shape (app_metadata dict) into AdminUser. */
+export function mapRawAdminUser(u: RawAdminUser): AdminUser {
+  return {
+    id: u.id,
+    email: u.email ?? "",
+    created_at: u.created_at ?? "",
+    last_sign_in_at: u.last_sign_in_at,
+    is_admin: Boolean(u.app_metadata?.is_admin),
+    email_confirmed_at: u.email_confirmed_at ?? null,
+  };
 }
 
 export interface AuditLogEntry {
@@ -136,14 +149,7 @@ export function useAdminUsers(page: number = 1, perPage: number = 20) {
         total?: number;
       }>(`/api/admin/users?page=${page}&per_page=${perPage}`);
 
-      const users: AdminUser[] = (raw.users ?? []).map((u) => ({
-        id: u.id,
-        email: u.email ?? "",
-        created_at: u.created_at ?? "",
-        last_sign_in_at: u.last_sign_in_at,
-        is_admin: Boolean(u.app_metadata?.is_admin),
-        email_confirmed_at: null, // Not returned by admin list_users
-      }));
+      const users: AdminUser[] = (raw.users ?? []).map(mapRawAdminUser);
 
       return {
         users,

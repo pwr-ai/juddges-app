@@ -258,7 +258,8 @@ export interface paths {
          * @description List all platform users with pagination.
          *
          *     Uses the Supabase Auth Admin API, which bypasses RLS.
-         *     Returns user id, email, created_at, last_sign_in_at, and app_metadata.
+         *     Returns user id, email, created_at, last_sign_in_at, email_confirmed_at
+         *     (None while the address is unconfirmed), and app_metadata.
          */
         get: operations["list_users_api_admin_users_get"];
         put?: never;
@@ -12186,6 +12187,8 @@ export interface components {
             created_at?: string | null;
             /** Email */
             email?: string | null;
+            /** Email Confirmed At */
+            email_confirmed_at?: string | null;
             /** Id */
             id: string;
             /** Last Sign In At */

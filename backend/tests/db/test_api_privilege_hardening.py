@@ -52,6 +52,7 @@ def test_profile_role_cannot_be_changed_by_authenticated_user(conn):
         "public.archive_expired_audit_logs()",
         "public.get_user_topic_clicks(uuid,integer,integer)",
         "public.get_trending_topics(integer,integer)",
+        "public.get_admin_document_breakdown()",
     ),
 )
 def test_backend_only_rpcs_are_not_callable_by_api_roles(conn, signature):
