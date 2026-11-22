@@ -204,7 +204,7 @@ async def get_related_reasoning_lines(
 
     # Parse target embedding if available
     target_embedding: np.ndarray | None = None
-    target_emb_raw = target.get("avg_embedding")
+    target_emb_raw = parse_embedding(target.get("avg_embedding"))
     if target_emb_raw is not None:
         try:
             target_embedding = np.array(target_emb_raw, dtype=np.float32)
@@ -251,7 +251,7 @@ async def get_related_reasoning_lines(
         # Embedding cosine similarity
         embedding_sim = 0.0
         if target_embedding is not None:
-            row_emb_raw = row.get("avg_embedding")
+            row_emb_raw = parse_embedding(row.get("avg_embedding"))
             if row_emb_raw is not None:
                 try:
                     row_embedding = np.array(row_emb_raw, dtype=np.float32)
