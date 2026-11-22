@@ -198,6 +198,9 @@ def refresh_dashboard_stats(self: Task) -> dict[str, Any]:
     return {"status": "completed", "cache_cleared": cleared}
 
 
+VACUUM_STATEMENT_TIMEOUT = os.environ.get("VACUUM_STATEMENT_TIMEOUT", "60min")
+
+
 @celery_app.task(
     bind=True,
     name="maintenance.vacuum_analyze",
@@ -222,6 +225,12 @@ def vacuum_analyze_judgments(self: Task) -> dict[str, Any]:
         # VACUUM cannot run inside a transaction block.
         conn = psycopg.connect(database_url, autocommit=True)
         cur = conn.cursor()
+        # The DATABASE_URL role has a short statement_timeout (120s) that
+        # cancels VACUUM on the large judgments table; raise it per session.
+        cur.execute(
+            "SELECT set_config('statement_timeout', %s, false)",
+            (VACUUM_STATEMENT_TIMEOUT,),
+        )
         logger.info("Running VACUUM ANALYZE on judgments table")
         cur.execute("VACUUM ANALYZE public.judgments")
         cur.close()
@@ -230,7 +239,11 @@ def vacuum_analyze_judgments(self: Task) -> dict[str, Any]:
         return {"status": "completed"}
     except Exception as exc:
         logger.error(f"VACUUM ANALYZE failed: {exc}")
-        raise
+        # psycopg errors may not survive Celery's result backend pickling;
+        # raise a plain, picklable error.
+        raise RuntimeError(
+            f"vacuum_analyze failed: {type(exc).__name__}: {exc}"
+        ) from None
 
 
 @celery_app.task(

@@ -238,6 +238,7 @@ class TestListUsers:
             "email": "user@example.com",
             "created_at": "2024-01-01",
             "last_sign_in_at": "2024-06-01",
+            "email_confirmed_at": "2024-01-02T10:00:00+00:00",
             "app_metadata": {"plan": "pro"},
         }
         mock_client.auth.admin.list_users.return_value = [mock_user]
@@ -254,6 +255,57 @@ class TestListUsers:
         data = response.json()
         assert len(data["users"]) == 1
         assert data["users"][0]["email"] == "user@example.com"
+        assert data["users"][0]["email_confirmed_at"] == "2024-01-02T10:00:00+00:00"
+
+    @patch("app.api.admin.get_admin_supabase_client")
+    async def test_list_users_datetime_email_confirmed_at_is_iso(
+        self, mock_get_client, admin_app
+    ):
+        from datetime import UTC, datetime
+
+        mock_user = MagicMock()
+        mock_user.model_dump.return_value = {
+            "id": "u1",
+            "email": "a@b.com",
+            "email_confirmed_at": datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
+        }
+        mock_client = MagicMock()
+        mock_client.auth.admin.list_users.return_value = [mock_user]
+        mock_get_client.return_value = mock_client
+
+        async with AsyncClient(
+            transport=ASGITransport(app=admin_app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/admin/users",
+                headers={"Authorization": "Bearer fake"},
+            )
+        assert (
+            response.json()["users"][0]["email_confirmed_at"]
+            == "2024-01-02T10:00:00+00:00"
+        )
+
+    @patch("app.api.admin.get_admin_supabase_client")
+    async def test_list_users_unconfirmed_has_null_email_confirmed_at(
+        self, mock_get_client, admin_app
+    ):
+        mock_client = MagicMock()
+        mock_client.auth.admin.list_users.return_value = [
+            {"id": "u1", "email": "a@b.com", "email_confirmed_at": None},
+            {"id": "u2", "email": "c@d.com", "confirmed_at": "2024-02-01"},
+        ]
+        mock_get_client.return_value = mock_client
+
+        async with AsyncClient(
+            transport=ASGITransport(app=admin_app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/admin/users",
+                headers={"Authorization": "Bearer fake"},
+            )
+        users = response.json()["users"]
+        assert users[0]["email_confirmed_at"] is None
+        assert users[1]["email_confirmed_at"] == "2024-02-01"
 
     @patch("app.api.admin.get_admin_supabase_client")
     async def test_list_users_handles_dict_users(self, mock_get_client, admin_app):
@@ -508,16 +560,6 @@ class TestGetDocumentStats:
                 ]
                 m.select.return_value.execute.return_value = resp
             elif call_idx["n"] == 3:
-                # country
-                resp = MagicMock()
-                resp.data = [{"country": "PL"}, {"country": "UK"}, {"country": "PL"}]
-                m.select.return_value.execute.return_value = resp
-            elif call_idx["n"] == 4:
-                # language
-                resp = MagicMock()
-                resp.data = [{"language": "pl"}, {"language": "en"}]
-                m.select.return_value.execute.return_value = resp
-            elif call_idx["n"] == 5:
                 # added this week
                 resp = MagicMock()
                 resp.count = 10
@@ -525,6 +567,14 @@ class TestGetDocumentStats:
             return m
 
         mock_client.table.side_effect = table_side
+        breakdown = MagicMock()
+        breakdown.data = [
+            {"dimension": "country", "key": "PL", "doc_count": 250000},
+            {"dimension": "country", "key": "UK", "doc_count": 90000},
+            {"dimension": "language", "key": "pl", "doc_count": 250000},
+            {"dimension": "language", "key": None, "doc_count": 90000},
+        ]
+        mock_client.rpc.return_value.execute.return_value = breakdown
         mock_get_client.return_value = mock_client
 
         async with AsyncClient(
@@ -539,6 +589,11 @@ class TestGetDocumentStats:
         assert data["total"] == 100
         # TOTAL should be filtered out from by_type
         assert "TOTAL" not in data["by_type"]
+        # Breakdowns come from a server-side aggregate, not a capped row scan
+        mock_client.rpc.assert_called_once_with("get_admin_document_breakdown", {})
+        assert data["by_country"] == {"PL": 250000, "UK": 90000}
+        assert data["by_language"] == {"pl": 250000, "unknown": 90000}
+        assert data["added_this_week"] == 10
 
 
 # ===== System health endpoint tests =====
