@@ -88,6 +88,25 @@ export async function fetchAdminPosts(params?: {
   return requestJson<PostsResponse>(url);
 }
 
+/**
+ * Backend cap for `GET /blog/admin/posts` (`limit: int = Query(20, ge=1, le=100)`
+ * in backend/app/api/blog.py). Larger values are rejected with 422.
+ */
+export const ADMIN_POSTS_MAX_LIMIT = 100;
+
+/** Fetch every admin post by following pagination at the backend's page cap. */
+export async function fetchAllAdminPosts(): Promise<BlogPost[]> {
+  const all: BlogPost[] = [];
+  let page = 1;
+  for (;;) {
+    const res = await fetchAdminPosts({ page, limit: ADMIN_POSTS_MAX_LIMIT });
+    all.push(...res.data);
+    if (!res.pagination?.has_next || res.data.length === 0) break;
+    page += 1;
+  }
+  return all;
+}
+
 export async function fetchAdminStats(): Promise<BlogStats> {
   return requestJson<BlogStats>("/api/blog/admin/stats");
 }

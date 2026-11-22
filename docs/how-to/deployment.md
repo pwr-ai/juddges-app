@@ -144,6 +144,18 @@ For a production-like local build without version bumps or registry pushes:
 docker compose up -d --build
 ```
 
+### Building the frontend image by hand
+
+`/changelog` reads the repo-root `release-notes/` directory, which is outside the frontend build context (`./frontend`). The production target therefore needs it as a named build context, and the build fails without it (#879):
+
+```bash
+docker build --target production \
+  --build-context release-notes=./release-notes \
+  -t juddges-frontend:local frontend
+```
+
+`docker compose build` and `scripts/build_and_push_prod.sh` already pass it (`additional_contexts` / `--build-context`). Development-target builds do not need it.
+
 ### Local production ports
 
 | Service | Port | Notes |

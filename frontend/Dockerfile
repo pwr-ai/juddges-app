@@ -7,8 +7,19 @@
 #
 # Usage:
 #   Development: docker build --target development -t frontend:dev .
-#   Production:  docker build --target production -t frontend:prod .
+#   Production:  docker build --target production --build-context release-notes=../release-notes -t frontend:prod .
 # ==============================================================================
+
+# ==============================================================================
+# Release notes (#879)
+# ==============================================================================
+# /changelog reads the repo-root release-notes/ directory, which is outside this
+# build context (./frontend). Supply it as a named build context:
+#   docker build --build-context release-notes=../release-notes ...
+# (docker-compose.yml: additional_contexts; scripts/build_and_push_prod.sh).
+# Without it this stage is empty and the builder stage fails the build
+# instead of shipping a /changelog that silently renders "No release notes yet".
+FROM scratch AS release-notes
 
 # ==============================================================================
 # Base Stage - Common Setup
@@ -72,6 +83,14 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application files
 COPY . .
 
+# Release notes are read while `next build` prerenders /changelog (force-static)
+# and /changelog/[version] (generateStaticParams), so they must exist here, not
+# only in the production stage. Fail early rather than bake an empty page.
+COPY --from=release-notes / /app/release-notes
+RUN ls /app/release-notes/prod-v*.md >/dev/null 2>&1 || \
+    { echo "ERROR: no release-notes/prod-v*.md in the image; pass --build-context release-notes=<repo>/release-notes" >&2; exit 1; }
+ENV CHANGELOG_DIR=/app/release-notes
+
 # Build arguments for Next.js public environment variables.
 # They only seed the inline baseline in prerendered HTML; the running
 # container's values win at request time via /runtime-env.js and the
@@ -90,6 +109,10 @@ ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 # Build the application with optimizations
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+
+# Guard (#879): the prerendered /changelog must contain release entries.
+RUN grep -Eq "/changelog/v[0-9]+" .next/server/app/changelog.html || \
+    { echo "ERROR: prerendered /changelog has no release entries" >&2; exit 1; }
 
 # Guard (#578): refuse an image whose browser-facing output (client chunks,
 # prerendered HTML/RSC) points at localhost/127.0.0.1 -- in a visitor's browser
@@ -131,6 +154,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/app/node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public files
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Release notes for /changelog, its RSS feed and /changelog/[version]
+# (read at runtime via CHANGELOG_DIR, see lib/changelog.ts).
+COPY --from=builder --chown=nextjs:nodejs /app/release-notes /app/release-notes
+ENV CHANGELOG_DIR=/app/release-notes
 
 # Copy the entrypoint. It exports the runtime NEXT_PUBLIC_* values (with
 # defaults) for the server process; the browser receives them from the

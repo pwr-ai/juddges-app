@@ -34,5 +34,16 @@ export function formatStatNumber(value: number | undefined | null): string {
     return `${Math.floor(value / 1_000)}K`;
   }
 
-  return value.toLocaleString();
+  return formatNumber(value);
+}
+
+/**
+ * Format a number with a fixed locale (en-US grouping, e.g. "6,050").
+ *
+ * Bare `toLocaleString()` uses the runtime default locale, so the server
+ * (en) and a pl-PL browser render different text and React throws hydration
+ * error #418. Use this for any number rendered during SSR.
+ */
+export function formatNumber(value: number): string {
+  return value.toLocaleString("en-US");
 }

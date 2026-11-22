@@ -353,6 +353,8 @@ build_and_push() {
         for name in "${FRONTEND_PUBLIC_BUILD_VARS[@]}"; do
             build_args+=(--build-arg "${name}=${!name:-}")
         done
+        # /changelog reads release-notes/, outside the frontend build context (#879)
+        build_args+=(--build-context "release-notes=${REPO_ROOT}/release-notes")
     else
         build_args=(--build-arg "APP_VERSION=${version}")
     fi
