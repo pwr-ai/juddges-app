@@ -54,7 +54,7 @@ export default function HelpPage() {
  },
 	 {
 	 q: "What kind of legal documents can I find on JuDDGES? ",
-	 a: "The platform contains court judgments and related legal materials for research and analysis. The database is continuously updated with new documents from official sources.",
+	 a: "There are two ways to search. Polish native: the full corpus of about 2.7 million Polish judgments from common courts and administrative courts (NSA), with hybrid semantic and keyword search tuned for Polish. Comparative: a curated set of Polish and England & Wales judgments with structured extractions under the shared base schema, for cross-jurisdiction and cross-language comparison, filters on extracted fields, collections and export. Choose the mode with the switch at the top of the search page.",
 	 },
  ],
  },

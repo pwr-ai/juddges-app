@@ -213,6 +213,14 @@ export default function AboutPage(): React.JSX.Element {
             theories in judicial decision-making, facilitating a deeper
             understanding of judicial policies and practices.
           </p>
+          <p className="text-base leading-relaxed">
+            The platform offers two ways of working with judgments. The{" "}
+            <strong>Polish-native</strong> mode searches the full corpus of
+            about 2.7 million Polish judgments from common and administrative
+            courts. The <strong>comparative</strong> mode works on a curated set
+            of Polish and England &amp; Wales judgments with structured
+            extractions, for comparison across jurisdictions and languages.
+          </p>
 
           <div>
             <Headline as="h3" size="xs" className="mb-5">
