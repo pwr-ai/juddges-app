@@ -52,7 +52,7 @@ test.describe('Visual Regression Tests', () => {
   });
 
   test('search page initial state', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
@@ -64,7 +64,7 @@ test.describe('Visual Regression Tests', () => {
   });
 
   test('search page with results', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(500);
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -123,7 +123,7 @@ test.describe('Visual Regression Tests', () => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(1000);
 
     await expect(page).toHaveScreenshot('search-mobile.png', {
@@ -136,7 +136,7 @@ test.describe('Visual Regression Tests', () => {
     // Set tablet viewport
     await page.setViewportSize({ width: 768, height: 1024 });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(1000);
 
     await expect(page).toHaveScreenshot('search-tablet.png', {
@@ -160,7 +160,7 @@ test.describe('Visual Regression Tests', () => {
       }, 5000);
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(500);
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -187,7 +187,7 @@ test.describe('Visual Regression Tests', () => {
       });
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(500);
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -215,7 +215,7 @@ test.describe('Visual Regression Tests', () => {
       });
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(500);
 
     const searchInput = page.getByRole('textbox', { name: /search/i });

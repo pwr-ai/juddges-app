@@ -303,20 +303,21 @@ class TestJudgmentsQueries:
     async def test_document_stats_maps_country_and_language(self) -> None:
         from app.api.admin import get_document_stats
 
-        client = _FakeClient(
-            {
-                "judgments": _FakeResponse(
-                    [{"country": "PL", "language": "pl"}], count=12
-                )
-            }
+        client = _FakeClient({"judgments": _FakeResponse(count=12)})
+        client.rpc = MagicMock()
+        client.rpc.return_value.execute.return_value = _FakeResponse(
+            [
+                {"dimension": "country", "key": "PL", "doc_count": 7},
+                {"dimension": "language", "key": "pl", "doc_count": 7},
+            ]
         )
         with patch("app.api.admin.get_admin_supabase_client", return_value=client):
-            await get_document_stats(admin=_admin_user())
+            stats = await get_document_stats(admin=_admin_user())
 
-        projections = client.projections("judgments")
-        # jurisdiction is the country dimension; language lives in metadata JSONB.
-        assert "country:jurisdiction" in projections
-        assert "language:metadata->>language" in projections
+        # country/language are aggregated server-side (PostgREST caps rows at 1000).
+        client.rpc.assert_called_once_with("get_admin_document_breakdown", {})
+        assert stats.by_country == {"PL": 7}
+        assert stats.by_language == {"pl": 7}
         assert client.filter_columns("judgments") == {"created_at"}
 
     async def test_topic_modeling_fetch_uses_judgments_columns(self) -> None:

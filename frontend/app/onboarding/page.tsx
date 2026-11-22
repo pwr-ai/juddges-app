@@ -35,7 +35,7 @@ const STEPS: Step[] = [
       "Filter by jurisdiction (PL · UK), language, date range, and issuing body using the right-hand panel.",
       "Each result shows jurisdiction and document-type badges; open one to read the full judgment, or save the entire search via the Save Search button.",
     ],
-    cta: { href: "/search?q=unfair+dismissal", label: "Try the example search" },
+    cta: { href: "/search?engine=curated&q=unfair+dismissal", label: "Try the example search" },
     icon: Search,
     screenshot: {
       src: "/docs/onboarding/step-1-search.png",

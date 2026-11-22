@@ -14,7 +14,7 @@ from collections import Counter
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -682,7 +682,7 @@ def _build_topics(
 )
 @limiter.limit(TOPIC_MODELING_RATE_LIMIT)
 async def analyze_topics(
-    request: Request, topic_request: TopicModelingRequest
+    request: Request, response: Response, topic_request: TopicModelingRequest
 ) -> TopicModelingResponse:
     """
     Perform topic modeling on the document corpus.
@@ -765,6 +765,7 @@ async def analyze_topics(
 @limiter.limit(TOPIC_MODELING_RATE_LIMIT)
 async def get_trending_topics(
     request: Request,
+    response: Response,
     num_topics: int = Query(default=5, ge=2, le=15, description="Number of topics"),
     sample_size: int = Query(
         default=200, ge=20, le=500, description="Documents to analyze"

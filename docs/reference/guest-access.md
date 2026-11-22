@@ -13,7 +13,7 @@ The corpus is public court rulings, so reading it requires no identity.
 | Surface | Anonymous | Notes |
 |---|---|---|
 | `/` landing, `/about`, `/blog`, … | yes | unchanged |
-| `/search` | yes | text and hybrid modes; metered, see below |
+| `/search` | yes | curated engine only (text and hybrid modes); metered, see below. The full-corpus engine is locked for guests |
 | `/documents/<id>` | yes | full judgment detail page |
 | `GET /api/search/documents` | yes | the metered endpoint |
 | `GET /api/search/suggest`, `/autocomplete` | yes | typeahead |
@@ -29,6 +29,8 @@ Anything that carries identity or spends real money per call:
   deeper path is unaffected
 - Semantic chunk search (`POST /api/documents/search`, `/api/documents/batch`)
 - `GET /api/search/analytics/history`, `GET /api/search/topics/my-clicks`
+- The full-corpus engine (#867): `POST /api/search/v2`,
+  `GET /api/search/v2/judgments/<id>` and the `/judgments/full/<id>` page
 
 The single source of truth is `isPublicRequest()` in
 `frontend/lib/supabase/public-route-policy.ts`. Adding a route to that

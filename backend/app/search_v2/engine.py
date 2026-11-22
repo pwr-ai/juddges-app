@@ -10,14 +10,15 @@ bge-m3, so queries go to the v2 stack's own TEI server and never through
 the BM25 side of the hybrid query receives the raw text.
 
 Both clients here are synchronous; the router runs :meth:`WeaviateV2Engine.search`
-in a worker thread.
+and :meth:`WeaviateV2Engine.get_judgment` in a worker thread.
 """
 
 from __future__ import annotations
 
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Protocol
 
 import httpx
@@ -49,6 +50,68 @@ JUDGMENT_PROPERTIES = [
     "source",
     "source_id",
 ]
+# The detail view, full text included. Only names present in the deployed
+# schema: an unknown property fails the whole gRPC call.
+DETAIL_PROPERTIES = [
+    *JUDGMENT_PROPERTIES,
+    "court_type",
+    "department_name",
+    "judgment_type",
+    "full_text",
+    "keywords",
+    "judges",
+    "presiding_judge",
+    "legal_bases",
+    "references",
+    "source_url",
+    "language",
+]
+
+
+@dataclass(frozen=True)
+class ChunkFilters:
+    """Filters served by the denormalized fields on ``JudgmentChunks``.
+
+    ``source`` is not among them (it lives on ``Judgments`` only), so it is not
+    offered: filtering it would need a join per chunk.
+    """
+
+    court_type: list[str] = field(default_factory=list)
+    date_from: date | None = None
+    date_to: date | None = None
+
+    def __bool__(self) -> bool:
+        return bool(self.court_type or self.date_from or self.date_to)
+
+
+def _utc_midnight(day: date) -> datetime:
+    return datetime(day.year, day.month, day.day, tzinfo=UTC)
+
+
+def build_chunk_filter(filters: ChunkFilters | None) -> Any:
+    """Weaviate filter for ``filters``, or ``None`` when nothing is set.
+
+    Both ingest paths store ``date_issued`` as UTC midnight of the (Polish)
+    calendar day, so whole-day bounds are ``[from 00:00Z, to + 1 day 00:00Z)``.
+    """
+    if not filters:
+        return None
+    parts = []
+    if filters.court_type:
+        parts.append(Filter.by_property("court_type").contains_any(filters.court_type))
+    if filters.date_from:
+        parts.append(
+            Filter.by_property("date_issued").greater_or_equal(
+                _utc_midnight(filters.date_from)
+            )
+        )
+    if filters.date_to:
+        parts.append(
+            Filter.by_property("date_issued").less_than(
+                _utc_midnight(filters.date_to + timedelta(days=1))
+            )
+        )
+    return parts[0] if len(parts) == 1 else Filter.all_of(parts)
 
 
 @dataclass(frozen=True)
@@ -170,7 +233,12 @@ class WeaviateV2Engine:
                 logger.debug("Closing Weaviate v2 client failed: {}", exc)
 
     def _search_chunks(
-        self, client: Any, query: str, vector: Sequence[float], alpha: float
+        self,
+        client: Any,
+        query: str,
+        vector: Sequence[float],
+        alpha: float,
+        filters: ChunkFilters | None = None,
     ) -> list[ChunkHit]:
         response = client.collections.use(CHUNKS_COLLECTION).query.hybrid(
             query=query,
@@ -180,6 +248,7 @@ class WeaviateV2Engine:
             target_vector=TARGET_VECTOR,
             fusion_type=HybridFusion.RELATIVE_SCORE,
             limit=CHUNK_LIMIT,
+            filters=build_chunk_filter(filters),
             return_properties=["judgment_id", "chunk_idx", "chunk_text"],
             return_metadata=MetadataQuery(score=True),
         )
@@ -210,14 +279,30 @@ class WeaviateV2Engine:
         }
 
     def search(
-        self, query: str, limit: int, alpha: float
+        self,
+        query: str,
+        limit: int,
+        alpha: float,
+        *,
+        filters: ChunkFilters | None = None,
     ) -> list[tuple[JudgmentHit, dict[str, Any]]]:
         """Top ``limit`` judgments with their Weaviate metadata (empty dict if missing)."""
         vector = self._embedder.embed_query(query)
         client = self._get_client()
-        hits = maxp(self._search_chunks(client, query, vector, alpha), limit)
+        hits = maxp(self._search_chunks(client, query, vector, alpha, filters), limit)
         meta = self._fetch_judgments(client, [h.judgment_id for h in hits])
         return [(hit, meta.get(hit.judgment_id, {})) for hit in hits]
+
+    def get_judgment(self, judgment_id: str) -> dict[str, Any] | None:
+        """One judgment with its full text, or ``None`` when it is not in the corpus."""
+        obj = (
+            self._get_client()
+            .collections.use(JUDGMENTS_COLLECTION)
+            .query.fetch_object_by_id(
+                generate_uuid5(judgment_id), return_properties=DETAIL_PROPERTIES
+            )
+        )
+        return None if obj is None else dict(obj.properties)
 
     def close(self) -> None:
         self.reset()

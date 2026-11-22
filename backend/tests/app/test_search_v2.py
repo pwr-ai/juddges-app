@@ -8,19 +8,24 @@ override, so no test touches the network.
 from __future__ import annotations
 
 import json
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from typing import Any
 
 import httpx
 import pytest
+from weaviate.util import generate_uuid5
 
 from app.search_v2 import api as search_v2_api
 from app.search_v2.config import load_settings
 from app.search_v2.engine import (
+    DETAIL_PROPERTIES,
     QUERY_PREFIX,
+    ChunkFilters,
     ChunkHit,
     TeiQueryEmbedder,
     WeaviateV2Engine,
+    build_chunk_filter,
     maxp,
 )
 from app.search_v2.supabase_ids import candidate_source_ids, map_supabase_ids
@@ -168,6 +173,13 @@ class _FakeQuery:
             objects=[SimpleNamespace(properties=dict(j)) for j in self._judgments]
         )
 
+    def fetch_object_by_id(self, uuid, **kwargs):
+        self.fetch_calls.append({"uuid": uuid, **kwargs})
+        for j in self._judgments:
+            if generate_uuid5(j["judgment_id"]) == uuid:
+                return SimpleNamespace(properties=dict(j))
+        return None
+
 
 class _FakeWeaviate:
     def __init__(self, chunks: list[dict], judgments: list[dict]):
@@ -221,6 +233,88 @@ def test_engine_search_runs_hybrid_with_raw_text_and_prefixed_vector():
     assert results[0][1]["document_number"] == "I C 1/20"
     # Only the ranked judgments are fetched, and never the full text.
     assert "full_text" not in fake.judgments.fetch_calls[0]["return_properties"]
+    assert call["filters"] is None
+
+
+def test_engine_search_passes_chunk_filters_to_hybrid():
+    fake = _FakeWeaviate(chunks=[], judgments=[])
+    engine = WeaviateV2Engine(
+        _SETTINGS, embedder=_FakeEmbedder(), client_factory=lambda s: fake
+    )
+    engine.search(
+        "x", limit=5, alpha=0.25, filters=ChunkFilters(court_type=["ordinary_court"])
+    )
+    assert fake.chunks.hybrid_calls[0]["filters"] is not None
+
+
+def _filter_leaves(flt) -> list[tuple[str, str, Any]]:
+    """(property, operator, value) of every leaf in a weaviate v4 filter tree."""
+    filters = getattr(flt, "filters", None)
+    if isinstance(filters, list):
+        return [leaf for child in filters for leaf in _filter_leaves(child)]
+    return [(flt.target, flt.operator.value, flt.value)]
+
+
+def test_build_chunk_filter_is_none_without_filters():
+    assert build_chunk_filter(None) is None
+    assert build_chunk_filter(ChunkFilters()) is None
+
+
+def test_build_chunk_filter_maps_court_type_and_whole_day_date_range():
+    flt = build_chunk_filter(
+        ChunkFilters(
+            court_type=["administrative_court"],
+            date_from=date(2013, 5, 14),
+            date_to=date(2013, 5, 14),
+        )
+    )
+    leaves = sorted(_filter_leaves(flt), key=lambda leaf: leaf[1])
+    assert leaves == sorted(
+        [
+            ("court_type", "ContainsAny", ["administrative_court"]),
+            (
+                "date_issued",
+                "GreaterThanEqual",
+                datetime(2013, 5, 14, tzinfo=UTC),
+            ),
+            (
+                "date_issued",
+                "LessThan",
+                datetime(2013, 5, 15, tzinfo=UTC),
+            ),
+        ],
+        key=lambda leaf: leaf[1],
+    )
+
+
+def test_build_chunk_filter_single_bound():
+    leaves = _filter_leaves(build_chunk_filter(ChunkFilters(date_to=date(2020, 1, 31))))
+    assert leaves == [
+        (
+            "date_issued",
+            "LessThan",
+            datetime(2020, 2, 1, tzinfo=UTC),
+        )
+    ]
+
+
+def test_engine_get_judgment_fetches_by_deterministic_uuid_with_full_text():
+    fake = _FakeWeaviate(
+        chunks=[],
+        judgments=[{"judgment_id": "j1", "full_text": "pełny tekst"}],
+    )
+    engine = WeaviateV2Engine(
+        _SETTINGS, embedder=_FakeEmbedder(), client_factory=lambda s: fake
+    )
+    assert engine.get_judgment("j1") == {
+        "judgment_id": "j1",
+        "full_text": "pełny tekst",
+    }
+    call = fake.judgments.fetch_calls[0]
+    assert call["uuid"] == generate_uuid5("j1")
+    assert call["return_properties"] == DETAIL_PROPERTIES
+    assert "full_text" in DETAIL_PROPERTIES
+    assert engine.get_judgment("missing") is None
 
 
 # ---------------------------------------------------------------------------
@@ -282,13 +376,21 @@ def test_map_supabase_ids_is_none_when_absent():
 
 
 class _StubEngine:
-    def __init__(self, results):
+    def __init__(self, results, judgments: dict[str, dict] | None = None):
         self.results = results
+        self.judgments = judgments or {}
         self.calls: list[tuple[str, int, float]] = []
+        self.filters: list[ChunkFilters | None] = []
+        self.detail_calls: list[str] = []
 
-    def search(self, query: str, limit: int, alpha: float):
+    def search(self, query: str, limit: int, alpha: float, *, filters=None):
         self.calls.append((query, limit, alpha))
+        self.filters.append(filters)
         return self.results
+
+    def get_judgment(self, judgment_id: str):
+        self.detail_calls.append(judgment_id)
+        return self.judgments.get(judgment_id)
 
     def reset(self):
         pass
@@ -305,7 +407,22 @@ def stub_engine():
         "thesis": "t" * 2000,
         "source_id": "j1",
     }
-    engine = _StubEngine([(hit, props)])
+    detail = {
+        **props,
+        "court_type": "ordinary_court",
+        "department_name": "I Wydział Cywilny",
+        "judgment_type": "SENTENCE",
+        "full_text": "Uzasadnienie " * 10_000,
+        "keywords": ["zachowek"],
+        "judges": ["Jan Kowalski"],
+        "presiding_judge": "Jan Kowalski",
+        "legal_bases": ["art. 991 kc"],
+        "references": ["Ustawa z dnia 23 kwietnia 1964 r. - Kodeks cywilny"],
+        "source": "pl-court",
+        "source_url": "https://orzeczenia.example/j1",
+        "language": "pl",
+    }
+    engine = _StubEngine([(hit, props)], judgments={"j1": detail})
     app.dependency_overrides[search_v2_api.get_engine] = lambda: engine
 
     async def _lookup(pairs):
@@ -393,7 +510,7 @@ async def test_search_v2_maps_backend_failures_to_503_and_reconnects(
 ):
     resets: list[bool] = []
 
-    def _fail(query, limit, alpha):
+    def _fail(query, limit, alpha, *, filters=None):
         raise httpx.ConnectError("weaviate down")
 
     stub_engine.search = _fail
@@ -401,4 +518,145 @@ async def test_search_v2_maps_backend_failures_to_503_and_reconnects(
     response = await authenticated_client.post("/search/v2", json={"query": "x"})
     assert response.status_code == 503
     assert response.json()["detail"] == "search v2 unavailable"
+    assert resets == [True]
+
+
+async def test_search_v2_forwards_court_type_and_date_filters(
+    authenticated_client, stub_engine
+):
+    response = await authenticated_client.post(
+        "/search/v2",
+        json={
+            "query": "x",
+            "court_type": ["administrative_court"],
+            "date_from": "2013-01-01",
+            "date_to": "2013-12-31",
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert stub_engine.filters == [
+        ChunkFilters(
+            court_type=["administrative_court"],
+            date_from=date(2013, 1, 1),
+            date_to=date(2013, 12, 31),
+        )
+    ]
+
+
+async def test_search_v2_without_filters_passes_none(authenticated_client, stub_engine):
+    await authenticated_client.post("/search/v2", json={"query": "x"})
+    assert stub_engine.filters == [None]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"date_from": "2020-02-01", "date_to": "2020-01-01"},
+        {"court_type": ["x" * 65]},
+        {"court_type": ["a"] * 11},
+        {"source": "nsa"},
+    ],
+)
+async def test_search_v2_rejects_bad_filters(authenticated_client, stub_engine, extra):
+    response = await authenticated_client.post(
+        "/search/v2", json={"query": "x", **extra}
+    )
+    assert response.status_code == 422
+    assert stub_engine.calls == []
+
+
+# ---------------------------------------------------------------------------
+# GET /search/v2/judgments/{judgment_id}
+# ---------------------------------------------------------------------------
+
+
+async def test_get_judgment_requires_a_signed_in_user(
+    client, valid_api_headers, stub_engine
+):
+    response = await client.get("/search/v2/judgments/j1", headers=valid_api_headers)
+    assert response.status_code in (401, 403)
+    assert stub_engine.detail_calls == []
+
+
+async def test_get_judgment_returns_metadata_and_whole_full_text(
+    authenticated_client, stub_engine
+):
+    response = await authenticated_client.get("/search/v2/judgments/j1")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert stub_engine.detail_calls == ["j1"]
+    assert body["judgment_id"] == "j1"
+    assert body["signature"] == "I C 1/20"
+    assert body["court_name"] == "Sąd Okręgowy"
+    assert body["court_type"] == "ordinary_court"
+    assert body["department_name"] == "I Wydział Cywilny"
+    assert body["decision_date"] == "2020-01-02"
+    assert body["thesis"] == "t" * 2000  # never truncated on the detail view
+    assert body["full_text"] == "Uzasadnienie " * 10_000
+    assert body["full_text_truncated"] is False
+    assert body["keywords"] == ["zachowek"]
+    assert body["judges"] == ["Jan Kowalski"]
+    assert body["legal_bases"] == ["art. 991 kc"]
+    assert body["source"] == "pl-court"
+    assert body["source_url"] == "https://orzeczenia.example/j1"
+    assert body["supabase_id"] == "11111111-1111-4111-a111-111111111111"
+
+
+async def test_get_judgment_caps_oversized_full_text(authenticated_client, stub_engine):
+    cap = search_v2_api.FULL_TEXT_MAX_CHARS
+    stub_engine.judgments["j1"]["full_text"] = "x" * (cap + 10)
+    body = (await authenticated_client.get("/search/v2/judgments/j1")).json()
+    assert len(body["full_text"]) == cap
+    assert body["full_text_truncated"] is True
+
+
+async def test_get_judgment_is_gzipped(authenticated_client, stub_engine):
+    response = await authenticated_client.get(
+        "/search/v2/judgments/j1", headers={"Accept-Encoding": "gzip"}
+    )
+    assert response.headers.get("content-encoding") == "gzip"
+
+
+async def test_get_judgment_accepts_nsa_path_ids(authenticated_client, stub_engine):
+    nsa_id = "/doc/39FBE5DB09"
+    stub_engine.judgments[nsa_id] = {"judgment_id": nsa_id, "source": "nsa"}
+    response = await authenticated_client.get(
+        "/search/v2/judgments/%2Fdoc%2F39FBE5DB09"
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["judgment_id"] == nsa_id
+    assert stub_engine.detail_calls == [nsa_id]
+
+
+async def test_get_judgment_404_when_missing(authenticated_client, stub_engine):
+    response = await authenticated_client.get("/search/v2/judgments/nope")
+    assert response.status_code == 404
+
+
+async def test_get_judgment_rejects_malformed_ids(authenticated_client, stub_engine):
+    response = await authenticated_client.get("/search/v2/judgments/a%20b")
+    assert response.status_code == 422
+    assert stub_engine.detail_calls == []
+
+
+async def test_get_judgment_503_when_not_configured(authenticated_client, monkeypatch):
+    for name in ("WEAVIATE_V2_HTTP_HOST", "WEAVIATE_V2_TEI_URL"):
+        monkeypatch.delenv(name, raising=False)
+    response = await authenticated_client.get("/search/v2/judgments/j1")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "search v2 not configured"
+
+
+async def test_get_judgment_maps_backend_failures_to_503(
+    authenticated_client, stub_engine
+):
+    resets: list[bool] = []
+
+    def _fail(judgment_id):
+        raise httpx.ConnectError("weaviate down")
+
+    stub_engine.get_judgment = _fail
+    stub_engine.reset = lambda: resets.append(True)
+    response = await authenticated_client.get("/search/v2/judgments/j1")
+    assert response.status_code == 503
     assert resets == [True]

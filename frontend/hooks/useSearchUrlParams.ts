@@ -8,6 +8,8 @@ interface UseSearchUrlParamsOptions {
   setUrlParamsProcessed: (processed: boolean) => void;
   hasPerformedSearch: boolean;
   isSearching: boolean;
+  /** Active search engine, kept in `?engine=` (owned by the search page). */
+  engine?: string;
 }
 
 /**
@@ -20,6 +22,7 @@ export function useSearchUrlParams({
   setUrlParamsProcessed,
   hasPerformedSearch,
   isSearching,
+  engine,
 }: UseSearchUrlParamsOptions) {
   const router = useRouter();
   const pathname = usePathname();
@@ -73,6 +76,10 @@ export function useSearchUrlParams({
         }
 
         const params = new URLSearchParams();
+
+        if (engine) {
+          params.set('engine', engine);
+        }
 
         // Add query if present
         if (query.trim()) {
@@ -182,6 +189,7 @@ export function useSearchUrlParams({
       currentPage,
       pageSize,
       filters,
+      engine,
       pathname,
       router,
     ]

@@ -296,7 +296,7 @@ test.describe('Core journey: search → save to collection → export', () => {
       const { getCreateBody, getAddedDocumentId } = await mockBackend(page);
 
       // ── Step 1: Search ───────────────────────────────────────────────────
-      await page.goto('/search');
+      await page.goto('/search?engine=curated');
       await page.waitForLoadState('domcontentloaded');
 
       // The search input has no accessible name of its own; target it by its

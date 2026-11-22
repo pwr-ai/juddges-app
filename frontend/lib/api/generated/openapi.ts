@@ -258,7 +258,8 @@ export interface paths {
          * @description List all platform users with pagination.
          *
          *     Uses the Supabase Auth Admin API, which bypasses RLS.
-         *     Returns user id, email, created_at, last_sign_in_at, and app_metadata.
+         *     Returns user id, email, created_at, last_sign_in_at, email_confirmed_at
+         *     (None while the address is unconfirmed), and app_metadata.
          */
         get: operations["list_users_api_admin_users_get"];
         put?: never;
@@ -5197,8 +5198,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Test search over the Weaviate v2 corpus (hybrid chunks + MaxP) */
+        /** Full-corpus search over the Weaviate v2 corpus (hybrid chunks + MaxP) */
         post: operations["search_v2_search_v2_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/v2/judgments/{judgment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One judgment of the Weaviate v2 corpus, full text included */
+        get: operations["get_judgment_v2_search_v2_judgments__judgment_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11161,6 +11179,60 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** SearchV2Judgment */
+        SearchV2Judgment: {
+            /** Court Name */
+            court_name?: string | null;
+            /** Court Type */
+            court_type?: string | null;
+            /** Decision Date */
+            decision_date?: string | null;
+            /** Department Name */
+            department_name?: string | null;
+            /**
+             * Engine
+             * @default weaviate-v2
+             */
+            engine: string;
+            /** Full Text */
+            full_text?: string | null;
+            /**
+             * Full Text Truncated
+             * @default false
+             */
+            full_text_truncated: boolean;
+            /** Judges */
+            judges?: string[];
+            /** Judgment Id */
+            judgment_id: string;
+            /** Judgment Type */
+            judgment_type?: string | null;
+            /** Keywords */
+            keywords?: string[];
+            /** Language */
+            language?: string | null;
+            /** Legal Bases */
+            legal_bases?: string[];
+            /** Presiding Judge */
+            presiding_judge?: string | null;
+            /** References */
+            references?: string[];
+            /** Signature */
+            signature?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Source Id */
+            source_id?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Supabase Id
+             * @description judgments.id when the judgment is also in the app database
+             */
+            supabase_id?: string | null;
+            /** Thesis */
+            thesis?: string | null;
+        };
         /** SearchV2Request */
         SearchV2Request: {
             /**
@@ -11169,6 +11241,21 @@ export interface components {
              * @default 0.25
              */
             alpha: number;
+            /**
+             * Court Type
+             * @description Exact court_type values, e.g. ordinary_court, administrative_court
+             */
+            court_type?: string[];
+            /**
+             * Date From
+             * @description First decision day (inclusive)
+             */
+            date_from?: string | null;
+            /**
+             * Date To
+             * @description Last decision day (inclusive)
+             */
+            date_to?: string | null;
             /**
              * Limit
              * @default 10
@@ -12186,6 +12273,8 @@ export interface components {
             created_at?: string | null;
             /** Email */
             email?: string | null;
+            /** Email Confirmed At */
+            email_confirmed_at?: string | null;
             /** Id */
             id: string;
             /** Last Sign In At */
@@ -19935,6 +20024,45 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SearchV2Response"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_judgment_v2_search_v2_judgments__judgment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Weaviate judgment_id */
+                judgment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchV2Judgment"];
+                };
+            };
+            /** @description Not in the v2 corpus */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

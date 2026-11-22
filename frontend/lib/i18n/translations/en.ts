@@ -226,6 +226,24 @@ export const en: Translations = {
     caseLaw: 'Case law',
     regulations: 'Regulations',
     taxInterpretations: 'Tax interpretations',
+
+    // Search engines
+    engineSwitchLabel: 'Search mode',
+    engineFullLabel: 'Polish native · full corpus (~2.7M judgments)',
+    engineFullDescription: 'Every Polish common and administrative court judgment, without extractions.',
+    engineFullUnavailable: 'Available after signing in.',
+    engineCuratedLabel: 'Comparative · PL + EN across jurisdictions (with extractions)',
+    engineCuratedDescription: 'Selected Polish and UK judgments (~12k) with extractions, filters and collections.',
+    engineFullResults: 'Results from the full Polish corpus (Weaviate)',
+    engineCuratedResults: 'Results from the comparative set (Supabase)',
+    engineAutoCurated: 'Comparative mode was selected because this search uses: {{reasons}}. The Polish native corpus holds Polish judgments only, without extractions.',
+    engineSuggestCurated: 'The Polish native corpus does not support: {{reasons}}. These settings only work in comparative mode.',
+    engineSwitchToFull: 'Switch to Polish native',
+    engineSwitchToCurated: 'Switch to comparative',
+    engineReasonEnglish: 'UK/EN judgments',
+    engineReasonJurisdiction: 'UK jurisdiction',
+    engineReasonExtractions: 'extracted-field filters',
+    engineReasonMetadata: 'metadata filters',
   },
 
   documents: {

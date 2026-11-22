@@ -48,6 +48,7 @@ class UserListItem(BaseModel):
     email: str | None = None
     created_at: str | None = None
     last_sign_in_at: str | None = None
+    email_confirmed_at: str | None = None
     app_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -340,7 +341,8 @@ async def list_users(
     List all platform users with pagination.
 
     Uses the Supabase Auth Admin API, which bypasses RLS.
-    Returns user id, email, created_at, last_sign_in_at, and app_metadata.
+    Returns user id, email, created_at, last_sign_in_at, email_confirmed_at
+    (None while the address is unconfirmed), and app_metadata.
     """
     client = get_admin_supabase_client()
 
@@ -363,12 +365,23 @@ async def list_users(
             else:
                 u_dict = dict(u)
 
+            confirmed_at = u_dict.get("email_confirmed_at") or u_dict.get(
+                "confirmed_at"
+            )
+
             users.append(
                 UserListItem(
                     id=str(u_dict.get("id", "")),
                     email=u_dict.get("email"),
                     created_at=str(u_dict.get("created_at", "")) or None,
                     last_sign_in_at=str(u_dict.get("last_sign_in_at", "")) or None,
+                    email_confirmed_at=(
+                        confirmed_at.isoformat()
+                        if isinstance(confirmed_at, datetime)
+                        else str(confirmed_at)
+                        if confirmed_at
+                        else None
+                    ),
                     app_metadata=u_dict.get("app_metadata") or {},
                 )
             )
@@ -550,31 +563,20 @@ async def get_document_stats(
     except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch doc_type_stats: {e}")
 
-    # Counts by country (return as dict)
+    # Country / language breakdown: aggregated in SQL over the whole table.
+    # Selecting rows through PostgREST would silently cap at 1000 rows.
     by_country: dict[str, int] = {}
-    try:
-        # `judgments.jurisdiction` (PL/UK) is the country dimension.
-        country_response = (
-            client.table("judgments").select("country:jurisdiction").execute()
-        )
-        for row in country_response.data or []:
-            country = row.get("country") or "unknown"
-            by_country[country] = by_country.get(country, 0) + 1
-    except Exception as e:
-        logger.warning(f"Admin doc stats: could not fetch country breakdown: {e}")
-
-    # Counts by language (return as dict)
     by_language: dict[str, int] = {}
     try:
-        # `judgments` has no scalar language column; it lives in metadata JSONB.
-        lang_response = (
-            client.table("judgments").select("language:metadata->>language").execute()
-        )
-        for row in lang_response.data or []:
-            lang = row.get("language") or "unknown"
-            by_language[lang] = by_language.get(lang, 0) + 1
+        # `judgments.jurisdiction` (PL/UK) is the country dimension; language
+        # lives in metadata JSONB (no scalar column).
+        breakdown_response = client.rpc("get_admin_document_breakdown", {}).execute()
+        for row in breakdown_response.data or []:
+            key = row.get("key") or "unknown"
+            target = by_country if row.get("dimension") == "country" else by_language
+            target[key] = target.get(key, 0) + int(row.get("doc_count") or 0)
     except Exception as e:
-        logger.warning(f"Admin doc stats: could not fetch language breakdown: {e}")
+        logger.warning(f"Admin doc stats: could not fetch country/language: {e}")
 
     # Recent additions
     added_this_week = 0

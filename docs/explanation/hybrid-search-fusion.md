@@ -1,5 +1,8 @@
 # Hybrid search fusion (keyword + semantic)
 
+This is the **curated** search engine (`?engine=curated`); the default
+full-corpus engine is Weaviate v2, see [Search engines](search-engines.md).
+
 How `GET /api/search/documents?semantic_ratio=…` blends Meilisearch keyword
 ranking with BGE-M3 vector ranking, and why the blend is done in the backend
 rather than by Meilisearch. Code: `reciprocal_rank_fusion` and

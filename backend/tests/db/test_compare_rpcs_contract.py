@@ -202,3 +202,40 @@ def test_unknown_field_raises(conn, corpus):
     token, _ = corpus
     with pytest.raises(Exception, match="Unknown extracted field"):
         _facets(conn, {"keywords": [token]}, "no_such_field")
+
+
+def test_array_field_counts_documents_not_elements(conn):
+    """#886: a document repeating a value inside one array counts ONCE for it.
+
+    Counting unnested elements pushed share = count / covered past 100%.
+    """
+    token = f"cmp-{uuid.uuid4()}"
+    ids = [
+        _seed(
+            conn,
+            token,
+            "PL",
+            "2020-01-01",
+            appeal_outcome=["outcome_other", "outcome_other", "outcome_other"],
+        ),
+        _seed(
+            conn,
+            token,
+            "PL",
+            "2020-02-01",
+            appeal_outcome=["outcome_other", "outcome_conviction_quashed"],
+        ),
+    ]
+    try:
+        rows = _facets(conn, {"keywords": [token]}, "appeal_outcome")
+        by = {(r[0], r[1]): r for r in rows}
+        # 2 documents carry outcome_other (not 4 elements); covered = 2
+        assert by[("PL", "outcome_other")][2:5] == (2, 2, 2)
+        assert by[("PL", "outcome_conviction_quashed")][2:5] == (1, 2, 2)
+        assert all(r[2] <= r[4] for r in rows if r[2] is not None)
+    finally:
+        _exec(
+            conn,
+            "DELETE FROM public.judgments WHERE id = ANY(%s::uuid[])",
+            (ids,),
+        )

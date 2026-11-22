@@ -85,3 +85,42 @@ The profile/RPC privilege fix is independent of the private-schema move and
 should remain enabled during recovery. Review existing administrator assignments
 and retained audit logs separately: closing a permission gap cannot establish
 whether earlier access was legitimate.
+
+## Frontend environment boundary
+
+The production frontend has an explicit `environment` allowlist in
+`docker-compose.yml`. Do not add `env_file: .env` to this service: it gives the
+Next.js process database, Supabase service-role, AI-provider and host release
+credentials that it does not need. Compose still reads the host `.env` for
+interpolation; backend/worker environment files are independent of this list.
+
+The frontend retains its public Supabase configuration, internal backend URL,
+server-only `BACKEND_API_KEY`, trusted-proxy setting and authentication redirect
+hosts. Optional contact-mail configuration includes `RESEND_API_KEY` because
+that mail is sent by a Next.js server route. Runtime Sentry configuration, log
+level, timeouts and changelog location are explicitly listed as well.
+`SENTRY_AUTH_TOKEN` belongs to a build process only, not the runtime container.
+
+The Supabase URL/anon key accept the existing non-prefixed aliases but are
+passed to the container under their canonical `NEXT_PUBLIC_*` names. The
+entrypoint refuses to start if either resolved value is empty. Compose refuses
+an empty backend API key, preventing the entrypoint's legacy dummy-key fallback.
+
+Check the boundary without printing secrets:
+
+```sh
+docker compose -f docker-compose.yml config --quiet
+cd backend
+uv run pytest tests/app/test_frontend_compose_environment.py -q
+```
+
+These tests render the real frontend environment expressions with synthetic
+host secrets, check that those secrets are excluded, preserve authentication,
+contact and proxy settings, and verify missing credentials fail closed.
+
+Recreate the frontend to apply environment changes; restarting an existing
+container does not replace its environment. Use the deployed image tag when
+recreating without a new release. After deployment, check the actual container
+environment by variable name only and verify public pages, authentication
+configuration, backend proxy requests and the contact-mail configuration.
+Do not submit a real contact form as a smoke test: that sends mail.

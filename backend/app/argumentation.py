@@ -8,7 +8,7 @@ find potential counter-arguments.
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
@@ -277,6 +277,7 @@ def _format_document_for_analysis(doc: dict[str, Any]) -> str:
 @limiter.limit(ARGUMENTATION_RATE_LIMIT)
 async def analyze_arguments(
     request: Request,
+    response: Response,
     argumentation_request: ArgumentationRequest,
 ) -> ArgumentationResponse:
     """Analyze the argumentation structure of legal documents."""

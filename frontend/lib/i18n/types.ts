@@ -280,6 +280,24 @@ export interface SearchTranslations {
   caseLaw: string;
   regulations: string;
   taxInterpretations: string;
+
+  // Search engines (#867): `?engine=full` and `?engine=curated`
+  engineSwitchLabel: string;
+  engineFullLabel: string;
+  engineFullDescription: string;
+  engineFullUnavailable: string;
+  engineCuratedLabel: string;
+  engineCuratedDescription: string;
+  engineFullResults: string;
+  engineCuratedResults: string;
+  engineAutoCurated: string;
+  engineSuggestCurated: string;
+  engineSwitchToFull: string;
+  engineSwitchToCurated: string;
+  engineReasonEnglish: string;
+  engineReasonJurisdiction: string;
+  engineReasonExtractions: string;
+  engineReasonMetadata: string;
 }
 
 /**

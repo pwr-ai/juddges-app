@@ -202,6 +202,22 @@ export function useLanguage(): LanguageContextValue {
 }
 
 /**
+ * Translator of the nearest LanguageProvider, or of the default locale when
+ * there is none. For shared components that also render outside the provider
+ * (tests, isolated surfaces) and must not throw there.
+ */
+export function useOptionalTranslation(): {
+  t: (key: TranslationKey, values?: InterpolationValues) => string;
+  locale: LocaleCode;
+} {
+  const context = useContext(LanguageContext);
+  const fallback = useMemo(() => createTranslator(DEFAULT_LOCALE), []);
+  return context
+    ? { t: context.t, locale: context.locale }
+    : { t: fallback.t, locale: DEFAULT_LOCALE };
+}
+
+/**
  * Hook to get the translation function only
  * Useful for components that only need translations
  */
