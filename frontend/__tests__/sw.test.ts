@@ -194,6 +194,37 @@ describe("service worker (sw.js)", () => {
       expect(body.error).toBe("offline");
     });
 
+    it("never replaces a slow-but-alive response with the offline 503 (issue #877)", async () => {
+      jest.useFakeTimers();
+      try {
+        const fakeSw = loadServiceWorker();
+        // Resolves only after 6 s, well past the old 2.5 s navigation timeout.
+        fetchMock.mockImplementationOnce(
+          (_req, init?: RequestInit) =>
+            new Promise((resolve, reject) => {
+              init?.signal?.addEventListener("abort", () =>
+                reject(new DOMException("Aborted", "AbortError"))
+              );
+              setTimeout(
+                () => resolve(new Response('{"status":"ok"}', { status: 200 })),
+                6000
+              );
+            })
+        );
+
+        const event = makeFetchEvent("https://example.test/api/health/status");
+        fakeSw.fetch(event);
+
+        await jest.advanceTimersByTimeAsync(6000);
+
+        const response = (await event.respondWith.mock.calls[0][0]) as Response;
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({ status: "ok" });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it("does not cache /api/* even when an authenticated cookie is absent", async () => {
       const event = makeFetchEvent("https://example.test/api/judgments");
       sw.fetch(event);

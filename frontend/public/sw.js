@@ -6,7 +6,9 @@
 // v4 evicts those entries. Bump again whenever cache semantics change.
 // v4 -> v5: /runtime-env.js is excluded from the static cache (it carries the
 // running container's configuration and must always come from the network).
-const CACHE_VERSION = "v5";
+// v5 -> v6: /api/* no longer has a client-side timeout. The 2.5 s cap turned
+// slow-but-healthy responses into a synthetic offline 503 (issue #877).
+const CACHE_VERSION = "v6";
 
 // Runtime configuration script served by app/runtime-env.js/route.ts. It ends
 // in ".js" but is not a static asset: never cache it, never serve it offline.
@@ -58,7 +60,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Navigation/API network timeout. On flaky networks the browser can hang for
+// Navigation network timeout. (NOT applied to /api/*: see issue #877.) On flaky networks the browser can hang for
 // 5–10 s waiting for a navigation response before the connection finally errors,
 // leaving the user staring at a blank tab (issue #178). We race the fetch against
 // an AbortController so a stalled request fails fast and falls through to the
@@ -68,7 +70,7 @@ const NETWORK_TIMEOUT_MS = 2500;
 
 // Fetch with a hard timeout. Resolves like `fetch`; rejects (AbortError) once
 // NETWORK_TIMEOUT_MS elapses so callers can fall through to their offline path.
-// NOTE: this does NOT add cache fallback for navigations/API — those responses
+// NOTE: this does NOT add cache fallback for navigations — those responses
 // are deliberately never cached (cross-user replay risk, issue #210).
 function fetchWithTimeout(request, timeoutMs = NETWORK_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -174,10 +176,15 @@ self.addEventListener("fetch", (event) => {
   // one user's authenticated response to the next (issue #210). Offline
   // replay isn't a goal for this app (see commit 1d05d48), so caching
   // would only add risk for no benefit. Fall back to an offline JSON
-  // response if the network is genuinely unavailable.
+  // response ONLY when the fetch actually fails. There is deliberately no
+  // timeout here: API calls (health status, admin system, first load of a
+  // large reasoning line) can legitimately take longer than a few seconds, and
+  // a synthetic 503 for a slow-but-alive request is a false "offline" (#877).
+  // Streaming endpoints (chat SSE) are untouched by this: fetch() resolves on
+  // headers and the body stream is passed through as is.
   if (isApiRequest(url)) {
     event.respondWith(
-      fetchWithTimeout(event.request).catch(() => createOfflineApiResponse())
+      fetch(event.request).catch(() => createOfflineApiResponse())
     );
     return;
   }
