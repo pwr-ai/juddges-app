@@ -65,7 +65,7 @@ export class SearchPage {
    * Navigate to search page
    */
   async goto() {
-    await this.page.goto('/search');
+    await this.page.goto('/search?engine=curated');
     await this.page.waitForLoadState('domcontentloaded');
   }
 

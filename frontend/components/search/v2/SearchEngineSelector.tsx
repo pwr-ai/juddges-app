@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 
+import { useOptionalTranslation } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/lib/i18n/types";
 import { cn } from "@/lib/utils";
 import type { SearchEngine } from "@/lib/search/engine";
 
@@ -9,31 +11,35 @@ export type { SearchEngine } from "@/lib/search/engine";
 
 interface EngineOption {
   value: SearchEngine;
-  label: string;
-  size: string;
-  description: string;
+  labelKey: TranslationKey;
+  descriptionKey: TranslationKey;
 }
 
+/** Labels and one-line descriptions live in the i18n catalogs (`search.engine*`). */
 export const ENGINE_OPTIONS: readonly EngineOption[] = [
   {
     value: "full",
-    label: "Pełna baza",
-    size: "~2,7 mln orzeczeń PL",
-    description: "Wszystkie orzeczenia sądów powszechnych i administracyjnych, bez ekstrakcji.",
+    labelKey: "search.engineFullLabel",
+    descriptionKey: "search.engineFullDescription",
   },
   {
     value: "curated",
-    label: "Baza kuratorowana",
-    size: "~12 tys. orzeczeń PL + EN",
-    description: "Wybrane orzeczenia polskie i brytyjskie z ekstrakcjami, filtrami i kolekcjami.",
+    labelKey: "search.engineCuratedLabel",
+    descriptionKey: "search.engineCuratedDescription",
   },
 ];
 
 /** Results-header label of the active engine. */
-export const ENGINE_RESULTS_LABEL: Record<SearchEngine, string> = {
-  full: "Wyniki z pełnej bazy (Weaviate)",
-  curated: "Wyniki z bazy kuratorowanej (Supabase)",
+export const ENGINE_RESULTS_KEY: Record<SearchEngine, TranslationKey> = {
+  full: "search.engineFullResults",
+  curated: "search.engineCuratedResults",
 };
+
+/** "Mode · corpus" split, so the mode name and the corpus get their own type. */
+function splitLabel(label: string): [string, string | null] {
+  const at = label.indexOf(" · ");
+  return at < 0 ? [label, null] : [label.slice(0, at), label.slice(at + 3)];
+}
 
 /**
  * Top-level switch between the full corpus and the curated set, shown right
@@ -44,20 +50,21 @@ export function SearchEngineSelector({
   value,
   onChange,
   disabled,
-  fullUnavailableReason,
+  fullUnavailable,
   hint,
 }: {
   value: SearchEngine;
   onChange: (engine: SearchEngine) => void;
   disabled?: boolean;
   /** Set for guests: the full corpus needs a session. */
-  fullUnavailableReason?: string;
+  fullUnavailable?: boolean;
   /** Inline note next to the switch (why an engine was picked, or a suggestion). */
   hint?: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useOptionalTranslation();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const isDisabled = (option: EngineOption): boolean =>
-    !!disabled || (option.value === "full" && !!fullUnavailableReason);
+    !!disabled || (option.value === "full" && !!fullUnavailable);
 
   const move = (from: number, step: number): void => {
     for (let i = 1; i <= ENGINE_OPTIONS.length; i += 1) {
@@ -74,13 +81,15 @@ export function SearchEngineSelector({
     <div className="w-full space-y-2">
       <div
         role="radiogroup"
-        aria-label="Baza wyszukiwania"
+        aria-label={t("search.engineSwitchLabel")}
         className="grid w-full grid-cols-1 border border-[color:var(--rule-strong)] sm:grid-cols-2"
       >
         {ENGINE_OPTIONS.map((option, index) => {
           const selected = option.value === value;
           const optionDisabled = isDisabled(option);
-          const unavailable = option.value === "full" ? fullUnavailableReason : undefined;
+          const [mode, corpus] = splitLabel(t(option.labelKey));
+          const unavailable =
+            option.value === "full" && fullUnavailable ? t("search.engineFullUnavailable") : null;
           return (
             <button
               key={option.value}
@@ -115,15 +124,17 @@ export function SearchEngineSelector({
               )}
             >
               <span className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-serif text-lg leading-tight">{option.label}</span>
+                <span className="font-serif text-lg leading-tight">{mode}</span>
+                {corpus && (
                 <span
                   className={cn(
                     "font-mono text-[11px] uppercase tracking-[0.14em] tabular-nums",
                     selected ? "text-[color:var(--gold-soft)]" : "text-[color:var(--oxblood)]"
                   )}
                 >
-                  · {option.size}
+                  · {corpus}
                 </span>
+                )}
               </span>
               <span
                 className={cn(
@@ -131,7 +142,7 @@ export function SearchEngineSelector({
                   selected ? "text-[color:var(--parchment)]/80" : "text-[color:var(--ink-soft)]"
                 )}
               >
-                {unavailable ?? option.description}
+                {unavailable ?? t(option.descriptionKey)}
               </span>
             </button>
           );

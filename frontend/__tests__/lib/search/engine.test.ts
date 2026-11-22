@@ -44,12 +44,7 @@ describe('curatedOnlyReasons', () => {
         baseFilters: { appeal_outcome: { kind: 'tag_array', values: ['dismissed'] } },
         customMetadata: { court: ['x'] },
       })
-    ).toEqual([
-      'orzeczenia UK/EN',
-      'jurysdykcja UK',
-      'filtry pól ekstrakcji',
-      'filtry metadanych',
-    ]);
+    ).toEqual(['english', 'jurisdiction', 'extractions', 'metadata']);
   });
 
   it('ignores a PL-only jurisdiction and unset extraction filters', () => {
@@ -69,12 +64,12 @@ describe('resolveEngine', () => {
   });
 
   it('honours an explicit choice over curated-only reasons', () => {
-    expect(resolveEngine({ signedIn: true, explicit: 'full', reasons: ['x'] })).toBe('full');
+    expect(resolveEngine({ signedIn: true, explicit: 'full', reasons: ['english'] })).toBe('full');
     expect(resolveEngine({ signedIn: true, explicit: 'curated', reasons: [] })).toBe('curated');
   });
 
   it('falls back to curated when the state needs it', () => {
-    expect(resolveEngine({ signedIn: true, explicit: null, reasons: ['x'] })).toBe('curated');
+    expect(resolveEngine({ signedIn: true, explicit: null, reasons: ['extractions'] })).toBe('curated');
   });
 });
 
@@ -84,7 +79,7 @@ describe('curatedOnlyStateFromUrl', () => {
       new URLSearchParams('lang=uk&extracted={"a":["b"]}'),
       PLAIN
     );
-    expect(curatedOnlyReasons(state)).toEqual(['orzeczenia UK/EN', 'filtry pól ekstrakcji']);
+    expect(curatedOnlyReasons(state)).toEqual(['english', 'extractions']);
   });
 
   it('keeps the stored state when the URL has no such params', () => {

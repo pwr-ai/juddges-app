@@ -34,7 +34,7 @@ test.describe('Performance Tests', () => {
   test('search page loads within acceptable time', async ({ page }) => {
     const startTime = Date.now();
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('networkidle');
 
     const loadTime = Date.now() - startTime;
@@ -46,7 +46,7 @@ test.describe('Performance Tests', () => {
   });
 
   test('search page is interactive within acceptable time', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     const startTime = Date.now();
 
@@ -90,7 +90,7 @@ test.describe('Performance Tests', () => {
       }, 100); // Simulate 100ms API time
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(500);
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -179,7 +179,7 @@ test.describe('Performance Tests', () => {
       });
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(500);
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -213,7 +213,7 @@ test.describe('Performance Tests', () => {
   });
 
   test('memory usage remains stable', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForTimeout(1000);
 
     // Get initial memory (if available)
@@ -253,7 +253,7 @@ test.describe('Performance Tests', () => {
   });
 
   test('Web Vitals meet thresholds', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Collect Web Vitals
     const vitals = await page.evaluate((): Promise<{ fcp?: number; lcp?: number; cls?: number }> => {

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import { Eyebrow } from "@/components/editorial";
@@ -6,7 +8,8 @@ import {
   type SearchV2Response,
   type SearchV2Result,
 } from "@/lib/api/search-v2";
-import { ENGINE_RESULTS_LABEL } from "./SearchEngineSelector";
+import { useOptionalTranslation } from "@/contexts/LanguageContext";
+import { ENGINE_RESULTS_KEY } from "./SearchEngineSelector";
 
 function SearchV2ResultItem({ result }: { result: SearchV2Result }): React.JSX.Element {
   const label = result.signature || result.judgment_id;
@@ -45,7 +48,7 @@ function SearchV2ResultItem({ result }: { result: SearchV2Result }): React.JSX.E
       </p>
 
       <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--ink-soft)]">
-        {result.supabase_id ? "także w bazie kuratorowanej" : "tylko w pełnej bazie (bez ekstrakcji)"}
+        {result.supabase_id ? "także w bazie porównawczej" : "tylko w pełnej bazie (bez ekstrakcji)"}
       </p>
     </li>
   );
@@ -56,11 +59,12 @@ export function SearchV2Results({
 }: {
   response: SearchV2Response;
 }): React.JSX.Element {
+  const { t } = useOptionalTranslation();
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <Eyebrow as="p" tone="oxblood">
-          {ENGINE_RESULTS_LABEL.full}
+          {t(ENGINE_RESULTS_KEY.full)}
         </Eyebrow>
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--ink-soft)] tabular-nums">
           {response.results.length} orzeczeń · {response.took_ms} ms

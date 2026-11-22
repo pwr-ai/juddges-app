@@ -40,7 +40,7 @@ const RESPONSE: SearchV2Response = {
 describe('SearchV2Results', () => {
   it('names the engine in the results header', () => {
     render(<SearchV2Results response={RESPONSE} />);
-    expect(screen.getByText('Wyniki z pełnej bazy (Weaviate)')).toBeInTheDocument();
+    expect(screen.getByText('Results from the full Polish corpus (Weaviate)')).toBeInTheDocument();
     expect(screen.getByText(/2 orzeczeń · 42 ms/)).toBeInTheDocument();
   });
 
@@ -67,7 +67,7 @@ describe('SearchV2Results', () => {
       'href',
       '/documents/11111111-1111-4111-a111-111111111111'
     );
-    expect(within(inDb).getByText('także w bazie kuratorowanej')).toBeInTheDocument();
+    expect(within(inDb).getByText('także w bazie porównawczej')).toBeInTheDocument();
 
     expect(within(fullOnly).getByRole('link', { name: /II FSK 2\/21/ })).toHaveAttribute(
       'href',

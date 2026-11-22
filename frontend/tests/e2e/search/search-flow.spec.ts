@@ -20,7 +20,7 @@ test.describe('Search Functionality', () => {
       window.mockSupabaseClient = mockSupabaseClient;
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
   });
 
   test('should render search interface', async ({ page }) => {

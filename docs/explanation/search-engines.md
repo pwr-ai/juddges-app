@@ -1,11 +1,17 @@
-# Search engines: full corpus and curated set
+# Search modes: Polish native and comparative
 
 `/search` runs over one of two corpora, and the user picks which one with the
-switch directly above the query input (issue #867).
+switch directly above the query input (issue #867). The labels live in the
+i18n catalogs (`search.engine*` in `frontend/lib/i18n/translations/{en,pl}.ts`):
+
+| `?engine=` | EN | PL |
+|---|---|---|
+| `full` | Polish native · full corpus (~2.7M judgments) | Polski natywny · pełna baza (~2,7 mln orzeczeń) |
+| `curated` | Comparative · PL + EN across jurisdictions (with extractions) | Porównawczy · PL + EN, jurysdykcje (z ekstrakcjami) |
 
 ## The two engines
 
-**Pełna baza (`?engine=full`)**, the default for signed-in users. This is the
+**Polish native (`?engine=full`)**, the default for signed-in users. This is the
 Weaviate v2 corpus: about 2.69M Polish judgments from the common courts
 (`pl-court-raw`) and the administrative courts (NSA, WSA), split into about
 30.7M chunks. The search is hybrid on `JudgmentChunks` (BM25 plus
@@ -15,7 +21,7 @@ portals publish: no LLM extractions, no UK judgments, no facets. Code:
 `backend/app/search_v2/`. Operations:
 [Enable the full-corpus search engine](../how-to/enable-search-v2.md).
 
-**Baza kuratorowana (`?engine=curated`)**. This is the Supabase and
+**Comparative (`?engine=curated`)**. This is the Supabase and
 Meilisearch path, about 6k PL and 6k EN judgments with LLM extractions. It
 serves extracted-field filters, facets, collections, export and the
 cross-lingual features. Its behaviour has not changed; see
@@ -43,14 +49,14 @@ load, after the session is known so that no engine flashes first:
    - custom-metadata filters (`?customMeta=`).
 
    If one is present, the page opens the curated engine and says so next to
-   the switch ("Wybrano bazę kuratorowaną, bo wyszukiwanie używa: …") with a
+   the switch ("Comparative mode was selected because this search uses: …") with a
    one-click way back.
 4. **Otherwise `full`.**
 
 The choice is then fixed for the visit. Clearing a filter never switches
 engines on its own. When the user is on the full corpus and the stored state
-holds curated-only settings, the page only suggests switching ("Pełna baza nie
-obsługuje: …") and leaves the decision to the user. The chosen engine is
+holds curated-only settings, the page only suggests switching ("The Polish
+native corpus does not support: …") and leaves the decision to the user. The chosen engine is
 written to `?engine=`, so shared links and refreshes keep it.
 
 Links built for curated features say so explicitly: saved searches replay with

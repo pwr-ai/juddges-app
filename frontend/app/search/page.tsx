@@ -26,15 +26,17 @@ import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOptionalAuth } from '@/contexts/AuthContext';
-import { SearchEngineSelector, ENGINE_RESULTS_LABEL } from '@/components/search/v2/SearchEngineSelector';
+import { SearchEngineSelector, ENGINE_RESULTS_KEY } from '@/components/search/v2/SearchEngineSelector';
 import { SearchV2Panel } from '@/components/search/v2/SearchV2Panel';
 import { Eyebrow } from '@/components/editorial';
 import {
+ CURATED_REASON_KEYS,
  ENGINE_PARAM,
  curatedOnlyReasons,
  curatedOnlyStateFromUrl,
  parseEngineParam,
  resolveEngine,
+ type CuratedReason,
  type SearchEngine,
 } from '@/lib/search/engine';
 
@@ -86,7 +88,7 @@ function TypingHeader({
 function SearchPageContent(): React.JSX.Element | null {
  const router = useRouter();
  const pathname = usePathname();
- const { locale } = useLanguage();
+ const { locale, t } = useLanguage();
  const [mounted, setMounted] = useState(false);
  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
  const searchInputRef = useRef<HTMLInputElement>(null);
@@ -101,7 +103,7 @@ function SearchPageContent(): React.JSX.Element | null {
  const signedIn = !!auth?.user;
  const authLoading = auth?.loading ?? false;
  const [engineChoice, setEngineChoice] = useState<SearchEngine | null>(null);
- const [autoCuratedReasons, setAutoCuratedReasons] = useState<string[]>([]);
+ const [autoCuratedReasons, setAutoCuratedReasons] = useState<CuratedReason[]>([]);
  const engine: SearchEngine = signedIn ? (engineChoice ?? 'full') : 'curated';
  const useV2 = engine === 'full';
 
@@ -247,7 +249,9 @@ function SearchPageContent(): React.JSX.Element | null {
  setUrlParamsProcessed,
  hasPerformedSearch,
  isSearching,
- engine: engineChoice ?? undefined,
+ // Only a signed-in choice goes into `?engine=`: a guest's link must not pin
+ // a signed-in recipient to the curated engine.
+ engine: signedIn ? (engineChoice ?? undefined) : undefined,
  });
 
  const liveCuratedReasons = useMemo(
@@ -458,30 +462,27 @@ function SearchPageContent(): React.JSX.Element | null {
  return <SearchPageSkeleton />;
  }
 
+ const reasonList = (reasons: readonly CuratedReason[]): string =>
+ reasons.map((reason) => t(CURATED_REASON_KEYS[reason])).join(', ');
+ const hintAction = (next: SearchEngine): React.JSX.Element => (
+ <button
+ type="button"
+ onClick={() => changeEngine(next)}
+ className="font-medium text-[color:var(--oxblood)] underline underline-offset-4"
+ >
+ {t(next === 'full' ? 'search.engineSwitchToFull' : 'search.engineSwitchToCurated')}
+ </button>
+ );
  const engineHint =
  engine === 'curated' && autoCuratedReasons.length > 0 ? (
  <p>
- Wybrano bazę kuratorowaną, bo wyszukiwanie używa: {autoCuratedReasons.join(', ')}. Pełna
- baza obejmuje tylko polskie orzeczenia bez ekstrakcji.{' '}
- <button
- type="button"
- onClick={() => changeEngine('full')}
- className="font-medium text-[color:var(--oxblood)] underline underline-offset-4"
- >
- Przełącz na pełną bazę
- </button>
+ {t('search.engineAutoCurated', { reasons: reasonList(autoCuratedReasons) })}{' '}
+ {hintAction('full')}
  </p>
  ) : engine === 'full' && liveCuratedReasons.length > 0 ? (
  <p>
- Pełna baza nie obsługuje: {liveCuratedReasons.join(', ')}. Te ustawienia działają tylko w
- bazie kuratorowanej.{' '}
- <button
- type="button"
- onClick={() => changeEngine('curated')}
- className="font-medium text-[color:var(--oxblood)] underline underline-offset-4"
- >
- Przełącz na bazę kuratorowaną
- </button>
+ {t('search.engineSuggestCurated', { reasons: reasonList(liveCuratedReasons) })}{' '}
+ {hintAction('curated')}
  </p>
  ) : undefined;
 
@@ -490,7 +491,7 @@ function SearchPageContent(): React.JSX.Element | null {
  value={engine}
  onChange={changeEngine}
  disabled={isSearching}
- fullUnavailableReason={signedIn ? undefined : 'Dostępna po zalogowaniu.'}
+ fullUnavailable={!signedIn}
  hint={engineHint}
  />
  );
@@ -647,7 +648,7 @@ function SearchPageContent(): React.JSX.Element | null {
 
  {searchMetadata.length > 0 && (
  <Eyebrow as="p" tone="oxblood" className="mb-3">
- {ENGINE_RESULTS_LABEL.curated}
+ {t(ENGINE_RESULTS_KEY.curated)}
  </Eyebrow>
  )}
 

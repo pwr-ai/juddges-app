@@ -5,13 +5,13 @@ signed-in users:
 
 | Engine | `?engine=` | Corpus | Backend |
 |---|---|---|---|
-| **Pełna baza** (default, signed-in) | `full` | ~2.7M Polish judgments (pl-court + NSA), ~30.7M chunks, no LLM extractions | `POST /search/v2`, `GET /search/v2/judgments/{judgment_id}` over Weaviate v2 |
-| **Baza kuratorowana** | `curated` | ~6k PL + ~6k EN judgments with extractions, collections, facets | `/api/search/documents` (Supabase + Meilisearch), unchanged |
+| **Polish native · full corpus** / *Polski natywny · pełna baza* (default, signed-in) | `full` | ~2.7M Polish judgments (pl-court + NSA), ~30.7M chunks, no LLM extractions | `POST /search/v2`, `GET /search/v2/judgments/{judgment_id}` over Weaviate v2 |
+| **Comparative · PL + EN across jurisdictions** / *Porównawczy · PL + EN, jurysdykcje* | `curated` | ~6k PL + ~6k EN judgments with extractions, collections, facets | `/api/search/documents` (Supabase + Meilisearch), unchanged |
 
 Guests always get the curated engine: both `/search/v2` endpoints require a
 signed-in Supabase user, and the BFF routes answer 401 (the middleware
 login-redirects a guest before that). The switch still shows the full corpus,
-locked, with "Dostępna po zalogowaniu." How the engine is picked, and why, is
+locked, with "Available after signing in." How the engine is picked, and why, is
 in [Search engines](../explanation/search-engines.md).
 
 The Weaviate v2 stack (`JudgmentChunks` + `Judgments`, `mmlw-retrieval-e5-large`
@@ -26,7 +26,7 @@ same host. The backend reaches it over that project's default network.
 |---|---|---|
 | `WEAVIATE_V2_HTTP_HOST` or `WEAVIATE_V2_TEI_URL` unset | 503 `search v2 not configured` | "Pełna baza nieskonfigurowana" |
 | Env set, Weaviate or TEI unreachable | 503 `search v2 unavailable` | "Pełna baza niedostępna" |
-| Env set, stack up | 200 `{results, took_ms, engine: "weaviate-v2"}` | results list, headed "Wyniki z pełnej bazy (Weaviate)" |
+| Env set, stack up | 200 `{results, took_ms, engine: "weaviate-v2"}` | results list, headed "Results from the full Polish corpus (Weaviate)" |
 | Session expired | BFF call is login-redirected | "Sesja wygasła…" (the client rejects a redirected or non-JSON response) |
 
 The env is read on every request, so the engine can be switched on and off by
@@ -129,9 +129,9 @@ engine.close()
 `load_settings()` returns `None` while the env is incomplete, and the snippet
 then fails with an `AttributeError`. That is the 503 "not configured" case.
 
-End to end, sign in on the site and open `/search`: **Pełna baza** is selected
+End to end, sign in on the site and open `/search`: **Polish native** is selected
 and the URL carries `?engine=full`. Run a query. You should get a list headed
-"Wyniki z pełnej bazy (Weaviate)" with signatures, courts, dates, scores and
+"Results from the full Polish corpus (Weaviate)" with signatures, courts, dates, scores and
 excerpts. Open a result marked "tylko w pełnej bazie (bez ekstrakcji)": it
 lands on `/judgments/full/…` with the full text.
 
@@ -139,5 +139,5 @@ lands on `/judgments/full/…` with the full text.
 
 Clear `WEAVIATE_V2_HTTP_HOST` (or `WEAVIATE_V2_TEI_URL`) in `.env` and recreate
 the backend. `/search/v2` goes back to 503 "not configured", and users need
-to pick **Baza kuratorowana** by hand (or follow `?engine=curated` links). The
+to pick **Comparative** by hand (or follow `?engine=curated` links). The
 network attachment can stay.

@@ -91,14 +91,14 @@ describe('FullJudgmentView', () => {
     expect(
       screen.getByRole('link', { name: 'Centralna Baza Orzeczeń Sądów Administracyjnych' })
     ).toHaveAttribute('href', JUDGMENT.source_url);
-    expect(screen.queryByRole('link', { name: /bazie kuratorowanej/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /bazie porównawczej/ })).not.toBeInTheDocument();
   });
 
   it('links to the curated page when the ruling is also in the app database', async () => {
     mockFetch(200, { ...JUDGMENT, supabase_id: 'uuid-1' });
     renderView();
     expect(
-      await screen.findByRole('link', { name: 'Otwórz w bazie kuratorowanej' })
+      await screen.findByRole('link', { name: 'Otwórz w bazie porównawczej' })
     ).toHaveAttribute('href', '/documents/uuid-1');
   });
 

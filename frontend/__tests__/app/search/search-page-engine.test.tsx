@@ -153,8 +153,8 @@ function renderPage() {
   );
 }
 
-const fullRadio = () => screen.getByRole('radio', { name: /Pełna baza/ });
-const curatedRadio = () => screen.getByRole('radio', { name: /Baza kuratorowana/ });
+const fullRadio = () => screen.getByRole('radio', { name: /Polish native/ });
+const curatedRadio = () => screen.getByRole('radio', { name: /Comparative/ });
 
 describe('/search engine choice', () => {
   beforeAll(() => {
@@ -236,12 +236,12 @@ describe('/search engine choice', () => {
 
     await waitFor(() => expect(curatedRadio()).toHaveAttribute('aria-checked', 'true'));
     const hint = screen.getByRole('status');
-    expect(hint).toHaveTextContent('Wybrano bazę kuratorowaną');
-    expect(hint).toHaveTextContent('filtry pól ekstrakcji');
+    expect(hint).toHaveTextContent('Comparative mode was selected because this search uses');
+    expect(hint).toHaveTextContent('extracted-field filters');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Przełącz na pełną bazę' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to Polish native' }));
     expect(fullRadio()).toHaveAttribute('aria-checked', 'true');
-    expect(screen.queryByText(/Wybrano bazę kuratorowaną/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Comparative mode was selected/)).not.toBeInTheDocument();
   });
 
   it('picks curated for a UK-only language selection', async () => {
@@ -249,7 +249,7 @@ describe('/search engine choice', () => {
     renderPage();
 
     await waitFor(() => expect(curatedRadio()).toHaveAttribute('aria-checked', 'true'));
-    expect(screen.getByRole('status')).toHaveTextContent('orzeczenia UK/EN');
+    expect(screen.getByRole('status')).toHaveTextContent('UK/EN judgments');
   });
 
   it('on the full corpus, suggests curated for curated-only state instead of switching', async () => {
@@ -258,9 +258,11 @@ describe('/search engine choice', () => {
     renderPage();
 
     await waitFor(() => expect(fullRadio()).toHaveAttribute('aria-checked', 'true'));
-    expect(screen.getByRole('status')).toHaveTextContent('Pełna baza nie obsługuje: orzeczenia UK/EN');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'The Polish native corpus does not support: UK/EN judgments'
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Przełącz na bazę kuratorowaną' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to comparative' }));
     expect(curatedRadio()).toHaveAttribute('aria-checked', 'true');
   });
 
@@ -271,7 +273,7 @@ describe('/search engine choice', () => {
 
     await waitFor(() => expect(curatedRadio()).toHaveAttribute('aria-checked', 'true'));
     expect(fullRadio()).toHaveAttribute('aria-disabled', 'true');
-    expect(fullRadio()).toHaveTextContent('Dostępna po zalogowaniu.');
+    expect(fullRadio()).toHaveTextContent('Available after signing in.');
   });
 
   it('waits for the session before choosing, so no engine flashes', () => {

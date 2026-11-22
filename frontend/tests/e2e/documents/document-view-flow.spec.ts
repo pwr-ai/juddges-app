@@ -114,7 +114,7 @@ test.describe('Document View Flow', () => {
 
   test('user can view similar documents', async ({ page }) => {
     // Navigate directly to a document (simulating navigation from search)
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Mock search to get to document
     await page.route('**/api/documents/search', route => {
@@ -192,7 +192,7 @@ test.describe('Document View Flow', () => {
   });
 
   test('user can navigate between similar documents', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Mock initial search
     await page.route('**/api/documents/search', route => {
@@ -256,7 +256,7 @@ test.describe('Document View Flow', () => {
   });
 
   test('user can view document metadata', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Mock search
     await page.route('**/api/documents/search', route => {
@@ -295,7 +295,7 @@ test.describe('Document View Flow', () => {
   });
 
   test('user can save a document', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Mock search
     await page.route('**/api/documents/search', route => {
@@ -346,7 +346,7 @@ test.describe('Document View Flow', () => {
   });
 
   test('user can close document and return to search results', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Mock search
     await page.route('**/api/documents/search', route => {
@@ -394,7 +394,7 @@ test.describe('Document View Flow', () => {
   });
 
   test('user can view full document content', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Mock search
     await page.route('**/api/documents/search', route => {
@@ -457,7 +457,7 @@ Final conclusions and ruling...`,
   });
 
   test('document view handles missing similar documents gracefully', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     // Mock search
     await page.route('**/api/documents/search', route => {

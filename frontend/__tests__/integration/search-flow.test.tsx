@@ -558,7 +558,7 @@ describe('Complete Search Flow Integration', () => {
       // first tab stop is its selected option (a radiogroup has one stop),
       // and the next is the query input.
       await user.tab();
-      expect(screen.getByRole('radio', { name: /Baza kuratorowana/ })).toHaveFocus();
+      expect(screen.getByRole('radio', { name: /Comparative/ })).toHaveFocus();
       await user.tab();
       expect(screen.getByRole('textbox')).toHaveFocus();
     });

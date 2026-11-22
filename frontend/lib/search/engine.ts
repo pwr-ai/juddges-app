@@ -10,6 +10,7 @@
  * unless the search state already uses something only `curated` can serve —
  * then `curated`, and the page says why (`curatedOnlyReasons`), never silently.
  */
+import type { TranslationKey } from "@/lib/i18n/types";
 import type { BaseFilters } from "@/lib/store/searchStore";
 
 export type SearchEngine = "full" | "curated";
@@ -38,25 +39,35 @@ export interface CuratedOnlyState {
   customMetadata: Record<string, unknown>;
 }
 
+/** Why a search needs the curated engine; labels: `search.engineReason*`. */
+export type CuratedReason = "english" | "jurisdiction" | "extractions" | "metadata";
+
+export const CURATED_REASON_KEYS = {
+  english: "search.engineReasonEnglish",
+  jurisdiction: "search.engineReasonJurisdiction",
+  extractions: "search.engineReasonExtractions",
+  metadata: "search.engineReasonMetadata",
+} as const satisfies Record<CuratedReason, TranslationKey>;
+
 /**
- * Human-readable (PL) reasons the current search state needs the curated
- * engine. Empty when the full corpus can serve it.
+ * Reasons the current search state needs the curated engine. Empty when the
+ * full corpus can serve it.
  */
-export function curatedOnlyReasons(state: CuratedOnlyState): string[] {
-  const reasons: string[] = [];
+export function curatedOnlyReasons(state: CuratedOnlyState): CuratedReason[] {
+  const reasons: CuratedReason[] = [];
   const languages = new Set(Array.from(state.selectedLanguages, (l) => l.toLowerCase()));
   if (languages.size > 0 && !languages.has("pl")) {
-    reasons.push("orzeczenia UK/EN");
+    reasons.push("english");
   }
   const jurisdictions = Array.from(state.jurisdictions, (j) => j.toUpperCase());
   if (jurisdictions.some((j) => j !== "PL")) {
-    reasons.push("jurysdykcja UK");
+    reasons.push("jurisdiction");
   }
   if (Object.values(state.baseFilters).some((v) => v !== undefined)) {
-    reasons.push("filtry pól ekstrakcji");
+    reasons.push("extractions");
   }
   if (Object.keys(state.customMetadata).length > 0) {
-    reasons.push("filtry metadanych");
+    reasons.push("metadata");
   }
   return reasons;
 }
@@ -68,7 +79,7 @@ export function resolveEngine({
 }: {
   signedIn: boolean;
   explicit: SearchEngine | null;
-  reasons: string[];
+  reasons: readonly CuratedReason[];
 }): SearchEngine {
   if (!signedIn) return "curated";
   if (explicit) return explicit;

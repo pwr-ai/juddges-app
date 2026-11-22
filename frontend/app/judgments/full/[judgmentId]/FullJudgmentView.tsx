@@ -56,7 +56,7 @@ function JudgmentBody({ judgment }: { judgment: SearchV2Judgment }): React.JSX.E
   return (
     <article className="space-y-8">
       <header className="space-y-3">
-        <Eyebrow tone="oxblood">Pełna baza · Weaviate</Eyebrow>
+        <Eyebrow tone="oxblood">Polski natywny · pełna baza (Weaviate)</Eyebrow>
         <Headline as="h1" size="sm">
           {judgment.signature || judgment.judgment_id}
         </Headline>
@@ -77,7 +77,7 @@ function JudgmentBody({ judgment }: { judgment: SearchV2Judgment }): React.JSX.E
                 href={`/documents/${judgment.supabase_id}`}
                 className="font-medium text-[color:var(--oxblood)] underline underline-offset-4"
               >
-                Otwórz w bazie kuratorowanej
+                Otwórz w bazie porównawczej
               </Link>
             </>
           )}
