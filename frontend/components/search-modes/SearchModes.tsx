@@ -1,6 +1,10 @@
+"use client";
+
 import { Database, Languages, type LucideIcon } from "lucide-react";
 
 import { EditorialButton } from "@/components/editorial";
+import { useOptionalTranslation } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/lib/i18n/types";
 import { buildSearchHref } from "@/lib/searchHref";
 import { cn } from "@/lib/utils";
 
@@ -11,16 +15,17 @@ import { cn } from "@/lib/utils";
  * - `full`: the Polish-native full corpus (~2.7M judgments, Weaviate v2).
  * - `curated`: the comparative PL + EN set (Supabase), with LLM extractions.
  *
- * The ids match the `engine` query parameter of `/search`.
+ * The ids match the `engine` query parameter of `/search`. Mode names and
+ * descriptions are the same catalog strings the `/search` switch shows
+ * (`search.engine*` in `lib/i18n/translations`).
  */
 export type SearchModeId = "full" | "curated";
 
 export interface SearchMode {
   id: SearchModeId;
   icon: LucideIcon;
-  eyebrow: string;
-  title: string;
-  size: string;
+  labelKey: TranslationKey;
+  descriptionKey: TranslationKey;
   points: readonly string[];
   cta: string;
 }
@@ -29,9 +34,8 @@ export const SEARCH_MODES: readonly SearchMode[] = [
   {
     id: "full",
     icon: Database,
-    eyebrow: "Polish native · full corpus",
-    title: "All Polish judgments",
-    size: "~2.7 million judgments",
+    labelKey: "search.engineFullLabel",
+    descriptionKey: "search.engineFullDescription",
     points: [
       "Common courts and administrative courts (NSA)",
       "Hybrid semantic + keyword search tuned for Polish",
@@ -42,9 +46,8 @@ export const SEARCH_MODES: readonly SearchMode[] = [
   {
     id: "curated",
     icon: Languages,
-    eyebrow: "Comparative · PL + EN",
-    title: "Curated Polish & English set",
-    size: "Poland · England & Wales",
+    labelKey: "search.engineCuratedLabel",
+    descriptionKey: "search.engineCuratedDescription",
     points: [
       "Two jurisdictions and two languages side by side",
       "Structured extractions with the shared base schema",
@@ -71,6 +74,7 @@ export function SearchModesOverview({
   compact = false,
   className,
 }: SearchModesOverviewProps) {
+  const { t, locale } = useOptionalTranslation();
   return (
     <div
       className={cn("grid grid-cols-1 gap-4 md:grid-cols-2", className)}
@@ -78,10 +82,13 @@ export function SearchModesOverview({
     >
       {SEARCH_MODES.map((mode) => {
         const Icon = mode.icon;
-        const size =
+        const label = t(mode.labelKey);
+        const at = label.indexOf(" · ");
+        const [name, corpus] = at < 0 ? [label, null] : [label.slice(0, at), label.slice(at + 3)];
+        const liveCount =
           mode.id === "curated" && curatedCount
-            ? `${curatedCount.toLocaleString("en-US")} judgments · ${mode.size}`
-            : mode.size;
+            ? curatedCount.toLocaleString(locale === "pl" ? "pl-PL" : "en-US")
+            : null;
         return (
           <section
             key={mode.id}
@@ -94,7 +101,7 @@ export function SearchModesOverview({
           >
             <p className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-oxblood">
               <Icon className="size-3.5" aria-hidden />
-              {mode.eyebrow}
+              {corpus}
             </p>
             <h3
               id={`search-mode-${mode.id}`}
@@ -103,11 +110,15 @@ export function SearchModesOverview({
                 compact ? "text-2xl" : "text-3xl"
               )}
             >
-              {mode.title}
+              <span className="sr-only">{label}</span>
+              <span aria-hidden>{name}</span>
             </h3>
-            <p className="mt-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-              {size}
-            </p>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{t(mode.descriptionKey)}</p>
+            {liveCount && (
+              <p className="mt-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft tabular-nums">
+                {liveCount} · Poland · England &amp; Wales
+              </p>
+            )}
             <ul className="mt-4 flex-1 space-y-1.5 text-sm leading-relaxed text-ink-soft">
               {mode.points.map((point) => (
                 <li key={point} className="flex gap-2">

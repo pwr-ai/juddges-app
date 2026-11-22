@@ -14,6 +14,9 @@ jest.mock("@/contexts/AuthContext", () => ({
 }));
 
 jest.mock("@/contexts/LanguageContext", () => ({
+  // The search-mode cards read their labels through the real
+  // useOptionalTranslation (default locale outside a provider).
+  ...jest.requireActual("@/contexts/LanguageContext"),
   useTranslation: jest.fn(),
 }));
 

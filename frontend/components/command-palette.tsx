@@ -51,8 +51,8 @@ interface CommandItem {
 const navigationItems: CommandItem[] = [
   {
     id: "search",
-    label: "Search the full Polish corpus",
-    description: "Polish native: ~2.7 million Polish judgments",
+    label: "Polish native · full corpus (~2.7M judgments)",
+    description: "Search every Polish court judgment",
     icon: <Search className="h-4 w-4" />,
     href: "/search?engine=full",
     keywords: ["search", "find", "documents", "query", "polish", "full", "weaviate"],
@@ -60,8 +60,8 @@ const navigationItems: CommandItem[] = [
   },
   {
     id: "search-curated",
-    label: "Comparative search (PL + EN)",
-    description: "Curated Polish and English judgments with extractions",
+    label: "Comparative · PL + EN across jurisdictions (with extractions)",
+    description: "Compare Polish and English judgments with extracted data",
     icon: <Search className="h-4 w-4" />,
     href: "/search?engine=curated",
     keywords: ["search", "compare", "comparative", "english", "uk", "curated", "extractions"],

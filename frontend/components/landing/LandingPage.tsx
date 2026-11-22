@@ -185,9 +185,9 @@ function HeroSection({ stats, statsLoading, statsError }: LandingPageProps) {
           >
             <DropCap>
               An open-source research platform for court judgments with two
-              ways of working: Polish-native search over the full corpus of
-              ~2.7 million Polish judgments, and comparative research on a
-              curated Polish and English set with structured data extraction.
+              search modes: Polish native, over the full corpus of ~2.7
+              million Polish judgments, and comparative, on a curated Polish
+              and English set with structured data extraction.
             </DropCap>
           </motion.div>
 

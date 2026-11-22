@@ -214,12 +214,16 @@ export default function AboutPage(): React.JSX.Element {
             understanding of judicial policies and practices.
           </p>
           <p className="text-base leading-relaxed">
-            The platform offers two ways of working with judgments. The{" "}
-            <strong>Polish-native</strong> mode searches the full corpus of
-            about 2.7 million Polish judgments from common and administrative
-            courts. The <strong>comparative</strong> mode works on a curated set
-            of Polish and England &amp; Wales judgments with structured
-            extractions, for comparison across jurisdictions and languages.
+            The platform offers two search modes.{" "}
+            <strong>Polish native · full corpus (~2.7M judgments)</strong>{" "}
+            searches every Polish judgment from common and administrative
+            courts.{" "}
+            <strong>
+              Comparative · PL + EN across jurisdictions (with extractions)
+            </strong>{" "}
+            works on a curated set of Polish and England &amp; Wales judgments
+            with structured extractions, for comparison across jurisdictions
+            and languages.
           </p>
 
           <div>

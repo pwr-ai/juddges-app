@@ -98,6 +98,17 @@ test.describe('full-corpus search contract', () => {
     expect(bff.headers()['content-type']).toContain('application/json');
 
     const paths = (await adapterRequests(request)).map(({ path }) => path);
-    expect(paths.filter((path) => path.startsWith('/search/v2/judgments/'))).toHaveLength(2);
+    // The BFF reached the backend with the id still one encoded segment, for
+    // the page's own read (React Query may read it more than once) and the
+    // direct BFF call.
+    const detailPaths = new Set(
+      paths.filter((path) => path.startsWith('/search/v2/judgments/')),
+    );
+    expect(detailPaths).toEqual(
+      new Set([
+        `/search/v2/judgments/${encodeURIComponent(FULL_CORPUS.judgmentId)}`,
+        `/search/v2/judgments/${encodeURIComponent('/doc/missing')}`,
+      ]),
+    );
   });
 });
