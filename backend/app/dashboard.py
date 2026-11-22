@@ -346,6 +346,7 @@ async def get_dashboard_stats(
 @limiter.limit(DASHBOARD_HEALTH_RATE_LIMIT)
 async def dashboard_health(
     request: Request,
+    response: Response,
     api_key: str = Depends(verify_api_key),
 ):
     """Check dashboard data availability."""

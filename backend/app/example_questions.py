@@ -1,6 +1,6 @@
 """Router for serving example questions for chat interface."""
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from juddges_search.prompts.legal.examples import get_random_example_questions
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ class ExampleQuestionsResponse(BaseModel):
 @router.get("", response_model=ExampleQuestionsResponse)
 @limiter.limit(EXAMPLE_QUESTIONS_RATE_LIMIT)
 async def get_example_questions(
-    request: Request, num_polish: int = 2, num_english: int = 2
+    request: Request, response: Response, num_polish: int = 2, num_english: int = 2
 ) -> ExampleQuestionsResponse:
     """
     Get randomly sampled example questions.

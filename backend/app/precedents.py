@@ -7,7 +7,7 @@ and legal issues. Uses semantic similarity and legal reasoning to rank results.
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
@@ -633,7 +633,7 @@ def _rank_precedents(precedents: list[PrecedentMatch]) -> list[PrecedentMatch]:
 )
 @limiter.limit(PRECEDENTS_RATE_LIMIT)
 async def find_precedents(
-    request: Request, precedents_request: FindPrecedentsRequest
+    request: Request, response: Response, precedents_request: FindPrecedentsRequest
 ) -> FindPrecedentsResponse:
     """Find relevant precedent cases using semantic search and AI analysis."""
     logger.info(
