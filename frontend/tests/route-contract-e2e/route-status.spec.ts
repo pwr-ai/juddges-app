@@ -676,12 +676,30 @@ test.describe.serial('production route status contract', () => {
       // is unit-tested) runs, so the backend never sees the request.
       const v2 = await expectWireStatus(anonymous.request, 'POST', '/api/search/v2', 307);
       expect(v2.headers()['location']).toContain('/auth/login');
+      // Its detail page and BFF (#867) are gated the same way, unlike the
+      // public curated judgment page above.
+      const fullPage = await expectWireStatus(
+        anonymous.request,
+        'GET',
+        '/judgments/full/%2Fdoc%2F39FBE5DB09',
+        307,
+      );
+      expect(fullPage.headers()['location']).toContain('/auth/login');
+      await expectWireStatus(
+        anonymous.request,
+        'GET',
+        '/api/search/v2/judgments/%2Fdoc%2F39FBE5DB09',
+        307,
+      );
 
       const domainPaths = domainRequests(await adapterRequests(request)).map(
         ({ path }) => path,
       );
       expect(domainPaths).toContain(`/documents/${IDS.document.known}/metadata`);
       expect(domainPaths).not.toContain('/search/v2');
+      expect(
+        domainPaths.some((path) => path.startsWith('/search/v2/judgments')),
+      ).toBe(false);
     } finally {
       await anonymous.close();
     }

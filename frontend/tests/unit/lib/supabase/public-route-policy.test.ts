@@ -57,6 +57,12 @@ const PUBLIC_READ_APIS = [
 
 const PROTECTED_PAGE_CASES = [
   '/search/extractions',
+  // #867 — the full corpus (Weaviate v2) is for signed-in users only: its
+  // detail page and BFF stay gated, unlike the curated `/documents/<id>`.
+  '/judgments/full/151500000001006_II_AKa_000145_2013_Uz_2013-05-14_001',
+  '/judgments/full/%2Fdoc%2F39FBE5DB09',
+  '/api/search/v2',
+  '/api/search/v2/judgments/%2Fdoc%2F39FBE5DB09',
   '/chat',
   '/collections',
   '/documents',

@@ -12317,7 +12317,214 @@
         "title": "SearchV2Chunk",
         "type": "object"
       },
+      "SearchV2Judgment": {
+        "properties": {
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name"
+          },
+          "court_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Type"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Date"
+          },
+          "department_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Name"
+          },
+          "engine": {
+            "default": "weaviate-v2",
+            "title": "Engine",
+            "type": "string"
+          },
+          "full_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Text"
+          },
+          "full_text_truncated": {
+            "default": false,
+            "title": "Full Text Truncated",
+            "type": "boolean"
+          },
+          "judges": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Judges",
+            "type": "array"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "judgment_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judgment Type"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "legal_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Legal Bases",
+            "type": "array"
+          },
+          "presiding_judge": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Presiding Judge"
+          },
+          "references": {
+            "items": {
+              "type": "string"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "supabase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "judgments.id when the judgment is also in the app database",
+            "title": "Supabase Id"
+          },
+          "thesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesis"
+          }
+        },
+        "required": [
+          "judgment_id"
+        ],
+        "title": "SearchV2Judgment",
+        "type": "object"
+      },
       "SearchV2Request": {
+        "additionalProperties": false,
         "properties": {
           "alpha": {
             "default": 0.25,
@@ -12326,6 +12533,43 @@
             "minimum": 0.0,
             "title": "Alpha",
             "type": "number"
+          },
+          "court_type": {
+            "description": "Exact court_type values, e.g. ordinary_court, administrative_court",
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Court Type",
+            "type": "array"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First decision day (inclusive)",
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last decision day (inclusive)",
+            "title": "Date To"
           },
           "limit": {
             "default": 10,
@@ -27891,9 +28135,65 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Test search over the Weaviate v2 corpus (hybrid chunks + MaxP)",
+        "summary": "Full-corpus search over the Weaviate v2 corpus (hybrid chunks + MaxP)",
         "tags": [
-          "Search v2 (test)"
+          "Search v2 (full corpus)"
+        ]
+      }
+    },
+    "/search/v2/judgments/{judgment_id}": {
+      "get": {
+        "operationId": "get_judgment_v2_search_v2_judgments__judgment_id__get",
+        "parameters": [
+          {
+            "description": "Weaviate judgment_id",
+            "in": "path",
+            "name": "judgment_id",
+            "required": true,
+            "schema": {
+              "description": "Weaviate judgment_id",
+              "pattern": "^[A-Za-z0-9_.\\-/]{1,255}$",
+              "title": "Judgment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchV2Judgment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not in the v2 corpus"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One judgment of the Weaviate v2 corpus, full text included",
+        "tags": [
+          "Search v2 (full corpus)"
         ]
       }
     },

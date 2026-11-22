@@ -29,6 +29,7 @@ import {
   SectionHeader,
   Stat,
 } from "@/components/editorial";
+import { SearchModesOverview } from "@/components/search-modes/SearchModes";
 import {
   huggingFaceOrgUrl,
   outputs,
@@ -183,9 +184,10 @@ function HeroSection({ stats, statsLoading, statsError }: LandingPageProps) {
             className="max-w-2xl mb-10"
           >
             <DropCap>
-              An open-source research platform for searching and analyzing
-              court judgments from Poland and England &amp; Wales with
-              AI-powered semantic search and structured data extraction.
+              An open-source research platform for court judgments with two
+              search modes: Polish native, over the full corpus of ~2.7
+              million Polish judgments, and comparative, on a curated Polish
+              and English set with structured data extraction.
             </DropCap>
           </motion.div>
 
@@ -274,6 +276,29 @@ function HeroSection({ stats, statsLoading, statsError }: LandingPageProps) {
         </div>
       </div>
     </section>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Section 1b: Two ways to work with judgments
+// ─────────────────────────────────────────────
+
+function SearchModesSection({ stats }: Pick<LandingPageProps, "stats">) {
+  const curated =
+    stats?.judgments_pl && stats?.judgments_uk
+      ? stats.judgments_pl + stats.judgments_uk
+      : null;
+  return (
+    <Section id="search-modes">
+      <div className="w-full max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        <SectionHeader
+          eyebrow="Two search modes"
+          title="Polish native or comparative"
+          description="Search all Polish judgments at full scale, or compare Polish and English judgments with structured, extracted data."
+        />
+        <SearchModesOverview curatedCount={curated} className="mt-10" />
+      </div>
+    </Section>
   );
 }
 
@@ -1082,6 +1107,7 @@ export function LandingPage({
         statsLoading={statsLoading}
         statsError={statsError}
       />
+      <SearchModesSection stats={stats} />
       <AboutProjectSection />
       <CapabilitiesSection />
       <DataAuthoritySection

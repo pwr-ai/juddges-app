@@ -554,7 +554,11 @@ describe('Complete Search Flow Integration', () => {
         expect(screen.getByRole('textbox')).toBeInTheDocument();
       });
 
-      // Tab through interactive elements
+      // The engine switch sits directly above the query input (#867), so the
+      // first tab stop is its selected option (a radiogroup has one stop),
+      // and the next is the query input.
+      await user.tab();
+      expect(screen.getByRole('radio', { name: /Comparative/ })).toHaveFocus();
       await user.tab();
       expect(screen.getByRole('textbox')).toHaveFocus();
     });

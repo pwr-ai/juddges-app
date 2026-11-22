@@ -13,6 +13,7 @@ import { Check, Copy, Database, FileJson, FolderOpen, Search } from "lucide-reac
 import { PageContainer } from "@/lib/styles/components";
 import { formatStatNumber } from "@/lib/format-stats";
 import { LandingPage } from "@/components/landing/LandingPage";
+import { SearchModesOverview } from "@/components/search-modes/SearchModes";
 import {
   EditorialCard,
   EditorialButton,
@@ -211,12 +212,13 @@ export default function HomePage(): React.JSX.Element {
             Move from a legal question to structured, reviewable evidence.
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
-            Search Polish and UK judgments, organise the relevant decisions, then
+            Search the full Polish corpus, or compare Polish and English
+            judgments in the curated set, organise the relevant decisions, then
             extract comparable facts with a shared coding schema.
           </p>
         </div>
         <div className="mt-5 flex shrink-0 flex-col gap-2 sm:mt-0 sm:min-w-48">
-          <EditorialButton href="/search" size="md" arrow>
+          <EditorialButton href="/search?engine=full" size="md" arrow>
             Search judgments
           </EditorialButton>
           <EditorialButton href="/collections" variant="secondary" size="md">
@@ -224,6 +226,12 @@ export default function HomePage(): React.JSX.Element {
           </EditorialButton>
         </div>
       </section>
+
+      <SearchModesOverview
+        compact
+        curatedCount={totalJudgments || null}
+        className="mb-6"
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="lg:col-span-12">
