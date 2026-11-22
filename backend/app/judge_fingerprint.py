@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -310,6 +310,7 @@ def _build_judge_profile(
 @limiter.limit(PROFILE_RATE_LIMIT)
 async def get_judge_profile(
     request: Request,
+    response: Response,
     judge_name: str,
 ) -> JudgeProfile:
     """Build a reasoning fingerprint profile for the specified judge."""
@@ -347,6 +348,7 @@ async def get_judge_profile(
 @limiter.limit(COMPARE_RATE_LIMIT)
 async def compare_judges(
     request: Request,
+    response: Response,
     judges: str = Query(
         description="Comma-separated list of 2-3 judge names to compare",
         examples=["Jan Kowalski,Anna Nowak"],
@@ -402,6 +404,7 @@ async def compare_judges(
 @limiter.limit(SEARCH_RATE_LIMIT)
 async def search_judges(
     request: Request,
+    response: Response,
     q: str = Query(
         description="Search string for judge name autocomplete",
         min_length=2,
