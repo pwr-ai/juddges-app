@@ -231,6 +231,9 @@ export default function SavedSearchesPage() {
     // Navigate to search page - the URL params hook will trigger the search
     // Filters are passed via URL params below so the search page can restore them
     const params = new URLSearchParams();
+    // Saved searches are made on the curated engine (its results view holds
+    // the save dialog), so they replay there, not on the full corpus (#867).
+    params.set('engine', 'curated');
     if (search.query) params.set('q', search.query);
     if (search.search_mode) params.set('mode', search.search_mode);
     if (search.languages.length > 0) params.set('lang', search.languages.join(','));

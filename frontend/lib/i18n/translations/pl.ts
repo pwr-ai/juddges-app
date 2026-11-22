@@ -226,6 +226,24 @@ export const pl: Translations = {
     caseLaw: 'Orzecznictwo',
     regulations: 'Przepisy',
     taxInterpretations: 'Interpretacje podatkowe',
+
+    // Tryby wyszukiwania
+    engineSwitchLabel: 'Tryb wyszukiwania',
+    engineFullLabel: 'Polski natywny · pełna baza (~2,7 mln orzeczeń)',
+    engineFullDescription: 'Wszystkie orzeczenia polskich sądów powszechnych i administracyjnych, bez ekstrakcji.',
+    engineFullUnavailable: 'Dostępna po zalogowaniu.',
+    engineCuratedLabel: 'Porównawczy · PL + EN, jurysdykcje (z ekstrakcjami)',
+    engineCuratedDescription: 'Wybrane orzeczenia polskie i brytyjskie (~12 tys.) z ekstrakcjami, filtrami i kolekcjami.',
+    engineFullResults: 'Wyniki z pełnej bazy polskiej (Weaviate)',
+    engineCuratedResults: 'Wyniki z bazy porównawczej (Supabase)',
+    engineAutoCurated: 'Wybrano tryb porównawczy, bo wyszukiwanie używa: {{reasons}}. Pełna baza polska obejmuje tylko polskie orzeczenia, bez ekstrakcji.',
+    engineSuggestCurated: 'Pełna baza polska nie obsługuje: {{reasons}}. Te ustawienia działają tylko w trybie porównawczym.',
+    engineSwitchToFull: 'Przełącz na tryb polski natywny',
+    engineSwitchToCurated: 'Przełącz na tryb porównawczy',
+    engineReasonEnglish: 'orzeczenia UK/EN',
+    engineReasonJurisdiction: 'jurysdykcja UK',
+    engineReasonExtractions: 'filtry pól ekstrakcji',
+    engineReasonMetadata: 'filtry metadanych',
   },
 
   documents: {

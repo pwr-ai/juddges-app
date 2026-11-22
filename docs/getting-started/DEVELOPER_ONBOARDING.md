@@ -213,7 +213,7 @@ juddges-app/
 
 #### Infrastructure
 - **Database**: Supabase (managed PostgreSQL + Auth + Storage)
-- **Vector Database**: pgvector extension; the experimental `/search/v2` engine (`backend/app/search_v2`, `WEAVIATE_V2_*`) queries a separate Weaviate v2 corpus
+- **Vector Database**: pgvector extension for the curated set; the default full-corpus engine `/search/v2` (`backend/app/search_v2`, `WEAVIATE_V2_*`) queries a separate Weaviate v2 corpus of ~2.7M Polish judgments (see `docs/explanation/search-engines.md`)
 - **Caching**: Redis for sessions and task queue
 - **Deployment**: Docker Compose (dev and prod configurations)
 

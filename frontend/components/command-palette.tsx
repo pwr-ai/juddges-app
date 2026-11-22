@@ -51,11 +51,20 @@ interface CommandItem {
 const navigationItems: CommandItem[] = [
   {
     id: "search",
-    label: "Search Documents",
-    description: "Find legal documents",
+    label: "Polish native · full corpus (~2.7M judgments)",
+    description: "Search every Polish court judgment",
     icon: <Search className="h-4 w-4" />,
-    href: "/search",
-    keywords: ["search", "find", "documents", "query"],
+    href: "/search?engine=full",
+    keywords: ["search", "find", "documents", "query", "polish", "full", "weaviate"],
+    category: "navigation",
+  },
+  {
+    id: "search-curated",
+    label: "Comparative · PL + EN across jurisdictions (with extractions)",
+    description: "Compare Polish and English judgments with extracted data",
+    icon: <Search className="h-4 w-4" />,
+    href: "/search?engine=curated",
+    keywords: ["search", "compare", "comparative", "english", "uk", "curated", "extractions"],
     category: "navigation",
   },
   {

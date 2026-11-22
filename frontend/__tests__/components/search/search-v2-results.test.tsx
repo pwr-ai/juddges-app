@@ -1,9 +1,7 @@
 /**
- * v2 (Weaviate, test) engine results list (issue #867).
- *
- * A v2 hit links to the judgment page only when the backend matched it to a
- * row in the app database (`supabase_id`); otherwise it says the ruling is
- * outside the app corpus instead of rendering a dead link.
+ * Full-corpus results list (#867). Every hit opens somewhere: the curated
+ * judgment page when the backend matched it to a `judgments` row
+ * (`supabase_id`), otherwise the full-corpus page `/judgments/full/<id>`.
  */
 import { render, screen, within } from '@testing-library/react';
 
@@ -26,20 +24,26 @@ const RESPONSE: SearchV2Response = {
       supabase_id: '11111111-1111-4111-a111-111111111111',
     },
     {
-      judgment_id: 'v2-only',
-      signature: 'II K 2/21',
-      court_name: 'Sąd Rejonowy w Bolesławcu',
+      judgment_id: '/doc/39FBE5DB09',
+      signature: 'II FSK 2/21',
+      court_name: 'Naczelny Sąd Administracyjny',
       decision_date: '2021-05-06',
       thesis: null,
       score: 0.5,
       best_chunk: { text: 'Inny fragment.', chunk_idx: 0 },
-      source_id: 'v2-only',
+      source_id: '/doc/39FBE5DB09',
       supabase_id: null,
     },
   ],
 };
 
 describe('SearchV2Results', () => {
+  it('names the engine in the results header', () => {
+    render(<SearchV2Results response={RESPONSE} />);
+    expect(screen.getByText('Results from the full Polish corpus (Weaviate)')).toBeInTheDocument();
+    expect(screen.getByText(/2 orzeczeń · 42 ms/)).toBeInTheDocument();
+  });
+
   it('renders each judgment with signature, court, date, score and excerpt', () => {
     render(<SearchV2Results response={RESPONSE} />);
 
@@ -55,23 +59,26 @@ describe('SearchV2Results', () => {
     expect(first.getByText('Teza orzeczenia o zachowku.')).toBeInTheDocument();
   });
 
-  it('links to the judgment page only when supabase_id is set', () => {
+  it('links to the curated page when matched, else to the full-corpus page', () => {
     render(<SearchV2Results response={RESPONSE} />);
-    const [inDb, v2Only] = screen.getAllByRole('listitem');
+    const [inDb, fullOnly] = screen.getAllByRole('listitem');
 
     expect(within(inDb).getByRole('link', { name: /I C 1\/20/ })).toHaveAttribute(
       'href',
       '/documents/11111111-1111-4111-a111-111111111111'
     );
-    expect(within(inDb).queryByText(/spoza bazy aplikacji/)).not.toBeInTheDocument();
+    expect(within(inDb).getByText('także w bazie porównawczej')).toBeInTheDocument();
 
-    expect(within(v2Only).queryByRole('link')).not.toBeInTheDocument();
-    expect(within(v2Only).getByText('spoza bazy aplikacji (tylko v2)')).toBeInTheDocument();
+    expect(within(fullOnly).getByRole('link', { name: /II FSK 2\/21/ })).toHaveAttribute(
+      'href',
+      '/judgments/full/%2Fdoc%2F39FBE5DB09'
+    );
+    expect(within(fullOnly).getByText('tylko w pełnej bazie (bez ekstrakcji)')).toBeInTheDocument();
   });
 
   it('says so when nothing matched', () => {
     render(<SearchV2Results response={{ ...RESPONSE, results: [] }} />);
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
-    expect(screen.getByText(/No results/i)).toBeInTheDocument();
+    expect(screen.getByText(/Brak wyników w pełnej bazie/)).toBeInTheDocument();
   });
 });

@@ -161,6 +161,13 @@ function readJsonBody(request) {
   });
 }
 
+/** Mirrored by `full-corpus-search.spec.ts`. */
+const FULL_CORPUS = {
+  judgmentId: '/doc/39FBE5DB09',
+  signature: 'II FSK 1/21',
+  fullText: 'Route contract full-corpus judgment text.',
+};
+
 function sendJson(response, status, body, headers = {}) {
   response.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -973,6 +980,61 @@ const server = createServer((request, response) => {
         { document_id: 'p-allowed', similarity_score: 0.71, case_number: 'C-4', title: 'R v Allowed', jurisdiction: 'UK', court_name: 'Court of Appeal', decision_date: '2022-06-01', appeal_outcome: ['allowed'], sentences_received: [], convict_offences: ['burglary'] },
       ],
       resolved_case: null,
+    });
+    return;
+  }
+
+  // Full-corpus engine (Weaviate v2, #867). One NSA hit with no `judgments`
+  // row, so the result links to `/judgments/full/<encoded id>`: NSA ids are
+  // paths, which is what the spec proves survives Next routing.
+  if (request.method === 'POST' && url.pathname === '/search/v2') {
+    logRequest(request, url);
+    request.resume();
+    sendJson(response, 200, {
+      engine: 'weaviate-v2',
+      took_ms: 3,
+      results: [
+        {
+          judgment_id: FULL_CORPUS.judgmentId,
+          signature: FULL_CORPUS.signature,
+          court_name: 'Naczelny Sąd Administracyjny',
+          decision_date: '2021-07-08',
+          thesis: null,
+          score: 0.9,
+          best_chunk: { text: 'Route contract full-corpus excerpt.', chunk_idx: 0 },
+          source_id: FULL_CORPUS.judgmentId,
+          supabase_id: null,
+        },
+      ],
+    });
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname.startsWith('/search/v2/judgments/')) {
+    logRequest(request, url);
+    const judgmentId = decodeURIComponent(
+      url.pathname.slice('/search/v2/judgments/'.length),
+    );
+    if (judgmentId !== FULL_CORPUS.judgmentId) {
+      sendJson(response, 404, { detail: 'judgment not found' });
+      return;
+    }
+    sendJson(response, 200, {
+      judgment_id: FULL_CORPUS.judgmentId,
+      signature: FULL_CORPUS.signature,
+      court_name: 'Naczelny Sąd Administracyjny',
+      court_type: 'administrative_court',
+      decision_date: '2021-07-08',
+      full_text: FULL_CORPUS.fullText,
+      full_text_truncated: false,
+      keywords: [],
+      judges: [],
+      legal_bases: [],
+      references: [],
+      source: 'nsa',
+      source_id: FULL_CORPUS.judgmentId,
+      supabase_id: null,
+      engine: 'weaviate-v2',
     });
     return;
   }

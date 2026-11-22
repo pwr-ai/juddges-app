@@ -33,7 +33,7 @@ test.describe('Edge Cases & Error Handling', () => {
   });
 
   test('application handles offline mode gracefully', async ({ page, context }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     // Wait for the page to fully load before going offline
     await page.waitForLoadState('networkidle');
 
@@ -64,7 +64,7 @@ test.describe('Edge Cases & Error Handling', () => {
   });
 
   test('application recovers from network errors', async ({ page }) => {
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
 
     let failCount = 0;
 
@@ -130,7 +130,7 @@ test.describe('Edge Cases & Error Handling', () => {
     });
 
     // Navigate through pages
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -184,7 +184,7 @@ test.describe('Edge Cases & Error Handling', () => {
       }
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('domcontentloaded');
 
     // Expire session
@@ -232,7 +232,7 @@ test.describe('Edge Cases & Error Handling', () => {
       }
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -274,7 +274,7 @@ test.describe('Edge Cases & Error Handling', () => {
       });
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -307,7 +307,7 @@ test.describe('Edge Cases & Error Handling', () => {
       });
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
@@ -354,7 +354,7 @@ test.describe('Edge Cases & Error Handling', () => {
       }, delay);
     });
 
-    await page.goto('/search');
+    await page.goto('/search?engine=curated');
     await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });

@@ -113,7 +113,10 @@ async function searchSelectAndSave(
   request: APIRequestContext,
 ): Promise<void> {
   await test.step('search returns the stubbed judgments', async () => {
-    await page.goto('/search');
+    // The full corpus (Weaviate v2) is the default engine for a signed-in
+    // user since #867; this flow selects and saves curated judgments, so it
+    // opens the curated engine explicitly.
+    await page.goto('/search?engine=curated');
     await page.getByRole('textbox', { name: 'Search documents' }).fill(SEARCH_QUERY);
     await page.getByRole('textbox', { name: 'Search documents' }).press('Enter');
     await expect(
