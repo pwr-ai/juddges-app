@@ -13,6 +13,7 @@ import { CanvasPane } from "./CanvasPane";
 import { VersionsTab } from "./versions/VersionsTab";
 import { useSchemaEditorStore } from "@/hooks/schema-editor/useSchemaEditorStore";
 import { schemaService } from "@/lib/schema-editor/service";
+import { buildExistingFieldProperties } from "@/lib/schema-editor/existing-fields";
 import { toast } from "sonner";
 import { Layers, History } from "lucide-react";
 import type { SchemaField } from "@/hooks/schema-editor/types";
@@ -67,21 +68,12 @@ export function SchemaStudioLayout({
   // Get store state and actions
   const { fields, metadata, setFields, markDirty, addField } = useSchemaEditorStore();
 
-  // Convert current fields to format expected by ChatPane (JSON Schema properties)
+  // Convert current fields to the JSON Schema properties sent to the AI as
+  // "existing fields". Full definitions (enum, items, format, nested
+  // properties, ...) are kept so the backend can preserve them on merge.
   const currentSchemaFields = useMemo(() => {
     if (fields.length === 0) return undefined;
-
-    const properties: Record<string, unknown> = {};
-    fields
-      .filter((f) => !f.parent_field_id) // Only root-level fields
-      .forEach((field) => {
-        properties[field.field_name] = {
-          type: field.field_type,
-          description: field.description || "",
-        };
-      });
-
-    return properties;
+    return buildExistingFieldProperties(fields);
   }, [fields]);
 
   // Get set of existing field names for deduplication
