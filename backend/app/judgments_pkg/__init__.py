@@ -520,7 +520,18 @@ async def get_documents_batch(request: BatchDocumentsRequest):
             )
 
     db = get_vector_db()
-    docs_data = await db.get_documents_by_ids(request.document_ids)
+    # full_text is ~130 KB/row; skip it (and the base_* block) when the caller
+    # asked only for light properties. Callers that omit return_properties,
+    # request full_text, vectors or base fields keep the full projection.
+    needs_full_projection = (
+        request.return_properties is None
+        or "full_text" in request.return_properties
+        or request.include_base_fields
+        or request.return_vectors
+    )
+    docs_data = await db.get_documents_by_ids(
+        request.document_ids, include_full_text=needs_full_projection
+    )
 
     documents: list[LegalDocument] = []
     for doc in docs_data:
