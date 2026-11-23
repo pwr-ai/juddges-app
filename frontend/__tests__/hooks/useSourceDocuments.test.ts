@@ -110,4 +110,57 @@ describe('useSourceDocuments', () => {
     expect(result.current.data).toHaveLength(MAX_SOURCE_CARDS + 2);
     expect(result.current.data?.[MAX_SOURCE_CARDS].summary).toBe('+2 more sources available');
   });
+
+  it('does not cache failures: a second mount fetches again', async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 500 }))
+      .mockResolvedValueOnce(okResponse([{ document_id: 'h1', title: 'H' }]));
+    global.fetch = fetchMock as unknown as typeof global.fetch;
+
+    const first = renderHook(() => useSourceDocuments({ documentIds: ['h1'] }));
+    await waitFor(() => expect(first.result.current.isError).toBe(true));
+    first.unmount();
+
+    const second = renderHook(() => useSourceDocuments({ documentIds: ['h1'] }));
+    await waitFor(() => expect(second.result.current.data?.[0]?.title).toBe('H'));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not set an error when unmounted during the fetch (abort)', async () => {
+    global.fetch = jest.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            const e = new Error('aborted');
+            e.name = 'AbortError';
+            reject(e);
+          });
+        }),
+    ) as unknown as typeof global.fetch;
+
+    const { result, unmount } = renderHook(() => useSourceDocuments({ documentIds: ['i1'] }));
+    await waitFor(() => expect(result.current.isLoading).toBe(true));
+    unmount();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.isError).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('clears a previous error when disabled', async () => {
+    global.fetch = jest.fn(async () => new Response('{}', { status: 500 })) as unknown as typeof global.fetch;
+
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useSourceDocuments({ documentIds: ['j1'], enabled }),
+      { initialProps: { enabled: true } },
+    );
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    rerender({ enabled: false });
+    await waitFor(() => expect(result.current.error).toBeNull());
+    expect(result.current.isError).toBe(false);
+  });
 });

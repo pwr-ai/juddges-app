@@ -44,7 +44,7 @@ async function readJson(response: Response, failure: string): Promise<unknown> {
     throw new SearchV2Error(SESSION_EXPIRED_MESSAGE, 401);
   }
   if (response.redirected || !contentType.includes("application/json")) {
-    if (response.redirected || response.ok || response.status === 401) {
+    if (response.redirected || response.ok) {
       throw new SearchV2Error(SESSION_EXPIRED_MESSAGE, 401);
     }
     throw new SearchV2Error(`${failure} (${response.status})`, response.status);

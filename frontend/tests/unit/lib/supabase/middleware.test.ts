@@ -97,63 +97,63 @@ describe("Supabase middleware public route policy", () => {
       "/publications/admin/secret.txt",
       "http://localhost/auth/login?next=%2Fpublications%2Fadmin%2Fsecret.txt",
     ],
-    [
-      "POST",
-      "/api/publications",
-      "http://localhost/auth/login?next=%2Fapi%2Fpublications",
-    ],
-    [
-      "POST",
-      "/api/health/invalidate",
-      "http://localhost/auth/login?next=%2Fapi%2Fhealth%2Finvalidate",
-    ],
-    [
-      "PUT",
-      "/api/contact",
-      "http://localhost/auth/login?next=%2Fapi%2Fcontact",
-    ],
-    [
-      "POST",
-      "/api/contact/nested",
-      "http://localhost/auth/login?next=%2Fapi%2Fcontact%2Fnested",
-    ],
-    [
-      "POST",
-      "/api/graphql",
-      "http://localhost/auth/login?next=%2Fapi%2Fgraphql",
-    ],
-    [
-      "POST",
-      "/api/graphql/nested",
-      "http://localhost/auth/login?next=%2Fapi%2Fgraphql%2Fnested",
-    ],
-    [
-      "GET",
-      "/api/extractions?job_id=not-a-uuid",
-      "http://localhost/auth/login?next=%2Fapi%2Fextractions%3Fjob_id%3Dnot-a-uuid",
-    ],
-    [
-      "POST",
-      `/api/extractions?job_id=${EXTRACTION_ID}`,
-      `http://localhost/auth/login?next=%2Fapi%2Fextractions%3Fjob_id%3D${EXTRACTION_ID}`,
-    ],
   ] as const)(
-    "rejects protected %s %s (pages redirect with exact next, /api returns 401)",
+    "redirects protected page %s %s with exact next",
     async (method, pathname, expectedLocation) => {
       const response = await updateSession(
         new NextRequest(`http://localhost${pathname}`, { method }),
       );
 
-      if (pathname.startsWith("/api/")) {
-        expect(response.status).toBe(401);
-        expect(response.headers.get("location")).toBeNull();
-        expect(await response.json()).toEqual({
-          error: "Authentication required",
-        });
-        return;
-      }
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(expectedLocation);
+    },
+  );
+
+  it.each([
+    [
+      "POST",
+      "/api/publications",
+    ],
+    [
+      "POST",
+      "/api/health/invalidate",
+    ],
+    [
+      "PUT",
+      "/api/contact",
+    ],
+    [
+      "POST",
+      "/api/contact/nested",
+    ],
+    [
+      "POST",
+      "/api/graphql",
+    ],
+    [
+      "POST",
+      "/api/graphql/nested",
+    ],
+    [
+      "GET",
+      "/api/extractions?job_id=not-a-uuid",
+    ],
+    [
+      "POST",
+      `/api/extractions?job_id=${EXTRACTION_ID}`,
+    ],
+  ] as const)(
+    "returns a JSON 401 for protected %s %s (never a redirect)",
+    async (method, pathname) => {
+      const response = await updateSession(
+        new NextRequest(`http://localhost${pathname}`, { method }),
+      );
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get("location")).toBeNull();
+      expect(await response.json()).toEqual({
+        error: "Authentication required",
+      });
     },
   );
 

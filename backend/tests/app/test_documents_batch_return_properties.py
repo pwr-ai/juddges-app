@@ -56,6 +56,17 @@ async def test_no_return_properties_keeps_full_documents():
 
 @pytest.mark.anyio
 @pytest.mark.unit
+async def test_empty_return_properties_keeps_full_documents():
+    db = _db()
+    await _call(db, return_properties=[])
+
+    db.get_documents_by_ids.assert_awaited_once_with(
+        [ROW["id"]], include_full_text=True
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
 async def test_return_properties_with_full_text_keeps_full_documents():
     db = _db()
     await _call(db, return_properties=["document_id", "full_text"])

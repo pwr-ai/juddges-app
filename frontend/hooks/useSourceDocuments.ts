@@ -99,8 +99,11 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
     const shouldFetch = enabled && documentIds && documentIds.length > 0;
 
     if (!shouldFetch) {
+      forceRefreshRef.current = false;
       setData([]);
       setIsLoading(false);
+      setIsError(false);
+      setError(null);
       return;
     }
 

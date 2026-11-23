@@ -524,7 +524,7 @@ async def get_documents_batch(request: BatchDocumentsRequest):
     # asked only for light properties. Callers that omit return_properties,
     # request full_text, vectors or base fields keep the full projection.
     needs_full_projection = (
-        request.return_properties is None
+        not request.return_properties
         or "full_text" in request.return_properties
         or request.include_base_fields
         or request.return_vectors
