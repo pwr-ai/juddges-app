@@ -4335,8 +4335,8 @@ export interface paths {
         };
         /**
          * Get full detail of a reasoning line with all members
-         * @description Retrieve a single reasoning line by ID, including all member judgments
-         *     with their metadata joined from the judgments table.
+         * @description Retrieve a single reasoning line by ID, including (by default) all member
+         *     judgments with their metadata joined from the judgments table.
          */
         get: operations["get_reasoning_line_reasoning_lines__line_id__get"];
         put?: never;
@@ -4400,6 +4400,26 @@ export interface paths {
          *     Drift events are persisted to the reasoning_line_events table.
          */
         post: operations["analyze_drift_reasoning_lines__line_id__drift_analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/{line_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the member judgments of a reasoning line
+         * @description Return the members of a reasoning line, ordered by position in the line.
+         */
+        get: operations["get_reasoning_line_members_reasoning_lines__line_id__members_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7758,6 +7778,18 @@ export interface components {
             documents?: {
                 [key: string]: unknown;
             }[];
+            /** Facetdistribution */
+            facetDistribution?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
+            /** Facetstats */
+            facetStats?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
             pagination: components["schemas"]["DocumentPagination"];
             /** Parsed Attributes */
             parsed_attributes?: {
@@ -14017,12 +14049,16 @@ export interface operations {
             query?: {
                 /** @description Search query (empty = match all) */
                 q?: string;
-                /** @description Max documents to return */
+                /** @description Max documents to return. 0 is allowed only together with `facets` (facet-only call). */
                 limit?: number;
                 /** @description Pagination offset */
                 offset?: number;
                 /** @description Optional Meilisearch filter expression */
                 filters?: string | null;
+                /** @description Filterable attributes to return value counts for (repeat the param; max 20). Adds `facetDistribution` to the response. */
+                facets?: string[] | null;
+                /** @description Narrow the values of each requested facet to those matching this text (Meilisearch facet-search, run per facet). */
+                facet_query?: string | null;
                 /** @description Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends 0.75. */
                 semantic_ratio?: number;
                 /** @description When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical. */
@@ -17063,7 +17099,10 @@ export interface operations {
     };
     get_facet_counts_extractions_base_schema_facets__field__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Restrict counts to one jurisdiction; omit for the whole corpus */
+                jurisdiction?: ("PL" | "UK") | null;
+            };
             header?: never;
             path: {
                 /** @description Field name to get facet counts for */
@@ -17151,6 +17190,8 @@ export interface operations {
             query?: {
                 /** @description Number of equal-width buckets */
                 bucket_count?: number;
+                /** @description Restrict the distribution to one jurisdiction; omit for the whole corpus */
+                jurisdiction?: ("PL" | "UK") | null;
             };
             header?: never;
             path: {
@@ -19095,7 +19136,10 @@ export interface operations {
     };
     get_reasoning_line_reasoning_lines__line_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include member judgments. Pass false for large lines and load them lazily via GET /{line_id}/members. */
+                include_members?: boolean;
+            };
             header?: never;
             path: {
                 line_id: string;
@@ -19206,6 +19250,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DriftAnalysisResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reasoning_line_members_reasoning_lines__line_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineMember"][];
                 };
             };
             /** @description Validation Error */

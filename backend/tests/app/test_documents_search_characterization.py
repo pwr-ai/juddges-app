@@ -227,6 +227,12 @@ def h(monkeypatch: pytest.MonkeyPatch) -> Harness:
                 raise hx.meili_response
             return hx.meili_response
 
+        async def facet_distribution_for_query(
+            self, facets: list[str], facet_query: str, **kw: Any
+        ) -> dict:
+            hx.record("meili_facet_search", facets=facets, facet_query=facet_query)
+            return {f: {"SN": 3} for f in facets}
+
     monkeypatch.setattr("app.services.search.MeiliSearchService", FakeMeili)
     return hx
 
@@ -273,7 +279,6 @@ async def test_facets_only_fast_path_proxies_meilisearch(h: Harness) -> None:
     req = make_request(
         query="",
         facets=["court_name"],
-        facet_query="S",
         limit_docs=5,
         offset=10,
     )
@@ -285,7 +290,6 @@ async def test_facets_only_fast_path_proxies_meilisearch(h: Harness) -> None:
             "limit": 5,
             "offset": 10,
             "facets": ["court_name"],
-            "facet_query": "S",
         }
     ]
     assert not h.called("_run_hybrid_search")
@@ -297,6 +301,18 @@ async def test_facets_only_fast_path_proxies_meilisearch(h: Harness) -> None:
     assert resp.query_time_ms == 4
     assert resp.facetDistribution == {"court_name": {"SN": 3}}
     assert resp.facetStats == {"year": {"min": 1990, "max": 2020}}
+
+
+@pytest.mark.unit
+async def test_facets_only_fast_path_facet_query_uses_facet_search(h: Harness) -> None:
+    """facetQuery is invalid on /search, so it is served by /facet-search."""
+    resp = await search_documents(
+        make_request(query="", facets=["court_name"], facet_query="S")
+    )
+    assert h.meili_calls == []  # /search is not called
+    assert h.called("meili_facet_search")
+    assert resp.facetDistribution == {"court_name": {"SN": 3}}
+    assert resp.chunks == []
 
 
 @pytest.mark.unit

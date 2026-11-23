@@ -658,6 +658,10 @@ export interface ReasoningLinesTranslations {
   membersHeading: string;
   membersShowing: string;
   membersShowMore: string;
+  membersExpand: string;
+  membersCollapse: string;
+  membersLoading: string;
+  membersError: string;
   membersEmptyTitle: string;
   membersEmptyDescription: string;
 

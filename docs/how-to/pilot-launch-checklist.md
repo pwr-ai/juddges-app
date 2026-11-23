@@ -79,9 +79,14 @@ in `.env`.
       keyed on the normalized email. Both ship with safe defaults — only
       override with a reason.
 - [ ] `LLM_NAME` — pin to a dated OpenAI snapshot before the pilot.
-      Currently unset, so extraction and chat run on the floating alias
-      `"gpt-5"`, which OpenAI can repoint without notice — an extracted
+      Currently unset, so extraction and chat run on the code default
+      `"gpt-6.2-sol"` (mid tier of GPT-6.2; the mini model for rewrites and
+      classification stays `"gpt-5-mini"` via `LLM_MINI_NAME`). It is a
+      floating alias OpenAI can repoint without notice — an extracted
       dataset from before and after that happens is not reproducible.
+      GPT-6.x rejects `reasoning_effort="minimal"` and any non-default
+      `temperature`; `llms.py` / `llm_provider.py` pick `"low"` and omit
+      temperature for it. `LLM_REASONING_EFFORT` overrides the effort.
       **`OPENAI_MODEL` in `.env.example` is read by no code at all** —
       `LLM_NAME` (`backend/packages/juddges_search/juddges_search/llms.py`)
       is the live variable. Do not edit `OPENAI_MODEL` expecting an effect.

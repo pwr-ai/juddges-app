@@ -19,6 +19,7 @@ jest.mock("@/lib/extractions/use-extracted-data-filters", () => ({
 jest.mock("@/lib/extractions/base-schema-filter-api", () => ({
   useExtractionResults: () => ({ data: undefined, isLoading: false, isFetching: false, error: new Error("boom"), refetch: jest.fn() }),
   useExtractionFacet: () => ({ data: undefined }),
+  singleJurisdiction: () => null,
 }));
 jest.mock("@/app/search/extractions/_components/StatisticsView", () => ({
   StatisticsView: () => <div data-testid="statistics-view" />,

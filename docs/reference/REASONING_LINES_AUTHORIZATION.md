@@ -11,6 +11,7 @@ does not infer per-user ownership that the schema cannot enforce.
 | `GET /reasoning-lines/` | Authenticated user | Shared read |
 | `GET /reasoning-lines/dag` | Authenticated user | Shared read |
 | `GET /reasoning-lines/{id}` | Authenticated user | Shared read |
+| `GET /reasoning-lines/{id}/members` | Authenticated user | Shared read |
 | `GET /reasoning-lines/{id}/timeline` | Authenticated user | Shared read |
 | `GET /reasoning-lines/{id}/related` | Authenticated user | Shared read |
 | `POST /reasoning-lines/discover` | Authenticated user | Read-only computation |

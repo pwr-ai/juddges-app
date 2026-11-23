@@ -1017,6 +1017,7 @@ class SearchChunksRequest(BaseModel):
     )
     facets: list[str] | None = Field(
         default=None,
+        max_length=20,
         description=(
             "Meilisearch facets to compute on this search. Each name must be "
             "in the index'''s filterableAttributes. Used by the frontend "
@@ -1031,6 +1032,15 @@ class SearchChunksRequest(BaseModel):
             "that match this prefix/substring."
         ),
     )
+
+    @field_validator("facets")
+    @classmethod
+    def validate_facet_names(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None:
+            bad = [n for n in v if not re.fullmatch(r"[a-z0-9_]+", n)]
+            if bad:
+                raise ValueError(f"invalid facet name(s): {bad}")
+        return v
 
     @field_validator("languages")
     @classmethod
