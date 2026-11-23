@@ -40,6 +40,13 @@ const OUTCOME_LABELS: Record<OutcomeKey, string> = {
 /** Stacking order of the bars, bottom to top */
 const OUTCOME_KEYS: readonly OutcomeKey[] = ['for', 'against', 'mixed', 'procedural'];
 
+/** Tooltip text for one series: count and its share of the period's
+ *  classified judgments, e.g. "720 (88%)". */
+function formatShare(count: number, classified: number): string {
+  if (classified <= 0) return `${count}`;
+  return `${count} (${Math.round((count / classified) * 100)}%)`;
+}
+
 /** Polish labels for the backend trend vocabulary (app/reasoning_lines/schemas.py);
  *  `color` is the text tone on a rule-bordered pill */
 const TREND_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -91,7 +98,10 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
         against: point.against_count,
         mixed: point.mixed_count,
         procedural: point.procedural_count,
-        // Keep raw data for tooltip
+        // Keep raw data for tooltip; shares are of classified judgments,
+        // the same base the 100% bars are normalised to.
+        _classified:
+          point.for_count + point.against_count + point.mixed_count + point.procedural_count,
         _total: point.total,
         _forRatio: point.for_ratio,
       })),
@@ -131,7 +141,13 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
         {/* Chart */}
         <div style={{ width: '100%', height }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+            {/* stackOffset="expand": every period is a 100% bar, so years with
+                few judgments compare on share, not on volume. */}
+            <BarChart
+              data={chartData}
+              stackOffset="expand"
+              margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke={rechartsTheme.grid} />
               <XAxis
                 dataKey="name"
@@ -140,7 +156,9 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
                 axisLine={{ stroke: rechartsTheme.axis }}
               />
               <YAxis
-                allowDecimals={false}
+                domain={[0, 1]}
+                ticks={[0, 0.25, 0.5, 0.75, 1]}
+                tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
                 tick={{ fill: rechartsTheme.tick, fontSize: 11 }}
                 tickLine={false}
                 axisLine={{ stroke: rechartsTheme.axis }}
@@ -148,7 +166,10 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
               <Tooltip
                 contentStyle={rechartsTheme.tooltip}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                formatter={(value: any, name: any) => [`${value}`, name]}
+                formatter={(value: any, name: any, item: any) => [
+                  formatShare(Number(value), item?.payload?._classified ?? 0),
+                  name,
+                ]}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 labelFormatter={(label: any) => `Okres: ${label}`}
               />
@@ -173,4 +194,4 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
   );
 }
 
-export { OUTCOME_COLORS, OUTCOME_LABELS, TREND_CONFIG };
+export { OUTCOME_COLORS, OUTCOME_LABELS, TREND_CONFIG, formatShare };

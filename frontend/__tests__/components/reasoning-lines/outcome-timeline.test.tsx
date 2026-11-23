@@ -1,13 +1,17 @@
 import { render, screen } from '@testing-library/react';
 
-import { OutcomeTimeline } from '@/components/reasoning-lines/OutcomeTimeline';
+import { OutcomeTimeline, formatShare } from '@/components/reasoning-lines/OutcomeTimeline';
 import type { ReasoningLineTimeline } from '@/types/reasoning-lines';
 
 // recharts (+ d3 ESM) cannot be transformed by jest here and the chart is
 // irrelevant to the trend badge — stub it out.
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  BarChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  BarChart: ({ children, stackOffset }: { children: React.ReactNode; stackOffset?: string }) => (
+    <div data-testid="bar-chart" data-stack-offset={stackOffset}>
+      {children}
+    </div>
+  ),
   // Render each series' display name so the legend labels can be asserted.
   Bar: ({ name }: { name: string }) => <span data-testid="series">{name}</span>,
   XAxis: () => null,
@@ -106,5 +110,21 @@ describe('OutcomeTimeline series labels', () => {
       'Częściowo',
       'Proceduralne',
     ]);
+  });
+});
+
+describe('OutcomeTimeline 100% bars', () => {
+  it('normalises every period to a 100% stacked bar', () => {
+    render(<OutcomeTimeline data={timeline('shifting')} />);
+
+    expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-stack-offset', 'expand');
+  });
+
+  it.each([
+    [720, 817, '720 (88%)'],
+    [0, 10, '0 (0%)'],
+    [3, 0, '3'],
+  ])('formats %i of %i classified as %s', (count, classified, expected) => {
+    expect(formatShare(count, classified)).toBe(expected);
   });
 });
