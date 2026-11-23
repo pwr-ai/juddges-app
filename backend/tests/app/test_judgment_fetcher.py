@@ -200,3 +200,13 @@ class TestGetDocumentById:
             result = await get_document_by_id("nonexistent")
 
         assert result is None
+
+
+def test_row_to_legal_document_keeps_the_judgment_uuid_beside_the_source_id():
+    from app.utils.judgment_fetcher import _row_to_legal_document
+
+    row = _row(source_id="155000000001521_III_")
+    doc = _row_to_legal_document(row, return_vectors=False)
+
+    assert doc.document_id == "155000000001521_III_"
+    assert doc.judgment_uuid == row["id"]

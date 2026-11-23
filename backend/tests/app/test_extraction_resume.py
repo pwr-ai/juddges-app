@@ -333,7 +333,7 @@ def test_legacy_source_id_rows_do_not_crash_the_merge():
     assert [row["document_id"] for row in merged] == [UUID_1]
 
 
-def _run_task(monkeypatch, stored_results):
+def _run_task(monkeypatch, stored_results, cancellation=None):
     """Run the task with docs whose document_id is a source id, not the UUID."""
     from app import workers
     from app.models import DocumentExtractionRequest
@@ -372,7 +372,9 @@ def _run_task(monkeypatch, stored_results):
         workers, "InformationExtractor", MagicMock(return_value=extractor)
     )
     monkeypatch.setattr(workers, "supabase_client", _ResumeSupabase(stored_results))
-    monkeypatch.setattr(workers, "_cancellation_requested", lambda _job_id: False)
+    monkeypatch.setattr(
+        workers, "_cancellation_requested", cancellation or (lambda _job_id: False)
+    )
 
     request = DocumentExtractionRequest(
         collection_id="col-1",
@@ -410,3 +412,52 @@ def test_resume_skips_documents_completed_under_their_uuid(monkeypatch, celery_e
     assert seen == ["text-" + UUID_2]
     by_id = {row["document_id"]: row for row in outcome.result}
     assert by_id[UUID_1]["extracted_data"] == {"case_number": "prior-run"}
+
+
+@pytest.mark.unit
+def test_resume_accepts_rows_stored_under_the_legacy_source_id(
+    monkeypatch, celery_eager
+):
+    """Jobs in flight before UUID keying stored source ids; do not re-bill them."""
+    stored = [
+        {
+            "document_id": "155000000001521_III_",
+            "status": "completed",
+            "extracted_data": {"case_number": "prior-run"},
+        }
+    ]
+    outcome, seen = _run_task(monkeypatch, stored)
+
+    assert outcome.successful()
+    assert seen == ["text-" + UUID_2], "the legacy-keyed document must be skipped"
+
+
+@pytest.mark.unit
+def test_late_failure_keeps_a_document_completed_in_this_run(monkeypatch, celery_eager):
+    """Doc 1 completes (source id != UUID), then the job fails before doc 2.
+
+    The completed row must survive the failure merge, keyed by the UUID.
+    """
+    from app import workers
+
+    persisted: list[dict] = []
+
+    def _save(job_id, results, **_kwargs):
+        persisted[:] = list(results)
+        return True
+
+    monkeypatch.setattr(workers, "_update_job_results_in_supabase", _save)
+    monkeypatch.setattr(
+        workers, "_fetch_job_results_from_supabase", lambda _job_id: list(persisted)
+    )
+
+    def _boom(_job_id):
+        raise RuntimeError("boom after first document")
+
+    outcome, seen = _run_task(monkeypatch, [], cancellation=_boom)
+
+    assert seen == ["text-" + UUID_1]
+    by_id = {row["document_id"]: row for row in outcome.result}
+    assert set(by_id) == {UUID_1, UUID_2}
+    assert by_id[UUID_1]["status"] == "completed"
+    assert by_id[UUID_2]["status"] == "failed"

@@ -747,7 +747,11 @@ def extract_information_from_documents_task(
         requested_ids = set(request.document_ids)
         for idx, doc in enumerate(documents):
             result_id = _requested_id(doc, requested_ids)
-            already_completed = completed_by_id.get(result_id)
+            # Rows stored by an attempt that predates UUID keying carry the
+            # source id; accept them so those documents are not paid for twice.
+            already_completed = completed_by_id.get(result_id) or completed_by_id.get(
+                doc.document_id
+            )
             if already_completed is not None:
                 results.append(already_completed)
             else:
