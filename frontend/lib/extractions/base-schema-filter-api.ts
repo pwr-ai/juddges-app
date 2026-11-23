@@ -56,6 +56,7 @@ export function singleJurisdiction(
   return selected && selected.length === 1 ? selected[0] : null;
 }
 
+// NB: `jurisdiction` comes before `signal` (positional; keep call sites in order).
 export async function fetchFacet(
   field: string,
   jurisdiction?: Jurisdiction | null,
@@ -105,6 +106,7 @@ export function useExtractionFacet(
   });
 }
 
+// NB: `jurisdiction` comes before `signal` (positional; keep call sites in order).
 export async function fetchHistogram(
   field: string,
   buckets: number,

@@ -93,7 +93,7 @@ BEGIN
                 COUNT(*)::bigint AS cnt
             FROM public.judgments j
             WHERE j.base_extraction_status = 'completed'
-          AND (%3$L::text IS NULL OR j.jurisdiction = %3$L::text)
+              AND (%3$L::text IS NULL OR j.jurisdiction = %3$L::text)
               AND j.%1$I IS NOT NULL
             $q$,
             v_column,
@@ -125,7 +125,7 @@ BEGIN
                 ) AS bucket_idx
             FROM public.judgments j
             WHERE j.base_extraction_status = 'completed'
-          AND (%6$L::text IS NULL OR j.jurisdiction = %6$L::text)
+              AND (%6$L::text IS NULL OR j.jurisdiction = %6$L::text)
               AND j.%1$I IS NOT NULL
         )
         SELECT
@@ -141,8 +141,8 @@ BEGIN
         v_min,     -- %2
         v_max,     -- %3
         v_width,   -- %4
-        v_buckets, -- %5
-        p_jurisdiction -- %6
+        v_buckets,      -- %5
+        p_jurisdiction  -- %6
     );
 END;
 $$;

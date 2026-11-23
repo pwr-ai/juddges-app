@@ -80,6 +80,15 @@ and forwards it through the Next.js proxies.
   drops the 2-argument form so there is a single overload). The scoped call
   also narrows the min/max range to that jurisdiction.
 
+Count semantics differ between the two paths: scoped counts are **distinct
+documents** and exclude whitespace-only text values; unscoped counts are **array
+elements** (a document repeating a value in one array counts per occurrence) and
+exclude only NULL/empty values.
+
+**Deploy order:** apply migration `20261123000001` *before* deploying the
+backend. Backend-first makes scoped histogram calls fail (`PGRST202`, surfaced as
+HTTP 500); unscoped calls are unaffected.
+
 ## RPC `public.get_extracted_facet_counts_by_jurisdiction(p_filters, field_path, p_text_query)`
 
 Sibling of `get_extracted_facet_counts(field_path)` (which stays untouched):

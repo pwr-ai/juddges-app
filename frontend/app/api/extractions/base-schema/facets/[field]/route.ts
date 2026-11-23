@@ -13,6 +13,18 @@ const apiLogger = logger.child('base-schema-facets-api');
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
 
+/** FastAPI 422 `detail` is an array of { msg }; surface a string, not the array. */
+function backendErrorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === 'string' && detail) return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d) => (d && typeof d === 'object' && 'msg' in d ? String((d as { msg: unknown }).msg) : ''))
+      .filter(Boolean);
+    if (msgs.length) return msgs.join('; ');
+  }
+  return fallback;
+}
+
 /**
  * GET /api/extractions/base-schema/facets/[field]
  * Get facet counts for a specific extracted data field.
@@ -69,7 +81,7 @@ export async function GET(
 
       return NextResponse.json(
         {
-          error: errorData.detail || "Failed to get facet counts",
+          error: backendErrorMessage(errorData.detail, "Failed to get facet counts"),
           code: errorData.code || "FACET_ERROR"
         },
         { status: response.status }
