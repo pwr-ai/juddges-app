@@ -1,6 +1,6 @@
 // hooks/useSourceDocuments.ts
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { SearchDocument } from '@/types/search';
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
 import { logger } from "@/lib/logger";
@@ -15,7 +15,24 @@ interface UseSourceDocumentsResult {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
+  /** Re-run the request (bypasses the cache); used by the retry button. */
+  refetch: () => void;
 }
+
+/** Error raised when the batch request fails; carries the HTTP status if any. */
+export class SourceDocumentsError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'SourceDocumentsError';
+    this.status = status;
+  }
+}
+
+// Limit to first 20 documents for source cards to avoid large payloads
+// Users can view more by expanding or viewing the full document
+export const MAX_SOURCE_CARDS = 20;
 
 // Simple in-memory cache
 const cache = new Map<string, { data: SearchDocument[]; timestamp: number }>();
@@ -58,14 +75,25 @@ const createErrorPlaceholder = (id: string, message: string): SearchDocument => 
 
 /**
  * Hook to fetch document details for an array of document IDs
- * Uses standard React hooks with simple caching
+ * Uses standard React hooks with simple caching.
+ *
+ * Only an id that is absent from a successful response gets the
+ * "Document was not found!" placeholder. A failed request (network error,
+ * 401, 5xx, redirect) surfaces through `error` and is never cached.
  */
 export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDocumentsOptions): UseSourceDocumentsResult {
   const [data, setData] = useState<SearchDocument[] | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const forceRefreshRef = useRef(false);
+
+  const refetch = useCallback(() => {
+    forceRefreshRef.current = true;
+    setRetryNonce((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     const shouldFetch = enabled && documentIds && documentIds.length > 0;
@@ -78,10 +106,15 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
 
     const cacheKey = documentIds.join(',');
 
-    // Check cache
+    const forceRefresh = forceRefreshRef.current;
+    forceRefreshRef.current = false;
+
+    // Check cache (successful responses only are ever stored)
     const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TIME) {
+    if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_TIME) {
       setData(cached.data);
+      setError(null);
+      setIsError(false);
       setIsLoading(false);
       return;
     }
@@ -99,16 +132,12 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
       setIsLoading(true);
       setIsError(false);
       setError(null);
+      setData(undefined);
 
-      // Limit to first 20 documents for source cards to avoid large payloads
-      // Users can view more by expanding or viewing the full document
-      const MAX_SOURCE_CARDS = 20;
       const limitedDocumentIds = documentIds.slice(0, MAX_SOURCE_CARDS);
 
       try {
-
         // Use POST with return_properties to fetch only metadata (optimized for source cards)
-        // This matches what the metadata endpoint returns but in batch
         const response = await fetch(`/api/documents/batch`, {
           method: 'POST',
           headers: {
@@ -129,8 +158,12 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
           }),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch source documents');
+        if (response.status === 401) {
+          throw new SourceDocumentsError('Your session has expired. Please sign in again.', 401);
+        }
+
+        if (!response.ok || response.redirected) {
+          throw new SourceDocumentsError('Failed to fetch source documents', response.status);
         }
 
         const result = await response.json();
@@ -153,15 +186,14 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
           unwrappedDocs.map((doc) => [cleanDocumentIdForUrl(doc.document_id), doc] as const)
         );
 
-
-        // 3) Resolve requested IDs to docs (or placeholders)
-        // Only map the limited IDs we actually fetched
+        // 3) Resolve requested IDs to docs (or "not found" placeholders).
+        // Reached only after a successful 200, so a missing id is genuinely missing.
         const finalData = limitedDocumentIds.map((id) => {
           const key = String(id);
           const found = docMap.get(key);
           if (found) return found;
 
-          logger.warn(`⚠️ Missing document for id=${key}`);
+          logger.warn(`Missing document for id=${key}`);
           return createErrorPlaceholder(id, "Document was not found!");
         });
 
@@ -173,7 +205,8 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
           );
           finalData.push(...remainingPlaceholders);
         }
-        // Update cache with the complete (mixed) data
+
+        // Cache successful responses only
         cache.set(cacheKey, { data: finalData, timestamp: Date.now() });
 
         setData(finalData);
@@ -186,25 +219,8 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
 
         const error = err instanceof Error ? err : new Error('Unknown error');
 
-        // Create error placeholders for limited documents only
-        if (documentIds && documentIds.length > 0) {
-          const MAX_SOURCE_CARDS = 20;
-          const limitedDocumentIds = documentIds.slice(0, MAX_SOURCE_CARDS);
-          const errorPlaceholders = limitedDocumentIds.map(id =>
-            createErrorPlaceholder(id, "Document was not found!")
-          );
-
-          // Add placeholder for remaining documents if any
-          if (documentIds.length > MAX_SOURCE_CARDS) {
-            const remainingPlaceholders = documentIds.slice(MAX_SOURCE_CARDS).map(id =>
-              createErrorPlaceholder(id, `+${documentIds.length - MAX_SOURCE_CARDS} more sources available`)
-            );
-            errorPlaceholders.push(...remainingPlaceholders);
-          }
-
-          setData(errorPlaceholders);
-        }
-
+        // Do not fabricate per-document "not found" cards and do not cache.
+        setData(undefined);
         setIsError(true);
         setError(error);
         setIsLoading(false);
@@ -220,7 +236,7 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documentIds?.join(','), enabled]);
+  }, [documentIds?.join(','), enabled, retryNonce]);
 
-  return { data, isLoading, isError, error };
+  return { data, isLoading, isError, error, refetch };
 }
