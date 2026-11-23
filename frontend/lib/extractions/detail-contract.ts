@@ -89,6 +89,57 @@ export function normalizeExtractionJobPayload(
   };
 }
 
+export interface ExtractionResultCounts {
+  completed: number;
+  failed: number;
+  other: number;
+}
+
+/** One page of `GET /api/extractions/{id}/results`. */
+export interface ExtractionResultsPage {
+  results: DocumentExtractionResult[];
+  /** All results stored on the job. */
+  total: number;
+  /** Results matching the status filter: the pager total. */
+  filtered_total: number;
+  counts: ExtractionResultCounts;
+}
+
+/**
+ * Validate one results page. Counters the backend omitted fall back to what the
+ * page itself shows, so a thin payload degrades to "this page is everything"
+ * rather than rejecting rows that are individually valid.
+ */
+export function normalizeExtractionResultsPage(
+  payload: unknown
+): ExtractionResultsPage | null {
+  if (!isPlainRecord(payload) || !Array.isArray(payload.results)) return null;
+  const results = payload.results.map(normalizeExtractionResult);
+  if (results.some((result) => result === null)) return null;
+  const rows = results as DocumentExtractionResult[];
+  const counts = isPlainRecord(payload.counts) ? payload.counts : {};
+  const count = (value: unknown, fallback: number) =>
+    typeof value === "number" && Number.isInteger(value) && value >= 0
+      ? value
+      : fallback;
+  const completed = rows.filter(
+    (row) => row.status === DocumentProcessingStatus.COMPLETED
+  ).length;
+  const failed = rows.filter(
+    (row) => row.status === DocumentProcessingStatus.FAILED
+  ).length;
+  return {
+    results: rows,
+    total: count(payload.total, rows.length),
+    filtered_total: count(payload.filtered_total, rows.length),
+    counts: {
+      completed: count(counts.completed, completed),
+      failed: count(counts.failed, failed),
+      other: count(counts.other, rows.length - completed - failed),
+    },
+  };
+}
+
 export function toExtractionJobSnapshot(
   response: ExtractionJobResponse
 ): ExtractionJobSnapshot {

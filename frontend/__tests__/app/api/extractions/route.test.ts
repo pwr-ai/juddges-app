@@ -372,6 +372,346 @@ describe("GET /api/extractions", () => {
     expect(response.status).toBe(400);
   });
 
+  describe("job status sync", () => {
+    interface JobRow {
+      status: string | null;
+      completed_documents: number | null;
+      completed_at: string | null;
+      collection_id: string | null;
+      schema_id: string | null;
+    }
+
+    function mockJobsTable(row: JobRow | null) {
+      const supabase = mockSupabaseAuth(USER_ID);
+      const selectColumns = jest.fn();
+      const updateMock = jest.fn();
+      const updateSelectMock = jest.fn().mockResolvedValue({
+        data: [{ job_id: JOB_ID }],
+        error: null,
+      });
+      updateMock.mockReturnValue({
+        eq: jest.fn().mockReturnValue({ select: updateSelectMock }),
+      });
+      supabase.from = jest.fn().mockImplementation((table: string) => {
+        if (table === "extraction_jobs") {
+          return {
+            select: selectColumns.mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({ data: row, error: null }),
+              }),
+            }),
+            update: updateMock,
+          };
+        }
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: { name: "Name" }, error: null }),
+            }),
+          }),
+        };
+      });
+      return { selectColumns, updateMock, updateSelectMock };
+    }
+
+    function mockBackendJob(body: Record<string, unknown>) {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          job_id: JOB_ID,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:01:00Z",
+          results: null,
+          ...body,
+        }),
+      });
+    }
+
+    const baseRow: JobRow = {
+      status: "STARTED",
+      completed_documents: 5,
+      completed_at: null,
+      collection_id: COLLECTION_ID,
+      schema_id: SCHEMA_ID,
+    };
+
+    it("asks the backend for the status only and answers without results", async () => {
+      mockJobsTable(baseRow);
+      mockBackendJob({ status: "IN_PROGRESS", completed_documents: 5, total_documents: 10 });
+
+      const response = await GET(makeGetRequest(JOB_ID));
+
+      expect(response.status).toBe(200);
+      expect(global.fetch).toHaveBeenCalledWith(
+        `http://localhost:8004/extractions/${JOB_ID}?include_results=false`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-API-Key": "test-api-key",
+            Authorization: "Bearer test-access-token",
+          }),
+        })
+      );
+      const body = await response.json();
+      expect(body.job_id).toBe(JOB_ID);
+      expect(body.status).toBe("IN_PROGRESS");
+      expect(body.results).toEqual([]);
+      expect(body.progress).toEqual({ completed: 5, total: 10 });
+      expect(body.collection_id).toBe(COLLECTION_ID);
+    });
+
+    it("reads only narrow columns, never results", async () => {
+      const { selectColumns } = mockJobsTable(baseRow);
+      mockBackendJob({ status: "IN_PROGRESS", completed_documents: 5, total_documents: 10 });
+
+      await GET(makeGetRequest(JOB_ID));
+
+      expect(selectColumns).toHaveBeenCalledTimes(1);
+      const columns = selectColumns.mock.calls[0][0] as string;
+      expect(columns).not.toContain("results");
+      expect(columns).toContain("completed_documents");
+    });
+
+    it("does not write when status and progress are unchanged", async () => {
+      const { updateMock } = mockJobsTable(baseRow);
+      mockBackendJob({ status: "IN_PROGRESS", completed_documents: 5, total_documents: 10 });
+
+      const response = await GET(makeGetRequest(JOB_ID));
+
+      expect(response.status).toBe(200);
+      expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it("writes status and progress when progress moved, without results or completed_at", async () => {
+      const { updateMock, updateSelectMock } = mockJobsTable(baseRow);
+      mockBackendJob({ status: "IN_PROGRESS", completed_documents: 7, total_documents: 10 });
+
+      await GET(makeGetRequest(JOB_ID));
+
+      expect(updateMock).toHaveBeenCalledTimes(1);
+      const written = updateMock.mock.calls[0][0];
+      expect(written).toEqual(
+        expect.objectContaining({ status: "STARTED", completed_documents: 7 })
+      );
+      expect(written).not.toHaveProperty("results");
+      expect(written).not.toHaveProperty("completed_at");
+      expect(updateSelectMock).toHaveBeenCalledWith("job_id");
+    });
+
+    it("stamps completed_at when the job turns terminal and it is still null", async () => {
+      const { updateMock } = mockJobsTable(baseRow);
+      mockBackendJob({ status: "COMPLETED", completed_documents: 10, total_documents: 10 });
+
+      await GET(makeGetRequest(JOB_ID));
+
+      const written = updateMock.mock.calls[0][0];
+      expect(written).toEqual(
+        expect.objectContaining({ status: "SUCCESS", completed_documents: 10 })
+      );
+      expect(typeof written.completed_at).toBe("string");
+      expect(written).not.toHaveProperty("results");
+    });
+
+    it("keeps an existing completed_at and does not write for a settled terminal job", async () => {
+      const { updateMock } = mockJobsTable({
+        ...baseRow,
+        status: "SUCCESS",
+        completed_documents: 10,
+        completed_at: "2026-01-01T00:01:00Z",
+      });
+      mockBackendJob({ status: "COMPLETED", completed_documents: 10, total_documents: 10 });
+
+      await GET(makeGetRequest(JOB_ID));
+
+      expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it("does not set completed_at for a non-terminal status change", async () => {
+      const { updateMock } = mockJobsTable({ ...baseRow, status: "PENDING" });
+      mockBackendJob({ status: "IN_PROGRESS", completed_documents: 5, total_documents: 10 });
+
+      await GET(makeGetRequest(JOB_ID));
+
+      expect(updateMock).toHaveBeenCalledTimes(1);
+      expect(updateMock.mock.calls[0][0]).not.toHaveProperty("completed_at");
+    });
+
+    it("skips the write when the job row is not visible", async () => {
+      const { updateMock } = mockJobsTable(null);
+      mockBackendJob({ status: "IN_PROGRESS", completed_documents: 5, total_documents: 10 });
+
+      const response = await GET(makeGetRequest(JOB_ID));
+
+      expect(response.status).toBe(200);
+      expect(updateMock).not.toHaveBeenCalled();
+    });
+  });
+
+  it("returns error when backend returns non-ok status", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      json: async () => ({ detail: "Invalid schema" }),
+    });
+
+    const response = await POST(
+      makePostRequest({
+        collection_id: COLLECTION_ID,
+        schema_id: SCHEMA_ID,
+        document_ids: [DOC_ID_1],
+        extraction_context: "Extract data",
+      })
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBeDefined();
+  });
+
+  it("preserves backend validation status and error code", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 422,
+      statusText: "Unprocessable Entity",
+      json: async () => ({
+        detail: {
+          error: "Validation Error",
+          message: "At least one document is required",
+          code: "EMPTY_DOCUMENT_LIST",
+        },
+      }),
+    });
+
+    const response = await POST(
+      makePostRequest({
+        collection_id: COLLECTION_ID,
+        schema_id: SCHEMA_ID,
+        document_ids: [DOC_ID_1],
+        extraction_context: "Extract data",
+      })
+    );
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({
+        code: "EMPTY_DOCUMENT_LIST",
+        details: "At least one document is required",
+      })
+    );
+  });
+
+  it("returns 500 when backend returns no job_id", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "PENDING" }), // no job_id
+    });
+
+    const response = await POST(
+      makePostRequest({
+        collection_id: COLLECTION_ID,
+        schema_id: SCHEMA_ID,
+        document_ids: [DOC_ID_1],
+        extraction_context: "Extract data",
+      })
+    );
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("returns error when collection has no documents", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => [], // empty documents
+    });
+
+    const response = await POST(
+      makePostRequest({
+        collection_id: COLLECTION_ID,
+        schema_id: SCHEMA_ID,
+        extraction_context: "Extract data",
+      })
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("includes additional_instructions when provided", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        job_id: JOB_ID,
+        status: "PENDING",
+      }),
+    });
+
+    await POST(
+      makePostRequest({
+        collection_id: COLLECTION_ID,
+        schema_id: SCHEMA_ID,
+        document_ids: [DOC_ID_1],
+        extraction_context: "Extract data",
+        additional_instructions: "Focus on dates",
+      })
+    );
+
+    const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(callBody.additional_instructions).toBe("Focus on dates");
+  });
+});
+
+describe("GET /api/extractions", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.BACKEND_API_KEY = "test-api-key";
+    process.env.API_BASE_URL = "http://localhost:8004";
+  });
+
+  it("returns 401 when user is not authenticated", async () => {
+    mockSupabaseAuth(null);
+
+    const response = await GET(makeGetRequest(JOB_ID));
+
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 400 when job_id is missing", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/extractions")
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when job_id is not a valid UUID", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/extractions?job_id=not-a-uuid")
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("fetches job status from backend and returns results", async () => {
     const supabase = mockSupabaseAuth(USER_ID);
 

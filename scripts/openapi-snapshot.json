@@ -6040,6 +6040,77 @@
         "title": "ExtractionJobLink",
         "type": "object"
       },
+      "ExtractionJobResultCounts": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "other": {
+            "title": "Other",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "completed",
+          "failed",
+          "other"
+        ],
+        "title": "ExtractionJobResultCounts",
+        "type": "object"
+      },
+      "ExtractionJobResultsPage": {
+        "description": "One page of a job's per-document results (offset/limit over the array).",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/ExtractionJobResultCounts"
+          },
+          "filtered_total": {
+            "description": "Results matching the status filter (the pager total)",
+            "title": "Filtered Total",
+            "type": "integer"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentExtractionResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total": {
+            "description": "All results stored on the job",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "offset",
+          "limit",
+          "total",
+          "filtered_total",
+          "counts",
+          "results"
+        ],
+        "title": "ExtractionJobResultsPage",
+        "type": "object"
+      },
       "ExtractionJobSummary": {
         "description": "Summary information for an extraction job.",
         "properties": {
@@ -24271,6 +24342,108 @@
           }
         ],
         "summary": "Export extraction results",
+        "tags": [
+          "extraction"
+        ]
+      }
+    },
+    "/extractions/{job_id}/results": {
+      "get": {
+        "description": "Paginated per-document results of an owned extraction job. The page is sliced inside the database, so large jobs do not load the whole result array. `counts` and `total` cover all results; `filtered_total` honours the `status` filter.",
+        "operationId": "get_extraction_job_results_page_extractions__job_id__results_get",
+        "parameters": [
+          {
+            "description": "Extraction job ID (task ID)",
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "description": "Extraction job ID (task ID)",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of results to skip",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Number of results to skip",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Page size",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Only results with this outcome",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "completed",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only results with this outcome",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJobResultsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get one page of an extraction job's results",
         "tags": [
           "extraction"
         ]
