@@ -9,10 +9,11 @@ Defaults (override via kwargs):
   with headroom for p99; prevents a hung OpenAI call from pinning a worker
   for the full 120s gunicorn budget.
 - max_retries = 2 — retry transient 429/5xx with SDK's built-in backoff.
-- reasoning_effort = "minimal" — GPT-5 is a reasoning model by default;
-  without this, hidden reasoning tokens consume the entire
+- reasoning_effort = "minimal" for the GPT-5 family, "low" for newer models
+  (GPT-6.x rejects "minimal"). These are reasoning models by default;
+  without a low effort, hidden reasoning tokens consume the entire
   max_completion_tokens budget and structured output fails with
-  "length limit reached". "minimal" is correct for classification,
+  "length limit reached". Low effort is correct for classification,
   routing, rewrites; chains that need deep thinking can override.
 - max_completion_tokens = 4000 — enough headroom for reasoning + real
   output. Deprecated `max_tokens` is NOT forwarded (GPT-5 rejects it).
@@ -35,8 +36,11 @@ GPT_4o_mini = "gpt-5-mini"
 GPT_5_nano = "gpt-5-nano"
 GPT_5_mini = "gpt-5-mini"
 GPT_5 = "gpt-5"
+# Mid tier of the GPT-6.2 line (above Luna/Terra, below Astra). Default for the
+# main model: chat answers and extraction. The mini model stays on GPT-5 mini.
+GPT_6_2_SOL = "gpt-6.2-sol"
 
-LLM_NAME = os.getenv("LLM_NAME") or GPT_5
+LLM_NAME = os.getenv("LLM_NAME") or GPT_6_2_SOL
 LLM_MINI_NAME = os.getenv("LLM_MINI_NAME") or GPT_5_mini
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", default=None)
 
@@ -46,16 +50,27 @@ LLM_BASE_URL = os.getenv("LLM_BASE_URL", default=None)
 DEFAULT_REQUEST_TIMEOUT = float(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS", "30"))
 DEFAULT_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "2"))
 DEFAULT_MAX_COMPLETION_TOKENS = int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "4000"))
-DEFAULT_REASONING_EFFORT = os.getenv("LLM_REASONING_EFFORT", "minimal")
+DEFAULT_REASONING_EFFORT = os.getenv("LLM_REASONING_EFFORT") or None
+
+# Only the original GPT-5 family accepts reasoning_effort="minimal".
+_MINIMAL_EFFORT_MODELS = (GPT_5, GPT_5_mini, GPT_5_nano)
 
 
-def _apply_defaults(kwargs: dict[str, Any]) -> dict[str, Any]:
+def default_reasoning_effort(model: str) -> str:
+    """Lowest reasoning effort the model accepts, unless LLM_REASONING_EFFORT is set."""
+    if DEFAULT_REASONING_EFFORT:
+        return DEFAULT_REASONING_EFFORT
+    base = model.rsplit("-20", 1)[0]  # strip a dated snapshot suffix
+    return "minimal" if base in _MINIMAL_EFFORT_MODELS else "low"
+
+
+def _apply_defaults(kwargs: dict[str, Any], model: str) -> dict[str, Any]:
     """Merge hardened defaults into caller kwargs (caller wins on conflict)."""
     kwargs.setdefault("request_timeout", DEFAULT_REQUEST_TIMEOUT)
     kwargs.setdefault("max_retries", DEFAULT_MAX_RETRIES)
     kwargs.setdefault("max_completion_tokens", DEFAULT_MAX_COMPLETION_TOKENS)
-    kwargs.setdefault("reasoning_effort", DEFAULT_REASONING_EFFORT)
-    # GPT-5 rejects `temperature` and deprecated `max_tokens`; drop silently
+    kwargs.setdefault("reasoning_effort", default_reasoning_effort(model))
+    # Reasoning models reject `temperature` and deprecated `max_tokens`; drop silently
     # so legacy call sites keep working without a rewrite.
     kwargs.pop("temperature", None)
     kwargs.pop("max_tokens", None)
@@ -87,7 +102,7 @@ def _freeze_kwargs(kwargs: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
 
 def get_default_llm(use_mini_model: bool, **kwargs: Any) -> ChatOpenAI:
     llm_name = LLM_MINI_NAME if use_mini_model else LLM_NAME
-    resolved = {"model": llm_name, "base_url": LLM_BASE_URL, **_apply_defaults(kwargs)}
+    resolved = {"model": llm_name, "base_url": LLM_BASE_URL, **_apply_defaults(kwargs, llm_name)}
     try:
         return _cached_chat_openai(_freeze_kwargs(resolved))
     except TypeError:
@@ -98,7 +113,7 @@ def get_default_llm(use_mini_model: bool, **kwargs: Any) -> ChatOpenAI:
 def get_llm(name: str | None = None, **kwargs: Any) -> ChatOpenAI:
     if name is None:
         name = LLM_NAME
-    resolved = {"model": name, **_apply_defaults(kwargs)}
+    resolved = {"model": name, **_apply_defaults(kwargs, name)}
     try:
         return _cached_chat_openai(_freeze_kwargs(resolved))
     except TypeError:
