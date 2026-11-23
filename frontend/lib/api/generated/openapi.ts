@@ -10242,6 +10242,13 @@ export interface components {
             legal_question: string;
             /** Line Id */
             line_id: string;
+            /**
+             * Outcome Labels
+             * @description Optional per-line display names for the outcome categories, keyed by for/against/mixed/procedural (from reasoning_lines.metadata.outcome_labels), e.g. {'for': 'Kredytobiorca wygrywa'}. Null when the line uses the generic for/against wording.
+             */
+            outcome_labels?: {
+                [key: string]: string;
+            } | null;
             /** Points */
             points: components["schemas"]["TimelinePoint"][];
             /** Total Classified */

@@ -19,6 +19,7 @@ from .schemas import (
 from .timeline_math import (
     _bucket_members_by_period,
     _detect_timeline_trend,
+    _outcome_labels_from_metadata,
 )
 
 router = APIRouter()
@@ -51,7 +52,7 @@ async def get_reasoning_line_timeline(
     try:
         line_response = (
             db.client.table("reasoning_lines")
-            .select("id, legal_question")
+            .select("id, legal_question, metadata")
             .eq("id", line_id)
             .execute()
         )
@@ -66,6 +67,7 @@ async def get_reasoning_line_timeline(
         )
 
     legal_question = line_rows[0]["legal_question"]
+    outcome_labels = _outcome_labels_from_metadata(line_rows[0].get("metadata"))
 
     # Step 2: Fetch all members with outcome_direction
     try:
@@ -208,4 +210,5 @@ async def get_reasoning_line_timeline(
         trend_slope=trend_slope,
         total_classified=total_classified,
         total_unclassified=total_unclassified,
+        outcome_labels=outcome_labels,
     )

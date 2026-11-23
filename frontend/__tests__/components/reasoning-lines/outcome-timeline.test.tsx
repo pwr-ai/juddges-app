@@ -7,8 +7,9 @@ import type { ReasoningLineTimeline } from '@/types/reasoning-lines';
 // irrelevant to the trend badge — stub it out.
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  BarChart: () => null,
-  Bar: () => null,
+  BarChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  // Render each series' display name so the legend labels can be asserted.
+  Bar: ({ name }: { name: string }) => <span data-testid="series">{name}</span>,
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
@@ -72,5 +73,38 @@ describe('OutcomeTimeline trend badge', () => {
     render(<OutcomeTimeline data={timeline('shifting')} />);
 
     expect(screen.queryByText('Niewystarczajace dane')).not.toBeInTheDocument();
+  });
+});
+
+describe('OutcomeTimeline series labels', () => {
+  it('uses the generic labels when the line has no outcome_labels', () => {
+    render(<OutcomeTimeline data={timeline('stable_split')} />);
+
+    expect(screen.getAllByTestId('series').map((el) => el.textContent)).toEqual([
+      'Za',
+      'Przeciw',
+      'Mieszane',
+      'Proceduralne',
+    ]);
+  });
+
+  it('names the series after the parties when the line provides outcome_labels', () => {
+    const data = {
+      ...timeline('shifting'),
+      outcome_labels: {
+        for: 'Kredytobiorca wygrywa',
+        against: 'Bank wygrywa',
+        mixed: 'Częściowo',
+      },
+    };
+
+    render(<OutcomeTimeline data={data} />);
+
+    expect(screen.getAllByTestId('series').map((el) => el.textContent)).toEqual([
+      'Kredytobiorca wygrywa',
+      'Bank wygrywa',
+      'Częściowo',
+      'Proceduralne',
+    ]);
   });
 });
