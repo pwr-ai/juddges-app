@@ -328,7 +328,9 @@ class TestSupabaseSearchClient:
             assert isinstance(results[0], DocumentChunk)
             mock_table.select.assert_called_once()
             mock_select.text_search.assert_called_once_with(
-                "chunk_text", "contract dispute", config="simple"
+                "chunk_text",
+                "contract dispute",
+                options={"config": "simple", "type": "web_search"},
             )
 
     @pytest.mark.asyncio

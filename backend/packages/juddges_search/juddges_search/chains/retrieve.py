@@ -85,6 +85,23 @@ def get_document_types(input):
         return getattr(input, "document_types", None)
 
 
+def _query_generation_input(inputs):
+    return {"question": inputs["question"], "chat_history": inputs["chat_history"]}
+
+
+# Query generation must emit a single value, not a stream. Its JSON parser
+# streams partial plain dicts; under `.astream()` RunnableAssign forwards them as
+# {"processed_question": <partial dict>} chunks, and the next step adds every
+# chunk together. dict + dict raises TypeError, and since langchain-core 1.7.x
+# the accumulator then replaces everything gathered so far with the last chunk,
+# dropping max_documents/languages/document_types (KeyError in /chat/stream).
+generate_search_queries = RunnableLambda(
+    lambda inputs, config: search_query_generation.invoke(_query_generation_input(inputs), config=config),
+    afunc=lambda inputs, config: search_query_generation.ainvoke(_query_generation_input(inputs), config=config),
+    name="generate_search_queries",
+)
+
+
 retrieve_documents_runnable = (
     RunnableParallel(
         {
@@ -95,17 +112,7 @@ retrieve_documents_runnable = (
             "document_types": lambda input: get_document_types(input),
         }
     )
-    .assign(
-        processed_question=RunnableSequence(
-            RunnableLambda(
-                lambda inputs: {
-                    "question": inputs["question"],
-                    "chat_history": inputs["chat_history"],
-                }
-            ),
-            search_query_generation,
-        )
-    )
+    .assign(processed_question=generate_search_queries)
     .assign(
         context=RunnableSequence(
             RunnableLambda(create_retriever_input),
