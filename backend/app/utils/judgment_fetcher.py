@@ -42,6 +42,10 @@ def _row_to_legal_document(row: dict[str, Any], return_vectors: bool) -> LegalDo
         # Prefer source_id when present so non-UUID callers round-trip the same
         # ID they passed in; fall back to the UUID for direct lookups.
         document_id=row.get("source_id") or row.get("id", ""),
+        # `LegalDocument` allows extras. Keeps the `judgments.id` that
+        # `document_id` shadows, so batch callers (extraction jobs) can map a
+        # fetched document back to the UUID they requested.
+        judgment_uuid=row.get("id"),
         title=row.get("title"),
         summary=row.get("summary"),
         full_text=row.get("full_text", "") or "",

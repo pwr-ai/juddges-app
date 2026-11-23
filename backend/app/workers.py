@@ -296,6 +296,20 @@ def _update_job_results_in_supabase(
         return False
 
 
+def _requested_id(doc: Any, requested_ids: set[str]) -> str:
+    """Return the id the caller requested for ``doc``.
+
+    ``LegalDocument.document_id`` is the judgment's source id when it has one,
+    so it differs from the ``judgments.id`` UUID that collections (and thus
+    extraction requests) use. Results must be keyed by the requested id, or
+    resume and failure-merge can never match them back to the request.
+    """
+    for candidate in (getattr(doc, "judgment_uuid", None), doc.document_id):
+        if isinstance(candidate, str) and candidate in requested_ids:
+            return candidate
+    return doc.document_id
+
+
 def _merge_failure_into_results(
     existing: list[dict[str, Any]],
     document_ids: list[str],
@@ -730,8 +744,10 @@ def extract_information_from_documents_task(
                 f"document(s) from a prior attempt"
             )
 
+        requested_ids = set(request.document_ids)
         for idx, doc in enumerate(documents):
-            already_completed = completed_by_id.get(doc.document_id)
+            result_id = _requested_id(doc, requested_ids)
+            already_completed = completed_by_id.get(result_id)
             if already_completed is not None:
                 results.append(already_completed)
             else:
@@ -767,7 +783,7 @@ def extract_information_from_documents_task(
                     results.append(
                         DocumentExtractionResponse(
                             collection_id=request.collection_id,
-                            document_id=doc.document_id,
+                            document_id=result_id,
                             status=DocumentProcessingStatus.COMPLETED,
                             created_at=datetime.now(UTC).isoformat(),
                             updated_at=datetime.now(UTC).isoformat(),
@@ -780,12 +796,13 @@ def extract_information_from_documents_task(
                 except Exception as doc_error:
                     # Individual document failed - mark it as failed but continue with other documents
                     logger.exception(
-                        f"Error extracting from document {doc.document_id}: {doc_error}"
+                        f"Error extracting from document {result_id} "
+                        f"(source id {doc.document_id}): {doc_error}"
                     )
                     results.append(
                         DocumentExtractionResponse(
                             collection_id=request.collection_id,
-                            document_id=doc.document_id,
+                            document_id=result_id,
                             status=DocumentProcessingStatus.FAILED,
                             created_at=datetime.now(UTC).isoformat(),
                             updated_at=datetime.now(UTC).isoformat(),
