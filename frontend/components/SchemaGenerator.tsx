@@ -306,15 +306,15 @@ export function SchemaGenerator({
 
  return (
  <Dialog open={isOpen} onOpenChange={handleClose}>
- <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-parchment border border-rule">
+ <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto overflow-x-hidden bg-parchment border border-rule">
  <DialogHeader>
- <DialogTitle className="flex items-center gap-2 font-display text-ink">
+ <DialogTitle className="flex items-center gap-2 pr-8 font-display text-ink">
  <FileText className="h-5 w-5 text-ink"/>
  Generate Extraction Schema
  </DialogTitle>
  </DialogHeader>
 
- <div className="space-y-6">
+ <div className="min-w-0 space-y-6">
  {/* Document Context Section - Show loading or error states */}
  {isLoadingDocuments && (
  <BaseCard
