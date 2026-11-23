@@ -11,6 +11,7 @@ import {
   discoverReasoningLines,
   getReasoningLineDAG,
   getReasoningLineDetail,
+  getReasoningLineMembers,
   getReasoningLineTimeline,
   getRelatedLines,
   listReasoningLines,
@@ -68,5 +69,27 @@ describe('reasoning-lines API client', () => {
       ['/api/reasoning-lines/search', 'POST'],
       ['/api/reasoning-lines/line-1/related', 'GET'],
     ]);
+  });
+
+  it('skips members on the detail request and loads them from /members', async () => {
+    await getReasoningLineDetail('line-1', { includeMembers: false });
+    await getReasoningLineMembers('line-1');
+
+    expect((global.fetch as jest.Mock).mock.calls.map(([url, init]) => [url, init.method])).toEqual([
+      ['/api/reasoning-lines/line-1?include_members=false', 'GET'],
+      ['/api/reasoning-lines/line-1/members', 'GET'],
+    ]);
+  });
+
+  it('throws a Polish error when the members request fails', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    });
+
+    await expect(getReasoningLineMembers('line-1')).rejects.toThrow(
+      'Nie udalo sie pobrac orzeczen w linii orzeczniczej.'
+    );
   });
 });

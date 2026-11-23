@@ -4335,8 +4335,8 @@ export interface paths {
         };
         /**
          * Get full detail of a reasoning line with all members
-         * @description Retrieve a single reasoning line by ID, including all member judgments
-         *     with their metadata joined from the judgments table.
+         * @description Retrieve a single reasoning line by ID, including (by default) all member
+         *     judgments with their metadata joined from the judgments table.
          */
         get: operations["get_reasoning_line_reasoning_lines__line_id__get"];
         put?: never;
@@ -4400,6 +4400,26 @@ export interface paths {
          *     Drift events are persisted to the reasoning_line_events table.
          */
         post: operations["analyze_drift_reasoning_lines__line_id__drift_analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/{line_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the member judgments of a reasoning line
+         * @description Return the members of a reasoning line, ordered by position in the line.
+         */
+        get: operations["get_reasoning_line_members_reasoning_lines__line_id__members_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -19116,7 +19136,10 @@ export interface operations {
     };
     get_reasoning_line_reasoning_lines__line_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include member judgments. Pass false for large lines and load them lazily via GET /{line_id}/members. */
+                include_members?: boolean;
+            };
             header?: never;
             path: {
                 line_id: string;
@@ -19227,6 +19250,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DriftAnalysisResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reasoning_line_members_reasoning_lines__line_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineMember"][];
                 };
             };
             /** @description Validation Error */
