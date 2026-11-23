@@ -37,7 +37,7 @@ import {
   formatEnumLabel,
   type FilterFieldConfig,
 } from "@/lib/extractions/base-schema-filter-config";
-import { useExtractionFacet } from "@/lib/extractions/base-schema-filter-api";
+import { singleJurisdiction, useExtractionFacet } from "@/lib/extractions/base-schema-filter-api";
 import { cn } from "@/lib/utils";
 import type {
   BaseSchemaFilters,
@@ -441,6 +441,7 @@ function FieldRow({ config, filters, onChange }: FieldRowProps) {
   const facetQuery = useExtractionFacet(
     config.control === "enum_multi" ? config.field : null,
     open,
+    singleJurisdiction(filters.jurisdiction),
   );
   const activeBadge = describeActive(config, value);
 
