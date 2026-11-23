@@ -124,6 +124,7 @@ class TestPrompt:
         assert "JSON" in text  # required by json_object mode
         assert "Decompose" in text and "aggregat" in text.lower()
         assert "15-40" in text
+        assert "Keep the schema flat" in text
         assert "not_stated" in text
         assert "EXISTING FIELDS" not in text
         assert "x-ai-generated" not in text

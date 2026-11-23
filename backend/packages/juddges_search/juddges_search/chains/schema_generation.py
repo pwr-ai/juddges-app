@@ -92,13 +92,16 @@ judgments. Preferred types, in this order: boolean, enum, array of enums, number
    labels. Include "other" when the list cannot be exhaustive and "not_stated" (or
    "unclear") whenever the judgment may not say. Use arrays of enums for multi-select
    categories (e.g. several grounds, several claim types).
-5. **Numbers and dates.** Use "number" or "integer" for amounts, counts, durations (put the
+5. **Keep the schema flat.** Put fields at the top level. Do not use arrays of objects or
+   nested objects; express several facets as separate top-level fields (arrays of enums for
+   multi-valued categories).
+6. **Numbers and dates.** Use "number" or "integer" for amounts, counts, durations (put the
    unit in the field name, e.g. `_pln`, `_months`) and string with "format": "date" for dates.
-6. **Booleans only for questions the judgment nearly always answers.** When the information
+7. **Booleans only for questions the judgment nearly always answers.** When the information
    is often absent, use an enum with `yes` / `no` / `not_stated` instead of a boolean.
    For a number or date that may be absent, add a companion boolean such as
    `<field>_stated` so the value can be ignored when it is false.
-7. Do not generate these generic metadata fields, every judgment already has them: {{ base_metadata_fields }}.
+8. Do not generate these generic metadata fields, every judgment already has them: {{ base_metadata_fields }}.
    Add them only if the user explicitly asks.
 
 ## Field descriptions
@@ -124,6 +127,8 @@ schema_generation_prompt = ChatPromptTemplate.from_template(
 
 
 SCHEMA_MAX_COMPLETION_TOKENS = 16000
+# Generating 15-40 fields takes well over the 30 s default request timeout.
+SCHEMA_REQUEST_TIMEOUT_SECONDS = 180.0
 
 
 # Lazy-load LLM to avoid requiring API key at import time
@@ -136,7 +141,11 @@ def _get_model():
     fields with instruction-style descriptions (plus reasoning tokens) overrun the
     4000-token default.
     """
-    llm = get_default_llm(use_mini_model=False, max_completion_tokens=SCHEMA_MAX_COMPLETION_TOKENS)
+    llm = get_default_llm(
+        use_mini_model=False,
+        max_completion_tokens=SCHEMA_MAX_COMPLETION_TOKENS,
+        request_timeout=SCHEMA_REQUEST_TIMEOUT_SECONDS,
+    )
     return llm.bind(response_format={"type": "json_object"})
 
 
