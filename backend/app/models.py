@@ -521,6 +521,26 @@ class DocumentExtractionResponse(BaseModel):
     extracted_data: dict | None = None
 
 
+class ExtractionJobResultCounts(BaseModel):
+    completed: int
+    failed: int
+    other: int
+
+
+class ExtractionJobResultsPage(BaseModel):
+    """One page of a job's per-document results (offset/limit over the array)."""
+
+    job_id: str
+    offset: int
+    limit: int
+    total: int = Field(..., description="All results stored on the job")
+    filtered_total: int = Field(
+        ..., description="Results matching the status filter (the pager total)"
+    )
+    counts: ExtractionJobResultCounts
+    results: list[DocumentExtractionResponse]
+
+
 class BatchExtractionResponse(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True

@@ -1365,3 +1365,155 @@ class TestValidateDocumentsMaxCap:
         shared_module._enforce_max_documents(None, "col-1")
         shared_module._enforce_max_documents([], "col-1")
         shared_module._enforce_max_documents(["d1", "d2", "d3"], "col-1")
+
+
+# =============================================================================
+# GET /extractions/{job_id}/results (paginated)
+# =============================================================================
+
+
+def _rpc_supabase(payload=None, error: Exception | None = None) -> MagicMock:
+    mock = MagicMock()
+    execute = mock.rpc.return_value.execute
+    if error is not None:
+        execute.side_effect = error
+    else:
+        execute.return_value = MagicMock(data=payload)
+    return mock
+
+
+def _page_payload(**overrides) -> dict:
+    payload = {
+        "found": True,
+        "total": 3,
+        "filtered_total": 2,
+        "counts": {"completed": 2, "failed": 1, "other": 0},
+        "items": [
+            _stored_result("doc-1", "completed"),
+            _stored_result("doc-2", "completed"),
+        ],
+    }
+    payload.update(overrides)
+    return payload
+
+
+class TestGetExtractionJobResultsPage:
+    @pytest.mark.unit
+    async def test_calls_rpc_and_shapes_response(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = _rpc_supabase(_page_payload())
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}/results",
+                params={"offset": 10, "limit": 25, "status": "completed"},
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        mock_supabase.rpc.assert_called_once_with(
+            "get_extraction_job_results_page",
+            {
+                "p_job_id": _GET_JOB_ID,
+                "p_user_id": _USER_001,
+                "p_offset": 10,
+                "p_limit": 25,
+                "p_status": "completed",
+            },
+        )
+        body = response.json()
+        assert body["job_id"] == _GET_JOB_ID
+        assert body["offset"] == 10
+        assert body["limit"] == 25
+        assert body["total"] == 3
+        assert body["filtered_total"] == 2
+        assert body["counts"] == {"completed": 2, "failed": 1, "other": 0}
+        assert [r["document_id"] for r in body["results"]] == ["doc-1", "doc-2"]
+
+    @pytest.mark.unit
+    async def test_defaults(self, client, valid_api_headers) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = _rpc_supabase(_page_payload(items=[]))
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}/results",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        args = mock_supabase.rpc.call_args.args[1]
+        assert (args["p_offset"], args["p_limit"], args["p_status"]) == (0, 50, None)
+        assert response.json()["results"] == []
+
+    @pytest.mark.unit
+    async def test_not_found(self, client, valid_api_headers) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = _rpc_supabase(_page_payload(found=False, items=[], total=0))
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}/results",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Extraction job not found"
+
+    @pytest.mark.unit
+    async def test_non_uuid_job_id_is_404_without_db_call(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = _rpc_supabase(_page_payload())
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/not-a-uuid/results",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 404
+        mock_supabase.rpc.assert_not_called()
+
+    @pytest.mark.unit
+    async def test_rpc_error_is_503(self, client, valid_api_headers) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = _rpc_supabase(error=RuntimeError("boom"))
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}/results",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 503
+        assert response.json()["detail"] == "Extraction job store unavailable"
+
+    @pytest.mark.unit
+    async def test_supabase_unavailable_is_503(self, client, valid_api_headers) -> None:
+        _install_jwt_user_override(_USER_001)
+        with patch("app.extraction_domain.jobs_router.supabase", None):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}/results",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 503
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "params",
+        [{"limit": 201}, {"limit": 0}, {"offset": -1}, {"status": "bogus"}],
+    )
+    async def test_invalid_query_is_422(
+        self, client, valid_api_headers, params
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = _rpc_supabase(_page_payload())
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}/results",
+                params=params,
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 422
+        mock_supabase.rpc.assert_not_called()
