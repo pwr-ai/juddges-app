@@ -10,7 +10,7 @@ signed-in users:
 
 Guests always get the curated engine: both `/search/v2` endpoints require a
 signed-in Supabase user, and the BFF routes answer 401 (the middleware
-login-redirects a guest before that). The switch still shows the full corpus,
+rejects a guest with a JSON 401 before that). The switch still shows the full corpus,
 locked, with "Available after signing in." How the engine is picked, and why, is
 in [Search engines](../explanation/search-engines.md).
 
@@ -27,7 +27,7 @@ same host. The backend reaches it over that project's default network.
 | `WEAVIATE_V2_HTTP_HOST` or `WEAVIATE_V2_TEI_URL` unset | 503 `search v2 not configured` | "Pełna baza nieskonfigurowana" |
 | Env set, Weaviate or TEI unreachable | 503 `search v2 unavailable` | "Pełna baza niedostępna" |
 | Env set, stack up | 200 `{results, took_ms, engine: "weaviate-v2"}` | results list, headed "Results from the full Polish corpus (Weaviate)" |
-| Session expired | BFF call is login-redirected | "Sesja wygasła…" (the client rejects a redirected or non-JSON response) |
+| Session expired | middleware answers the BFF call with a JSON 401 | "Sesja wygasła…" (the client also rejects a redirected or non-JSON response) |
 
 The env is read on every request, so the engine can be switched on and off by
 editing `.env` and recreating the backend. No new image is needed. With the

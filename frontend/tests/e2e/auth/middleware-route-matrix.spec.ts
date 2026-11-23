@@ -140,6 +140,13 @@ function expectLoginRedirect(
   response: APIResponse,
   expectedNext: string,
 ): void {
+  // Anonymous /api/* gets a JSON 401, never a redirect (fetch would replay
+  // the POST against /auth/login); pages keep the login redirect.
+  if (expectedNext.startsWith('/api/')) {
+    expect(response.status()).toBe(401);
+    expect(response.headers().location).toBeUndefined();
+    return;
+  }
   expect(response.status()).toBe(307);
   const location = response.headers().location;
   expect(location).toBeTruthy();
