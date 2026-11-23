@@ -5,6 +5,9 @@ Generates OpenAI-compatible JSON Schemas from natural language descriptions
 using a single LLM call with structured output parsing.
 """
 
+import copy
+import json
+import re
 from functools import lru_cache
 from typing import Any
 
@@ -19,9 +22,23 @@ from juddges_search.info_extraction.oai_schema_validation import (
 )
 from juddges_search.llms import get_default_llm
 
-# Prompt template for single-shot schema generation
-SCHEMA_GENERATION_PROMPT = """You are an expert JSON Schema generator for document information extraction.
-Generate a valid JSON Schema based on the user's requirements.
+# Generic metadata every judgment already carries (core + base layers, see
+# docs/reference/JUDGMENT_FIELDS.md). Listed in the prompt so the model does not
+# re-generate them unless the user asks.
+BASE_METADATA_FIELDS = (
+    "court name, court level, jurisdiction, case number, decision date, "
+    "publication date, title, summary, judges, case type, decision type, "
+    "overall outcome, keywords, legal topics, cited legislation"
+)
+
+# Prompt template for single-shot schema generation. Output is requested as a
+# JSON object (the LLM runs in JSON mode, which requires the word JSON here);
+# the x-ai-generated marker is set in code by merge_and_mark_new_fields.
+SCHEMA_GENERATION_PROMPT = """You design JSON Schemas for extracting structured data from court judgments.
+The judgments are Polish and English/UK court decisions used for legal case-law research.
+An LLM extractor reads ONE judgment and fills every field of the schema; the filled
+values are then aggregated, filtered and compared across thousands of judgments.
+Respond with a single JSON object that is the JSON Schema (no other text).
 
 ## Schema Context
 Schema Name: {{ schema_name }}
@@ -37,60 +54,70 @@ Description: {{ schema_description }}
 ## User's Request
 {{ user_request }}
 
-Note: If the user asks questions (ending with "?"), convert them to fields:
-- Yes/no questions → boolean field (e.g., "Is there a penalty?" → has_penalty: boolean)
-- "What type/kind of...?" → enum field with relevant options
-- "What is the...?" → appropriate type (string, number, date)
+If the user asks questions (ending with "?"), convert them to fields:
+- Yes/no questions -> boolean field (e.g. "Is there a penalty?" -> penalty_imposed: boolean)
+- "What type/kind of...?" -> enum field with relevant options
+- "What is the...?" -> the most aggregatable type (enum, number, date); string only for names/identifiers
 
 {% if existing_fields %}
 ## EXISTING FIELDS (PRESERVE EXACTLY)
-Include ALL existing fields unchanged. Only ADD new fields.
+The schema already contains these fields. Do NOT change, rename or repeat them; they are
+kept as they are. Only ADD new fields. For every concept in the request, add several
+complementary new fields (see decomposition below) and do not duplicate the meaning of
+an existing field.
 
 Existing fields:
 {{ existing_fields }}
 {% endif %}
 
-## FIELD DESIGN PRIORITIES (CRITICAL FOR AGGREGATION)
-Design fields based on USER'S REQUEST. Optimize for aggregation:
+## GOAL: MANY AGGREGATABLE FIELDS
+Every field should be something that can be counted, grouped, filtered or compared across
+judgments. Preferred types, in this order: boolean, enum, array of enums, number
+(integer/number), date (string with format "date"). Avoid free-form text.
 
-1. **PREFER BOOLEAN fields** for yes/no questions:
-   - Example: "has_penalty" (boolean) - not "penalty_description" (string)
+1. **Breadth.** A broad request must yield a rich schema: roughly 15-40 fields for a broad
+   topic. When extending an existing schema, add several new fields (3-8) for each
+   requested concept.
+2. **Decompose instead of describing.** Never use one free-text field for a topic. Split the
+   topic into several boolean / enum / number / date / array-of-enum fields that together
+   cover it. Illustration only (do NOT copy it; build fields for THIS request):
+   instead of `penalty_description: string` use `penalty_imposed: boolean`,
+   `penalty_type: enum[...]`, `penalty_amount: number`, `penalty_suspended: boolean`,
+   `penalty_duration_months: number`.
+3. **Free text only for true names/identifiers** (e.g. a case reference, a party name) or when
+   no sensible categorisation exists. Even then, add categorical companion fields next
+   to it.
+4. **Enums.** Use domain-specific values that fit Polish and UK case law (typical courts,
+   procedures, remedies, outcomes, legal bases). 3-10 values, snake_case or short English
+   labels. Include "other" when the list cannot be exhaustive and "not_stated" (or
+   "unclear") whenever the judgment may not say. Use arrays of enums for multi-select
+   categories (e.g. several grounds, several claim types).
+5. **Keep the schema flat.** Put fields at the top level. Do not use arrays of objects or
+   nested objects; express several facets as separate top-level fields (arrays of enums for
+   multi-valued categories).
+6. **Numbers and dates.** Use "number" or "integer" for amounts, counts, durations (put the
+   unit in the field name, e.g. `_pln`, `_months`) and string with "format": "date" for dates.
+7. **Booleans only for questions the judgment nearly always answers.** When the information
+   is often absent, use an enum with `yes` / `no` / `not_stated` instead of a boolean.
+   For a number or date that may be absent, add a companion boolean such as
+   `<field>_stated` so the value can be ignored when it is false.
+8. Do not generate these generic metadata fields, every judgment already has them: {{ base_metadata_fields }}.
+   Add them only if the user explicitly asks.
 
-2. **PREFER ENUM fields** for categorical data:
-   - Example: "status" with enum ["active", "inactive", "pending"]
-   - Define 3-7 specific enum values based on the domain
-
-3. **Arrays of enums** for multi-select categories
-
-4. **Use string/number ONLY when necessary**:
-   - Identifiers (case_number, document_id)
-   - Dates (ruling_date with format: "date")
-   - Amounts (tax_amount as number)
-   - Truly free-form content (summary, description)
+## Field descriptions
+The `description` is the instruction for the extractor. State what to look for in the
+judgment, which part of it, and what to return when the judgment does not say (e.g.
+"Return not_stated if the judgment does not mention costs.", "false if not mentioned").
+Descriptions must be specific, one or two sentences.
 
 ## Technical Requirements
-- Root type: "object"
-- All properties in "required" array (OpenAI requirement)
-- "additionalProperties": false (OpenAI requirement)
-- Arrays must define "items" with type schema
-- Use snake_case for field names
-{% if existing_fields %}
-- Mark NEW fields with: "x-ai-generated": true
-{% endif %}
-
-## OUTPUT FORMAT
-Return ONLY raw JSON. No markdown, no code blocks, no explanation.
-Generate fields SPECIFIC to the user's request - do NOT copy examples.
-
-Structure:
-{"type": "object", "properties": {<your_fields>}, "required": [<all_field_names>], "additionalProperties": false}
-
-Field format examples (DO NOT copy these - create fields for user's request):
-- Boolean: {"type": "boolean", "description": "..."{% if existing_fields %}, "x-ai-generated": true{% endif %}}
-- Enum: {"type": "string", "enum": ["opt1", "opt2"], "description": "..."{% if existing_fields %}, "x-ai-generated": true{% endif %}}
-- String: {"type": "string", "description": "..."{% if existing_fields %}, "x-ai-generated": true{% endif %}}
-- Number: {"type": "number", "description": "..."{% if existing_fields %}, "x-ai-generated": true{% endif %}}
-- Array: {"type": "array", "items": {"type": "string"}, "description": "..."{% if existing_fields %}, "x-ai-generated": true{% endif %}}"""
+- Root type: "object", with "properties", "required" and "additionalProperties": false
+- All properties listed in "required" (OpenAI structured output requirement)
+- "type" must be a single string (string, number, integer, boolean, array, object); never a list such as ["string", "null"]
+- Arrays must define "items" with a type schema; arrays of enums use "items": {"type": "string", "enum": [...]}
+- Enums are {"type": "string", "enum": [...]}
+- Use snake_case English field names; enum values are short lowercase snake_case English labels
+"""
 
 # Create prompt template with jinja2 format
 schema_generation_prompt = ChatPromptTemplate.from_template(
@@ -99,10 +126,31 @@ schema_generation_prompt = ChatPromptTemplate.from_template(
 )
 
 
+SCHEMA_MAX_COMPLETION_TOKENS = 16000
+# Generating 15-40 fields takes well over the 30 s default request timeout.
+SCHEMA_REQUEST_TIMEOUT_SECONDS = 180.0
+# One retry keeps the worst case (2 x 180 s) under the ~300 s undici fetch
+# timeout of the Next.js /api/schema-generator/simple proxy.
+SCHEMA_MAX_RETRIES = 1
+
+
 # Lazy-load LLM to avoid requiring API key at import time
 def _get_model():
-    """Get or create the default LLM model (GPT-4o by default)."""
-    return get_default_llm(use_mini_model=False)
+    """Default LLM in JSON mode.
+
+    ``json_object`` (not strict ``json_schema``): the output is itself an arbitrary
+    JSON Schema, which strict structured output cannot describe. ``bind`` leaves the
+    shared cached client untouched. The completion budget is raised because 15-40
+    fields with instruction-style descriptions (plus reasoning tokens) overrun the
+    4000-token default.
+    """
+    llm = get_default_llm(
+        use_mini_model=False,
+        max_completion_tokens=SCHEMA_MAX_COMPLETION_TOKENS,
+        request_timeout=SCHEMA_REQUEST_TIMEOUT_SECONDS,
+        max_retries=SCHEMA_MAX_RETRIES,
+    )
+    return llm.bind(response_format={"type": "json_object"})
 
 
 def strip_markdown_json(text: str) -> str:
@@ -111,8 +159,6 @@ def strip_markdown_json(text: str) -> str:
 
     Handles cases where LLM wraps JSON in ```json ... ``` blocks.
     """
-    import re
-
     text = text.strip()
 
     # Remove ```json ... ``` or ``` ... ``` blocks
@@ -131,6 +177,13 @@ def strip_markdown_json(text: str) -> str:
             text = text[start : end + 1]
 
     return text
+
+
+def _collapse_type_union(prop: Any) -> None:
+    """In-place: ``"type": ["boolean", "null"]`` -> ``"type": "boolean"``."""
+    if isinstance(prop, dict) and isinstance(prop.get("type"), list):
+        non_null = [t for t in prop["type"] if t != "null"]
+        prop["type"] = non_null[0] if non_null else "string"
 
 
 def validate_and_fix_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -162,6 +215,13 @@ def validate_and_fix_schema(schema: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(properties, dict) or not properties:
         raise ValueError("Schema must have at least one property defined")
 
+    # Downstream consumers (validator, editor, aggregation) read "type" as a string;
+    # collapse a nullable union such as ["string", "null"] to its non-null member.
+    for prop in properties.values():
+        _collapse_type_union(prop)
+        if isinstance(prop, dict) and isinstance(prop.get("items"), dict):
+            _collapse_type_union(prop["items"])
+
     # Auto-generate required array from all properties (OpenAI requirement)
     schema["required"] = list(properties.keys())
 
@@ -186,7 +246,16 @@ def format_existing_fields(fields: list[dict[str, Any]] | None) -> str:
         description = field.get("description", "")
         is_required = field.get("is_required", True)
         required_str = "required" if is_required else "optional"
-        lines.append(f"- {field_name} ({field_type}, {required_str}): {description}")
+        details = ""
+        enum_values = field.get("enum") or (field.get("validation_rules") or {}).get("enum")
+        items = field.get("items")
+        if enum_values:
+            details += f" enum={list(enum_values)}"
+        if isinstance(items, dict):
+            details += f" items={items.get('type', 'string')}"
+            if items.get("enum"):
+                details += f" enum={list(items['enum'])}"
+        lines.append(f"- {field_name} ({field_type}, {required_str}){details}: {description}")
 
     return "\n".join(lines)
 
@@ -202,6 +271,41 @@ def get_existing_field_names(fields: list[dict[str, Any]] | None) -> set[str]:
         if name:
             names.add(name)
     return names
+
+
+_WRAPPER_KEYS = frozenset({"field_name", "name", "field_type", "is_required", "validation_rules"})
+_VALIDATION_RULE_KEYS = (
+    "enum",
+    "format",
+    "pattern",
+    "minLength",
+    "maxLength",
+    "minimum",
+    "maximum",
+    "minItems",
+    "maxItems",
+)
+
+
+def _existing_field_to_property(field: dict[str, Any]) -> dict[str, Any]:
+    """Turn an existing-field payload into a JSON Schema property, losslessly.
+
+    The payload is the full property definition plus the legacy wrapper keys
+    (``field_name``/``field_type``/``is_required``/``validation_rules``); the
+    wrapper keys are dropped, everything else is copied as is.
+    """
+    prop = {k: copy.deepcopy(v) for k, v in field.items() if k not in _WRAPPER_KEYS}
+    if "type" not in prop:
+        prop["type"] = field.get("field_type", "string")
+    if not prop.get("description"):
+        prop.pop("description", None)
+
+    validation_rules = field.get("validation_rules")
+    if isinstance(validation_rules, dict):
+        for key in _VALIDATION_RULE_KEYS:
+            if key in validation_rules:
+                prop[key] = validation_rules[key]
+    return prop
 
 
 def merge_and_mark_new_fields(
@@ -234,40 +338,14 @@ def merge_and_mark_new_fields(
     existing_names = get_existing_field_names(existing_fields)
     properties = generated_schema.get("properties", {})
 
-    # Build existing fields as JSON Schema properties for merging
+    # Rebuild each existing field as a JSON Schema property, keeping its full
+    # definition (enum, items, format, nested properties, ...).
     existing_props = {}
     for field in existing_fields:
         field_name = field.get("field_name", field.get("name"))
         if not field_name:
             continue
-
-        field_type = field.get("field_type", field.get("type", "string"))
-        description = field.get("description", "")
-
-        prop = {"type": field_type}
-        if description:
-            prop["description"] = description
-
-        # Copy any validation rules
-        for key in [
-            "enum",
-            "format",
-            "pattern",
-            "minLength",
-            "maxLength",
-            "minimum",
-            "maximum",
-            "minItems",
-            "maxItems",
-        ]:
-            if key in field:
-                prop[key] = field[key]
-            # Also check validation_rules nested object
-            validation_rules = field.get("validation_rules", {})
-            if isinstance(validation_rules, dict) and key in validation_rules:
-                prop[key] = validation_rules[key]
-
-        existing_props[field_name] = prop
+        existing_props[field_name] = _existing_field_to_property(field)
 
     # Merge: existing fields take precedence, mark new fields
     merged_properties = {}
@@ -298,6 +376,7 @@ def prepare_input(inputs: dict[str, Any]) -> dict[str, Any]:
         "user_request": inputs.get("user_request", ""),
         "existing_fields": format_existing_fields(inputs.get("existing_fields")),
         "extraction_instructions": inputs.get("extraction_instructions", ""),
+        "base_metadata_fields": BASE_METADATA_FIELDS,
     }
 
 
@@ -309,32 +388,30 @@ def build_full_prompt(inputs: dict[str, Any]) -> str:
 
 def parse_llm_json_output(message) -> dict[str, Any]:
     """
-    Parse LLM output to JSON, handling markdown wrapping.
+    Parse the LLM output (JSON mode) into a dict.
 
-    Args:
-        message: LLM output (AIMessage or string)
-
-    Returns:
-        Parsed JSON as dict
+    JSON mode returns a bare JSON object, so a plain ``json.loads`` is tried first;
+    the markdown-stripping path stays as a defensive fallback (e.g. a proxy or model
+    that ignores ``response_format``).
     """
-    import json
+    text = message.content if hasattr(message, "content") else str(message)
+    if isinstance(text, list):  # content blocks
+        text = "".join(block.get("text", "") if isinstance(block, dict) else str(block) for block in text)
 
-    # Extract text content from message
-    if hasattr(message, "content"):
-        text = message.content
-    else:
-        text = str(message)
-
-    # Strip any markdown formatting
-    clean_text = strip_markdown_json(text)
-
-    # Parse JSON
     try:
-        return json.loads(clean_text)
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON from LLM output: {e}")
-        logger.debug(f"Raw output: {text[:500]}...")
-        raise ValueError(f"Invalid JSON in LLM response: {e}")
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning("LLM output is not bare JSON despite JSON mode; falling back to lenient parse")
+        try:
+            parsed = json.loads(strip_markdown_json(text))
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON from LLM output: {e}")
+            logger.debug(f"Raw output: {text[:500]}...")
+            raise ValueError(f"Invalid JSON in LLM response: {e}")
+
+    if not isinstance(parsed, dict):
+        raise ValueError("Invalid JSON in LLM response: expected a JSON object")
+    return parsed
 
 
 @lru_cache(maxsize=1)
