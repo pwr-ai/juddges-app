@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import secrets
 from typing import Any
 
@@ -131,6 +132,9 @@ class DocumentSearchResponse(BaseModel):
     # ``parse_attributes=true``. ``None`` when parsing is disabled or matched
     # nothing — base-search responses are unchanged.
     parsed_attributes: dict[str, Any] | None = None
+    # Present only when ``facets`` were requested: attribute -> value -> count.
+    facetDistribution: dict[str, dict[str, int]] | None = None
+    facetStats: dict[str, dict[str, float]] | None = None
 
 
 def _parsed_attributes_dict(parsed: Any) -> dict[str, Any]:
@@ -330,6 +334,27 @@ async def suggest(
     )
 
 
+MAX_FACETS = 20
+_FACET_NAME_RE = re.compile(r"^[a-z0-9_]+$")
+
+
+def _validate_facets(facets: list[str] | None, facet_query: str | None) -> list[str]:
+    """Reject unsafe/excessive facet requests with a 422; return de-duplicated names."""
+    names = list(dict.fromkeys(f.strip() for f in facets or [] if f.strip()))
+    if len(names) > MAX_FACETS:
+        raise HTTPException(
+            status_code=422, detail=f"at most {MAX_FACETS} facets may be requested"
+        )
+    bad = [n for n in names if not _FACET_NAME_RE.fullmatch(n)]
+    if bad:
+        raise HTTPException(status_code=422, detail=f"invalid facet name(s): {bad}")
+    if facet_query is not None and len(names) != 1:
+        raise HTTPException(
+            status_code=422, detail="facet_query requires exactly one facet"
+        )
+    return names
+
+
 @router.get("/documents", response_model=DocumentSearchResponse)
 @limiter.limit(SEARCH_DOCUMENTS_RATE_LIMIT)
 async def documents_search(
@@ -337,10 +362,33 @@ async def documents_search(
     background_tasks: BackgroundTasks,
     response: Response,
     q: str = Query("", max_length=500, description="Search query (empty = match all)"),
-    limit: int = Query(10, ge=1, le=100, description="Max documents to return"),
+    limit: int = Query(
+        10,
+        ge=0,
+        le=100,
+        description=(
+            "Max documents to return. 0 is allowed only together with `facets` "
+            "(facet-only call)."
+        ),
+    ),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     filters: str | None = Query(
         None, description="Optional Meilisearch filter expression"
+    ),
+    facets: list[str] | None = Query(
+        None,
+        description=(
+            f"Filterable attributes to return value counts for (repeat the "
+            f"param; max {MAX_FACETS}). Adds `facetDistribution` to the response."
+        ),
+    ),
+    facet_query: str | None = Query(
+        None,
+        max_length=200,
+        description=(
+            "Narrow the values of the single requested facet to those matching "
+            "this text (Meilisearch facet-search). Requires exactly one facet."
+        ),
     ),
     semantic_ratio: float = Query(
         0.0,
@@ -378,13 +426,21 @@ async def documents_search(
     """
     query = q.strip()
 
+    facet_names = _validate_facets(facets, facet_query)
+    if limit == 0 and not facet_names:
+        raise HTTPException(status_code=422, detail="limit must be >= 1")
+    # A facet-only call (no query, no hits) is a filter-panel helper, not a
+    # search: it is not charged against the guest allowance. The per-IP
+    # ``@limiter.limit`` above still applies to it.
+    facet_only = bool(facet_names) and limit == 0 and not query
+
     if not search_service.configured:
         raise HTTPException(status_code=503, detail="Meilisearch is not configured")
 
     # Guest allowance is checked before the search runs, but only charged after
     # one returns, so an upstream failure never costs part of the allowance.
     quota = None
-    if user is None:
+    if user is None and not facet_only:
         quota = await open_guest_search_quota(guest_session_id)
         if quota.limit_reached:
             raise guest_limit_exceeded_error()
@@ -417,14 +473,41 @@ async def documents_search(
             effective_query = " ".join(p for p in fts_parts if p).strip()
             parsed_attributes = _parsed_attributes_dict(parsed)
 
+    facet_distribution: dict[str, dict[str, int]] | None = None
+    facet_stats: dict[str, dict[str, float]] | None = None
     try:
-        result = await search_service.documents_search(
-            query=effective_query,
-            limit=limit,
-            offset=offset,
-            filters=effective_filters,
-            semantic_ratio=effective_semantic_ratio,
-        )
+        if limit == 0:
+            # Facet-only: no hits are needed, so skip the document search.
+            result = {"hits": [], "query": effective_query, "search_mode": "keyword"}
+        else:
+            result = await search_service.documents_search(
+                query=effective_query,
+                limit=limit,
+                offset=offset,
+                filters=effective_filters,
+                semantic_ratio=effective_semantic_ratio,
+            )
+        if facet_names and facet_query:
+            facet_distribution = {
+                facet_names[0]: await search_service.facet_search_counts(
+                    facet_names[0],
+                    facet_query,
+                    query=effective_query,
+                    filters=effective_filters,
+                )
+            }
+        elif facet_names:
+            facet_result = await search_service.search(
+                query=effective_query,
+                limit=0,
+                filters=effective_filters,
+                facets=facet_names,
+            )
+            facet_distribution = facet_result.get("facetDistribution") or {}
+            facet_stats = facet_result.get("facetStats") or None
+            if limit == 0:
+                result["estimatedTotalHits"] = facet_result.get("estimatedTotalHits")
+                result["processingTimeMs"] = facet_result.get("processingTimeMs")
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail=f"Document search error: {exc}"
@@ -500,6 +583,8 @@ async def documents_search(
         total_count=estimated_total,
         search_mode=result.get("search_mode", "keyword"),
         parsed_attributes=parsed_attributes,
+        facetDistribution=facet_distribution,
+        facetStats=facet_stats,
     )
 
 
