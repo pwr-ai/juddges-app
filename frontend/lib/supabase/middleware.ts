@@ -236,6 +236,29 @@ function loginRedirect(
   return copyCookies(sessionResponse, NextResponse.redirect(url));
 }
 
+/**
+ * Response for an unauthenticated request to a non-public path. Pages get the
+ * login redirect; `/api/*` gets a JSON 401. A 307 to `/auth/login` is wrong
+ * for API calls: `fetch` replays a POST against the login page (and nests
+ * `?next=` on every loop), and the caller can never tell the session expired.
+ */
+function authRequiredResponse(
+  request: NextRequest,
+  sessionResponse: NextResponse,
+): NextResponse {
+  const pathname = request.nextUrl.pathname;
+  if (pathname === "/api" || pathname.startsWith("/api/")) {
+    return copyCookies(
+      sessionResponse,
+      NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      ),
+    );
+  }
+  return loginRedirect(request, sessionResponse);
+}
+
 export async function updateSessionWithAuth(
   incomingRequest: NextRequest
 ): Promise<SessionUpdate> {
@@ -459,7 +482,7 @@ export async function updateSessionWithAuth(
     const collectionAccessToken = sessionData.session?.access_token;
     if (!collectionAccessToken) {
       return sessionUpdate(
-        loginRedirect(request, supabaseResponse),
+        authRequiredResponse(request, supabaseResponse),
         request,
         null,
         null,
@@ -547,7 +570,7 @@ export async function updateSessionWithAuth(
     !documentFailureNeedsExactStatus
   ) {
     return {
-      response: loginRedirect(request, supabaseResponse),
+      response: authRequiredResponse(request, supabaseResponse),
       request,
       userId: null,
       accessToken: null,

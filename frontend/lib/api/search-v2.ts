@@ -33,14 +33,18 @@ export class SearchV2Error extends Error {
 /**
  * The parsed JSON body, or a `SearchV2Error`.
  *
- * An expired session makes the middleware answer the BFF call with a 307 to
- * `/auth/login`; `fetch` follows it and gets the login page as a 200 HTML
- * response. That must surface as a 401, never as an empty result object.
+ * An expired session makes the middleware answer the BFF call with a JSON 401
+ * (older builds sent a 307 to `/auth/login`, which `fetch` follows into a 200
+ * HTML login page). Both must surface as a 401, never as an empty result.
  */
 async function readJson(response: Response, failure: string): Promise<unknown> {
   const contentType = response.headers?.get("content-type") ?? "";
+  // The middleware answers an expired session on /api/* with a JSON 401.
+  if (response.status === 401) {
+    throw new SearchV2Error(SESSION_EXPIRED_MESSAGE, 401);
+  }
   if (response.redirected || !contentType.includes("application/json")) {
-    if (response.redirected || response.ok || response.status === 401) {
+    if (response.redirected || response.ok) {
       throw new SearchV2Error(SESSION_EXPIRED_MESSAGE, 401);
     }
     throw new SearchV2Error(`${failure} (${response.status})`, response.status);
