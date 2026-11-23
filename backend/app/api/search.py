@@ -348,10 +348,8 @@ def _validate_facets(facets: list[str] | None, facet_query: str | None) -> list[
     bad = [n for n in names if not _FACET_NAME_RE.fullmatch(n)]
     if bad:
         raise HTTPException(status_code=422, detail=f"invalid facet name(s): {bad}")
-    if facet_query is not None and len(names) != 1:
-        raise HTTPException(
-            status_code=422, detail="facet_query requires exactly one facet"
-        )
+    if facet_query and not names:
+        raise HTTPException(status_code=422, detail="facet_query requires facets")
     return names
 
 
@@ -386,8 +384,8 @@ async def documents_search(
         None,
         max_length=200,
         description=(
-            "Narrow the values of the single requested facet to those matching "
-            "this text (Meilisearch facet-search). Requires exactly one facet."
+            "Narrow the values of each requested facet to those matching this "
+            "text (Meilisearch facet-search, run per facet)."
         ),
     ),
     semantic_ratio: float = Query(
@@ -487,15 +485,15 @@ async def documents_search(
                 filters=effective_filters,
                 semantic_ratio=effective_semantic_ratio,
             )
+        # NOTE: facet counts are always computed in keyword mode, even when the
+        # hits above used hybrid ranking (semantic_ratio > 0).
         if facet_names and facet_query:
-            facet_distribution = {
-                facet_names[0]: await search_service.facet_search_counts(
-                    facet_names[0],
-                    facet_query,
-                    query=effective_query,
-                    filters=effective_filters,
-                )
-            }
+            facet_distribution = await search_service.facet_distribution_for_query(
+                facet_names,
+                facet_query,
+                query=effective_query,
+                filters=effective_filters,
+            )
         elif facet_names:
             facet_result = await search_service.search(
                 query=effective_query,

@@ -18300,7 +18300,7 @@
             }
           },
           {
-            "description": "Narrow the values of the single requested facet to those matching this text (Meilisearch facet-search). Requires exactly one facet.",
+            "description": "Narrow the values of each requested facet to those matching this text (Meilisearch facet-search, run per facet).",
             "in": "query",
             "name": "facet_query",
             "required": false,
@@ -18314,7 +18314,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Narrow the values of the single requested facet to those matching this text (Meilisearch facet-search). Requires exactly one facet.",
+              "description": "Narrow the values of each requested facet to those matching this text (Meilisearch facet-search, run per facet).",
               "title": "Facet Query"
             }
           },

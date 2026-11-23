@@ -768,15 +768,22 @@ async def run_document_search(request: SearchChunksRequest) -> SearchChunksRespo
 
         meili = MeiliSearchService.from_env()
         try:
-            meili_response = await meili.search(
-                query=request.query or "",
-                limit=max(request.limit_docs, 0)
-                if request.limit_docs is not None
-                else 0,
-                offset=request.offset or 0,
-                facets=request.facets,
-                facet_query=request.facet_query,
-            )
+            if request.facet_query:
+                # facetQuery is only valid on /facet-search, not /search.
+                meili_response = {
+                    "facetDistribution": await meili.facet_distribution_for_query(
+                        request.facets, request.facet_query
+                    )
+                }
+            else:
+                meili_response = await meili.search(
+                    query=request.query or "",
+                    limit=max(request.limit_docs, 0)
+                    if request.limit_docs is not None
+                    else 0,
+                    offset=request.offset or 0,
+                    facets=request.facets,
+                )
         except SearchServiceError as exc:
             logger.warning(
                 "facets_proxy_meili_failure — returning empty facets: {}", str(exc)

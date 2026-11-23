@@ -899,7 +899,10 @@ class MeiliSearchService:
 
         Uses ``POST /indexes/{idx}/facet-search`` — the only endpoint that
         supports ``facetQuery`` — honouring the same ``q``/``filter`` as the
-        document search so counts match the current result set.
+        document search so counts match the current result set. Meilisearch
+        caps the number of returned facet hits at its own default (this call
+        sends no ``limit``; v1.49 ``/facet-search`` does not define one), so
+        the result is a bounded list of the best-matching values.
         """
         if not self.configured:
             raise SearchServiceError("Meilisearch is not configured")
@@ -928,6 +931,25 @@ class MeiliSearchService:
             for h in data.get("facetHits") or []
             if isinstance(h, dict) and "value" in h
         }
+
+    async def facet_distribution_for_query(
+        self,
+        facets: list[str],
+        facet_query: str,
+        *,
+        query: str = "",
+        filters: str | None = None,
+    ) -> dict[str, dict[str, int]]:
+        """Run :meth:`facet_search_counts` per facet concurrently and merge."""
+        counts = await asyncio.gather(
+            *(
+                self.facet_search_counts(
+                    name, facet_query, query=query, filters=filters
+                )
+                for name in facets
+            )
+        )
+        return dict(zip(facets, counts, strict=True))
 
     async def facet_search(
         self,

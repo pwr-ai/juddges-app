@@ -40,7 +40,9 @@ def _service() -> MagicMock:
             "facetStats": {"base_year": {"min": 1990.0, "max": 2024.0}},
         }
     )
-    service.facet_search_counts = AsyncMock(return_value={"vat": 3})
+    service.facet_distribution_for_query = AsyncMock(
+        return_value={"base_keywords": {"vat": 3}}
+    )
     return service
 
 
@@ -96,10 +98,72 @@ async def test_facet_query_uses_facet_search(client, valid_api_headers, svc):
     )
     assert resp.status_code == 200
     assert resp.json()["facetDistribution"] == {"base_keywords": {"vat": 3}}
-    args = svc.facet_search_counts.await_args
-    assert args.args == ("base_keywords", "va")
+    args = svc.facet_distribution_for_query.await_args
+    assert args.args == (["base_keywords"], "va")
     assert args.kwargs["filters"] == 'jurisdiction = "pl"'
     svc.search.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_facet_query_runs_per_facet(client, valid_api_headers):
+    from app.api.search import get_search_service
+    from app.server import app
+    from app.services.search import MeiliSearchService
+
+    real = MeiliSearchService(
+        base_url="http://meili:7700", api_key="k", index_name="judgments"
+    )
+    real.facet_search_counts = AsyncMock(side_effect=[{"a": 1}, {"b": 2}])
+    app.dependency_overrides[get_search_service] = lambda: real
+    try:
+        resp = await client.get(
+            URL,
+            params=[
+                ("limit", "0"),
+                ("facets", "base_x"),
+                ("facets", "base_y"),
+                ("facet_query", "q"),
+            ],
+            headers=valid_api_headers,
+        )
+    finally:
+        app.dependency_overrides.clear()
+    assert resp.status_code == 200
+    assert resp.json()["facetDistribution"] == {
+        "base_x": {"a": 1},
+        "base_y": {"b": 2},
+    }
+    assert real.facet_search_counts.await_count == 2
+
+
+@pytest.mark.anyio
+async def test_facet_search_failure_is_502(client, valid_api_headers, svc):
+    svc.facet_distribution_for_query = AsyncMock(side_effect=RuntimeError("boom"))
+    resp = await client.get(
+        URL,
+        params=[("limit", "0"), ("facets", "base_keywords"), ("facet_query", "x")],
+        headers=valid_api_headers,
+    )
+    assert resp.status_code == 502
+
+
+@pytest.mark.anyio
+async def test_non_facet_only_guest_call_is_charged(
+    client, valid_api_headers, svc, monkeypatch
+):
+    import app.api.search as mod
+
+    opened = AsyncMock(
+        return_value=MagicMock(limit_reached=False, enforced=False, session_id=None)
+    )
+    monkeypatch.setattr(mod, "open_guest_search_quota", opened)
+    resp = await client.get(
+        URL,
+        params=[("q", "vat"), ("limit", "0"), ("facets", "base_keywords")],
+        headers=valid_api_headers,
+    )
+    assert resp.status_code == 200
+    opened.assert_awaited_once()
 
 
 @pytest.mark.anyio
@@ -121,7 +185,7 @@ async def test_facets_with_hits(client, valid_api_headers, svc):
         [("limit", "0"), ("facets", "Bad Name")],
         [("limit", "0"), ("facets", 'x" OR 1=1')],
         [("limit", "0")] + [("facets", f"f{i}") for i in range(21)],
-        [("limit", "0"), ("facets", "a"), ("facets", "b"), ("facet_query", "x")],
+        [("limit", "0"), ("facet_query", "x")],
         [("limit", "0")],
     ],
 )
@@ -141,7 +205,7 @@ async def test_no_facets_path_unchanged(client, valid_api_headers, svc):
     body = resp.json()
     assert body["facetDistribution"] is None
     svc.search.assert_not_awaited()
-    svc.facet_search_counts.assert_not_awaited()
+    svc.facet_distribution_for_query.assert_not_awaited()
     assert svc.documents_search.await_args.kwargs["limit"] == 5
 
 

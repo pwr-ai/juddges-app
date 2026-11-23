@@ -39,10 +39,16 @@ async def test_facets_param_forwarded_to_meili(client_with_api_key: TestClient) 
             "base_appeal_outcome": {"dismissed": 124, "allowed": 33},
         },
     }
-    with patch(
-        "app.services.search.MeiliSearchService.search",
-        new=AsyncMock(return_value=fake_response),
-    ) as mock_search:
+    with (
+        patch(
+            "app.services.search.MeiliSearchService.search",
+            new=AsyncMock(return_value=fake_response),
+        ) as mock_search,
+        patch(
+            "app.services.search.MeiliSearchService.facet_search_counts",
+            new=AsyncMock(return_value={"dismissed": 124}),
+        ) as mock_facet_search,
+    ):
         resp = client_with_api_key.post(
             "/documents/search",
             json={
@@ -54,7 +60,10 @@ async def test_facets_param_forwarded_to_meili(client_with_api_key: TestClient) 
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
-        assert body.get("facetDistribution") == fake_response["facetDistribution"]
-        kwargs = mock_search.await_args.kwargs
-        assert kwargs.get("facets") == ["base_appeal_outcome"]
-        assert kwargs.get("facet_query") == "dis"
+        # facet_query is served by /facet-search, never by /search.
+        assert body.get("facetDistribution") == {
+            "base_appeal_outcome": {"dismissed": 124}
+        }
+        mock_search.assert_not_awaited()
+        args = mock_facet_search.await_args
+        assert args.args == ("base_appeal_outcome", "dis")

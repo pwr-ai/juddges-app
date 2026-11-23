@@ -888,3 +888,47 @@ class TestSharedClientLifecycle:
         service._topics_service_instance = sub
         await service.aclose()
         assert sub_client.is_closed, "aclose() must cascade to cached sub-services"
+
+
+class TestFacetSearchCounts:
+    @pytest.mark.asyncio
+    async def test_payload_and_mapping(self, service):
+        captured: dict = {}
+
+        async def fake_post(self_, url, json, headers):
+            captured["url"] = url
+            captured["payload"] = json
+            return _mock_response(
+                200,
+                {
+                    "facetHits": [
+                        {"value": "vat", "count": 3},
+                        {"value": "tax", "count": 2},
+                    ]
+                },
+            )
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.facet_search_counts(
+                "base_keywords", "va", query="q", filters='jurisdiction = "pl"'
+            )
+
+        assert captured["url"].endswith("/indexes/judgments/facet-search")
+        assert captured["payload"] == {
+            "facetName": "base_keywords",
+            "facetQuery": "va",
+            "q": "q",
+            "filter": 'jurisdiction = "pl"',
+        }
+        assert result == {"vat": 3, "tax": 2}
+
+    @pytest.mark.asyncio
+    async def test_http_error_wrapped(self, service):
+        async def fake_post(self_, url, json, headers):
+            return _mock_response(500, {})
+
+        with (
+            patch("httpx.AsyncClient.post", new=fake_post),
+            pytest.raises(SearchServiceError),
+        ):
+            await service.facet_search_counts("base_keywords", "va")

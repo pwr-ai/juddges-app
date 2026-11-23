@@ -14037,7 +14037,7 @@ export interface operations {
                 filters?: string | null;
                 /** @description Filterable attributes to return value counts for (repeat the param; max 20). Adds `facetDistribution` to the response. */
                 facets?: string[] | null;
-                /** @description Narrow the values of the single requested facet to those matching this text (Meilisearch facet-search). Requires exactly one facet. */
+                /** @description Narrow the values of each requested facet to those matching this text (Meilisearch facet-search, run per facet). */
                 facet_query?: string | null;
                 /** @description Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends 0.75. */
                 semantic_ratio?: number;
