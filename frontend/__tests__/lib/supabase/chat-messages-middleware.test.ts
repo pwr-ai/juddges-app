@@ -174,8 +174,13 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
       new NextRequest(`http://localhost:3000${path}`),
     );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/auth/login");
+    if (path.startsWith("/api/")) {
+      expect(response.status).toBe(401);
+      expect(response.headers.get("location")).toBeNull();
+    } else {
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/auth/login");
+    }
   });
 
   it("returns 503 for an auth-service failure on an exact chat page", async () => {
@@ -272,8 +277,8 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
       }),
     );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/auth/login");
+    expect(response.status).toBe(401);
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("continues to the page when the authenticated user owns the chat", async () => {

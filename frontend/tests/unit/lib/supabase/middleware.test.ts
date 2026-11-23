@@ -138,16 +138,53 @@ describe("Supabase middleware public route policy", () => {
       `http://localhost/auth/login?next=%2Fapi%2Fextractions%3Fjob_id%3D${EXTRACTION_ID}`,
     ],
   ] as const)(
-    "redirects protected %s %s with exact next",
+    "rejects protected %s %s (pages redirect with exact next, /api returns 401)",
     async (method, pathname, expectedLocation) => {
       const response = await updateSession(
         new NextRequest(`http://localhost${pathname}`, { method }),
       );
 
+      if (pathname.startsWith("/api/")) {
+        expect(response.status).toBe(401);
+        expect(response.headers.get("location")).toBeNull();
+        expect(await response.json()).toEqual({
+          error: "Authentication required",
+        });
+        return;
+      }
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(expectedLocation);
     },
   );
+
+  it("keeps refreshed session cookies on the /api 401 and redirects pages as before", async () => {
+    const { createServerClient } = jest.requireMock("@supabase/ssr");
+    const withRefreshedCookie = (_url: string, _key: string, options: any) => ({
+      auth: {
+        getUser: async () => {
+          options.cookies.setAll([
+            { name: "sb-refreshed", value: "v1", options: {} },
+          ]);
+          return { data: { user: null }, error: { message: "expired" } };
+        },
+        getSession: mockGetSession,
+      },
+    });
+    createServerClient.mockImplementationOnce(withRefreshedCookie);
+    const api = await updateSession(
+      new NextRequest("http://localhost/api/search/v2", { method: "POST" }),
+    );
+    expect(api.status).toBe(401);
+    expect(api.cookies.get("sb-refreshed")?.value).toBe("v1");
+
+    createServerClient.mockImplementationOnce(withRefreshedCookie);
+    const page = await updateSession(
+      new NextRequest("http://localhost/collections"),
+    );
+    expect(page.status).toBe(307);
+    expect(page.headers.get("location")).toContain("/auth/login");
+    expect(page.cookies.get("sb-refreshed")?.value).toBe("v1");
+  });
 
   it("redirects an anonymous asset-like collection ID with the exact return target", async () => {
     const response = await updateSession(
@@ -197,8 +234,8 @@ describe("Supabase middleware public route policy", () => {
     expect(exact.headers.get("location")).toBeNull();
     expect(exactHead.status).toBe(200);
     expect(exactHead.headers.get("location")).toBeNull();
-    expect(wrongMethod.status).toBe(307);
-    expect(nested.status).toBe(307);
+    expect(wrongMethod.status).toBe(401);
+    expect(nested.status).toBe(401);
   });
 
   it("strips forged document proof headers and preserves the method", async () => {
@@ -535,7 +572,7 @@ describe("Supabase middleware public route policy", () => {
       "/api/schemas/nested/value.css",
     ]) {
       const response = await updateSession(new NextRequest(`http://localhost${path}`));
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(401);
     }
   });
 
