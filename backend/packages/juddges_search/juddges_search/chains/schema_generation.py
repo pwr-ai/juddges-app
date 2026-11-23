@@ -129,6 +129,9 @@ schema_generation_prompt = ChatPromptTemplate.from_template(
 SCHEMA_MAX_COMPLETION_TOKENS = 16000
 # Generating 15-40 fields takes well over the 30 s default request timeout.
 SCHEMA_REQUEST_TIMEOUT_SECONDS = 180.0
+# One retry keeps the worst case (2 x 180 s) under the ~300 s undici fetch
+# timeout of the Next.js /api/schema-generator/simple proxy.
+SCHEMA_MAX_RETRIES = 1
 
 
 # Lazy-load LLM to avoid requiring API key at import time
@@ -145,6 +148,7 @@ def _get_model():
         use_mini_model=False,
         max_completion_tokens=SCHEMA_MAX_COMPLETION_TOKENS,
         request_timeout=SCHEMA_REQUEST_TIMEOUT_SECONDS,
+        max_retries=SCHEMA_MAX_RETRIES,
     )
     return llm.bind(response_format={"type": "json_object"})
 
