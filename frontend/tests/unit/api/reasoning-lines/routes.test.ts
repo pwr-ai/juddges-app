@@ -159,6 +159,22 @@ describe('reasoning-lines BFF routes', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('forwards include_members=false on the line detail request', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    await getReasoningLine(
+      new NextRequest(`http://localhost/api/reasoning-lines/${lineId}?include_members=false`),
+      { params: Promise.resolve({ path: [lineId] }) },
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      `http://backend.test/reasoning-lines/${lineId}?include_members=false`,
+      expect.any(Object),
+    );
+  });
+
   it.each([
     ['POST', ['discover']],
     ['POST', ['create']],
@@ -171,6 +187,7 @@ describe('reasoning-lines BFF routes', () => {
     ['POST', [lineId, 'drift-analysis']],
     ['POST', [lineId, 'analyze-outcomes']],
     ['GET', [lineId, 'related']],
+    ['GET', [lineId, 'members']],
   ])('allows the explicit %s /%s operation', async (method, path) => {
     (global.fetch as jest.Mock).mockResolvedValue(
       new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
