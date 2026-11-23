@@ -351,7 +351,7 @@ describe("schemas production HTTP/auth status matrix", () => {
       const apiLookalike = await requestUntilReady(
         `${appUrl}/api/schemas/${ids.visible}/nested`
       );
-      expect(apiLookalike.status).toBe(307);
+      expect(apiLookalike.status).toBe(401);
       await apiLookalike.text();
 
       for (const method of ["POST", "DELETE"]) {

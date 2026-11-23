@@ -672,10 +672,13 @@ test.describe.serial('production route status contract', () => {
       await expectWireStatus(anonymous.request, 'GET', '/history', 307);
       await expectWireStatus(anonymous.request, 'GET', '/reasoning-lines', 307);
       // The v2 (Weaviate) test engine is for signed-in users only (#867): the
-      // middleware login-redirects a guest before the BFF route (whose own 401
-      // is unit-tested) runs, so the backend never sees the request.
-      const v2 = await expectWireStatus(anonymous.request, 'POST', '/api/search/v2', 307);
-      expect(v2.headers()['location']).toContain('/auth/login');
+      // middleware rejects a guest before the BFF route (whose own 401 is
+      // unit-tested) runs, so the backend never sees the request. /api/* gets a
+      // JSON 401, not a 307 to /auth/login: fetch would replay the POST against
+      // the login page and loop on nested `?next=`.
+      const v2 = await expectWireStatus(anonymous.request, 'POST', '/api/search/v2', 401);
+      expect(await v2.json()).toEqual({ error: 'Authentication required' });
+      expect(v2.headers()['location']).toBeUndefined();
       // Its detail page and BFF (#867) are gated the same way, unlike the
       // public curated judgment page above.
       const fullPage = await expectWireStatus(
@@ -689,7 +692,7 @@ test.describe.serial('production route status contract', () => {
         anonymous.request,
         'GET',
         '/api/search/v2/judgments/%2Fdoc%2F39FBE5DB09',
-        307,
+        401,
       );
 
       const domainPaths = domainRequests(await adapterRequests(request)).map(

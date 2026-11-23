@@ -67,6 +67,14 @@ describe('searchV2', () => {
     expect((error as SearchV2Error).message).toBe(SESSION_EXPIRED_MESSAGE);
   });
 
+  it('maps the middleware JSON 401 to the expired-session message', async () => {
+    mockFetch(fakeResponse({ status: 401, body: { error: 'Authentication required' } }));
+    const error = await searchV2({ query: 'x' }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(SearchV2Error);
+    expect((error as SearchV2Error).status).toBe(401);
+    expect((error as SearchV2Error).message).toBe(SESSION_EXPIRED_MESSAGE);
+  });
+
   it('rejects a 200 HTML page even when not flagged as redirected', async () => {
     mockFetch(fakeResponse({ body: '<html>', contentType: 'text/html; charset=utf-8' }));
     await expect(searchV2({ query: 'x' })).rejects.toMatchObject({ status: 401 });

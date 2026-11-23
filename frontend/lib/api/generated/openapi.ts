@@ -3345,6 +3345,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extractions/{job_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get one page of an extraction job's results
+         * @description Paginated per-document results of an owned extraction job. The page is sliced inside the database, so large jobs do not load the whole result array. `counts` and `total` cover all results; `filtered_total` honours the `status` filter.
+         */
+        get: operations["get_extraction_job_results_page_extractions__job_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -8166,6 +8186,40 @@ export interface components {
             job_id: string;
             /** Job Status */
             job_status?: string | null;
+        };
+        /** ExtractionJobResultCounts */
+        ExtractionJobResultCounts: {
+            /** Completed */
+            completed: number;
+            /** Failed */
+            failed: number;
+            /** Other */
+            other: number;
+        };
+        /**
+         * ExtractionJobResultsPage
+         * @description One page of a job's per-document results (offset/limit over the array).
+         */
+        ExtractionJobResultsPage: {
+            counts: components["schemas"]["ExtractionJobResultCounts"];
+            /**
+             * Filtered Total
+             * @description Results matching the status filter (the pager total)
+             */
+            filtered_total: number;
+            /** Job Id */
+            job_id: string;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Results */
+            results: components["schemas"]["DocumentExtractionResponse"][];
+            /**
+             * Total
+             * @description All results stored on the job
+             */
+            total: number;
         };
         /**
          * ExtractionJobSummary
@@ -17625,6 +17679,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_extraction_job_results_page_extractions__job_id__results_get: {
+        parameters: {
+            query?: {
+                /** @description Number of results to skip */
+                offset?: number;
+                /** @description Page size */
+                limit?: number;
+                /** @description Only results with this outcome */
+                status?: ("completed" | "failed") | null;
+            };
+            header?: never;
+            path: {
+                /** @description Extraction job ID (task ID) */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtractionJobResultsPage"];
                 };
             };
             /** @description Validation Error */

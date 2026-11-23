@@ -300,7 +300,7 @@ describe('documents production HTTP/auth status matrix', () => {
       const anonymousLookalike = await requestUntilReady(
         `${appUrl}/api/documents/visible-doc/metadata/nested`
       );
-      expect(anonymousLookalike.status).toBe(307);
+      expect(anonymousLookalike.status).toBe(401);
 
       const anonymousPage = await requestUntilReady(
         `${appUrl}/documents/visible-doc`

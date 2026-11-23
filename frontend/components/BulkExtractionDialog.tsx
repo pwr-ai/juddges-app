@@ -121,9 +121,14 @@ export function BulkExtractionDialog({
  const normalizedStatus = data.status?.toUpperCase() || '';
  const isTerminal = ['COMPLETED', 'SUCCESS', 'PARTIALLY_COMPLETED', 'FAILED', 'FAILURE', 'CANCELLED'].includes(normalizedStatus);
 
- const completedDocs = data.results?.filter(
- (r: { status: string }) => r.status === 'completed' || r.status === 'failed'
- ).length || 0;
+ // The status poll carries no per-document results (they are paged
+ // separately), so progress comes from the job-level counter.
+ const completedDocs =
+ typeof data.progress?.completed === 'number'
+ ? data.progress.completed
+ : typeof data.completed_documents === 'number'
+ ? data.completed_documents
+ : 0;
 
  setJobStatuses(prev => ({
  ...prev,

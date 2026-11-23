@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime
+from typing import Literal
 
 from celery.result import AsyncResult
 from fastapi import (
@@ -19,6 +20,7 @@ from fastapi import (
     status,
 )
 from loguru import logger
+from pydantic import ValidationError
 from supabase import PostgrestAPIError, StorageException
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
@@ -47,6 +49,7 @@ from app.models import (
     DocumentExtractionResponse,
     DocumentExtractionSubmissionResponse,
     DocumentProcessingStatus,
+    ExtractionJobResultsPage,
     ExtractionJobSummary,
     ListExtractionJobsResponse,
     SimpleExtractionRequest,
@@ -1169,6 +1172,111 @@ _API_STATUS_TO_DB_VALUES: dict[str, list[str]] = {
     "FAILED": ["FAILURE", "FAILED"],
     "CANCELLED": ["REVOKED", "CANCELLED"],
 }
+
+
+_STORED_STATUS_ALIASES = {"success": "completed", "failure": "failed"}
+
+
+def _page_item_to_response(
+    item: object, job_id: str, position: int
+) -> DocumentExtractionResponse:
+    """Build one page row without letting a malformed stored item fail the page.
+
+    Stored results predate the response model in places (``success``/``failure``
+    spellings, missing timestamps). Normalise what can be normalised; anything
+    still invalid becomes a FAILED row that says so, instead of a 500 that hides
+    the other rows of the page.
+    """
+    data = dict(item) if isinstance(item, dict) else {}
+    raw_status = str(data.get("status") or "").strip().lower()
+    data["status"] = _STORED_STATUS_ALIASES.get(raw_status, raw_status)
+    data.setdefault("created_at", "")
+    data.setdefault("updated_at", "")
+    for key in ("created_at", "updated_at"):
+        if data[key] is None:
+            data[key] = ""
+    try:
+        return DocumentExtractionResponse(**data)
+    except ValidationError as invalid:
+        logger.warning(
+            f"Malformed stored result at position {position} of job {job_id}: {invalid}"
+        )
+        return DocumentExtractionResponse(
+            collection_id=str(data.get("collection_id") or ""),
+            document_id=str(data.get("document_id") or f"row-{position}"),
+            status=DocumentProcessingStatus.FAILED,
+            created_at=str(data.get("created_at") or ""),
+            updated_at=str(data.get("updated_at") or ""),
+            error_message="Stored result is malformed and cannot be displayed.",
+        )
+
+
+@router.get(
+    "/{job_id}/results",
+    response_model=ExtractionJobResultsPage,
+    summary="Get one page of an extraction job's results",
+    description=(
+        "Paginated per-document results of an owned extraction job. The page is "
+        "sliced inside the database, so large jobs do not load the whole result "
+        "array. `counts` and `total` cover all results; `filtered_total` honours "
+        "the `status` filter."
+    ),
+)
+async def get_extraction_job_results_page(
+    job_id: str = Path(..., description="Extraction job ID (task ID)"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    limit: int = Query(50, ge=1, le=200, description="Page size"),
+    status_filter: Literal["completed", "failed"] | None = Query(
+        None, alias="status", description="Only results with this outcome"
+    ),
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> ExtractionJobResultsPage:
+    if not is_uuid(job_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Extraction job not found",
+        )
+    if not supabase:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Extraction job store unavailable",
+        )
+    try:
+        response = supabase.rpc(
+            "get_extraction_job_results_page",
+            {
+                "p_job_id": job_id,
+                "p_user_id": user.id,
+                "p_offset": offset,
+                "p_limit": limit,
+                "p_status": status_filter,
+            },
+        ).execute()
+    except Exception as rpc_error:
+        logger.error(f"Could not load results page for job {job_id}: {rpc_error}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Extraction job store unavailable",
+        ) from rpc_error
+
+    page = response.data
+    if not isinstance(page, dict) or not page.get("found"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Extraction job not found",
+        )
+    return ExtractionJobResultsPage(
+        job_id=job_id,
+        offset=offset,
+        limit=limit,
+        total=page["total"],
+        filtered_total=page["filtered_total"],
+        counts=page["counts"],
+        results=[
+            _page_item_to_response(item, job_id, idx)
+            for idx, item in enumerate(page["items"], start=offset)
+        ],
+    )
 
 
 @router.get(

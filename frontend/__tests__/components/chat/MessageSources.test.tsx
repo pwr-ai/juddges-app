@@ -97,6 +97,33 @@ describe('MessageSources', () => {
     expect(screen.getByText(/Failed to load sources/i)).toBeInTheDocument();
   });
 
+  it('does not show the loading skeleton on error and retries via refetch', async () => {
+    const user = userEvent.setup();
+    const refetch = jest.fn();
+    useSourceDocuments.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('boom'),
+      refetch,
+    });
+
+    const { container } = render(<MessageSources documentIds={['doc-1']} isExpanded={true} />);
+
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells the user to sign in again on a 401 and offers no retry', () => {
+    const error = Object.assign(new Error('expired'), { status: 401 });
+    useSourceDocuments.mockReturnValue({ data: undefined, isLoading: false, error, refetch: jest.fn() });
+
+    render(<MessageSources documentIds={['doc-1']} isExpanded={true} />);
+
+    expect(screen.getByText(/sign in again/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+  });
+
   it('uses the external toggle handler when provided', async () => {
     const user = userEvent.setup();
     const onToggle = jest.fn();

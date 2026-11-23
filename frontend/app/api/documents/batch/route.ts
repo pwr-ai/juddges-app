@@ -8,6 +8,15 @@ const backendUrl = getBackendUrl();
 const apiKey = process.env.BACKEND_API_KEY || '';
 
 /**
+ * A backend 401/403 means our BACKEND_API_KEY was rejected, not that the
+ * user's session expired; pass it through and the client would tell the user
+ * to sign in again. Report it as a bad gateway instead.
+ */
+function upstreamStatus(status: number): number {
+  return status === 401 || status === 403 ? 502 : status;
+}
+
+/**
  * GET /api/documents/batch?ids=id1,id2,id3
  * Fetches multiple documents by their IDs (used by chat sources)
  */
@@ -80,7 +89,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       logger.error(`[documents/batch GET] Backend error: ${response.status}`, data);
       return NextResponse.json(
         { error: data.detail || 'Failed to fetch documents by IDs' },
-        { status: response.status }
+        { status: upstreamStatus(response.status) }
       );
     }
 
@@ -140,7 +149,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       logger.error(`[documents/batch POST] Backend error: ${response.status}`, data);
       return NextResponse.json(
         { error: data.detail || 'Failed to fetch documents by IDs' },
-        { status: response.status }
+        { status: upstreamStatus(response.status) }
       );
     }
 

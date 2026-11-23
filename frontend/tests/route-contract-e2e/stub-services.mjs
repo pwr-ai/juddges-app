@@ -12,6 +12,8 @@ const LOGGABLE_QUERY_KEYS = new Set([
   'include_results',
   'job_id',
   'limit',
+  'offset',
+  'status',
   'order',
   'select',
   'top_k',
@@ -457,16 +459,34 @@ const SEQUENCED_EXTRACTION_STEPS = [
   },
 ];
 
-function sequencedExtractionResponse(url, response) {
-  // The middleware builds the SSR snapshot with `include_results=false`
-  // (frontend/middleware.ts). That read must observe the current state without
-  // consuming a step, or the browser polls would start mid-sequence.
-  const isSnapshotRead = url.searchParams.get('include_results') === 'false';
+/**
+ * The middleware builds the SSR snapshot (frontend/middleware.ts) and the
+ * `/api/extractions?job_id=` BFF poll answers the browser's status polls. Both
+ * send `include_results=false` now that results are paged separately, so the
+ * query string no longer tells them apart; the middleware is the one that sends
+ * `Accept: application/json`, the BFF fetch sends none. A snapshot read must
+ * observe the current step without consuming it, or the browser polls would
+ * start mid-sequence.
+ */
+function isSnapshotRead(request) {
+  return request.headers.accept === 'application/json';
+}
+
+/** Results of the step that was served last, i.e. what the job holds right now. */
+function currentSequencedResults() {
+  const index = Math.min(
+    Math.max(sequencedPolls - 1, 0),
+    SEQUENCED_EXTRACTION_STEPS.length - 1,
+  );
+  return SEQUENCED_EXTRACTION_STEPS[index].results ?? [];
+}
+
+function sequencedExtractionResponse(request, response) {
   const step =
     SEQUENCED_EXTRACTION_STEPS[
       Math.min(sequencedPolls, SEQUENCED_EXTRACTION_STEPS.length - 1)
     ];
-  if (!isSnapshotRead) {
+  if (!isSnapshotRead(request)) {
     sequencedPolls += 1;
     // Recorded here rather than sniffed in the browser. Observed while
     // building this spec: one page load issues two polls milliseconds apart
@@ -489,7 +509,9 @@ function sequencedExtractionResponse(url, response) {
     total_documents: EXTRACTABLE_DOCUMENT_IDS.length,
     created_at: '2026-08-06T00:00:00.000Z',
     updated_at: '2026-08-06T00:01:00.000Z',
-    results: isSnapshotRead ? null : step.results,
+    // Status reads never carry results (`include_results=false`); the detail
+    // page pages them through `GET /extractions/{id}/results`.
+    results: null,
   });
 }
 
@@ -499,7 +521,7 @@ function sequencedExtractionResponse(url, response) {
  * POSTed to `/extractions/db`, not from the collection: an extract page that
  * submits the wrong set shows up here as the wrong `total_documents`.
  */
-function flowExtractionResponse(url, response) {
+function flowSteps() {
   const submitted = flowSubmittedDocumentIds ?? [];
   const total = submitted.length;
   const steps = [
@@ -528,9 +550,18 @@ function flowExtractionResponse(url, response) {
       }),
     },
   ];
-  const isSnapshotRead = url.searchParams.get('include_results') === 'false';
+  return { steps, total };
+}
+
+function currentFlowResults() {
+  const { steps } = flowSteps();
+  return steps[Math.min(Math.max(flowPolls - 1, 0), steps.length - 1)].results ?? [];
+}
+
+function flowExtractionResponse(request, response) {
+  const { steps, total } = flowSteps();
   const step = steps[Math.min(flowPolls, steps.length - 1)];
-  if (!isSnapshotRead) {
+  if (!isSnapshotRead(request)) {
     flowPolls += 1;
     flowServed.push({
       status: step.status,
@@ -547,7 +578,40 @@ function flowExtractionResponse(url, response) {
     total_documents: total,
     created_at: '2026-08-06T00:00:00.000Z',
     updated_at: '2026-08-06T00:01:00.000Z',
-    results: isSnapshotRead ? null : step.results,
+    results: null,
+  });
+}
+
+/**
+ * `GET /extractions/{id}/results`: the same page envelope as the backend
+ * (offset/limit/status; `counts`/`total` over all results, `filtered_total`
+ * over the status filter).
+ */
+function resultsPageResponse(jobId, url, response) {
+  let all = null;
+  if (jobId === IDS.extraction.sequenced) all = currentSequencedResults();
+  else if (jobId === FLOW.jobId) all = currentFlowResults();
+  if (all === null) {
+    sendJson(response, 404, { detail: 'job not found' });
+    return;
+  }
+  const offset = Number(url.searchParams.get('offset') ?? 0);
+  const limit = Number(url.searchParams.get('limit') ?? 20);
+  const status = url.searchParams.get('status');
+  const filtered = status ? all.filter((row) => row.status === status) : all;
+  const countOf = (value) => all.filter((row) => row.status === value).length;
+  sendJson(response, 200, {
+    job_id: jobId,
+    offset,
+    limit,
+    total: all.length,
+    filtered_total: filtered.length,
+    counts: {
+      completed: countOf('completed'),
+      failed: countOf('failed'),
+      other: all.length - countOf('completed') - countOf('failed'),
+    },
+    results: filtered.slice(offset, offset + limit),
   });
 }
 
@@ -1079,16 +1143,23 @@ const server = createServer((request, response) => {
     return;
   }
 
+  const resultsMatch = url.pathname.match(/^\/extractions\/([^/]+)\/results$/);
+  if (request.method === 'GET' && resultsMatch) {
+    logRequest(request, url);
+    resultsPageResponse(decodeURIComponent(resultsMatch[1]), url, response);
+    return;
+  }
+
   const extractionMatch = url.pathname.match(/^\/extractions\/([^/]+)$/);
   if (request.method === 'GET' && extractionMatch) {
     logRequest(request, url);
     const jobId = decodeURIComponent(extractionMatch[1]);
     if (jobId === IDS.extraction.sequenced) {
-      sequencedExtractionResponse(url, response);
+      sequencedExtractionResponse(request, response);
       return;
     }
     if (jobId === FLOW.jobId) {
-      flowExtractionResponse(url, response);
+      flowExtractionResponse(request, response);
       return;
     }
     extractionResponse(jobId, response);

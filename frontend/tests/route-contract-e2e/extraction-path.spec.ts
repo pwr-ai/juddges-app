@@ -173,6 +173,37 @@ test.describe.serial('extraction path contract', () => {
       { status: 'COMPLETED', completed_documents: 2, total_documents: 2 },
     ]);
 
+    // 7. The page was paged, never bulk-loaded: the browser asked the results
+    //    route for one page of 20 and the backend was never asked for the full
+    //    job (`GET /extractions/{id}` without `include_results=false`), which is
+    //    the ~15 MB response that 504ed the detail page for large jobs.
+    const requestLog = await request.get(
+      `${ADAPTER_BASE_URL}/__route-contract/requests`,
+    );
+    const { requests: stubRequests } = (await requestLog.json()) as {
+      requests: Array<{
+        method: string;
+        path: string;
+        query: Record<string, string | string[]>;
+      }>;
+    };
+    const resultsPages = stubRequests.filter(
+      (r) => r.path === `/extractions/${jobId}/results`,
+    );
+    expect(resultsPages.length).toBeGreaterThan(0);
+    for (const pageRequest of resultsPages) {
+      expect(pageRequest.query).toMatchObject({
+        offset: '0',
+        limit: '20',
+        status: 'completed',
+      });
+    }
+    const jobReads = stubRequests.filter((r) => r.path === `/extractions/${jobId}`);
+    expect(jobReads.length).toBeGreaterThan(0);
+    expect(
+      jobReads.filter((r) => r.query.include_results !== 'false'),
+    ).toEqual([]);
+
     await page.close();
   });
 });
