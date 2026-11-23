@@ -8,6 +8,7 @@ import {
   formatEnumOptionLabel,
 } from "@/lib/extractions/base-schema-filter-config";
 import type { BaseFilters, BaseFilterValue } from "@/lib/store/searchStore";
+import type { Jurisdiction } from "@/types/base-schema-filter";
 import { NumericRangeControl } from "./controls/NumericRangeControl";
 import { DateRangeControl } from "./controls/DateRangeControl";
 import { BooleanTriControl } from "./controls/BooleanTriControl";
@@ -19,6 +20,8 @@ export interface BaseFiltersDrawerProps {
   filters: BaseFilters;
   /** Emitted with `(field, nextValue|undefined)` whenever a control changes. */
   onChange: (field: string, value: BaseFilterValue | undefined) => void;
+  /** Scope numeric distribution histograms to one jurisdiction (omit = all). */
+  jurisdiction?: Jurisdiction | null;
   /** Clear all filters. */
   onReset: () => void;
   /** Optional facet counts keyed by registry-field name for tag_array autocomplete. */
@@ -41,6 +44,7 @@ export function BaseFiltersDrawer({
   filters,
   onChange,
   onReset,
+  jurisdiction,
   facetCounts,
   onTagQueryChange,
   disabled,
@@ -116,6 +120,7 @@ export function BaseFiltersDrawer({
                       <NumericRangeControl
                         key={cfg.field}
                         field={cfg.field}
+                        jurisdiction={jurisdiction}
                         label={cfg.label}
                         description={cfg.help}
                         value={v?.kind === "numeric_range" ? v : undefined}

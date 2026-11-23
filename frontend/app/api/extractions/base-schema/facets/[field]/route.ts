@@ -23,6 +23,7 @@ export async function GET(
 ) {
   const requestId = crypto.randomUUID();
   const { field } = await params;
+  const jurisdiction = request.nextUrl.searchParams.get("jurisdiction");
 
   try {
     apiLogger.info('GET /api/extractions/base-schema/facets started', { requestId, field });
@@ -44,7 +45,9 @@ export async function GET(
 
     // Forward request to backend
     const response = await fetch(
-      `${API_BASE_URL}/extractions/base-schema/facets/${encodeURIComponent(field)}`,
+      `${API_BASE_URL}/extractions/base-schema/facets/${encodeURIComponent(field)}${
+        jurisdiction ? `?jurisdiction=${encodeURIComponent(jurisdiction)}` : ''
+      }`,
       {
         method: 'GET',
         headers: {

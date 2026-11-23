@@ -2,6 +2,7 @@
 import React from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import type { BaseFilterValue, BaseNumericRange } from "@/lib/store/searchStore";
+import type { Jurisdiction } from "@/types/base-schema-filter";
 import { Slider } from "@/components/ui/slider";
 import { useNumericHistogram } from "@/lib/extractions/base-schema-filter-api";
 
@@ -12,6 +13,8 @@ export interface NumericRangeControlProps {
   onChange: (next: Extract<BaseFilterValue, { kind: "numeric_range" }> | undefined) => void;
   /** Registry field key — drives the distribution-histogram fetch (issue #140). */
   field?: string;
+  /** Scope the distribution to one jurisdiction (omit = whole corpus). */
+  jurisdiction?: Jurisdiction | null;
   min?: number;
   step?: number;
   /**
@@ -38,7 +41,7 @@ function fmtEdge(n: number): string {
 const CHART_HEIGHT = 56;
 
 export function NumericRangeControl({
-  label, description, value, onChange, field, min, step, showDistribution = true, disabled,
+  label, description, value, onChange, field, jurisdiction, min, step, showDistribution = true, disabled,
 }: NumericRangeControlProps) {
   const range = value?.range ?? {};
 
@@ -60,6 +63,7 @@ export function NumericRangeControl({
     field ?? null,
     20,
     Boolean(field) && showDistribution,
+    jurisdiction ?? null,
   );
   const buckets = React.useMemo(
     () => histogram.data?.buckets ?? [],

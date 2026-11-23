@@ -20,6 +20,7 @@ import type {
   BaseSchemaFilterRequest,
   BaseSchemaFilterResponse,
   FacetCount,
+  Jurisdiction,
   NumericHistogramResponse,
 } from "@/types/base-schema-filter";
 
@@ -45,19 +46,35 @@ async function postFilter(
   return (await response.json()) as BaseSchemaFilterResponse;
 }
 
-async function fetchFacet(
+/**
+ * The jurisdiction to scope facet/histogram requests to: only when exactly one
+ * is selected. Zero or both selected means "whole corpus", so nothing is sent.
+ */
+export function singleJurisdiction(
+  selected: readonly Jurisdiction[] | undefined | null,
+): Jurisdiction | null {
+  return selected && selected.length === 1 ? selected[0] : null;
+}
+
+export async function fetchFacet(
   field: string,
+  jurisdiction?: Jurisdiction | null,
   signal?: AbortSignal,
 ): Promise<FacetCount[]> {
-  const response = await fetch(`${FACETS_URL}/${encodeURIComponent(field)}`, {
-    signal,
-  });
+  const query = jurisdiction
+    ? `?jurisdiction=${encodeURIComponent(jurisdiction)}`
+    : "";
+  const response = await fetch(
+    `${FACETS_URL}/${encodeURIComponent(field)}${query}`,
+    { signal },
+  );
   if (!response.ok) {
     if (response.status === 404) return [];
     throw new Error(`Facet fetch failed for ${field}: ${response.status}`);
   }
-  const json = (await response.json()) as { facets?: FacetCount[] } | FacetCount[];
-  return Array.isArray(json) ? json : (json.facets ?? []);
+  // Backend FacetCountsResponse: { field, counts: [{ value, count }], total }.
+  const json = (await response.json()) as { counts?: FacetCount[] };
+  return json.counts ?? [];
 }
 
 /** Filtered list of judgments. Cached for 30s; results table-friendly. */
@@ -75,22 +92,30 @@ export function useExtractionResults(
 }
 
 /** Facet counts for one field. Cached longer — values shift slowly. */
-export function useExtractionFacet(field: string | null, enabled: boolean = true) {
+export function useExtractionFacet(
+  field: string | null,
+  enabled: boolean = true,
+  jurisdiction: Jurisdiction | null = null,
+) {
   return useQuery({
-    queryKey: ["base-schema-facet", field],
-    queryFn: ({ signal }) => fetchFacet(field as string, signal),
+    queryKey: ["base-schema-facet", field, jurisdiction],
+    queryFn: ({ signal }) => fetchFacet(field as string, jurisdiction, signal),
     enabled: enabled && Boolean(field),
     staleTime: 5 * 60_000,
   });
 }
 
-async function fetchHistogram(
+export async function fetchHistogram(
   field: string,
   buckets: number,
+  jurisdiction?: Jurisdiction | null,
   signal?: AbortSignal,
 ): Promise<NumericHistogramResponse> {
+  const scope = jurisdiction
+    ? `&jurisdiction=${encodeURIComponent(jurisdiction)}`
+    : "";
   const response = await fetch(
-    `${HISTOGRAM_URL}/${encodeURIComponent(field)}?buckets=${buckets}`,
+    `${HISTOGRAM_URL}/${encodeURIComponent(field)}?buckets=${buckets}${scope}`,
     { signal },
   );
   if (!response.ok) {
@@ -110,10 +135,12 @@ export function useNumericHistogram(
   field: string | null,
   buckets: number = 20,
   enabled: boolean = true,
+  jurisdiction: Jurisdiction | null = null,
 ) {
   return useQuery({
-    queryKey: ["base-schema-histogram", field, buckets],
-    queryFn: ({ signal }) => fetchHistogram(field as string, buckets, signal),
+    queryKey: ["base-schema-histogram", field, buckets, jurisdiction],
+    queryFn: ({ signal }) =>
+      fetchHistogram(field as string, buckets, jurisdiction, signal),
     enabled: enabled && Boolean(field),
     staleTime: 3_600_000,
   });

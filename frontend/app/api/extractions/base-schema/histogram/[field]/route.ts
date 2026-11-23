@@ -23,6 +23,7 @@ export async function GET(
 ) {
   const requestId = crypto.randomUUID();
   const { field } = await params;
+  const jurisdiction = request.nextUrl.searchParams.get("jurisdiction");
   const bucketParam = request.nextUrl.searchParams.get("buckets");
   const buckets = bucketParam ? Number(bucketParam) : 20;
 
@@ -50,7 +51,9 @@ export async function GET(
 
     // Forward request to backend
     const response = await fetch(
-      `${API_BASE_URL}/extractions/base-schema/histogram/${encodeURIComponent(field)}?bucket_count=${bucketCount}`,
+      `${API_BASE_URL}/extractions/base-schema/histogram/${encodeURIComponent(field)}?bucket_count=${bucketCount}${
+        jurisdiction ? `&jurisdiction=${encodeURIComponent(jurisdiction)}` : ''
+      }`,
       {
         method: 'GET',
         headers: {
