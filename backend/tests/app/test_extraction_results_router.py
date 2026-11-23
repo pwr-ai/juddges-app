@@ -359,6 +359,71 @@ class TestGetFacetCounts:
             # Only "defendant" should remain (None and "" filtered out)
             assert len(data["counts"]) == 1
 
+    @pytest.mark.unit
+    async def test_facet_counts_without_jurisdiction_uses_corpus_rpc(
+        self, client, valid_api_headers
+    ) -> None:
+        mock_supabase = MagicMock()
+        mock_supabase.rpc.return_value.execute.return_value = MagicMock(data=[])
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/facets/appeal_outcome",
+                headers=valid_api_headers,
+            )
+        assert response.status_code == 200
+        mock_supabase.rpc.assert_called_once_with(
+            "get_extracted_facet_counts", {"field_path": "appeal_outcome"}
+        )
+
+    @pytest.mark.unit
+    async def test_facet_counts_with_jurisdiction_uses_per_jurisdiction_rpc(
+        self, client, valid_api_headers
+    ) -> None:
+        rows = [
+            {"jurisdiction": "PL", "value": "allowed", "count": 5},
+            {"jurisdiction": "PL", "value": "dismissed", "count": 3523},
+            {"jurisdiction": "PL", "value": None, "count": None},
+            # Defensive: a row of another jurisdiction must never leak in.
+            {"jurisdiction": "UK", "value": "dismissed", "count": 3626},
+        ]
+        mock_supabase = MagicMock()
+        mock_supabase.rpc.return_value.execute.return_value = MagicMock(data=rows)
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/facets/appeal_outcome?jurisdiction=PL",
+                headers=valid_api_headers,
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert [(c["value"], c["count"]) for c in data["counts"]] == [
+            ("dismissed", 3523),
+            ("allowed", 5),
+        ]
+        assert data["total"] == 3528
+        mock_supabase.rpc.assert_called_once_with(
+            "get_extracted_facet_counts_by_jurisdiction",
+            {
+                "p_filters": {"jurisdiction": ["PL"]},
+                "field_path": "appeal_outcome",
+                "p_text_query": None,
+            },
+        )
+
+    @pytest.mark.unit
+    async def test_facet_counts_invalid_jurisdiction_is_422(
+        self, client, valid_api_headers
+    ) -> None:
+        mock_supabase = MagicMock()
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/facets/appeal_outcome?jurisdiction=DE",
+                headers=valid_api_headers,
+            )
+        assert response.status_code == 422
+        mock_supabase.rpc.assert_not_called()
+
 
 # =============================================================================
 # GET /extractions/base-schema/histogram/{field}
@@ -403,6 +468,38 @@ class TestGetNumericHistogram:
                 "get_numeric_field_histogram",
                 {"field": "num_victims", "bucket_count": 20},
             )
+
+    @pytest.mark.unit
+    async def test_histogram_with_jurisdiction_passes_it_to_rpc(
+        self, client, valid_api_headers
+    ) -> None:
+        mock_supabase = MagicMock()
+        mock_supabase.rpc.return_value.execute.return_value = MagicMock(data=[])
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims"
+                "?bucket_count=10&jurisdiction=UK",
+                headers=valid_api_headers,
+            )
+        assert response.status_code == 200
+        mock_supabase.rpc.assert_called_once_with(
+            "get_numeric_field_histogram",
+            {"field": "num_victims", "bucket_count": 10, "p_jurisdiction": "UK"},
+        )
+
+    @pytest.mark.unit
+    async def test_histogram_invalid_jurisdiction_is_422(
+        self, client, valid_api_headers
+    ) -> None:
+        mock_supabase = MagicMock()
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims?jurisdiction=xx",
+                headers=valid_api_headers,
+            )
+        assert response.status_code == 422
+        mock_supabase.rpc.assert_not_called()
 
     @pytest.mark.unit
     async def test_histogram_empty(self, client, valid_api_headers) -> None:

@@ -23304,6 +23304,28 @@
               "title": "Field",
               "type": "string"
             }
+          },
+          {
+            "description": "Restrict counts to one jurisdiction; omit for the whole corpus",
+            "in": "query",
+            "name": "jurisdiction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PL",
+                    "UK"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict counts to one jurisdiction; omit for the whole corpus",
+              "title": "Jurisdiction"
+            }
           }
         ],
         "responses": {
@@ -23439,6 +23461,28 @@
               "minimum": 1,
               "title": "Bucket Count",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Restrict the distribution to one jurisdiction; omit for the whole corpus",
+            "in": "query",
+            "name": "jurisdiction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PL",
+                    "UK"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict the distribution to one jurisdiction; omit for the whole corpus",
+              "title": "Jurisdiction"
             }
           }
         ],

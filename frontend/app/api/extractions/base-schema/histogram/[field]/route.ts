@@ -13,6 +13,18 @@ const apiLogger = logger.child('base-schema-histogram-api');
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
 
+/** FastAPI 422 `detail` is an array of { msg }; surface a string, not the array. */
+function backendErrorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === 'string' && detail) return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d) => (d && typeof d === 'object' && 'msg' in d ? String((d as { msg: unknown }).msg) : ''))
+      .filter(Boolean);
+    if (msgs.length) return msgs.join('; ');
+  }
+  return fallback;
+}
+
 /**
  * GET /api/extractions/base-schema/histogram/[field]?buckets=20
  * Get the numeric distribution histogram for a range-filterable field.
@@ -23,6 +35,7 @@ export async function GET(
 ) {
   const requestId = crypto.randomUUID();
   const { field } = await params;
+  const jurisdiction = request.nextUrl.searchParams.get("jurisdiction");
   const bucketParam = request.nextUrl.searchParams.get("buckets");
   const buckets = bucketParam ? Number(bucketParam) : 20;
 
@@ -50,7 +63,9 @@ export async function GET(
 
     // Forward request to backend
     const response = await fetch(
-      `${API_BASE_URL}/extractions/base-schema/histogram/${encodeURIComponent(field)}?bucket_count=${bucketCount}`,
+      `${API_BASE_URL}/extractions/base-schema/histogram/${encodeURIComponent(field)}?bucket_count=${bucketCount}${
+        jurisdiction ? `&jurisdiction=${encodeURIComponent(jurisdiction)}` : ''
+      }`,
       {
         method: 'GET',
         headers: {
@@ -72,7 +87,7 @@ export async function GET(
 
       return NextResponse.json(
         {
-          error: errorData.detail || "Failed to get histogram",
+          error: backendErrorMessage(errorData.detail, "Failed to get histogram"),
           code: errorData.code || "HISTOGRAM_ERROR"
         },
         { status: response.status }

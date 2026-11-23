@@ -19,6 +19,7 @@ import { ErrorCard } from "@/lib/styles/components";
 import logger from "@/lib/logger";
 import {
   useExtractionFacet,
+  singleJurisdiction,
   useExtractionResults,
 } from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
@@ -249,10 +250,12 @@ function ExtractionSearchPage() {
   // Tag-field autocomplete: lazily fetch facet counts for whichever tag_array
   // field the user last focused/typed into (issue #581 — the page never wired
   // this before, so TagArrayControl's suggestion list was permanently empty).
+  const scopeJurisdiction = singleJurisdiction(filters.jurisdiction);
   const [activeFacetField, setActiveFacetField] = useState<string | null>(null);
   const { data: activeFacetValues } = useExtractionFacet(
     activeFacetField,
     Boolean(activeFacetField),
+    scopeJurisdiction,
   );
   const facetCounts = useMemo(() => {
     if (!activeFacetField || !activeFacetValues) return undefined;
@@ -338,6 +341,7 @@ function ExtractionSearchPage() {
           filters={drawerFilters}
           onChange={setDrawerFilter}
           onReset={resetDrawerFilters}
+          jurisdiction={scopeJurisdiction}
           facetCounts={facetCounts}
           onTagQueryChange={onTagQueryChange}
         />

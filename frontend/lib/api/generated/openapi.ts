@@ -17063,7 +17063,10 @@ export interface operations {
     };
     get_facet_counts_extractions_base_schema_facets__field__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Restrict counts to one jurisdiction; omit for the whole corpus */
+                jurisdiction?: ("PL" | "UK") | null;
+            };
             header?: never;
             path: {
                 /** @description Field name to get facet counts for */
@@ -17151,6 +17154,8 @@ export interface operations {
             query?: {
                 /** @description Number of equal-width buckets */
                 bucket_count?: number;
+                /** @description Restrict the distribution to one jurisdiction; omit for the whole corpus */
+                jurisdiction?: ("PL" | "UK") | null;
             };
             header?: never;
             path: {
