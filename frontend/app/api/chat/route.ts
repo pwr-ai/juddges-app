@@ -8,11 +8,26 @@ import {
   AppError,
   ErrorCode
 } from '@/lib/errors';
-import { chatRequestSchema } from '@/lib/validation/chat-endpoints';
+import { chatRequestSchema, type ChatMessage } from '@/lib/validation/chat-endpoints';
 import { validateRequestBody } from '@/lib/validation/schemas';
 
 const apiLogger = logger.child('chat-api');
 const API_KEY = process.env.BACKEND_API_KEY as string;
+
+/**
+ * Map client chat messages to the LangChain message shape the backend chain
+ * expects. System messages are dropped: the chain has its own system prompt
+ * and only accepts human/AI turns.
+ */
+type BackendChatMessage = { type: 'human' | 'ai'; content: string };
+
+function toBackendChatHistory(history: ChatMessage[]): BackendChatMessage[] {
+  return history.flatMap(({ role, content }): BackendChatMessage[] => {
+    if (role === 'human' || role === 'user') return [{ type: 'human', content }];
+    if (role === 'ai' || role === 'assistant') return [{ type: 'ai', content }];
+    return [];
+  });
+}
 
 /**
  * POST /api/chat - Process chat request with streaming support
@@ -46,14 +61,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body = await request.json();
     const validated = validateRequestBody(chatRequestSchema, body);
 
-    // Prepare backend payload
+    // Prepare backend payload. The chain's `chat_history` is
+    // `list[HumanMessage | AIMessage]`, which LangServe tells apart by `type`
+    // — a message without it validates as HumanMessage — so roles are mapped
+    // here rather than forwarded as-is.
     const backendPayload = {
       input: {
         question: validated.question,
-        max_documents: 10,
-        score_threshold: 0,
-        chat_history: [],
-        response_format: "detailed",
+        max_documents: validated.max_documents ?? 10,
+        score_threshold: validated.score_threshold ?? 0,
+        chat_history: toBackendChatHistory(validated.chat_history ?? []),
+        response_format: validated.response_format ?? "detailed",
       },
       config: {},
       kwargs: {},
