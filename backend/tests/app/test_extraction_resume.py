@@ -289,3 +289,175 @@ def test_merge_survives_malformed_existing_rows():
     assert by_id["doc-1"]["status"] == "completed"
     assert by_id["doc-1"]["extracted_data"] == {"a": 1}
     assert by_id["doc-2"]["status"] == "failed"
+
+
+UUID_1 = "26d7d71b-0458-4216-8147-2ec82c016cf8"
+UUID_2 = "9a1c0e52-1111-4222-8333-444455556666"
+
+
+@pytest.mark.unit
+def test_failure_merge_keeps_completed_rows_keyed_by_requested_uuid():
+    """Rows are keyed by the requested judgment UUID, so a failure merge keeps them."""
+    from app.workers import _merge_failure_into_results
+
+    merged = _merge_failure_into_results(
+        existing=[
+            {
+                "document_id": UUID_1,
+                "status": "completed",
+                "extracted_data": {"a": 1},
+            }
+        ],
+        document_ids=[UUID_1, UUID_2],
+        collection_id="col-1",
+        error_message="boom",
+    )
+
+    by_id = {row["document_id"]: row for row in merged}
+    assert by_id[UUID_1]["status"] == "completed"
+    assert by_id[UUID_2]["status"] == "failed"
+
+
+@pytest.mark.unit
+def test_legacy_source_id_rows_do_not_crash_the_merge():
+    """Rows an older attempt stored under source ids are tolerated, not matched."""
+    from app.workers import _merge_failure_into_results
+
+    merged = _merge_failure_into_results(
+        existing=[{"document_id": "155000000001521_III_", "status": "completed"}],
+        document_ids=[UUID_1],
+        collection_id="col-1",
+        error_message="boom",
+    )
+
+    assert [row["document_id"] for row in merged] == [UUID_1]
+
+
+def _run_task(monkeypatch, stored_results, cancellation=None):
+    """Run the task with docs whose document_id is a source id, not the UUID."""
+    from app import workers
+    from app.models import DocumentExtractionRequest
+
+    source_by_uuid = {UUID_1: "155000000001521_III_", UUID_2: "3243005340"}
+
+    def _docs(ids):
+        return _resolved(
+            [
+                type(
+                    "Doc",
+                    (),
+                    {
+                        "full_text": f"text-{i}",
+                        "document_id": source_by_uuid[i],
+                        "judgment_uuid": i,
+                    },
+                )()
+                for i in ids
+            ]
+        )
+
+    monkeypatch.setattr(workers, "get_documents_by_id", _docs)
+    monkeypatch.setattr(workers, "get_llm", MagicMock())
+    monkeypatch.setattr(workers, "prepare_schema_from_db", MagicMock())
+
+    extractor = MagicMock()
+    seen: list[str] = []
+
+    def _extract(payload):
+        seen.append(payload["full_text"])
+        return _resolved({"case_number": "AB-1/2026"})
+
+    extractor.extract_information_with_structured_output.side_effect = _extract
+    monkeypatch.setattr(
+        workers, "InformationExtractor", MagicMock(return_value=extractor)
+    )
+    monkeypatch.setattr(workers, "supabase_client", _ResumeSupabase(stored_results))
+    monkeypatch.setattr(
+        workers, "_cancellation_requested", cancellation or (lambda _job_id: False)
+    )
+
+    request = DocumentExtractionRequest(
+        collection_id="col-1",
+        document_ids=[UUID_1, UUID_2],
+        extraction_context="ctx",
+        user_schema={"type": "object", "description": "d", "required": []},
+        prompt_id="p",
+    )
+    outcome = workers.extract_information_from_documents_task.apply(
+        kwargs={"request": request}
+    )
+    return outcome, seen
+
+
+@pytest.mark.unit
+def test_results_carry_the_requested_uuids_not_source_ids(monkeypatch, celery_eager):
+    outcome, _ = _run_task(monkeypatch, [])
+
+    assert outcome.successful()
+    assert {row["document_id"] for row in outcome.result} == {UUID_1, UUID_2}
+
+
+@pytest.mark.unit
+def test_resume_skips_documents_completed_under_their_uuid(monkeypatch, celery_eager):
+    stored = [
+        {
+            "document_id": UUID_1,
+            "status": "completed",
+            "extracted_data": {"case_number": "prior-run"},
+        }
+    ]
+    outcome, seen = _run_task(monkeypatch, stored)
+
+    assert outcome.successful()
+    assert seen == ["text-" + UUID_2]
+    by_id = {row["document_id"]: row for row in outcome.result}
+    assert by_id[UUID_1]["extracted_data"] == {"case_number": "prior-run"}
+
+
+@pytest.mark.unit
+def test_resume_accepts_rows_stored_under_the_legacy_source_id(
+    monkeypatch, celery_eager
+):
+    """Jobs in flight before UUID keying stored source ids; do not re-bill them."""
+    stored = [
+        {
+            "document_id": "155000000001521_III_",
+            "status": "completed",
+            "extracted_data": {"case_number": "prior-run"},
+        }
+    ]
+    outcome, seen = _run_task(monkeypatch, stored)
+
+    assert outcome.successful()
+    assert seen == ["text-" + UUID_2], "the legacy-keyed document must be skipped"
+
+
+@pytest.mark.unit
+def test_late_failure_keeps_a_document_completed_in_this_run(monkeypatch, celery_eager):
+    """Doc 1 completes (source id != UUID), then the job fails before doc 2.
+
+    The completed row must survive the failure merge, keyed by the UUID.
+    """
+    from app import workers
+
+    persisted: list[dict] = []
+
+    def _save(job_id, results, **_kwargs):
+        persisted[:] = list(results)
+        return True
+
+    monkeypatch.setattr(workers, "_update_job_results_in_supabase", _save)
+    monkeypatch.setattr(
+        workers, "_fetch_job_results_from_supabase", lambda _job_id: list(persisted)
+    )
+
+    def _boom(_job_id):
+        raise RuntimeError("boom after first document")
+
+    outcome, seen = _run_task(monkeypatch, [], cancellation=_boom)
+
+    assert seen == ["text-" + UUID_1]
+    by_id = {row["document_id"]: row for row in outcome.result}
+    assert set(by_id) == {UUID_1, UUID_2}
+    assert by_id[UUID_1]["status"] == "completed"
+    assert by_id[UUID_2]["status"] == "failed"
