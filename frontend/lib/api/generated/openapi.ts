@@ -7758,6 +7758,18 @@ export interface components {
             documents?: {
                 [key: string]: unknown;
             }[];
+            /** Facetdistribution */
+            facetDistribution?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
+            /** Facetstats */
+            facetStats?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
             pagination: components["schemas"]["DocumentPagination"];
             /** Parsed Attributes */
             parsed_attributes?: {
@@ -14017,12 +14029,16 @@ export interface operations {
             query?: {
                 /** @description Search query (empty = match all) */
                 q?: string;
-                /** @description Max documents to return */
+                /** @description Max documents to return. 0 is allowed only together with `facets` (facet-only call). */
                 limit?: number;
                 /** @description Pagination offset */
                 offset?: number;
                 /** @description Optional Meilisearch filter expression */
                 filters?: string | null;
+                /** @description Filterable attributes to return value counts for (repeat the param; max 20). Adds `facetDistribution` to the response. */
+                facets?: string[] | null;
+                /** @description Narrow the values of each requested facet to those matching this text (Meilisearch facet-search, run per facet). */
+                facet_query?: string | null;
                 /** @description Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends 0.75. */
                 semantic_ratio?: number;
                 /** @description When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical. */

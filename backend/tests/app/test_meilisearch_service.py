@@ -888,3 +888,75 @@ class TestSharedClientLifecycle:
         service._topics_service_instance = sub
         await service.aclose()
         assert sub_client.is_closed, "aclose() must cascade to cached sub-services"
+
+
+class TestFacetSearchCounts:
+    @pytest.mark.asyncio
+    async def test_payload_and_mapping(self, service):
+        captured: dict = {}
+
+        async def fake_post(self_, url, json, headers):
+            captured["url"] = url
+            captured["payload"] = json
+            return _mock_response(
+                200,
+                {
+                    "facetHits": [
+                        {"value": "vat", "count": 3},
+                        {"value": "tax", "count": 2},
+                    ]
+                },
+            )
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.facet_search_counts(
+                "base_keywords", "va", query="q", filters='jurisdiction = "pl"'
+            )
+
+        assert captured["url"].endswith("/indexes/judgments/facet-search")
+        assert captured["payload"] == {
+            "facetName": "base_keywords",
+            "facetQuery": "va",
+            "q": "q",
+            "filter": 'jurisdiction = "pl"',
+        }
+        assert result == {"vat": 3, "tax": 2}
+
+    @pytest.mark.asyncio
+    async def test_http_error_wrapped(self, service):
+        async def fake_post(self_, url, json, headers):
+            return _mock_response(500, {})
+
+        with (
+            patch("httpx.AsyncClient.post", new=fake_post),
+            pytest.raises(SearchServiceError),
+        ):
+            await service.facet_search_counts("base_keywords", "va")
+
+
+class TestFacetDistributionForQuery:
+    @pytest.mark.asyncio
+    async def test_fan_out_and_merge(self, service):
+        service.facet_search_counts = AsyncMock(side_effect=[{"a": 1}, {"b": 2}])
+        result = await service.facet_distribution_for_query(
+            ["f1", "f2"], "q", query="x", filters="k = 1"
+        )
+        assert result == {"f1": {"a": 1}, "f2": {"b": 2}}
+        calls = service.facet_search_counts.await_args_list
+        assert [c.args for c in calls] == [("f1", "q"), ("f2", "q")]
+        assert all(c.kwargs == {"query": "x", "filters": "k = 1"} for c in calls)
+
+    @pytest.mark.asyncio
+    async def test_empty_facets(self, service):
+        service.facet_search_counts = AsyncMock()
+        assert await service.facet_distribution_for_query([], "q") == {}
+        service.facet_search_counts.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_cap_enforced(self, service):
+        service.facet_search_counts = AsyncMock()
+        with pytest.raises(SearchServiceError):
+            await service.facet_distribution_for_query(
+                [f"f{i}" for i in range(21)], "q"
+            )
+        service.facet_search_counts.assert_not_awaited()

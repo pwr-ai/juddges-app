@@ -191,6 +191,9 @@ class SuggestionHit(BaseModel):
     formatted: dict[str, Any] | None = Field(default=None, alias="_formatted")
 
 
+MAX_FACET_FANOUT = 20
+
+
 class MeiliSearchService:
     """Meilisearch HTTP client for autocomplete queries and index administration.
 
@@ -858,15 +861,15 @@ class MeiliSearchService:
         offset: int = 0,
         filters: str | None = None,
         facets: list[str] | None = None,
-        facet_query: str | None = None,
     ) -> dict[str, Any]:
         """Thin Meilisearch search wrapper used by the facets pass-through path.
 
         Unlike ``documents_search``, this method does **not** restrict the
         returned attributes or inject hybrid embeddings — it is intentionally
-        minimal so callers can request facet counts (``facets``) and an
-        optional substring filter on values (``facet_query`` → Meili's
-        ``facetQuery``) without paying the cost of the full document search.
+        minimal so callers can request facet counts (``facets``) without
+        paying the cost of the full document search. Meilisearch's
+        ``facetQuery`` is *not* accepted by ``/search`` (only by
+        ``/facet-search``); use :meth:`facet_search_counts` for that.
 
         The Meilisearch response is returned verbatim so callers can read
         ``facetDistribution`` and ``facetStats`` directly. Raises
@@ -884,11 +887,80 @@ class MeiliSearchService:
             payload["filter"] = filters
         if facets:
             payload["facets"] = facets
-        if facet_query is not None:
-            # Meilisearch expects camelCase facetQuery on the request body.
-            payload["facetQuery"] = facet_query
 
         return await self._search_post(payload)
+
+    async def facet_search_counts(
+        self,
+        facet_name: str,
+        facet_query: str | None = None,
+        *,
+        query: str = "",
+        filters: str | None = None,
+    ) -> dict[str, int]:
+        """Facet values (with counts) matching ``facet_query`` for one facet.
+
+        Uses ``POST /indexes/{idx}/facet-search`` — the only endpoint that
+        supports ``facetQuery`` — honouring the same ``q``/``filter`` as the
+        document search so counts match the current result set. Meilisearch
+        caps the number of returned facet hits at its own default (this call
+        sends no ``limit``; v1.49 ``/facet-search`` does not define one), so
+        the number of values returned is whatever Meilisearch's default allows.
+        """
+        if not self.configured:
+            raise SearchServiceError("Meilisearch is not configured")
+
+        url = f"{self.base_url}/indexes/{self.index_name}/facet-search"
+        payload: dict[str, Any] = {"facetName": facet_name}
+        if facet_query:
+            payload["facetQuery"] = facet_query
+        if query:
+            payload["q"] = query
+        if filters:
+            payload["filter"] = filters
+
+        try:
+            async with self._client_ctx() as client:
+                response = await client.post(
+                    url, json=payload, headers=self._search_headers()
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            raise SearchServiceError(str(exc)) from exc
+
+        return {
+            h["value"]: int(h.get("count", 0))
+            for h in data.get("facetHits") or []
+            if isinstance(h, dict) and "value" in h
+        }
+
+    async def facet_distribution_for_query(
+        self,
+        facets: list[str],
+        facet_query: str,
+        *,
+        query: str = "",
+        filters: str | None = None,
+    ) -> dict[str, dict[str, int]]:
+        """Run :meth:`facet_search_counts` per facet concurrently and merge.
+
+        Fan-out is capped at ``MAX_FACET_FANOUT`` facets; more raises
+        :class:`SearchServiceError`. An empty ``facets`` returns ``{}``.
+        """
+        if len(facets) > MAX_FACET_FANOUT:
+            raise SearchServiceError(
+                f"at most {MAX_FACET_FANOUT} facets may be requested"
+            )
+        counts = await asyncio.gather(
+            *(
+                self.facet_search_counts(
+                    name, facet_query, query=query, filters=filters
+                )
+                for name in facets
+            )
+        )
+        return dict(zip(facets, counts, strict=True))
 
     async def facet_search(
         self,
