@@ -11,6 +11,7 @@ const mockPush = jest.fn();
 const mockDiscoverReasoningLines = jest.fn();
 const mockGetReasoningLineDAG = jest.fn();
 const mockGetReasoningLineDetail = jest.fn();
+const mockGetReasoningLineMembers = jest.fn();
 const mockGetReasoningLineTimeline = jest.fn();
 const mockGetRelatedLines = jest.fn();
 
@@ -47,6 +48,7 @@ jest.mock('@/lib/api/reasoning-lines', () => ({
   detectEvents: jest.fn(),
   searchReasoningLines: jest.fn(),
   getReasoningLineDetail: (...args: unknown[]) => mockGetReasoningLineDetail(...args),
+  getReasoningLineMembers: (...args: unknown[]) => mockGetReasoningLineMembers(...args),
   deleteReasoningLine: jest.fn(),
   getReasoningLineTimeline: (...args: unknown[]) => mockGetReasoningLineTimeline(...args),
   classifyOutcomes: jest.fn(),
@@ -213,6 +215,69 @@ describe('reasoning-lines admin-only controls', () => {
   });
 });
 
+describe('reasoning line members are loaded lazily', () => {
+  const member = {
+    judgment_id: 'j-1',
+    signature: 'SIG 1',
+    title: 'Case 1',
+    court_name: 'NSA',
+    decision_date: '2020-01-01',
+    similarity_to_centroid: 0.9,
+    cited_legislation: [],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1', app_metadata: {} }, loading: false });
+    mockGetReasoningLineTimeline.mockResolvedValue({
+      line_id: reasoningLine.id,
+      legal_question: reasoningLine.legal_question,
+      points: [],
+      trend: 'stable',
+      trend_slope: 0,
+      total_classified: 0,
+      total_unclassified: 0,
+    });
+    mockGetRelatedLines.mockResolvedValue({ related: [] });
+    mockGetReasoningLineDetail.mockResolvedValue({ ...reasoningLine, case_count: 1 });
+    mockGetReasoningLineMembers.mockResolvedValue([member]);
+  });
+
+  it('does not fetch members on mount and fetches them on expand', async () => {
+    renderWithQueryClient(<ReasoningLineDetailPage />);
+
+    const toggle = await screen.findByRole('button', {
+      name: /Judgments in this line \(1\)/,
+    });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(mockGetReasoningLineDetail).toHaveBeenCalledWith(reasoningLine.id, {
+      includeMembers: false,
+    });
+    expect(mockGetReasoningLineMembers).not.toHaveBeenCalled();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByText('Case 1')).toBeInTheDocument();
+    expect(mockGetReasoningLineMembers).toHaveBeenCalledTimes(1);
+    expect(mockGetReasoningLineMembers).toHaveBeenCalledWith(reasoningLine.id);
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('shows an error with retry when members fail to load', async () => {
+    mockGetReasoningLineMembers.mockRejectedValueOnce(new Error('boom'));
+    renderWithQueryClient(<ReasoningLineDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Judgments in this line/ }));
+    expect(await screen.findByText('Failed to load the judgments in this line.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByText('Case 1')).toBeInTheDocument();
+  });
+});
+
 describe('reasoning line member timeline pagination', () => {
   const makeMembers = (n: number) =>
     Array.from({ length: n }, (_, i) => ({
@@ -242,13 +307,12 @@ describe('reasoning line member timeline pagination', () => {
       total_unclassified: 0,
     });
     mockGetRelatedLines.mockResolvedValue({ related: [] });
-    mockGetReasoningLineDetail.mockResolvedValue({
-      ...reasoningLine,
-      case_count: 250,
-      members: makeMembers(250),
-    });
+    mockGetReasoningLineDetail.mockResolvedValue({ ...reasoningLine, case_count: 250 });
+    mockGetReasoningLineMembers.mockResolvedValue(makeMembers(250));
 
     renderWithQueryClient(<ReasoningLineDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Judgments in this line \(250\)/ }));
 
     const entries = () =>
       screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/documents/'));

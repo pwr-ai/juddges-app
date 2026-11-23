@@ -595,6 +595,10 @@ export const pl: Translations = {
     membersHeading: 'Orzeczenia w linii ({{count}})',
     membersShowing: 'Wyświetlono {{shown}} z {{total}}',
     membersShowMore: 'Pokaż więcej',
+    membersExpand: 'Rozwiń listę orzeczeń',
+    membersCollapse: 'Zwiń listę orzeczeń',
+    membersLoading: 'Ładowanie orzeczeń…',
+    membersError: 'Nie udało się pobrać orzeczeń w linii.',
     membersEmptyTitle: 'Brak orzeczeń w tej linii',
     membersEmptyDescription: 'Do tej linii orzeczniczej nie przypisano jeszcze żadnych orzeczeń. Cotygodniowe automatyczne przypisywanie dodaje pasujące, nowo zaimportowane orzeczenia — wróć po kolejnym przebiegu.',
 
