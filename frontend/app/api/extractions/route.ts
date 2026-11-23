@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { DocumentExtractionResult } from "@/types/search";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import { rateLimitIdentity } from '@/app/api/utils/rate-limit-identity';
+import { parseBackendError } from '@/app/api/utils/parse-backend-error';
 import logger from '@/lib/logger';
 import {
   ValidationError,
@@ -18,7 +19,10 @@ import {
   validateRequestBody,
   validateQueryParams
 } from '@/lib/validation/schemas';
-import { normalizeExtractionJobPayload } from '@/lib/extractions/detail-contract';
+import {
+  isTerminalExtractionStatus,
+  normalizeExtractionJobPayload,
+} from '@/lib/extractions/detail-contract';
 
 const apiLogger = logger.child('extractions-api');
 const API_BASE_URL = getBackendUrl();
@@ -42,29 +46,6 @@ function mapStatusToDbStatus(backendStatus: string): string {
     'CANCELED': 'FAILURE',
   };
   return statusMap[backendStatus] || 'PENDING';
-}
-
-// Helper to extract error message and code from backend response
-async function parseBackendError(response: Response): Promise<{ message: string; code: string }> {
-  const defaultMessage = `Backend API error: ${response.status}`;
-  const defaultCode = 'BACKEND_ERROR';
-
-  try {
-    const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      const detail = errorData.detail;
-      const message = typeof detail === 'string'
-        ? detail
-        : detail?.message || detail?.error || errorData.message || errorData.error || defaultMessage;
-      const code = detail?.code || errorData.code || defaultCode;
-      return { message, code };
-    } catch {
-      return { message: text || defaultMessage, code: defaultCode };
-    }
-  } catch {
-    return { message: defaultMessage, code: defaultCode };
-  }
 }
 
 export async function POST(request: NextRequest) {
@@ -343,11 +324,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Call the backend API to get extraction status and results
+    // Status only: the per-document results are paged through
+    // /api/extractions/[id]/results, never carried on the poll.
     let response: Response;
     try {
       response = await fetch(
-        `${API_BASE_URL}/extractions/${job_id}`,
+        `${API_BASE_URL}/extractions/${job_id}?include_results=false`,
         {
           cache: 'no-store',
           headers: {
@@ -403,69 +385,78 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Update job status in Supabase
+    // One narrow read serves both the change check below and the collection /
+    // schema lookup further down. `results` is never selected: a corpus-sized
+    // job stores tens of MB there.
+    let jobRecord: {
+      status: string | null;
+      completed_documents: number | null;
+      completed_at: string | null;
+      collection_id: string | null;
+      schema_id: string | null;
+    } | null = null;
     try {
-      const updateData: {
-        status: string;
-        updated_at: string;
-        completed_documents?: number;
-        results?: unknown[];
-        completed_at?: string;
-      } = {
-        status: mapStatusToDbStatus(jobData.status),
-        updated_at: new Date().toISOString(),
-      };
-
-      if (jobData.results && jobData.results.length > 0) {
-        // Count all processed documents (both completed and failed) as completed_documents
-        // This represents documents that have finished processing, regardless of success/failure
-        const processedCount = jobData.results.filter(
-          (r: { status: string }) =>
-            r.status === 'completed' ||
-            r.status === 'failed' ||
-            r.status === 'partially_completed'
-        ).length;
-        updateData.completed_documents = processedCount;
-        updateData.results = jobData.results;
-      }
-
-      // Update completed_at for terminal states (SUCCESS, FAILURE, COMPLETED, PARTIALLY_COMPLETED)
-      if (jobData.status === 'SUCCESS' ||
-          jobData.status === 'FAILURE' ||
-          jobData.status === 'COMPLETED' ||
-          jobData.status === 'PARTIALLY_COMPLETED') {
-        updateData.completed_at = new Date().toISOString();
-      }
-
-      const { data: updateResult, error: updateError } = await supabase
+      const { data } = await supabase
         .from('extraction_jobs')
-        .update(updateData)
+        .select('status, completed_documents, completed_at, collection_id, schema_id')
         .eq('job_id', job_id)
-        .select();
+        .single();
+      jobRecord = data;
+    } catch (readError) {
+      apiLogger.warn('Failed to read extraction job row', { job_id, error: readError });
+    }
 
-      if (updateError) {
-        apiLogger.error('Failed to update job status in Supabase', updateError, {
-          job_id,
-          updateData
-        });
-      } else if (!updateResult || updateResult.length === 0) {
-        apiLogger.warn('No rows updated in Supabase - job might not exist or job_id mismatch', {
-          job_id,
-          updateData,
-          backendStatus: jobData.status
-        });
-      } else {
-        apiLogger.info('Successfully updated job status in Supabase', {
-          job_id,
-          status: jobData.status,
-          completed_documents: updateData.completed_documents,
-          updatedRows: updateResult.length,
-          oldStatus: updateResult[0]?.status,
-          newStatus: updateData.status
-        });
+    // Mirror the backend's status/progress into the row only when it moved.
+    // Results are never written from here: the worker and the backend already
+    // persist them, and echoing a 15 MB array back on every 3s poll is what
+    // overloaded Supabase.
+    if (jobRecord) {
+      try {
+        const nextStatus = mapStatusToDbStatus(jobData.status);
+        const nextCompleted = jobData.progress?.completed;
+        const terminal = isTerminalExtractionStatus(jobData.status);
+        const statusChanged = jobRecord.status !== nextStatus;
+        const completedChanged =
+          typeof nextCompleted === 'number' &&
+          jobRecord.completed_documents !== nextCompleted;
+        const needsCompletedAt = terminal && !jobRecord.completed_at;
+
+        if (statusChanged || completedChanged || needsCompletedAt) {
+          const now = new Date().toISOString();
+          const updateData: {
+            status: string;
+            updated_at: string;
+            completed_documents?: number;
+            completed_at?: string;
+          } = { status: nextStatus, updated_at: now };
+          if (typeof nextCompleted === 'number') {
+            updateData.completed_documents = nextCompleted;
+          }
+          if (needsCompletedAt) {
+            updateData.completed_at = now;
+          }
+
+          const { data: updateResult, error: updateError } = await supabase
+            .from('extraction_jobs')
+            .update(updateData)
+            .eq('job_id', job_id)
+            .select('job_id');
+
+          if (updateError) {
+            apiLogger.error('Failed to update job status in Supabase', updateError, {
+              job_id,
+              updateData
+            });
+          } else if (!updateResult || updateResult.length === 0) {
+            apiLogger.warn('No rows updated in Supabase - job might not exist or job_id mismatch', {
+              job_id,
+              backendStatus: jobData.status
+            });
+          }
+        }
+      } catch (error) {
+        apiLogger.error('Failed to update job status', error, { job_id });
       }
-    } catch (error) {
-      apiLogger.error('Failed to update job status', error, { job_id });
     }
 
     // Extract results from the response
@@ -483,13 +474,6 @@ export async function GET(request: NextRequest) {
     let schema_name: string | null = jobData.schema_name ?? null;
 
     try {
-      // Get job record with collection and schema IDs
-      const { data: jobRecord } = await supabase
-        .from('extraction_jobs')
-        .select('collection_id, schema_id')
-        .eq('job_id', job_id)
-        .single();
-
       if (jobRecord) {
         // Fall back to the seeded value rather than assigning unconditionally: a
         // lookup that comes back empty leaves the upstream value in place

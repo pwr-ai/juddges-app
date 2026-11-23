@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
  EmptyState,
@@ -8,7 +8,7 @@ import {
  PageContainer,
  SearchableDropdownButton,
 } from "@/lib/styles/components";
-import { StatusBadge } from "@/components/editorial";
+import { StatusBadge, EditorialPagination } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { DocumentExtractionResult, DocumentProcessingStatus } from "@/types/search";
 import {
@@ -26,6 +26,7 @@ import {
  Table2,
  LayoutList,
  History,
+ Download,
 } from "lucide-react";
 import Link from "next/link";
 import { ExtractionDataViewer } from "@/lib/styles/components/extraction";
@@ -38,7 +39,9 @@ import {
  isTerminalExtractionStatus,
  mergeExtractionJobUpdate,
  normalizeExtractionJobPayload,
+ normalizeExtractionResultsPage,
  type ExtractionJobResponse,
+ type ExtractionResultsPage,
  type ExtractionJobSnapshot,
 } from "@/lib/extractions/detail-contract";
 import"../print.css";
@@ -90,6 +93,22 @@ interface PollError {
 
 const POLL_INTERVAL_MS = 3_000;
 const POLL_TIMEOUT_MS = 10_000;
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+type ResultsFilter = 'completed' | 'failed';
+
+/** A results page plus the filter it was fetched for, so a stale page is never shown under the wrong tab. */
+interface LoadedResultsPage extends ExtractionResultsPage {
+ forFilter: ResultsFilter;
+}
+
+interface ResultsError {
+ status: number;
+ message: string;
+}
+
+const EXPORT_LINK = "inline-flex items-center gap-2 px-3 py-2 text-xs font-mono font-medium rounded-none border border-rule bg-parchment text-ink hover:bg-parchment-deep focus:outline-none focus:border-ink";
 
 export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientProps) {
  const router = useRouter();
@@ -101,7 +120,27 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
  const [resultsView, setResultsView] = useState<'document' | 'table'>('table');
  const [viewMode, setViewMode] = useState<'formatted' | 'json'>('formatted');
- const selectedResult = jobData.results.find(
+ const [resultsFilter, setResultsFilter] = useState<ResultsFilter>('completed');
+ const [page, setPage] = useState(1);
+ const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+ const [loadedPage, setLoadedPage] = useState<LoadedResultsPage | null>(null);
+ // Job-wide counters from the latest page response; they survive tab switches
+ // so the tab labels and the header do not flicker while a page loads.
+ const [jobCounts, setJobCounts] = useState<{ completed: number; failed: number; total: number } | null>(null);
+ const [resultsLoading, setResultsLoading] = useState(true);
+ const [resultsError, setResultsError] = useState<ResultsError | null>(null);
+ const [retryToken, setRetryToken] = useState(0);
+ const userPickedFilter = useRef(false);
+
+ // Only the rows of the page on screen are ever held. A stale page (fetched
+ // for the other tab) counts as empty until its replacement arrives.
+ const pageResults = useMemo<DocumentExtractionResult[]>(
+ () => (loadedPage && loadedPage.forFilter === resultsFilter ? loadedPage.results : []),
+ [loadedPage, resultsFilter]
+ );
+ const filteredTotal =
+ loadedPage && loadedPage.forFilter === resultsFilter ? loadedPage.filtered_total : 0;
+ const selectedResult = pageResults.find(
  (result) => result.document_id === selectedResultId
  ) ?? null;
 
@@ -195,6 +234,84 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  };
  }, [initialJob.status, jobId]);
 
+ // Re-fetch the visible page when the user navigates, and when the job moves:
+ // results grow while it runs (completed count changes) and the final set is
+ // settled once it turns terminal.
+ const jobIsTerminal = isTerminalExtractionStatus(jobData.status);
+ const progressCompleted = jobData.progress?.completed ?? null;
+ useEffect(() => {
+ let active = true;
+ const controller = new AbortController();
+ setResultsLoading(true);
+ const query = new URLSearchParams({
+ offset: String((page - 1) * pageSize),
+ limit: String(pageSize),
+ status: resultsFilter,
+ });
+ const load = async () => {
+ try {
+ const response = await fetch(`/api/extractions/${jobId}/results?${query}`, {
+ method: "GET",
+ headers: { Accept: "application/json" },
+ cache: "no-store",
+ signal: controller.signal,
+ });
+ const payload: unknown = await response.json().catch(() => null);
+ if (!response.ok) {
+ const errorPayload = payload as Record<string, unknown> | null;
+ const message =
+ (typeof errorPayload?.message === "string" && errorPayload.message) ||
+ (typeof errorPayload?.error === "string" && errorPayload.error) ||
+ `Results request failed with status ${response.status}`;
+ throw Object.assign(new Error(message), { status: response.status });
+ }
+ const nextPage = normalizeExtractionResultsPage(payload);
+ if (!nextPage) {
+ throw Object.assign(new Error("The extraction service returned malformed results."), {
+ status: 502,
+ });
+ }
+ if (!active) return;
+ setLoadedPage({ ...nextPage, forFilter: resultsFilter });
+ setJobCounts({
+ completed: nextPage.counts.completed,
+ failed: nextPage.counts.failed,
+ total: nextPage.total,
+ });
+ setResultsError(null);
+ // A job that produced only failures has nothing under the default tab.
+ if (
+ !userPickedFilter.current &&
+ nextPage.counts.completed === 0 &&
+ nextPage.counts.failed > 0
+ ) {
+ setResultsFilter('failed');
+ }
+ // Results can shrink under a resumed job; land on the last real page.
+ if (nextPage.results.length === 0 && nextPage.filtered_total > 0 && page > 1) {
+ setPage(Math.max(1, Math.ceil(nextPage.filtered_total / pageSize)));
+ }
+ } catch (error) {
+ if (!active || (error instanceof Error && error.name === 'AbortError')) return;
+ const status =
+ typeof error === "object" && error !== null && "status" in error &&
+ typeof error.status === "number" ? error.status : 503;
+ logger.error("Error loading extraction results page: ", error);
+ setResultsError({
+ status,
+ message: error instanceof Error ? error.message : "The extraction service is unavailable.",
+ });
+ } finally {
+ if (active) setResultsLoading(false);
+ }
+ };
+ void load();
+ return () => {
+ active = false;
+ controller.abort();
+ };
+ }, [jobId, page, pageSize, resultsFilter, jobIsTerminal, progressCompleted, retryToken]);
+
  useEffect(() => {
  const dateStr = new Date().toLocaleDateString();
  document.title = `${jobData.collection_name || ''} ${jobData.schema_name || ''} ${dateStr}`.trim();
@@ -207,25 +324,10 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  return status;
  };
 
- // Get all results and filter by status
- const allResults = jobData.results;
- const completedResults = allResults.filter((r: DocumentExtractionResult) => {
- const status = normalizeStatus(r.status);
- return status === DocumentProcessingStatus.COMPLETED ||
- status === 'completed' ||
- status === 'success';
- });
-
- const failedResults = allResults.filter((r: DocumentExtractionResult) => {
- const status = normalizeStatus(r.status);
- return status === DocumentProcessingStatus.FAILED ||
- status === 'failed' ||
- status === 'failure';
- });
-
- const totalResults = allResults.length;
- const processedCount = completedResults.length;
- const failedCount = failedResults.length;
+ // Header counters come from the job-wide counts, not from the rows on screen.
+ const processedCount = jobCounts?.completed ?? jobData.progress?.completed ?? 0;
+ const failedCount = jobCounts?.failed ?? 0;
+ const totalResults = Math.max(jobCounts?.total ?? 0, jobData.progress?.total ?? 0);
 
  // Job-level status collapsed onto the shared tone keys; raw backend spellings
  // (SUCCESS, FAILURE, REVOKED, QUEUED) would otherwise fall through to ink.
@@ -247,17 +349,16 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  : null;
  const resumeProgress = jobData.progress ?? null;
 
- // Compute table data: flatten all completed results and extract columns
+ // Table data: flatten the current page's rows and derive columns from them
  const tableData = useMemo(() => {
- if (completedResults.length === 0) {
+ if (pageResults.length === 0 || resultsFilter !== 'completed') {
  return { columns: [], rows: [] };
  }
 
- // Collect all unique column names from all results
  const columnSet = new Set<string>();
  const rows: Array<{ document_id: string; status: string; data: Record<string, unknown> }> = [];
 
- completedResults.forEach((result) => {
+ pageResults.forEach((result) => {
  if (!result.extracted_data) return;
 
  const flattened = flattenObject(result.extracted_data);
@@ -270,23 +371,18 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  });
  });
 
- // Sort columns alphabetically
  const columns = Array.from(columnSet).sort();
 
  return { columns, rows };
- }, [completedResults]);
+ }, [pageResults, resultsFilter]);
 
- // Auto-select first completed result if available, otherwise first result
+ // Keep a selection that lives on the current page; otherwise pick its first row
  useEffect(() => {
- if (!selectedResult) {
- if (completedResults.length > 0) {
- setSelectedResultId(completedResults[0].document_id);
- } else if (allResults.length > 0) {
- setSelectedResultId(allResults[0].document_id);
- }
+ if (!selectedResult && pageResults.length > 0) {
+ setSelectedResultId(pageResults[0].document_id);
  }
  // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [jobData]);
+ }, [pageResults]);
 
  // Get status badge for a result
  const getStatusBadge = (result: DocumentExtractionResult) => {
@@ -301,7 +397,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  };
 
  // Create document options for selector
- const documentOptions = allResults.map((result, index) => {
+ const documentOptions = pageResults.map((result, index) => {
  const statusInfo = getStatusBadge(result);
  const status = normalizeStatus(result.status);
  const isFailed = status === DocumentProcessingStatus.FAILED || status === 'failed' || status === 'failure';
@@ -328,7 +424,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  // Get selected document result
  const selectedDocumentId = selectedResult?.document_id;
  const handleDocumentChange = (documentId: string) => {
- const result = allResults.find(r => r.document_id === documentId);
+ const result = pageResults.find(r => r.document_id === documentId);
  setSelectedResultId(result?.document_id ?? null);
  };
 
@@ -484,8 +580,54 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
 
  </div>
 
+ {/* Results scope: completed vs failed, each paged from the server */}
+ {jobCounts && jobCounts.completed + jobCounts.failed > 0 && (
+ <div className="flex items-center justify-between mb-4 print:hidden">
+ <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+ Results
+ </div>
+ <Tabs
+ value={resultsFilter}
+ onValueChange={(v) => {
+ userPickedFilter.current = true;
+ setResultsFilter(v as ResultsFilter);
+ setPage(1);
+ setSelectedResultId(null);
+ }}
+ >
+ <TabsList className={TAB_LIST}>
+ <TabsTrigger value="completed" className={TAB_TRIGGER}>
+ <CheckCircle2 className="h-4 w-4"/>
+ Completed ({jobCounts.completed})
+ </TabsTrigger>
+ <TabsTrigger value="failed" className={TAB_TRIGGER}>
+ <XCircle className="h-4 w-4"/>
+ Failed ({jobCounts.failed})
+ </TabsTrigger>
+ </TabsList>
+ </Tabs>
+ </div>
+ )}
+
+ {resultsError && (
+ <EditorialCard flat className={cn(NOTICE_ERROR, "mb-6")}>
+ <div className="flex items-start gap-3" role="alert">
+ <XCircle className="h-5 w-5 text-oxblood flex-shrink-0 mt-0.5" />
+ <div className="flex-1">
+ <h2 className="font-semibold text-ink">
+ Could not load results ({resultsError.status})
+ </h2>
+ <p className="text-sm text-ink-soft">{resultsError.message}</p>
+ </div>
+ <VariantButton intent="secondary" size="sm" onClick={() => setRetryToken((n) => n + 1)}>
+ Retry
+ </VariantButton>
+ </div>
+ </EditorialCard>
+ )}
+
  {/* View Toggle */}
- {completedResults.length > 0 && (
+ {resultsFilter === 'completed' && (jobCounts?.completed ?? 0) > 0 && (
  <div className="flex items-center justify-between mb-6 print:hidden">
  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
  Results View
@@ -514,39 +656,74 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  )}
 
  {/* Table View */}
- {resultsView === 'table' && completedResults.length > 0 && (
- <div className="mb-6 print:hidden">
+ {resultsFilter === 'completed' && resultsView === 'table' && (jobCounts?.completed ?? 0) > 0 && (
+ <div className="mb-6 print:hidden" aria-busy={resultsLoading}>
+ <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+ <div className="text-sm font-mono text-muted-foreground">
+ {filteredTotal} {filteredTotal === 1 ? 'result' : 'results'}
+ </div>
+ {/* Server-side export: the table only ever holds one page, so its own
+ export would silently drop every other page. */}
+ <div className="flex items-center gap-2">
+ <span className="text-xs font-mono text-ink-soft">Export all results</span>
+ <a
+ href={`/api/extractions/${jobId}/export?format=xlsx`}
+ download
+ className={EXPORT_LINK}
+ >
+ <Download className="h-4 w-4" />
+ Excel (.xlsx)
+ </a>
+ <a
+ href={`/api/extractions/${jobId}/export?format=csv`}
+ download
+ className={EXPORT_LINK}
+ >
+ <Download className="h-4 w-4" />
+ CSV (.csv)
+ </a>
+ </div>
+ </div>
+ <div className={cn(resultsLoading && "opacity-60 transition-opacity")}>
  <ExtractionResultsTable
  columns={tableData.columns}
  rows={tableData.rows}
- pageSize={20}
- pageSizeOptions={[10, 20, 50, 100]}
+ pageSize={pageSize}
+ pageSizeOptions={PAGE_SIZE_OPTIONS}
+ serverPagination={{
+ page,
+ pageSize,
+ total: filteredTotal,
+ onPageChange: setPage,
+ onPageSizeChange: (size) => {
+ setPageSize(size);
+ setPage(1);
+ },
+ }}
  onDocumentClick={(documentId) => {
  const cleanedId = cleanDocumentIdForUrl(documentId);
  window.open(`/documents/${cleanedId}`, '_blank');
  }}
  onRowClick={(row) => {
- const result = completedResults.find(r => r.document_id === row.document_id);
+ const result = pageResults.find(r => r.document_id === row.document_id);
  if (result) {
  setSelectedResultId(result.document_id);
  setResultsView('document');
  }
  }}
- emptyMessage="No completed extraction results"
- exportOptions={{
- enabled: true,
- filename: `${jobData?.collection_name || 'extraction'}_${jobData?.schema_name || 'results'}_${new Date().toISOString().split('T')[0]}`.replace(/\s+/g, '-'),
- formats: ['xlsx', 'csv', 'json'],
- exportFiltered: true,
- }}
+ emptyMessage={resultsLoading ? "Loading results..." : "No completed extraction results"}
+ exportOptions={{ enabled: false }}
  />
+ </div>
  </div>
  )}
 
  {/* Document View: Document Selector */}
- {resultsView === 'document' && (
+ {resultsFilter === 'completed' && resultsView === 'document' && (
  <div className="mb-6 print:hidden space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Document</div>
+ <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+ Document ({pageResults.length} on this page of {filteredTotal})
+ </div>
  <div className="flex items-center gap-3">
  <div className="flex-1">
  <SearchableDropdownButton
@@ -555,7 +732,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  value={selectedDocumentId || ""}
  options={documentOptions}
  onChange={handleDocumentChange}
- searchPlaceholder="Search documents by ID..."
+ searchPlaceholder="Search documents on this page..."
  />
  </div>
  {selectedDocumentId && (
@@ -570,18 +747,18 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </div>
  )}
 
- {/* Failed Documents Summary */}
- {failedCount > 0 && (
- <div className="mb-6">
+ {/* Failed documents: one server page at a time */}
+ {resultsFilter === 'failed' && (jobCounts?.failed ?? 0) > 0 && (
+ <div className="mb-6" aria-busy={resultsLoading}>
  <EditorialCard flat className={NOTICE_ERROR}>
  <div className="flex items-start gap-3">
  <XCircle className="h-5 w-5 text-oxblood flex-shrink-0 mt-0.5"/>
- <div className="flex-1 min-w-0">
+ <div className={cn("flex-1 min-w-0", resultsLoading && "opacity-60 transition-opacity")}>
  <h3 className="text-sm font-semibold text-ink mb-2">
- {failedCount} Document{failedCount !== 1 ? 's' : ''} Failed
+ {jobCounts?.failed} Document{jobCounts?.failed !== 1 ? 's' : ''} Failed
  </h3>
  <div className="space-y-2">
- {failedResults.map((result) => (
+ {pageResults.map((result) => (
  <div
  key={result.document_id}
  className="text-sm p-2 border border-rule bg-parchment-deep"
@@ -597,6 +774,14 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </div>
  ))}
  </div>
+ <EditorialPagination
+ currentPage={page}
+ totalPages={Math.max(1, Math.ceil(filteredTotal / pageSize))}
+ onPageChange={setPage}
+ totalItems={filteredTotal}
+ itemsPerPage={pageSize}
+ itemLabel="failed documents"
+ />
  </div>
  </div>
  </EditorialCard>
@@ -604,7 +789,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  )}
 
  {/* Empty State if no results */}
- {totalResults === 0 && (
+ {jobCounts !== null && jobCounts.total === 0 && !resultsLoading && totalResults === 0 && (
  <EmptyState
  title="No Results Available"
  description="This extraction job hasn't produced any results yet"
@@ -614,7 +799,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  )}
 
  {/* Selected Document Data Viewer - Only show in document view for successful documents */}
- {resultsView === 'document' && selectedResult && (() => {
+ {resultsFilter === 'completed' && resultsView === 'document' && selectedResult && (() => {
  const status = normalizeStatus(selectedResult.status);
  const isFailed = status === DocumentProcessingStatus.FAILED || status === 'failed' || status === 'failure';
  const hasData = selectedResult.extracted_data && Object.keys(selectedResult.extracted_data).length > 0;

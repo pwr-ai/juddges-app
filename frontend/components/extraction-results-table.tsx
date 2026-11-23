@@ -40,6 +40,21 @@ export interface ExportOptions {
  exportFiltered?: boolean;
 }
 
+/**
+ * Server-driven pagination: `rows` is already the current page and the parent
+ * owns page/pageSize. Column filters and sorting then only act on that page, and
+ * the placeholder says so instead of implying a search over every result.
+ */
+export interface ServerPagination {
+ /** 1-based current page */
+ page: number;
+ pageSize: number;
+ /** Total rows across all pages */
+ total: number;
+ onPageChange: (page: number) => void;
+ onPageSizeChange: (size: number) => void;
+}
+
 export interface ExtractionResultsTableProps {
  columns: string[];
  rows: Array<{
@@ -55,6 +70,8 @@ export interface ExtractionResultsTableProps {
  emptyMessage?: string;
  /** Export configuration */
  exportOptions?: ExportOptions;
+ /** Switch to server-side pagination (see {@link ServerPagination}) */
+ serverPagination?: ServerPagination;
 }
 
 type SortDirection ="asc"|"desc"| null;
@@ -471,6 +488,7 @@ export function ExtractionResultsTable({
  className,
  emptyMessage ="No extraction results available",
  exportOptions = {},
+ serverPagination,
 }: ExtractionResultsTableProps): React.JSX.Element {
  // Merge export options with defaults
  const {
@@ -483,8 +501,10 @@ export function ExtractionResultsTable({
  // State
  const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
  const [filters, setFilters] = useState<Record<string, string>>({});
- const [currentPage, setCurrentPage] = useState(1);
- const [pageSize, setPageSize] = useState(initialPageSize);
+ const [localPage, setLocalPage] = useState(1);
+ const [localPageSize, setLocalPageSize] = useState(initialPageSize);
+ const currentPage = serverPagination ? serverPagination.page : localPage;
+ const pageSize = serverPagination ? serverPagination.pageSize : localPageSize;
  const [isExporting, setIsExporting] = useState(false);
 
  // All columns including document_id
@@ -543,11 +563,13 @@ export function ExtractionResultsTable({
 
  // Paginate rows
  const paginatedRows = useMemo(() => {
+ if (serverPagination) return sortedRows;
  const start = (currentPage - 1) * pageSize;
  return sortedRows.slice(start, start + pageSize);
- }, [sortedRows, currentPage, pageSize]);
+ }, [sortedRows, currentPage, pageSize, serverPagination]);
 
- const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+ const totalItems = serverPagination ? serverPagination.total : sortedRows.length;
+ const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
  // Handlers
  const handleSort = useCallback((columnKey: string) => {
@@ -564,17 +586,25 @@ export function ExtractionResultsTable({
 
  const handleFilterChange = useCallback((columnKey: string, value: string) => {
  setFilters((prev) => ({ ...prev, [columnKey]: value }));
- setCurrentPage(1);
+ setLocalPage(1);
  }, []);
 
+ const onServerPageChange = serverPagination?.onPageChange;
+ const onServerPageSizeChange = serverPagination?.onPageSizeChange;
  const handlePageChange = useCallback((page: number) => {
- setCurrentPage(Math.max(1, Math.min(page, totalPages)));
- }, [totalPages]);
+ const next = Math.max(1, Math.min(page, totalPages));
+ if (onServerPageChange) onServerPageChange(next);
+ else setLocalPage(next);
+ }, [totalPages, onServerPageChange]);
 
  const handlePageSizeChange = useCallback((size: number) => {
- setPageSize(size);
- setCurrentPage(1);
- }, []);
+ if (onServerPageSizeChange) {
+ onServerPageSizeChange(size);
+ return;
+ }
+ setLocalPageSize(size);
+ setLocalPage(1);
+ }, [onServerPageSizeChange]);
 
  // Export handler
  const handleExport = useCallback(
@@ -669,7 +699,7 @@ export function ExtractionResultsTable({
                       <ColumnFilter
                         value={filters[column] || ""}
                         onChange={(value) => handleFilterChange(column, value)}
-                        placeholder={`Filter...`}
+                        placeholder={serverPagination ? "Filter page..." : "Filter..."}
                       />
                     </div>
                   </th>
@@ -738,7 +768,7 @@ export function ExtractionResultsTable({
  currentPage={currentPage}
  totalPages={totalPages}
  pageSize={pageSize}
- totalItems={sortedRows.length}
+ totalItems={totalItems}
  pageSizeOptions={pageSizeOptions}
  onPageChange={handlePageChange}
  onPageSizeChange={handlePageSizeChange}
