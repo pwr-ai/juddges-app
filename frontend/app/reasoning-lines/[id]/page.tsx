@@ -36,7 +36,7 @@ import {
   getRelatedLines,
 } from '@/lib/api/reasoning-lines';
 import type { ReasoningLineMember } from '@/types/reasoning-lines';
-import type { DriftAnalysisResponse, RelatedLine } from '@/types/reasoning-lines';
+import type { DriftAnalysisResponse, OutcomeKey, ReasoningLineTimeline, RelatedLine } from '@/types/reasoning-lines';
 import Link from 'next/link';
 import { OutcomeTimeline } from '@/components/reasoning-lines/OutcomeTimeline';
 import { DriftChart } from '@/components/reasoning-lines/DriftChart';
@@ -434,6 +434,7 @@ export default function ReasoningLineDetailPage() {
                     member={member}
                     index={index}
                     isLast={index === sortedMembers.length - 1}
+                    outcomeLabels={timelineQuery.data?.outcome_labels}
                   />
                 ))}
               </div>
@@ -654,10 +655,13 @@ function TimelineEntry({
   member,
   index,
   isLast,
+  outcomeLabels,
 }: {
   member: ReasoningLineMember;
   index: number;
   isLast: boolean;
+  /** The line's party names for outcomes; raw direction when absent */
+  outcomeLabels?: ReasoningLineTimeline['outcome_labels'];
 }) {
   const similarityPct = Math.round(member.similarity_to_centroid * 100);
   const similarityTone =
@@ -719,7 +723,8 @@ function TimelineEntry({
                   )}
                   {member.outcome_direction && (
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-none border border-rule text-ink bg-transparent">
-                      {member.outcome_direction}
+                      {outcomeLabels?.[member.outcome_direction as OutcomeKey] ??
+                        member.outcome_direction}
                     </span>
                   )}
                 </div>

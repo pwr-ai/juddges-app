@@ -10448,6 +10448,21 @@
             "title": "Line Id",
             "type": "string"
           },
+          "outcome_labels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional per-line display names for the outcome categories, keyed by for/against/mixed/procedural (from reasoning_lines.metadata.outcome_labels), e.g. {'for': 'Kredytobiorca wygrywa'}. Null when the line uses the generic for/against wording.",
+            "title": "Outcome Labels"
+          },
           "points": {
             "items": {
               "$ref": "#/components/schemas/TimelinePoint"

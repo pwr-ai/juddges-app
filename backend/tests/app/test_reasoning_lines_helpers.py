@@ -116,3 +116,56 @@ class TestDetectTimelineTrend:
     def test_stable_split_when_centered_and_flat(self):
         label, _ = _detect_timeline_trend([0.5, 0.5, 0.5, 0.5])
         assert label == "stable_split"
+
+
+# ---------------------------------------------------------------------------
+# _outcome_labels_from_metadata — per-line outcome category names
+# ---------------------------------------------------------------------------
+
+
+class TestOutcomeLabelsFromMetadata:
+    def test_returns_party_labels(self):
+        from app.reasoning_lines.timeline_math import _outcome_labels_from_metadata
+
+        metadata = {
+            "extended_from_collection": "chf-loans-5k",
+            "outcome_labels": {
+                "for": "Kredytobiorca wygrywa",
+                "against": "Bank wygrywa",
+                "mixed": "Częściowo",
+            },
+        }
+
+        assert _outcome_labels_from_metadata(metadata) == {
+            "for": "Kredytobiorca wygrywa",
+            "against": "Bank wygrywa",
+            "mixed": "Częściowo",
+        }
+
+    @pytest.mark.parametrize(
+        "metadata",
+        [None, {}, [], "x", {"outcome_labels": None}, {"outcome_labels": ["for"]}],
+    )
+    def test_returns_none_without_labels(self, metadata):
+        from app.reasoning_lines.timeline_math import _outcome_labels_from_metadata
+
+        assert _outcome_labels_from_metadata(metadata) is None
+
+    def test_drops_unknown_keys_and_blank_or_non_string_values(self):
+        from app.reasoning_lines.timeline_math import _outcome_labels_from_metadata
+
+        metadata = {
+            "outcome_labels": {
+                "for": "  Kredytobiorca  ",
+                "against": "",
+                "mixed": 3,
+                "winner": "Bank",
+            }
+        }
+
+        assert _outcome_labels_from_metadata(metadata) == {"for": "Kredytobiorca"}
+
+    def test_all_invalid_labels_collapse_to_none(self):
+        from app.reasoning_lines.timeline_math import _outcome_labels_from_metadata
+
+        assert _outcome_labels_from_metadata({"outcome_labels": {"x": "y"}}) is None

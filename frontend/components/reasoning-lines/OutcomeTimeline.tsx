@@ -17,7 +17,7 @@ import {
   Minus,
   AlertTriangle,
 } from 'lucide-react';
-import type { ReasoningLineTimeline, TimelinePoint } from '@/types/reasoning-lines';
+import type { OutcomeKey, ReasoningLineTimeline, TimelinePoint } from '@/types/reasoning-lines';
 import { ChartFigure } from '@/components/editorial';
 import { OUTCOME_SERIES, rechartsTheme } from '@/lib/charts/reasoning-palette';
 
@@ -28,13 +28,17 @@ import { OUTCOME_SERIES, rechartsTheme } from '@/lib/charts/reasoning-palette';
 /** Color mapping for outcome categories — see lib/charts/reasoning-palette.ts */
 const OUTCOME_COLORS = OUTCOME_SERIES;
 
-/** Polish labels for outcome categories */
-const OUTCOME_LABELS: Record<string, string> = {
-  for_count: 'Za',
-  against_count: 'Przeciw',
-  mixed_count: 'Mieszane',
-  procedural_count: 'Proceduralne',
+/** Default Polish labels for outcome categories; a line can override them
+ *  through `outcome_labels` (e.g. "Kredytobiorca wygrywa" / "Bank wygrywa"). */
+const OUTCOME_LABELS: Record<OutcomeKey, string> = {
+  for: 'Za',
+  against: 'Przeciw',
+  mixed: 'Mieszane',
+  procedural: 'Proceduralne',
 };
+
+/** Stacking order of the bars, bottom to top */
+const OUTCOME_KEYS: readonly OutcomeKey[] = ['for', 'against', 'mixed', 'procedural'];
 
 /** Polish labels for the backend trend vocabulary (app/reasoning_lines/schemas.py);
  *  `color` is the text tone on a rule-bordered pill */
@@ -72,15 +76,21 @@ interface OutcomeTimelineProps {
 }
 
 export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
-  // Transform timeline points for recharts
+  const labels = useMemo(
+    () => ({ ...OUTCOME_LABELS, ...(data.outcome_labels ?? {}) }),
+    [data.outcome_labels]
+  );
+
+  // Transform timeline points for recharts. Series keys stay stable
+  // (for/against/...); the visible names come from `labels`.
   const chartData = useMemo(
     () =>
       data.points.map((point: TimelinePoint) => ({
         name: point.period_label,
-        Za: point.for_count,
-        Przeciw: point.against_count,
-        Mieszane: point.mixed_count,
-        Proceduralne: point.procedural_count,
+        for: point.for_count,
+        against: point.against_count,
+        mixed: point.mixed_count,
+        procedural: point.procedural_count,
         // Keep raw data for tooltip
         _total: point.total,
         _forRatio: point.for_ratio,
@@ -138,37 +148,23 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
               <Tooltip
                 contentStyle={rechartsTheme.tooltip}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                formatter={(value: any) => [`${value}`]}
+                formatter={(value: any, name: any) => [`${value}`, name]}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 labelFormatter={(label: any) => `Okres: ${label}`}
               />
               <Legend
                 wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
               />
-              <Bar
-                dataKey="Za"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.for_count}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="Przeciw"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.against_count}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="Mieszane"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.mixed_count}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="Proceduralne"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.procedural_count}
-                radius={[0, 0, 0, 0]}
-              />
+              {OUTCOME_KEYS.map((key) => (
+                <Bar
+                  key={key}
+                  dataKey={key}
+                  name={labels[key]}
+                  stackId="outcomes"
+                  fill={OUTCOME_COLORS[`${key}_count`]}
+                  radius={[0, 0, 0, 0]}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
