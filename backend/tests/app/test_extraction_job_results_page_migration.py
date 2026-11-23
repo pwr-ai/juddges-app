@@ -9,7 +9,7 @@ pytestmark = pytest.mark.unit
 
 _MIGRATION = (
     Path(__file__).resolve().parents[3]
-    / "supabase/migrations/20261123000003_extraction_job_results_page.sql"
+    / "supabase/migrations/20261123000004_extraction_job_results_page.sql"
 )
 _SIGNATURE = r"public\.get_extraction_job_results_page\(\s*text,\s*uuid,\s*int,\s*int,\s*text\s*\)"
 
