@@ -932,3 +932,31 @@ class TestFacetSearchCounts:
             pytest.raises(SearchServiceError),
         ):
             await service.facet_search_counts("base_keywords", "va")
+
+
+class TestFacetDistributionForQuery:
+    @pytest.mark.asyncio
+    async def test_fan_out_and_merge(self, service):
+        service.facet_search_counts = AsyncMock(side_effect=[{"a": 1}, {"b": 2}])
+        result = await service.facet_distribution_for_query(
+            ["f1", "f2"], "q", query="x", filters="k = 1"
+        )
+        assert result == {"f1": {"a": 1}, "f2": {"b": 2}}
+        calls = service.facet_search_counts.await_args_list
+        assert [c.args for c in calls] == [("f1", "q"), ("f2", "q")]
+        assert all(c.kwargs == {"query": "x", "filters": "k = 1"} for c in calls)
+
+    @pytest.mark.asyncio
+    async def test_empty_facets(self, service):
+        service.facet_search_counts = AsyncMock()
+        assert await service.facet_distribution_for_query([], "q") == {}
+        service.facet_search_counts.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_cap_enforced(self, service):
+        service.facet_search_counts = AsyncMock()
+        with pytest.raises(SearchServiceError):
+            await service.facet_distribution_for_query(
+                [f"f{i}" for i in range(21)], "q"
+            )
+        service.facet_search_counts.assert_not_awaited()

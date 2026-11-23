@@ -67,3 +67,16 @@ async def test_facets_param_forwarded_to_meili(client_with_api_key: TestClient) 
         mock_search.assert_not_awaited()
         args = mock_facet_search.await_args
         assert args.args == ("base_appeal_outcome", "dis")
+
+
+@pytest.mark.parametrize(
+    "facets",
+    [["Bad Name"], ['x" OR 1=1'], [f"f{i}" for i in range(21)]],
+)
+def test_search_chunks_request_rejects_bad_facets(facets: list[str]) -> None:
+    from pydantic import ValidationError
+
+    from app.models import SearchChunksRequest
+
+    with pytest.raises(ValidationError):
+        SearchChunksRequest(query="", facets=facets)

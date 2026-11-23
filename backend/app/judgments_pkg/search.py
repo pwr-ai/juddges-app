@@ -770,6 +770,8 @@ async def run_document_search(request: SearchChunksRequest) -> SearchChunksRespo
         try:
             if request.facet_query:
                 # facetQuery is only valid on /facet-search, not /search.
+                # /facet-search yields no stats or timing, so facetStats and
+                # query_time_ms are None on this branch.
                 meili_response = {
                     "facetDistribution": await meili.facet_distribution_for_query(
                         request.facets, request.facet_query

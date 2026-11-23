@@ -191,6 +191,9 @@ class SuggestionHit(BaseModel):
     formatted: dict[str, Any] | None = Field(default=None, alias="_formatted")
 
 
+MAX_FACET_FANOUT = 20
+
+
 class MeiliSearchService:
     """Meilisearch HTTP client for autocomplete queries and index administration.
 
@@ -902,7 +905,7 @@ class MeiliSearchService:
         document search so counts match the current result set. Meilisearch
         caps the number of returned facet hits at its own default (this call
         sends no ``limit``; v1.49 ``/facet-search`` does not define one), so
-        the result is a bounded list of the best-matching values.
+        the number of values returned is whatever Meilisearch's default allows.
         """
         if not self.configured:
             raise SearchServiceError("Meilisearch is not configured")
@@ -940,7 +943,15 @@ class MeiliSearchService:
         query: str = "",
         filters: str | None = None,
     ) -> dict[str, dict[str, int]]:
-        """Run :meth:`facet_search_counts` per facet concurrently and merge."""
+        """Run :meth:`facet_search_counts` per facet concurrently and merge.
+
+        Fan-out is capped at ``MAX_FACET_FANOUT`` facets; more raises
+        :class:`SearchServiceError`. An empty ``facets`` returns ``{}``.
+        """
+        if len(facets) > MAX_FACET_FANOUT:
+            raise SearchServiceError(
+                f"at most {MAX_FACET_FANOUT} facets may be requested"
+            )
         counts = await asyncio.gather(
             *(
                 self.facet_search_counts(
