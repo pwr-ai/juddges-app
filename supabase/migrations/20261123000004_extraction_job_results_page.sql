@@ -40,7 +40,7 @@ AS $$
         SELECT e.item,
                e.ord,
                CASE
-                   WHEN lower(coalesce(e.item ->> 'status', '')) IN ('completed', 'success')
+                   WHEN lower(coalesce(e.item ->> 'status', '')) IN ('completed', 'success', 'partially_completed')
                        THEN 'completed'
                    WHEN lower(coalesce(e.item ->> 'status', '')) IN ('failed', 'failure')
                        THEN 'failed'

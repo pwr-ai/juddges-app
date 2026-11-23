@@ -1432,6 +1432,36 @@ class TestGetExtractionJobResultsPage:
         assert [r["document_id"] for r in body["results"]] == ["doc-1", "doc-2"]
 
     @pytest.mark.unit
+    async def test_malformed_stored_item_does_not_fail_the_page(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        items = [
+            {"collection_id": "c", "document_id": "legacy", "status": "SUCCESS"},
+            {"document_id": "broken", "status": "weird"},
+            {
+                "collection_id": "c",
+                "document_id": "ok",
+                "status": "completed",
+                "created_at": "2026-01-01T00:00:00Z",
+                "updated_at": "2026-01-01T00:00:00Z",
+            },
+        ]
+        mock_supabase = _rpc_supabase(_page_payload(items=items))
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}/results",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        rows = {r["document_id"]: r for r in response.json()["results"]}
+        assert rows["legacy"]["status"] == "completed"
+        assert rows["broken"]["status"] == "failed"
+        assert rows["broken"]["error_message"]
+        assert rows["ok"]["status"] == "completed"
+
+    @pytest.mark.unit
     async def test_defaults(self, client, valid_api_headers) -> None:
         _install_jwt_user_override(_USER_001)
         mock_supabase = _rpc_supabase(_page_payload(items=[]))

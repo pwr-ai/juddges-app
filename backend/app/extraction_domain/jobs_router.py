@@ -20,6 +20,7 @@ from fastapi import (
     status,
 )
 from loguru import logger
+from pydantic import ValidationError
 from supabase import PostgrestAPIError, StorageException
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
@@ -1173,6 +1174,43 @@ _API_STATUS_TO_DB_VALUES: dict[str, list[str]] = {
 }
 
 
+_STORED_STATUS_ALIASES = {"success": "completed", "failure": "failed"}
+
+
+def _page_item_to_response(
+    item: object, job_id: str, position: int
+) -> DocumentExtractionResponse:
+    """Build one page row without letting a malformed stored item fail the page.
+
+    Stored results predate the response model in places (``success``/``failure``
+    spellings, missing timestamps). Normalise what can be normalised; anything
+    still invalid becomes a FAILED row that says so, instead of a 500 that hides
+    the other rows of the page.
+    """
+    data = dict(item) if isinstance(item, dict) else {}
+    raw_status = str(data.get("status") or "").strip().lower()
+    data["status"] = _STORED_STATUS_ALIASES.get(raw_status, raw_status)
+    data.setdefault("created_at", "")
+    data.setdefault("updated_at", "")
+    for key in ("created_at", "updated_at"):
+        if data[key] is None:
+            data[key] = ""
+    try:
+        return DocumentExtractionResponse(**data)
+    except ValidationError as invalid:
+        logger.warning(
+            f"Malformed stored result at position {position} of job {job_id}: {invalid}"
+        )
+        return DocumentExtractionResponse(
+            collection_id=str(data.get("collection_id") or ""),
+            document_id=str(data.get("document_id") or f"row-{position}"),
+            status=DocumentProcessingStatus.FAILED,
+            created_at=str(data.get("created_at") or ""),
+            updated_at=str(data.get("updated_at") or ""),
+            error_message="Stored result is malformed and cannot be displayed.",
+        )
+
+
 @router.get(
     "/{job_id}/results",
     response_model=ExtractionJobResultsPage,
@@ -1234,7 +1272,10 @@ async def get_extraction_job_results_page(
         total=page["total"],
         filtered_total=page["filtered_total"],
         counts=page["counts"],
-        results=[DocumentExtractionResponse(**item) for item in page["items"]],
+        results=[
+            _page_item_to_response(item, job_id, idx)
+            for idx, item in enumerate(page["items"], start=offset)
+        ],
     )
 
 

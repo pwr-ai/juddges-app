@@ -81,6 +81,15 @@ def test_status_filter_buckets(conn, mixed_job) -> None:
     assert failed["filtered_total"] == 2
 
 
+def test_partially_completed_counts_as_completed(conn, seed_job) -> None:
+    # The old full-array path counted partially_completed rows as processed;
+    # they must stay reachable through the completed filter.
+    job_id, owner = seed_job([_item(0, "partially_completed"), _item(1, "failed")])
+    page = _page(conn, job_id, owner, status="completed")
+    assert [i["document_id"] for i in page["items"]] == ["doc-0"]
+    assert page["counts"] == {"completed": 1, "failed": 1, "other": 0}
+
+
 def test_clamps_offset_and_limit(conn, seed_job) -> None:
     job_id, owner = seed_job([_item(i, "completed") for i in range(250)])
     assert len(_page(conn, job_id, owner, offset=-5, limit=1000)["items"]) == 200

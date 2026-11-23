@@ -288,7 +288,8 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  setResultsFilter('failed');
  }
  // Results can shrink under a resumed job; land on the last real page.
- if (nextPage.results.length === 0 && nextPage.filtered_total > 0 && page > 1) {
+ // An empty filter lands on page 1 rather than an empty page N.
+ if (nextPage.results.length === 0 && page > 1) {
  setPage(Math.max(1, Math.ceil(nextPage.filtered_total / pageSize)));
  }
  } catch (error) {
