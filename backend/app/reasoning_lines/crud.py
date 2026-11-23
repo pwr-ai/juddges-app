@@ -308,46 +308,8 @@ async def list_reasoning_lines(
     ]
 
 
-@router.get(
-    "/{line_id}",
-    response_model=ReasoningLineDetail,
-    summary="Get full detail of a reasoning line with all members",
-)
-@limiter.limit(REASONING_LINES_READ_RATE_LIMIT)
-async def get_reasoning_line(
-    request: Request, response: Response, line_id: str
-) -> ReasoningLineDetail:
-    """
-    Retrieve a single reasoning line by ID, including all member judgments
-    with their metadata joined from the judgments table.
-    """
-    db = get_vector_db()
-
-    # Fetch the reasoning line
-    line_fields = (
-        "id, label, legal_question, keywords, legal_bases, status, "
-        "case_count, coherence_score, date_range_start, date_range_end, "
-        "created_at, updated_at"
-    )
-    try:
-        response = (
-            db.client.table("reasoning_lines")
-            .select(line_fields)
-            .eq("id", line_id)
-            .execute()
-        )
-    except Exception as e:
-        logger.error(f"Error fetching reasoning line {line_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch reasoning line")
-
-    rows = response.data or []
-    if not rows:
-        raise HTTPException(
-            status_code=404, detail=f"Reasoning line {line_id} not found"
-        )
-
-    line = rows[0]
-
+def _load_members(db: Any, line_id: str) -> list[ReasoningLineMember]:
+    """Load a line's members (ordered by position) joined with judgment metadata."""
     # Fetch members ordered by position_in_line
     member_fields = (
         "judgment_id, position_in_line, similarity_to_centroid, "
@@ -407,6 +369,59 @@ async def get_reasoning_line(
                 outcome_direction=m.get("outcome_direction"),
             )
         )
+    return members
+
+
+@router.get(
+    "/{line_id}",
+    response_model=ReasoningLineDetail,
+    summary="Get full detail of a reasoning line with all members",
+)
+@limiter.limit(REASONING_LINES_READ_RATE_LIMIT)
+async def get_reasoning_line(
+    request: Request,
+    response: Response,
+    line_id: str,
+    include_members: bool = Query(
+        default=True,
+        description=(
+            "Include member judgments. Pass false for large lines and load "
+            "them lazily via GET /{line_id}/members."
+        ),
+    ),
+) -> ReasoningLineDetail:
+    """
+    Retrieve a single reasoning line by ID, including (by default) all member
+    judgments with their metadata joined from the judgments table.
+    """
+    db = get_vector_db()
+
+    # Fetch the reasoning line
+    line_fields = (
+        "id, label, legal_question, keywords, legal_bases, status, "
+        "case_count, coherence_score, date_range_start, date_range_end, "
+        "created_at, updated_at"
+    )
+    try:
+        response = (
+            db.client.table("reasoning_lines")
+            .select(line_fields)
+            .eq("id", line_id)
+            .execute()
+        )
+    except Exception as e:
+        logger.error(f"Error fetching reasoning line {line_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch reasoning line")
+
+    rows = response.data or []
+    if not rows:
+        raise HTTPException(
+            status_code=404, detail=f"Reasoning line {line_id} not found"
+        )
+
+    line = rows[0]
+
+    members = _load_members(db, line_id) if include_members else []
 
     return ReasoningLineDetail(
         id=str(line["id"]),
@@ -427,6 +442,34 @@ async def get_reasoning_line(
         updated_at=str(line.get("updated_at") or line["created_at"]),
         members=members,
     )
+
+
+@router.get(
+    "/{line_id}/members",
+    response_model=list[ReasoningLineMember],
+    summary="List the member judgments of a reasoning line",
+)
+@limiter.limit(REASONING_LINES_READ_RATE_LIMIT)
+async def get_reasoning_line_members(
+    request: Request, response: Response, line_id: str
+) -> list[ReasoningLineMember]:
+    """Return the members of a reasoning line, ordered by position in the line."""
+    db = get_vector_db()
+
+    try:
+        line_response = (
+            db.client.table("reasoning_lines").select("id").eq("id", line_id).execute()
+        )
+    except Exception as e:
+        logger.error(f"Error fetching reasoning line {line_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch reasoning line")
+
+    if not (line_response.data or []):
+        raise HTTPException(
+            status_code=404, detail=f"Reasoning line {line_id} not found"
+        )
+
+    return _load_members(db, line_id)
 
 
 @router.delete(

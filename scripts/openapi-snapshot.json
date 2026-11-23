@@ -26790,7 +26790,7 @@
         ]
       },
       "get": {
-        "description": "Retrieve a single reasoning line by ID, including all member judgments\nwith their metadata joined from the judgments table.",
+        "description": "Retrieve a single reasoning line by ID, including (by default) all member\njudgments with their metadata joined from the judgments table.",
         "operationId": "get_reasoning_line_reasoning_lines__line_id__get",
         "parameters": [
           {
@@ -26800,6 +26800,18 @@
             "schema": {
               "title": "Line Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Include member judgments. Pass false for large lines and load them lazily via GET /{line_id}/members.",
+            "in": "query",
+            "name": "include_members",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Include member judgments. Pass false for large lines and load them lazily via GET /{line_id}/members.",
+              "title": "Include Members",
+              "type": "boolean"
             }
           }
         ],
@@ -26936,6 +26948,61 @@
           }
         ],
         "summary": "Detect language drift within a reasoning line over time",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/{line_id}/members": {
+      "get": {
+        "description": "Return the members of a reasoning line, ordered by position in the line.",
+        "operationId": "get_reasoning_line_members_reasoning_lines__line_id__members_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReasoningLineMember"
+                  },
+                  "title": "Response Get Reasoning Line Members Reasoning Lines  Line Id  Members Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the member judgments of a reasoning line",
         "tags": [
           "reasoning-lines"
         ]

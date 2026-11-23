@@ -180,6 +180,109 @@ def test_get_reasoning_line_not_found(
     assert "not found" in response.json()["detail"].lower()
 
 
+class _RecordingVectorDb(_FakeVectorDb):
+    """Fake db with members + judgments that records which tables were read."""
+
+    def __init__(self):
+        super().__init__()
+        self.tables: list[str] = []
+
+    def table(self, name: str):
+        self.tables.append(name)
+        if name == "reasoning_line_members":
+            return _FakeQuery(
+                [
+                    {
+                        "judgment_id": "j-1",
+                        "position_in_line": 1,
+                        "similarity_to_centroid": 0.9,
+                    }
+                ]
+            )
+        if name == "judgments":
+            return _FakeInQuery(
+                [
+                    {
+                        "id": "j-1",
+                        "case_number": "I CSK 1/23",
+                        "title": "Wyrok",
+                        "court_name": "SN",
+                        "decision_date": "2023-01-01",
+                    }
+                ]
+            )
+        return super().table(name)
+
+
+class _FakeInQuery(_FakeQuery):
+    def in_(self, *_args, **_kwargs):
+        return self
+
+
+def test_get_reasoning_line_includes_members_by_default(
+    reasoning_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_db = _RecordingVectorDb()
+    monkeypatch.setattr("app.reasoning_lines.crud.get_vector_db", lambda: fake_db)
+
+    response = reasoning_client.get(
+        "/reasoning-lines/line-1", headers={"X-API-Key": _API_KEY}
+    )
+
+    assert response.status_code == 200
+    assert [m["judgment_id"] for m in response.json()["members"]] == ["j-1"]
+
+
+def test_get_reasoning_line_skips_members_when_not_requested(
+    reasoning_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_db = _RecordingVectorDb()
+    monkeypatch.setattr("app.reasoning_lines.crud.get_vector_db", lambda: fake_db)
+
+    response = reasoning_client.get(
+        "/reasoning-lines/line-1?include_members=false",
+        headers={"X-API-Key": _API_KEY},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["members"] == []
+    assert body["case_count"] == 2
+    assert fake_db.tables == ["reasoning_lines"]
+
+
+def test_get_reasoning_line_members_returns_joined_members(
+    reasoning_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_db = _RecordingVectorDb()
+    monkeypatch.setattr("app.reasoning_lines.crud.get_vector_db", lambda: fake_db)
+
+    response = reasoning_client.get(
+        "/reasoning-lines/line-1/members", headers={"X-API-Key": _API_KEY}
+    )
+
+    assert response.status_code == 200
+    members = response.json()
+    assert len(members) == 1
+    assert members[0]["signature"] == "I CSK 1/23"
+    assert members[0]["court_name"] == "SN"
+
+
+def test_get_reasoning_line_members_not_found(
+    reasoning_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_db = _RecordingVectorDb()
+    monkeypatch.setattr("app.reasoning_lines.crud.get_vector_db", lambda: fake_db)
+
+    response = reasoning_client.get(
+        "/reasoning-lines/non-existent-line/members",
+        headers={"X-API-Key": _API_KEY},
+    )
+
+    assert response.status_code == 404
+    assert "judgments" not in fake_db.tables
+
+
 # Regression for #614: the shared limiter has headers_enabled=True, so slowapi
 # needs a `response: Response` parameter on every limited endpoint to write the
 # X-RateLimit-* headers into. The autouse fixture disables the limiter, which
