@@ -1,0 +1,102 @@
+topic: pl_wibor_klauzula_zmiennego_oprocentowania
+collection:
+  name: "Spory o WIBOR w kredytach złotowych (2022-2026)"
+  description: "Orzeczenia sądów powszechnych (SR, SO, SA) w sprawach kredytobiorców kwestionujących klauzulę zmiennego oprocentowania opartego na WIBOR, w tym postanowienia o zabezpieczeniu i zawieszeniu. Poza zakresem: kredyty CHF/EUR (LIBOR/EURIBOR), sprawy windykacyjne banku bez zarzutów do WIBOR, sprawy SN (brak w pełnym korpusie)."
+  jurisdiction: PL
+  period: {from: 2022-01-01, to: 2026-11-24}
+  size_estimate: "ok. 1500-3000 orzeczeń w pełnym korpusie [?]: fala pozwów od 2022 r.; doniesienia prasowe o ~420 orzeczeniach w I poł. 2026; publikacja w portalu orzeczeń jest wybiórcza"
+  rationale: "Pozwy WIBOR-owe pojawiły się masowo w 2022 r. po gwałtownym wzroście stóp; wyrok TSUE C-471/24 z 12.02.2026 dzieli okres na przed/po, a zawisłe C-586/25, C-630/25, C-607/25 tłumaczą zawieszenia postępowań w 2026 r."
+
+search_v2:
+  - id: q01
+    purpose: "Rdzeń: abuzywność klauzuli WIBOR (art. 385¹ k.c.) — fraza ustawowa"
+    body: {query: "niedozwolone postanowienie umowne art. 385(1) k.c. oprocentowanie zmienne WIBOR kredyt hipoteczny w złotych", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q02
+    purpose: "Obowiązek informacyjny o ryzyku zmiennej stopy i rekomendacja S KNF"
+    body: {query: "bank nie poinformował o ryzyku zmiennej stopy procentowej WIBOR rekomendacja S symulacja wzrostu raty kredytu", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q03
+    purpose: "Rozporządzenie BMR 2016/1011 i wskaźnik referencyjny"
+    body: {query: "rozporządzenie 2016/1011 BMR wskaźnik referencyjny WIBOR administrator GPW Benchmark kredyt", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q04
+    purpose: "Po wyroku TSUE C-471/24 (PKO BP) — stosowanie/odróżnianie"
+    body: {query: "wyrok TSUE C-471/24 PKO BP WIBOR znacząca nierównowaga metodologia wskaźnika", court_type: [ordinary_court], date_from: 2026-02-12, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q05
+    purpose: "Zabezpieczenie — zawieszenie płatności rat w sprawie WIBOR"
+    body: {query: "wniosek o udzielenie zabezpieczenia wstrzymanie obowiązku spłaty rat kredytu WIBOR uprawdopodobnienie roszczenia art. 730(1) k.p.c.", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q06
+    purpose: "Skutek: usunięcie WIBOR, pozostawienie marży (oprocentowanie stałe = marża)"
+    body: {query: "umowa kredytu wiąże strony bez wskaźnika WIBOR oprocentowanie wyłącznie według marży banku", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q07
+    purpose: "Skutek: nieważność całej umowy kredytu złotowego"
+    body: {query: "ustalenie nieważności umowy kredytu złotowego zmienne oprocentowanie WIBOR art. 58 k.c. art. 353(1) k.c.", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q08
+    purpose: "Typowe oddalenie: wskaźnik obiektywny, nadzorowany, nie kształtowany przez bank"
+    body: {query: "WIBOR jest wskaźnikiem obiektywnym niezależnym od banku nadzorowanym przez KNF brak podstaw do uznania klauzuli za abuzywną powództwo oddalone", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.7, limit: 50}
+  - id: q09
+    purpose: "Zawieszenie postępowania do czasu rozstrzygnięcia TSUE (C-586/25, C-630/25, C-607/25)"
+    body: {query: "zawieszenie postępowania pytanie prejudycjalne TSUE WIBOR C-586/25 C-630/25 C-607/25", court_type: [ordinary_court], date_from: 2025-06-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q10
+    purpose: "Odsetki maksymalne"
+    body: {query: "odsetki maksymalne art. 359 § 2(1) k.c. oprocentowanie kredytu WIBOR plus marża przekroczenie", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q11
+    purpose: "Opisowo — perspektywa kredytobiorcy (wzrost rat 2022)"
+    body: {query: "kredytobiorcy pozwali bank po gwałtownym wzroście rat kredytu hipotecznego w złotówkach na skutek wzrostu WIBOR w 2022 roku", court_type: [ordinary_court], date_from: 2022-06-01, date_to: 2026-11-24, alpha: 0.8, limit: 50}
+  - id: q12
+    purpose: "Wymiana wskaźnika: WIRON / POLSTR, reforma wskaźników"
+    body: {query: "zastąpienie wskaźnika WIBOR wskaźnikiem WIRON POLSTR reforma wskaźników referencyjnych aneks do umowy kredytu", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q13
+    purpose: "Sądy apelacyjne — linia II instancji"
+    body: {query: "apelacja kredytobiorców oddalona klauzula zmiennego oprocentowania WIBOR sąd apelacyjny", court_type: [ordinary_court], date_from: 2023-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q14
+    purpose: "Wycinek czasowy przed wyrokiem TSUE — dla porównania pre/post"
+    body: {query: "klauzula WIBOR abuzywna transparentność dyrektywa 93/13 kredyt złotowy", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-02-11, alpha: 0.4, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date >= DATE '2022-01-01'
+    AND (
+      full_text ~* '\mWIBOR'
+      OR array_to_string(keywords, ' ') ~* 'wibor'
+      OR array_to_string(legal_topics, ' ') ~* 'wibor'
+    )
+    AND (
+      full_text ~* '(385\s*\(?\s*1|385¹|niedozwolon|abuzywn|zmienn\w* oprocentowan|wskaźnik\w* referencyjn|2016/1011|C-471/24)'
+      OR array_to_string(cited_legislation, ' ') ~* '(385|2016/1011)'
+    )
+    AND NOT (full_text ~* '\m(CHF|frank\w* szwajcarsk)' AND full_text !~* 'kredyt\w* (złotow|w PLN|w złotych)')
+  ORDER BY decision_date;
+
+filters:
+  case_number_patterns: ["I C", "XXVIII C", "I Ca", "I ACa", "V ACa", "XXVII Ca", "I Cz", "I ACz", "XXVIII Cz", "C upr"]
+  courts:
+    - "Sąd Okręgowy w Warszawie (XXVIII Wydział Cywilny)"
+    - "Sąd Apelacyjny w Warszawie"
+    - "Sąd Okręgowy w Krakowie"
+    - "Sąd Okręgowy w Gdańsku"
+    - "Sąd Okręgowy w Poznaniu"
+    - "Sąd Okręgowy we Wrocławiu"
+    - "Sąd Okręgowy w Łodzi"
+    - "Sąd Okręgowy w Katowicach"
+    - "Sąd Okręgowy w Piotrkowie Trybunalskim"
+    - "sądy rejonowe (wartość przedmiotu sporu do 100 000 zł)"
+
+inclusion_gate: {field: wibor_dotyczy, keep: [tak]}
+negative_markers:
+  - "kredyt indeksowany do CHF"
+  - "kredyt denominowany w CHF"
+  - "LIBOR CHF"
+  - "EURIBOR"
+  - "odsetki ustawowe za opóźnienie" # gdy jedyne wystąpienie stopy procentowej
+  - "nakaz zapłaty w postępowaniu upominawczym"
+  - "umowa leasingu"
+  - "postępowanie egzekucyjne"
+  - "upadłość konsumencka"
+
+analyses:
+  - "Odsetek uwzględnień (rozstrzygniecie_wibor) przed i po 12.02.2026 (C-471/24), osobno dla SO i SA oraz dla umowy_przed_bmr."
+  - "Rozkład umowa_wazna (wazna_w_calosci / wazna_bez_wibor_z_marza / niewazna) w czasie i według pozwany_bank."
+  - "Zabezpieczenia: odsetek udzielonych (zabezpieczenie_wynik) miesięcznie 2022-2026; czy po C-471/24 spadła liczba udzielonych."
+  - "Związek ocena_obowiazku_informacyjnego / bank_przedstawil_symulacje z wynikiem sprawy (tabela krzyżowa)."
+  - "Linia orzecznicza: stosunek_do_c_471_24 (stosuje/odroznia/polemizuje) po sądach okręgowych; liczba zawieszeń z powołaniem C-586/25, C-630/25, C-607/25."

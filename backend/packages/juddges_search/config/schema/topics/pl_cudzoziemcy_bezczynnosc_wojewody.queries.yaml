@@ -1,0 +1,98 @@
+topic: pl_cudzoziemcy_bezczynnosc_wojewody
+collection:
+  name: "Bezczynność wojewodów w sprawach legalizacji pobytu cudzoziemców (WSA/NSA 2022–2026)"
+  description: "Wyroki i postanowienia WSA (II SAB/...) oraz NSA (II OSK/...) w sprawach skarg na bezczynność lub przewlekłość wojewodów i Szefa UdSC w sprawach zezwoleń na pobyt czasowy, stały, rezydenta długoterminowego UE, Karty Pobytu i zezwoleń na pracę. Poza zakresem: skargi na merytoryczne decyzje odmowne, ochrona międzynarodowa, zobowiązanie do powrotu, bezczynność w innych kategoriach spraw."
+  jurisdiction: PL
+  period: {from: 2022-01-01, to: 2026-11-24}
+  size_estimate: "rzędu kilku–kilkunastu tysięcy orzeczeń (szacunek: sprawozdania WSA wskazują setki–tysiące skarg rocznie na bezczynność wojewodów w sprawach cudzoziemców, zwłaszcza WSA Wrocław, Poznań, Gliwice, Warszawa, Kraków); 15 zapytań × 50 da kilkaset unikalnych kandydatów — kolekcję należy uzupełniać zapytaniami per WSA i per rok"
+  rationale: "Od 2022 r. (napływ po agresji Rosji na Ukrainę, wzrost wniosków pracowniczych) skala zaległości i skarg gwałtownie wzrosła; okres obejmuje też zmiany z 2025 r. (wnioski przez MOS, nowa ustawa o zatrudnianiu cudzoziemców), co pozwala na porównanie przed/po."
+
+search_v2:
+  - id: q01
+    purpose: "Rdzeń: bezczynność wojewody w sprawie pobytu czasowego i pracy — fraza z sentencji"
+    body: {query: "skarga na bezczynność Wojewody w przedmiocie udzielenia zezwolenia na pobyt czasowy i pracę zobowiązuje do załatwienia wniosku", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q02
+    purpose: "Przewlekłość postępowania — art. 149 § 1 pkt 3, rażące naruszenie prawa"
+    body: {query: "przewlekłe prowadzenie postępowania przez Wojewodę zezwolenie na pobyt czasowy rażące naruszenie prawa art. 149 § 1a p.p.s.a.", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q03
+    purpose: "Grzywna wymierzona wojewodzie — art. 149 § 2 i art. 154 § 6"
+    body: {query: "wymierza Wojewodzie grzywnę art. 149 § 2 p.p.s.a. bezczynność cudzoziemiec zezwolenie na pobyt", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q04
+    purpose: "Suma pieniężna przyznana cudzoziemcowi"
+    body: {query: "przyznaje skarżącemu od Wojewody sumę pieniężną bezczynność w sprawie zezwolenia na pobyt", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q05
+    purpose: "Przyczyny organizacyjne — typowe rozumowanie: braki kadrowe nie usprawiedliwiają zwłoki"
+    body: {query: "trudności kadrowe i organizacyjne urzędu wojewódzkiego oraz duża liczba wniosków cudzoziemców nie usprawiedliwiają niezałatwienia sprawy w terminie", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.7, limit: 50}
+  - id: q06
+    purpose: "Termin ustawowy art. 112a ustawy o cudzoziemcach"
+    body: {query: "art. 112a ustawy o cudzoziemcach termin 60 dni wydanie decyzji w sprawie zezwolenia na pobyt czasowy bezczynność", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q07
+    purpose: "Ponaglenie do Szefa UdSC — warunek dopuszczalności (art. 53 § 2b), odrzucenie skargi"
+    body: {query: "ponaglenie do Szefa Urzędu do Spraw Cudzoziemców art. 37 k.p.a. warunek wniesienia skargi na bezczynność art. 53 § 2b", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q08
+    purpose: "Bezczynność historyczna — uchwała II OPS 5/19, skarga po załatwieniu sprawy"
+    body: {query: "II OPS 5/19 skarga na bezczynność wniesiona po wydaniu decyzji odrzucenie cudzoziemiec pobyt", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q09
+    purpose: "Umorzenie w zakresie zobowiązania po wydaniu decyzji w toku sprawy sądowej"
+    body: {query: "organ wydał decyzję po wniesieniu skargi umarza postępowanie w zakresie zobowiązania stwierdza bezczynność Wojewody pobyt czasowy", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q10
+    purpose: "Pobyt stały i rezydent długoterminowy UE"
+    body: {query: "bezczynność Wojewody w sprawie udzielenia zezwolenia na pobyt stały lub pobyt rezydenta długoterminowego Unii Europejskiej", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q11
+    purpose: "Karta Pobytu (wymiana/wydanie) i zezwolenie na pracę"
+    body: {query: "bezczynność Wojewody wydanie karty pobytu zezwolenie na pracę cudzoziemca skarga", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q12
+    purpose: "Opinie służb (art. 109) jako uzasadnienie zwłoki"
+    body: {query: "oczekiwanie na informację Komendanta Straży Granicznej Szefa ABW art. 109 ustawy o cudzoziemcach a bezczynność wojewody", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q13
+    purpose: "NSA — skargi kasacyjne wojewodów od wyroków stwierdzających bezczynność"
+    body: {query: "skarga kasacyjna Wojewody od wyroku stwierdzającego bezczynność w sprawie zezwolenia na pobyt czasowy cudzoziemca Naczelny Sąd Administracyjny", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q14
+    purpose: "Wycinek czasowy 2022–2023 (szczyt zaległości, okres COVID/Ukraina)"
+    body: {query: "cudzoziemiec wielomiesięczne oczekiwanie na rozpatrzenie wniosku o zezwolenie na pobyt czasowy bezczynność urzędu wojewódzkiego", court_type: [administrative_court], date_from: 2022-01-01, date_to: 2023-12-31, alpha: 0.7, limit: 50}
+  - id: q15
+    purpose: "Wycinek czasowy 2025–2026 (MOS, nowe przepisy)"
+    body: {query: "wniosek złożony w Module Obsługi Spraw MOS bezczynność Wojewody zezwolenie na pobyt czasowy", court_type: [administrative_court], date_from: 2025-04-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date BETWEEN '2022-01-01' AND '2026-11-24'
+    AND (
+      case_number ~* '(II\s*SAB/|II\s*OSK)'
+      OR court_name ~* '(administracyjny)'
+    )
+    AND (
+      full_text ~* '(bezczynno|przewlek)'
+      AND full_text ~* '(cudzoziem|pobyt czasowy|pobyt stały|karty pobytu|rezydenta długoterminowego)'
+    )
+    AND (
+      full_text ~* 'wojewod'
+      OR full_text ~* 'Urzędu do Spraw Cudzoziemców'
+      OR array_to_string(cited_legislation, ' ') ~* 'cudzoziem'
+      OR array_to_string(keywords, ' ') ~* '(cudzoziem|bezczynno)'
+    )
+  ORDER BY decision_date;
+
+filters:
+  case_number_patterns: ["II SAB/Wr", "II SAB/Po", "II SAB/Gl", "II SAB/Wa", "II SAB/Kr", "II SAB/Gd", "II SAB/Łd", "II SAB/Lu", "II SAB/Bk", "II SAB/Ol", "II SAB/Sz", "II SAB/Bd", "II SAB/Go", "II SAB/Op", "II SAB/Rz", "II SAB/Ke", "II OSK"]
+  case_symbols: ["658 (skargi na bezczynność/przewlekłość)", "619x sprawy cudzoziemców [?]"]
+  courts: ["WSA we Wrocławiu", "WSA w Poznaniu", "WSA w Gliwicach", "WSA w Warszawie", "WSA w Krakowie", "WSA w Gdańsku", "WSA w Łodzi", "WSA w Lublinie", "WSA w Białymstoku", "WSA w Olsztynie", "WSA w Szczecinie", "WSA w Bydgoszczy", "WSA w Gorzowie Wielkopolskim", "WSA w Opolu", "WSA w Rzeszowie", "WSA w Kielcach", "Naczelny Sąd Administracyjny"]
+
+inclusion_gate: {field: cudzoziemcy_bezczynnosc_dotyczy, keep: [tak]}
+negative_markers:
+  - "skarga na decyzję Wojewody w przedmiocie odmowy udzielenia zezwolenia"
+  - "ochrona międzynarodowa"
+  - "status uchodźcy"
+  - "zobowiązanie cudzoziemca do powrotu"
+  - "dostęp do informacji publicznej"
+  - "bezczynność w przedmiocie wydania zaświadczenia o samodzielności lokalu"
+  - "nielegalne powierzenie pracy (sprawa o wykroczenie)"
+
+analyses:
+  - "Per wojewoda: mediana czas_trwania_postepowania_miesiace, odsetek bezczynnosc_stwierdzona=tak i razace_naruszenie_prawa=tak — ranking urzędów wojewódzkich."
+  - "Per wojewoda i per WSA: odsetek grzywna_wymierzona, mediana grzywna_kwota_pln i suma_pieniezna_kwota_pln — czy sądy różnicują sankcje."
+  - "Trend kwartalny 2022–2026: liczba skarg, czas trwania, odsetek rażących naruszeń; przed/po 27.04.2025 (MOS) i po wejściu nowej ustawy o zatrudnianiu cudzoziemców."
+  - "Rozkład przyczyny_wskazywane_przez_organ × sad_uznal_przyczyny_za_usprawiedliwiajace — jak sądy oceniają argument przeciążenia urzędu."
+  - "Linia II OPS 5/19: udział odrzuceń przy sprawa_zalatwiona_przed_wyrokiem=przed_wniesieniem_skargi oraz stosunek_do_ii_ops_5_19 w czasie."

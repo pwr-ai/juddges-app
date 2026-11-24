@@ -1,0 +1,127 @@
+# Topic: Skargi na bezczynność / przewlekłość wojewodów w sprawach legalizacji pobytu cudzoziemców
+# Why: Masowe skargi (II SAB/<miasto>, symbol 658) na wielomiesięczne postępowania o zezwolenia
+#   pobytowe i Kartę Pobytu. Sporne: czy przyczyny organizacyjne (braki kadrowe, liczba wniosków)
+#   usprawiedliwiają zwłokę, kiedy bezczynność jest rażąca, kiedy wymierzać grzywnę / sumę pieniężną
+#   i jak wysoką; jak liczyć termin (art. 112a u.o.c.) oraz skutek załatwienia sprawy w toku sprawy.
+# Legal bases: art. 3 § 2 pkt 8, art. 53 § 2b, art. 149 § 1, § 1a, § 2, art. 154 § 6 p.p.s.a.;
+#   art. 35, 36, 37 k.p.a. (ponaglenie); ustawa z 12.12.2013 o cudzoziemcach: art. 112a (termin
+#   wydania decyzji o pobyt czasowy, zmieniany m.in. ustawą z 21.11.2025 [?]), art. 108 (legalny pobyt
+#   w toku postępowania, „stempel”), art. 109 (opinie służb); ustawa z 24.04.2025 o zmianie ustawy o
+#   cudzoziemcach (Dz.U. 2025 poz. 619; elektroniczne wnioski przez MOS); ustawa z 20.03.2025 o
+#   warunkach dopuszczalności powierzania pracy cudzoziemcom na terytorium RP [?].
+# Key rulings: uchwała 7 sędziów NSA z 22.06.2020, II OPS 5/19 — skarga na bezczynność wniesiona po
+#   zakończeniu postępowania przez organ (załatwieniu sprawy) jest niedopuszczalna („bezczynność
+#   historyczna”). Symbol 658 = skargi na bezczynność/przewlekłość; symbol podstawowy sprawy
+#   cudzoziemców 619x [?].
+# Applies to collection: see pl_cudzoziemcy_bezczynnosc_wojewody.queries.yaml
+title: pl_cudzoziemcy_bezczynnosc_wojewody
+description: "Ekstrakcja cech wyroków WSA/NSA w sprawach skarg na bezczynność lub przewlekłe prowadzenie postępowania przez wojewodów (i Szefa UdSC) w sprawach legalizacji pobytu i pracy cudzoziemców."
+type: object
+additionalProperties: false
+properties:
+  cudzoziemcy_bezczynnosc_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Bramka włączenia. 'tak' — orzeczenie rozpoznaje skargę (lub skargę kasacyjną od wyroku) na bezczynność lub przewlekłe prowadzenie postępowania przez wojewodę albo Szefa Urzędu do Spraw Cudzoziemców w sprawie zezwolenia na pobyt czasowy, pobyt stały, pobyt rezydenta długoterminowego UE, wymiany/wydania Karty Pobytu lub zezwolenia na pracę cudzoziemca; typowo sygnatura II SAB/... lub II OSK/... z symbolem 658. 'nie' — typowe fałszywe trafienia: skarga na merytoryczną decyzję odmowną (II SA/..., nie SAB), bezczynność w innych sprawach (dostęp do informacji publicznej, budowlane), sprawy azylowe/ochrony międzynarodowej, zobowiązanie do powrotu, sprawy karne o nielegalne zatrudnienie, sprawy cywilne. 'niejasne' — gdy nie wiadomo, czego dotyczyło postępowanie przed organem."
+  typ_skargi:
+    type: string
+    enum: [bezczynnosc, przewleklosc, bezczynnosc_i_przewleklosc, not_stated]
+    description: "Na co wniesiono skargę wg sentencji i uzasadnienia: 'bezczynnosc' (niezałatwienie sprawy w terminie, art. 37 § 1 pkt 1 k.p.a.), 'przewleklosc' (prowadzenie postępowania dłużej niż niezbędne, art. 37 § 1 pkt 2 k.p.a.), 'bezczynnosc_i_przewleklosc' gdy skarżący zarzuca oba. 'not_stated' gdy nie wynika."
+  typ_zezwolenia:
+    type: string
+    enum: [pobyt_czasowy_i_praca, pobyt_czasowy_niebieska_karta_ue, pobyt_czasowy_dzialalnosc_gospodarcza, pobyt_czasowy_laczenie_rodzin, pobyt_czasowy_studia, pobyt_czasowy_inny_cel, pobyt_staly, rezydent_dlugoterminowy_ue, zezwolenie_na_prace, wymiana_lub_wydanie_karty_pobytu, other, not_stated]
+    description: "Rodzaj zezwolenia / sprawy, której dotyczyło postępowanie przed organem. 'pobyt_czasowy_i_praca' = zezwolenie jednolite; 'pobyt_czasowy_inny_cel' gdy pobyt czasowy bez wskazanego lub z innym celem (np. okoliczności art. 187 u.o.c.); 'zezwolenie_na_prace' = zezwolenie na pracę wydawane przez wojewodę (nie pobytowe). Gdy wyrok mówi wyraźnie o pobycie czasowym, ale bez celu — 'pobyt_czasowy_inny_cel'; gdy nie da się ustalić nawet rodzaju pobytu — 'not_stated'."
+  wojewoda:
+    type: string
+    enum: [dolnoslaski, kujawsko_pomorski, lubelski, lubuski, lodzki, malopolski, mazowiecki, opolski, podkarpacki, podlaski, pomorski, slaski, swietokrzyski, warminsko_mazurski, wielkopolski, zachodniopomorski, szef_udsc, not_stated]
+    description: "Organ, którego bezczynność/przewlekłość jest przedmiotem skargi. Wojewodę identyfikuj po nazwie organu w sentencji ('Wojewody Wielkopolskiego' → wielkopolski); pomocniczo po sygnaturze WSA (II SAB/Po → wielkopolski, /Wr → dolnośląski, /Gl → śląski, /Wa → mazowiecki, /Kr → małopolski, /Gd → pomorski, /Łd → łódzki, /Lu → lubelski, /Bk → podlaski, /Ol → warmińsko-mazurski, /Sz → zachodniopomorski, /Bd → kujawsko-pomorski, /Go → lubuski, /Op → opolski, /Rz → podkarpacki, /Ke → świętokrzyski). 'szef_udsc' gdy skarga dotyczy organu II instancji. 'not_stated' gdy nie da się ustalić."
+  data_wniosku:
+    type: string
+    format: date
+    description: "Data złożenia wniosku o zezwolenie przez cudzoziemca (YYYY-MM-DD), jak podana w opisie stanu faktycznego. Jeżeli podano tylko miesiąc i rok, przyjmij pierwszy dzień miesiąca. Gdy brak — zwróć '1900-01-01' i ustaw data_wniosku_stated=false."
+  data_wniosku_stated:
+    type: boolean
+    description: "true jeśli wyrok podaje datę złożenia wniosku (co najmniej miesiąc i rok); false w przeciwnym razie."
+  czas_trwania_postepowania_miesiace:
+    type: number
+    description: "Czas trwania postępowania przed organem w miesiącach od złożenia wniosku do dnia wniesienia skargi albo — jeśli wyrok tak liczy — do dnia orzekania przez sąd lub załatwienia sprawy; zaokrąglij do 0,5. Jeżeli wyrok podaje okres w dniach, podziel przez 30. Gdy nie da się ustalić — 0 i _stated=false."
+  czas_trwania_postepowania_miesiace_stated:
+    type: boolean
+    description: "true jeśli czas trwania postępowania wynika z wyroku (wprost lub z dat), false gdy nie da się go ustalić."
+  ustawowy_termin_dni:
+    type: integer
+    description: "Termin załatwienia sprawy w dniach, który sąd uznał za właściwy (np. 60 dni z art. 112a u.o.c., 30/60 dni z art. 35 k.p.a., 90 dni dla rezydenta długoterminowego UE, inny wynikający z ustawy szczególnej lub wyznaczony przez organ na podstawie art. 36 k.p.a.). Zwróć 0, jeżeli sąd nie wskazuje terminu."
+  ponaglenie_zlozone:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy przed wniesieniem skargi złożono ponaglenie (art. 37 k.p.a.; warunek dopuszczalności skargi — art. 53 § 2b p.p.s.a.). 'nie' gdy sąd stwierdza brak ponaglenia (zwykle odrzucenie skargi). 'not_stated' gdy wyrok milczy."
+  organ_wyzszego_stopnia_rozpatrzyl:
+    type: string
+    enum: [uznal_ponaglenie_za_zasadne, uznal_ponaglenie_za_niezasadne, nie_rozpatrzyl, nie_dotyczy, not_stated]
+    description: "Jak Szef UdSC (organ wyższego stopnia) rozpatrzył ponaglenie przed wniesieniem skargi: uznał za zasadne (stwierdził bezczynność/przewlekłość, wyznaczył termin), za niezasadne, albo go nie rozpatrzył. 'nie_dotyczy' gdy ponaglenia nie było lub skarga dotyczy samego Szefa UdSC. 'not_stated' gdy brak informacji."
+  rozstrzygniecie_skargi:
+    type: string
+    enum: [uwzglednione_w_calosci, uwzglednione_czesciowo, oddalone, odrzucone, umorzone, skarga_kasacyjna_oddalona, wyrok_wsa_uchylony, other, not_stated]
+    description: "Rozstrzygnięcie sądu co do skargi na bezczynność/przewlekłość wg sentencji. 'uwzglednione_czesciowo' gdy np. stwierdzono bezczynność, ale oddalono wniosek o grzywnę lub sumę pieniężną. 'umorzone' gdy umorzono postępowanie sądowe w całości (np. cofnięcie skargi). Dla wyroków NSA użyj wartości 'skarga_kasacyjna_oddalona' / 'wyrok_wsa_uchylony'."
+  sad_zobowiazal_do_zalatwienia:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy sąd zobowiązał organ do wydania aktu / załatwienia sprawy w określonym terminie (art. 149 § 1 pkt 1 p.p.s.a.). 'nie' m.in. gdy sprawa została już załatwiona i sąd w tym zakresie umorzył postępowanie lub odstąpił od zobowiązania."
+  termin_zobowiazania_dni:
+    type: integer
+    description: "Termin w dniach, w jakim sąd zobowiązał organ do załatwienia sprawy, liczony zwykle od doręczenia prawomocnego wyroku wraz z aktami (np. 14, 30). Przelicz miesiące na dni (1 miesiąc = 30). 0 gdy sąd nie zobowiązał organu."
+  termin_zobowiazania_dni_stated:
+    type: boolean
+    description: "true jeśli sąd zobowiązał organ i podał termin; false w przeciwnym razie."
+  bezczynnosc_stwierdzona:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy sąd stwierdził, że organ dopuścił się bezczynności lub przewlekłego prowadzenia postępowania (art. 149 § 1 pkt 3 lub § 1 zd. 2 p.p.s.a.). 'tak' także gdy sąd stwierdził bezczynność mimo załatwienia sprawy w toku postępowania sądowego."
+  razace_naruszenie_prawa:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy sąd stwierdził, że bezczynność/przewlekłość miała miejsce z rażącym naruszeniem prawa (art. 149 § 1a p.p.s.a.). 'nie' gdy sąd wyraźnie stwierdza brak rażącego naruszenia. 'not_stated' gdy sąd się nie wypowiada (np. skarga odrzucona)."
+  grzywna_wymierzona:
+    type: boolean
+    description: "true jeśli sąd wymierzył organowi grzywnę (art. 149 § 2 w zw. z art. 154 § 6 p.p.s.a.); false w przeciwnym razie, w tym gdy oddalił wniosek o grzywnę."
+  grzywna_kwota_pln:
+    type: number
+    description: "Kwota grzywny w PLN wg sentencji. 0 gdy grzywny nie wymierzono."
+  suma_pieniezna_przyznana:
+    type: boolean
+    description: "true jeśli sąd przyznał skarżącemu od organu sumę pieniężną (art. 149 § 2 p.p.s.a.); false w przeciwnym razie."
+  suma_pieniezna_kwota_pln:
+    type: number
+    description: "Kwota przyznanej sumy pieniężnej w PLN wg sentencji. 0 gdy jej nie przyznano."
+  sprawa_zalatwiona_przed_wyrokiem:
+    type: string
+    enum: [przed_wniesieniem_skargi, po_wniesieniu_skargi, nie, not_stated]
+    description: "Czy i kiedy organ załatwił sprawę (wydał decyzję lub postanowienie kończące): 'przed_wniesieniem_skargi' (zwykle odrzucenie skargi — uchwała NSA II OPS 5/19), 'po_wniesieniu_skargi' ale przed wyrokiem (zwykle umorzenie w zakresie zobowiązania, ewentualnie stwierdzenie bezczynności), 'nie' gdy sprawa nadal niezałatwiona w dniu wyrokowania. 'not_stated' gdy brak informacji."
+  przyczyny_wskazywane_przez_organ:
+    type: array
+    items:
+      type: string
+      enum: [braki_kadrowe, duza_liczba_wnioskow, braki_formalne_wniosku, wezwania_do_uzupelnienia_dokumentow, oczekiwanie_na_opinie_sluzb, zawieszenie_terminow_covid, problemy_systemow_informatycznych, zmiany_przepisow, inne, brak]
+    description: "Przyczyny zwłoki podnoszone przez organ w odpowiedzi na skargę lub w odpowiedzi na ponaglenie, jak streszcza je sąd. 'oczekiwanie_na_opinie_sluzb' = informacje od Komendanta SG, ABW, Policji (art. 109 u.o.c.); 'zawieszenie_terminow_covid' = art. 15zzs specustawy COVID-19; 'problemy_systemow_informatycznych' = MOS, systemy kolejkowe. Zwróć ['brak'] gdy organ nie podał przyczyn lub wyrok tego nie opisuje. Można zaznaczyć kilka."
+  sad_uznal_przyczyny_za_usprawiedliwiajace:
+    type: string
+    enum: [tak, nie, czesciowo, not_stated]
+    description: "Jak sąd ocenił przyczyny zwłoki wskazane przez organ: 'nie' — typowo gdy sąd stwierdza, że problemy organizacyjne i kadrowe nie zwalniają z obowiązku terminowego działania; 'tak' — gdy uznał zwłokę za usprawiedliwioną (np. braki wniosku z winy cudzoziemca); 'czesciowo' — gdy uznał część okresu za usprawiedliwioną. 'not_stated' gdy sąd się nie odnosi."
+  koszty_zasadzone_kwota_pln:
+    type: number
+    description: "Kwota zwrotu kosztów postępowania sądowego zasądzona od organu na rzecz skarżącego w PLN (wpis + ewentualnie wynagrodzenie pełnomocnika i opłata od pełnomocnictwa). 0 gdy kosztów nie zasądzono lub kwoty nie podano."
+  obywatelstwo_cudzoziemca:
+    type: string
+    enum: [ukraina, bialorus, indie, gruzja, filipiny, kolumbia, other, not_stated]
+    description: "Obywatelstwo skarżącego cudzoziemca, jeżeli wynika z wyroku (np. 'obywatel Ukrainy'). Uwaga: w publikowanych wyrokach dane są często anonimizowane — wtedy 'not_stated'. 'other' dla obywatelstwa spoza listy."
+  powolane_orzeczenia_kluczowe:
+    type: array
+    items:
+      type: string
+      enum: [ii_ops_5_19, inne_uchwaly_nsa, inne_wyroki_nsa, wyroki_wsa, orzecznictwo_etpc_tsue, brak]
+    description: "Orzeczenia przywołane w uzasadnieniu: 'ii_ops_5_19' gdy powołano uchwałę NSA z 22.06.2020, II OPS 5/19; 'inne_uchwaly_nsa' dla pozostałych uchwał (sygn. ... OPS/FPS/GPS); 'inne_wyroki_nsa' dla wyroków NSA (np. II OSK ...); 'wyroki_wsa' dla wyroków WSA; 'orzecznictwo_etpc_tsue' dla ETPC lub TSUE. ['brak'] gdy nie powołano żadnych orzeczeń."
+  stosunek_do_ii_ops_5_19:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje uchwałę II OPS 5/19: 'stosuje' (np. odrzuca skargę wniesioną po załatwieniu sprawy), 'odroznia' (wskazuje, że sytuacja jest inna, np. sprawę załatwiono dopiero po wniesieniu skargi), 'polemizuje' (krytycznie). 'nie_dotyczy' gdy uchwały nie powołano."
+required: [cudzoziemcy_bezczynnosc_dotyczy, typ_skargi, typ_zezwolenia, wojewoda, data_wniosku, data_wniosku_stated, czas_trwania_postepowania_miesiace, czas_trwania_postepowania_miesiace_stated, ustawowy_termin_dni, ponaglenie_zlozone, organ_wyzszego_stopnia_rozpatrzyl, rozstrzygniecie_skargi, sad_zobowiazal_do_zalatwienia, termin_zobowiazania_dni, termin_zobowiazania_dni_stated, bezczynnosc_stwierdzona, razace_naruszenie_prawa, grzywna_wymierzona, grzywna_kwota_pln, suma_pieniezna_przyznana, suma_pieniezna_kwota_pln, sprawa_zalatwiona_przed_wyrokiem, przyczyny_wskazywane_przez_organ, sad_uznal_przyczyny_za_usprawiedliwiajace, koszty_zasadzone_kwota_pln, obywatelstwo_cudzoziemca, powolane_orzeczenia_kluczowe, stosunek_do_ii_ops_5_19]
