@@ -228,7 +228,7 @@ export const KeyInformation = memo(function KeyInformation({
     >
       {title && (
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-serif font-medium text-lg text-ink">{title}</h3>
+          <h2 className="font-serif font-medium text-lg text-ink">{title}</h2>
           <span className="text-xs font-mono text-ink-soft">
             {fields.length} {fields.length === 1 ? 'field' : 'fields'}
           </span>

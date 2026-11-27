@@ -26,6 +26,7 @@ const EmptyCollectionState: FC<EmptyCollectionStateProps> = ({
       <EmptyState
         icon={FileText}
         title="Empty Collection"
+        titleAs="h2"
         description="Start building your research collection by adding relevant legal documents."
         tipPosition="below"
         tip={
