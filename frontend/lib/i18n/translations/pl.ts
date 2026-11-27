@@ -693,7 +693,7 @@ export const pl: Translations = {
     cohortFilterActive: 'Filtr: {{value}} · {{count}} z {{total}} wyników rankingu',
     cohortClearFilter: 'Wyczyść filtr',
     cohortNoRanked: 'Żadne z orzeczeń w rankingu nie ma tej wartości — występuje w pozostałej części kohorty podobnych spraw.',
-    cohortEmpty: 'Żadna z podobnych spraw nie ma wartości dla tego pola.',
+    cohortEmpty: 'Żadna z podobnych spraw nie ma znanej wartości dla tego pola.',
     resolvedCase: 'Dopasowano sprawę {{caseNumber}} — pokazuję orzeczenia podobne do niej.',
   },
 };

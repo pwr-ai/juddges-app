@@ -75,6 +75,95 @@ describe("CohortInsights", () => {
     ).toBeInTheDocument();
   });
 
+  // AC-1, AC-2, AC-4
+  it("headline ignores a dominant outcome_unknown bucket", () => {
+    const base = makeCohort()[0];
+    const row = (id: string, appeal_outcome: string[]): PrecedentCohortItem => ({
+      ...base,
+      document_id: id,
+      appeal_outcome,
+    });
+    const cohort = [
+      row("u1", ["outcome_unknown"]),
+      row("u2", ["outcome_unknown"]),
+      row("u3", ["outcome_unknown"]),
+      row("k1", ["outcome_dismissed_or_refused"]),
+      row("k2", ["outcome_dismissed_or_refused"]),
+      row("k3", ["outcome_allowed"]),
+      row("m1", []),
+    ];
+
+    render(
+      <CohortInsights
+        cohort={cohort}
+        filter={null}
+        filteredRankedCount={0}
+        totalRankedCount={7}
+        onFilterChange={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByText("precedents.cohortHeadline:count=2,total=7,value=Dismissed or refused"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/value=Outcome unknown|value=Unknown/i)).not.toBeInTheDocument();
+    // The chart keeps the unknown bar.
+    expect(screen.getByTestId("bar-outcome_unknown")).toBeInTheDocument();
+  });
+
+  // AC-1 (headline chosen before the top-10 slice)
+  it("headline finds a known bucket ranked below the top 10 buckets", () => {
+    const base = makeCohort()[0];
+    const row = (id: string, appeal_outcome: string[]): PrecedentCohortItem => ({
+      ...base,
+      document_id: id,
+      appeal_outcome,
+    });
+    const cohort: PrecedentCohortItem[] = [];
+    for (let i = 1; i <= 10; i++) {
+      cohort.push(row(`x${i}a`, [`reason${i}_unknown`]), row(`x${i}b`, [`reason${i}_unknown`]));
+    }
+    cohort.push(row("k1", ["outcome_dismissed_or_refused"]));
+
+    render(
+      <CohortInsights
+        cohort={cohort}
+        filter={null}
+        filteredRankedCount={0}
+        totalRankedCount={21}
+        onFilterChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/^precedents\.cohortHeadline:count=1,total=21,value=/)).toBeInTheDocument();
+    expect(screen.queryByText("precedents.cohortEmpty")).not.toBeInTheDocument();
+  });
+
+  // AC-3, AC-4
+  it("falls back to cohortEmpty when every bucket is unknown", () => {
+    const base = makeCohort()[0];
+    const cohort = [
+      { ...base, document_id: "u1", appeal_outcome: ["outcome_unknown"] },
+      { ...base, document_id: "u2", appeal_outcome: ["outcome_unknown"] },
+      { ...base, document_id: "u3", appeal_outcome: ["dont_know"] },
+    ];
+
+    render(
+      <CohortInsights
+        cohort={cohort}
+        filter={null}
+        filteredRankedCount={0}
+        totalRankedCount={3}
+        onFilterChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("precedents.cohortEmpty")).toBeInTheDocument();
+    expect(screen.queryByText(/precedents\.cohortHeadline/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("chart")).toBeInTheDocument();
+    expect(screen.getByTestId("bar-outcome_unknown")).toBeInTheDocument();
+  });
+
   it("groups by a different field when the selector changes", () => {
     render(
       <CohortInsights

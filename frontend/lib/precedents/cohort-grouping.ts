@@ -91,8 +91,29 @@ export function projectRankedPrecedents(
   return ranked.filter(({ precedent }) => ids.has(precedent.document_id));
 }
 
-/** The largest value bucket — the one the headline sentence talks about. */
+/** Placeholder tokens that mean "no finding" — never a headline. */
+function isUnknownValue(value: string): boolean {
+  const v = value.trim().toLowerCase();
+  return v === "dont_know" || v.endsWith("_unknown");
+}
+
+/**
+ * The largest bucket that carries a finding, skipping `*_unknown` / `dont_know`
+ * placeholders. Null when there is none (or for numeric aggregates). Pass an
+ * aggregate that was not truncated to top-N, or use `cohortHeadline`.
+ */
 export function topBucket(aggregate: FieldAggregate): { value: string; count: number } | null {
   if (aggregate.kind === "numeric") return null;
-  return aggregate.values[0] ?? null;
+  return aggregate.values.find((b) => !isUnknownValue(b.value)) ?? null;
+}
+
+/**
+ * Headline bucket for a cohort, chosen from the full sorted bucket list so a
+ * known value ranked below the top-N chart cut-off is still found.
+ */
+export function cohortHeadline(
+  cohort: PrecedentCohortItem[],
+  field: CohortGroupField,
+): { value: string; count: number } | null {
+  return topBucket(groupCohort(cohort, field, Number.POSITIVE_INFINITY));
 }
