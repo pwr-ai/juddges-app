@@ -538,6 +538,8 @@ class TestUnifySchemaFields:
             "judgment_link",
             "metadata_completeness",
             "document_scope",
+            "analyst_notes",
+            "party_type_enum_placeholder",
             "court",
         )
         assert _names(unify_schema_fields(schema)) == ["verdict", "court"]
@@ -579,6 +581,7 @@ class TestUnifySchemaFields:
                 ["consumer_status_basis"],
             ),
             (["sections_list", "sections"], ["sections"]),
+            (["culpability_raw_text", "culpability"], ["culpability"]),
         ],
     )
     def test_collapse_examples(self, names, kept):

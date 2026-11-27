@@ -170,10 +170,12 @@ BOOKKEEPING_FIELD_NAMES = frozenset(
         "judgment_link",
         "metadata_completeness",
         "document_scope",
+        "analyst_notes",
     }
 )
 _BOOKKEEPING_PREFIXES = ("extraction_", "record_")
 _VARIANT_SUFFIXES = (
+    "_raw_text",
     "_as_stated",
     "_structured",
     "_details",
@@ -190,6 +192,7 @@ _VARIANT_PREFIX = "applied_"
 def _is_bookkeeping(name: str) -> bool:
     return (
         "provenance" in name
+        or name.endswith("_placeholder")
         or name.startswith(_BOOKKEEPING_PREFIXES)
         or name in BOOKKEEPING_FIELD_NAMES
     )
