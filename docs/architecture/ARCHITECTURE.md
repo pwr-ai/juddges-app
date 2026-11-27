@@ -331,12 +331,10 @@ packages/
 │   │   └── supabase_db.py    # Database client
 │   ├── models.py             # Data models
 │   └── utils.py              # Utilities
-│
-└── schema_generator_agent/
-    ├── graph.py              # LangGraph agent
-    ├── prompts.py            # Agent prompts
-    └── tools.py              # Agent tools
 ```
+
+Agentic schema generation is provided by the PyPI package `schematize`, wrapped by
+`backend/app/schemas_pkg/schematize_agent.py` (not a workspace package).
 
 ## Database Design
 

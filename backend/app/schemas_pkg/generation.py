@@ -8,15 +8,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
-from juddges_search.llms import get_default_llm
 from juddges_search.models import DocumentType
 from langgraph.types import Command
 from loguru import logger
-from schema_generator_agent.agents.agent_state import AgentState
-from schema_generator_agent.agents.schema_generator import (
-    SchemaGenerator,
-    load_prompts,
-)
 
 from app.core.session_store import SESSION_TTL, SessionStore
 
@@ -25,10 +19,17 @@ from .models import (
     SchemaGenerationResponse,
     SchemaRefinementRequest,
 )
+from .schematize_agent import (
+    JuddgesSchemaGenerator,
+    build_initial_state,
+    build_schema_generator,
+    graph_config,
+    state_to_response,
+)
 
 # In-memory store for agent objects (not JSON-serializable, must stay in-process).
 # session_id -> (agent, created_at)
-_generation_sessions: dict[str, tuple[SchemaGenerator, datetime]] = {}
+_generation_sessions: dict[str, tuple[JuddgesSchemaGenerator, datetime]] = {}
 
 
 def _build_session_store() -> SessionStore:
@@ -85,7 +86,7 @@ def get_or_create_generation_agent(
     session_id: str,
     document_type: DocumentType,
     request: Request,
-) -> SchemaGenerator:
+) -> JuddgesSchemaGenerator:
     """
     Get existing agent or create new one for the generation session.
 
@@ -95,31 +96,14 @@ def get_or_create_generation_agent(
         request: FastAPI request object (for accessing app state)
 
     Returns:
-        SchemaGenerator instance
+        JuddgesSchemaGenerator instance
     """
     if session_id in _generation_sessions:
         logger.info(f"Reusing existing generation agent for session: {session_id}")
         return _generation_sessions[session_id][0]
 
     logger.info(f"Creating new generation agent for session: {session_id}")
-    llm = get_default_llm(use_mini_model=True)
-    prompts = load_prompts(document_type=document_type)
-
-    agent = SchemaGenerator(
-        llm,
-        document_type,
-        prompts["problem_definer_helper_prompt"],
-        prompts["problem_definer_prompt"],
-        prompts["schema_generator_prompt"],
-        prompts["schema_assessment_prompt"],
-        prompts["schema_refiner_prompt"],
-        prompts["query_generator_prompt"],
-        prompts["schema_data_assessment_prompt"],
-        prompts["schema_data_assessment_merger_prompt"],
-        prompts["schema_data_refiner_prompt"],
-        use_interrupt=True,
-        graph_compilation_kwargs={"checkpointer": request.app.state.checkpointer},
-    )
+    agent = build_schema_generator(request.app.state.checkpointer)
 
     _generation_sessions[session_id] = (agent, datetime.now(UTC))
     return agent
@@ -171,29 +155,14 @@ def register_generation_routes(router: APIRouter) -> None:
             )
 
             created_at = datetime.now(UTC)
-            initial_state = AgentState(
-                messages=[],
-                user_input=params.prompt,
-                problem_help=None,
-                user_feedback=None,
-                problem_definition=None,
-                query=None,
-                current_schema=params.current_schema,
-                schema_history=[],
-                refinement_rounds=0,
-                assessment_result=None,
-                merged_data_assessment=None,
-                data_refinement_rounds=0,
-                conversation_id=session_id,
-                collection_id=params.collection_id,
-                confidence_score=None,
-                session_metadata={"created_at": created_at.isoformat()},
-            )
+            initial_state = build_initial_state(params.prompt, params.current_schema)
 
-            response = await agent.graph.ainvoke(
+            state = await agent.graph.ainvoke(
                 input=initial_state,
-                config={"configurable": {"thread_id": session_id}},
+                config=graph_config(session_id),
             )
+            response = state_to_response(state)
+            response["session_metadata"] = {"created_at": created_at.isoformat()}
 
             # Persist serialisable metadata to Redis (TTL-managed).
             await _session_store.set(
@@ -268,16 +237,12 @@ def register_generation_routes(router: APIRouter) -> None:
             logger.info(f"Refining schema generation session: {session_id}")
             agent, _ = _generation_sessions[session_id]
 
-            response = await agent.graph.ainvoke(
+            state = await agent.graph.ainvoke(
                 Command(resume=params.user_feedback),
-                config={"configurable": {"thread_id": session_id}},
+                config=graph_config(session_id),
             )
-
-            # Update confidence score from assessment if available
-            if response.get("merged_data_assessment"):
-                response["confidence_score"] = response["merged_data_assessment"].get(
-                    "confidence_score", 0.8
-                )
+            # confidence_score is derived from the merged data assessment.
+            response = state_to_response(state)
 
             response["session_id"] = session_id
             response["status"] = "active"
