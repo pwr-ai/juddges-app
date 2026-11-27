@@ -408,7 +408,7 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
 
  {/* Table */}
  <div className="rounded-none border border-rule bg-parchment overflow-hidden">
- <Table>
+ <Table scrollLabel="Schema fields table">
  <TableHeader>
  {table.getHeaderGroups().map((headerGroup) => (
  <TableRow
