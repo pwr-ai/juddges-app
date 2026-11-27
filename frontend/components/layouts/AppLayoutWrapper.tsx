@@ -109,9 +109,9 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
                 <AppSidebar />
                 <div className="flex-1 flex flex-col bg-background overflow-hidden">
                   <NavbarWithSuspense />
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 flex flex-col overflow-y-auto">
                     <FlowStepper />
-                    <main className="bg-background">
+                    <main className="bg-background flex-1 min-h-0">
                       {children}
                     </main>
                   </div>

@@ -359,7 +359,7 @@ export default function ChatPage(): React.JSX.Element {
  // Show loading state while auth is loading
  if (authLoading) {
  return (
- <div className="flex flex-col h-[calc(100vh-4rem)] relative overflow-hidden">
+ <div className="flex flex-col h-full relative overflow-hidden">
  {/* Loading indicator */}
  <div className="flex-1 flex items-center justify-center">
  <LoadingIndicator

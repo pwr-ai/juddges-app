@@ -35,7 +35,7 @@ test.describe('chat composer stays inside the viewport', () => {
         await setSyntheticSession(context);
         await page.goto(route.path);
 
-        const composer = page.getByPlaceholder('Type your message...');
+        const composer = page.getByRole('main').getByRole('textbox').first();
         await expect(composer).toBeVisible();
 
         const box = await composer.boundingBox();
