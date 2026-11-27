@@ -9,7 +9,7 @@ const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 export function CompactFooter({ className }: { className?: string }) {
   const { user, loading } = useAuth();
-  // /help and /dataset-comparison are auth-gated (public-route-policy.ts): a
+  // /help, /changelog and /dataset-comparison are auth-gated (public-route-policy.ts): a
   // guest clicking them is bounced to /auth/login, so hide them for guests.
   // While auth is still loading they stay visible: the common case is a
   // signed-in user, for whom hiding-then-showing would shift the link row on
@@ -62,6 +62,11 @@ export function CompactFooter({ className }: { className?: string }) {
             {showGatedLinks && (
               <Link href="/help" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
                 Help
+              </Link>
+            )}
+            {showGatedLinks && (
+              <Link href="/changelog" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
+                Changelog
               </Link>
             )}
             <Link href="/contact" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">

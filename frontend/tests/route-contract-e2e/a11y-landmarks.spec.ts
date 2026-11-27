@@ -97,6 +97,7 @@ test.describe('shell landmarks and contrast', () => {
     await expect(footer.getByRole('link', { name: 'Terms' })).toBeVisible();
     await expect(footer.locator('a[href="/help"]')).toHaveCount(0);
     await expect(footer.locator('a[href="/dataset-comparison"]')).toHaveCount(0);
+    await expect(footer.locator('a[href="/changelog"]')).toHaveCount(0);
 
     for (const link of await footer.getByRole('link').all()) {
       const box = await link.boundingBox();

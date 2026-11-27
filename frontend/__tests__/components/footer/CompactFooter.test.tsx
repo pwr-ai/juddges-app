@@ -8,7 +8,7 @@ jest.mock('@/contexts/AuthContext', () => ({
 
 import { CompactFooter } from '@/components/footer/CompactFooter';
 
-const GATED = ['/help', '/dataset-comparison'];
+const GATED = ['/help', '/changelog', '/dataset-comparison'];
 
 describe('CompactFooter', () => {
   it('hides auth-gated links for guests', () => {
