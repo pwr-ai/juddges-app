@@ -37,13 +37,13 @@ describe("FieldCard", () => {
     expect(items[0].count).toBe(60);
   });
 
-  it("bar click reports the real value, not the other/missing rows", () => {
+  it("value button reports the real value, and there is none for other/missing rows", () => {
     const onBarClick = jest.fn();
     render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" onBarClick={onBarClick} />);
     fireEvent.click(screen.getByRole("button", { name: "dismissed: 30" }));
     expect(onBarClick).toHaveBeenCalledWith("appeal_outcome", "dismissed");
-    expect(screen.queryByRole("button", { name: /statsOther/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /statsMissing/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^extraction.statsOther: / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^extraction.statsMissing: / })).toBeNull();
     expect(onBarClick).toHaveBeenCalledTimes(1);
   });
 
