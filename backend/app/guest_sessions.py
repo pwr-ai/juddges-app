@@ -19,6 +19,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
+from app.core.redis_policy import async_retry
 
 # Environment detection for secure cookies
 IS_PRODUCTION = os.getenv("PYTHON_ENV", "development") == "production"
@@ -43,6 +44,7 @@ def get_redis_client():
             password=redis_password,
             db=1,  # Use separate DB for sessions
             decode_responses=True,
+            retry=async_retry(),
         )
         logger.info(
             f"Initialized Redis client for guest sessions: {redis_host}:{redis_port}"

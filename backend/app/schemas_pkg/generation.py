@@ -44,6 +44,8 @@ def _build_session_store() -> SessionStore:
     try:
         import redis.asyncio as aioredis
 
+        from app.core.redis_policy import async_retry
+
         redis_port = int(os.getenv("REDIS_PORT", "6379"))
         redis_auth = os.getenv("REDIS_AUTH") or None
         client = aioredis.Redis(
@@ -52,6 +54,7 @@ def _build_session_store() -> SessionStore:
             password=redis_auth,
             db=2,  # Dedicated DB for schema generation session metadata
             decode_responses=True,
+            retry=async_retry(),
         )
         logger.info(
             f"Schema session store initialised with Redis at {redis_host}:{redis_port}"

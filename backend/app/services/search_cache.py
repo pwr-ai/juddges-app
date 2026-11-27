@@ -46,6 +46,8 @@ _redis_client = None
 try:
     import redis.asyncio as redis
 
+    from app.core.redis_policy import async_retry
+
     _redis_client = redis.Redis(
         host=os.getenv("REDIS_HOST", "redis"),
         port=int(os.getenv("REDIS_PORT", "6379")),
@@ -53,6 +55,7 @@ try:
         decode_responses=False,  # we store JSON bytes
         socket_connect_timeout=2,
         socket_timeout=2,
+        retry=async_retry(),
     )
     _REDIS_OK = True
     logger.info("Redis client initialized for search caching")
