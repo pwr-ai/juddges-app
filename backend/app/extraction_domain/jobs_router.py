@@ -169,12 +169,15 @@ def _with_job_progress(
     job_record: dict,
     completed_documents: int | None = None,
 ) -> ExtractionJobDetailResponse:
-    """Attach the persisted job-row fields to a job response.
+    """Attach the persisted job-row fields and metadata to a job response.
 
     Attempt, progress counters and the collection/schema identity live on the
     `extraction_jobs` row, not in Celery state, so every response path in the
     detail endpoint has to copy them across. `attempts` is what tells the UI a
     job was interrupted and resumed instead of run once.
+
+    The result is an `ExtractionJobDetailResponse`: the incoming response's
+    fields, the row-owned counters, and the collection/schema ids and names.
 
     Fields stay None when the row does not carry a usable value — a missing
     counter is not a zero. Names are resolved from `collections` and
@@ -182,21 +185,24 @@ def _with_job_progress(
     """
     collection_id = job_record.get("collection_id")
     schema_id = job_record.get("schema_id")
+    # Start from the incoming response so a field added to BatchExtractionResponse
+    # later is carried across instead of silently dropped; the job row then
+    # overrides the fields it owns.
     return ExtractionJobDetailResponse(
-        task_id=response.task_id,
-        status=response.status,
-        results=response.results,
-        attempts=_optional_count(job_record.get("attempts")),
-        completed_documents=(
-            completed_documents
-            if completed_documents is not None
-            else _optional_count(job_record.get("completed_documents"))
-        ),
-        total_documents=_optional_count(job_record.get("total_documents")),
-        collection_id=collection_id if isinstance(collection_id, str) else None,
-        collection_name=_lookup_name("collections", collection_id),
-        schema_id=schema_id if isinstance(schema_id, str) else None,
-        schema_name=_lookup_name("extraction_schemas", schema_id),
+        **{
+            **response.model_dump(),
+            "attempts": _optional_count(job_record.get("attempts")),
+            "completed_documents": (
+                completed_documents
+                if completed_documents is not None
+                else _optional_count(job_record.get("completed_documents"))
+            ),
+            "total_documents": _optional_count(job_record.get("total_documents")),
+            "collection_id": collection_id if isinstance(collection_id, str) else None,
+            "collection_name": _lookup_name("collections", collection_id),
+            "schema_id": schema_id if isinstance(schema_id, str) else None,
+            "schema_name": _lookup_name("extraction_schemas", schema_id),
+        }
     )
 
 
