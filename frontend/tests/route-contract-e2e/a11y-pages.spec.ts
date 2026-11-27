@@ -28,7 +28,7 @@ interface AxeViolation {
   nodes: Array<{ target: unknown[]; html: string }>;
 }
 
-async function axeViolations(page: Page): Promise<AxeViolation[]> {
+async function axeViolations(page: Page, rules: string[] = RULES): Promise<AxeViolation[]> {
   await page.addScriptTag({ path: AXE_PATH });
   return page.evaluate(async (rules) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,7 +41,7 @@ async function axeViolations(page: Page): Promise<AxeViolation[]> {
         nodes: v.nodes.map((n) => ({ target: n.target, html: n.html.slice(0, 160) })),
       }),
     );
-  }, RULES);
+  }, rules);
 }
 
 async function resetAdapter(request: APIRequestContext): Promise<void> {
@@ -113,6 +113,14 @@ test.describe('page-level a11y semantics (axe)', () => {
       expect(await axeViolations(page)).toEqual([]);
     });
   }
+
+  test('guest: /status keeps its h1 when the status API fails', async ({ page }) => {
+    // The stub has no system-status fixture, so the page lands in its error
+    // state, the branch that used to render only an h2.
+    await page.goto('/status');
+    await expect(page.getByRole('heading', { level: 1, name: 'System Status' })).toBeVisible();
+    expect(await axeViolations(page, ['page-has-heading-one', 'heading-order'])).toEqual([]);
+  });
 
   test('collections: Tab reaches each card title link once and Enter opens the collection', async ({
     page,
