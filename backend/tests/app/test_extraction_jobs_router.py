@@ -694,7 +694,8 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents, attempts",
+            "job_id, user_id, status, completed_documents, total_documents, attempts, "
+            "collection_id, schema_id",
             "job_id, user_id, results",
         ]
 
@@ -737,7 +738,8 @@ class TestGetExtractionJobEndpoint:
             ]
             selected_fields = query.select.call_args.args[0]
             assert selected_fields == (
-                "job_id, user_id, status, completed_documents, total_documents, attempts"
+                "job_id, user_id, status, completed_documents, total_documents, attempts, "
+                "collection_id, schema_id"
             )
             assert "results" not in selected_fields
             assert "document_ids" not in selected_fields
@@ -870,7 +872,8 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents, attempts"
+            "job_id, user_id, status, completed_documents, total_documents, attempts, "
+            "collection_id, schema_id"
         ]
 
     @pytest.mark.unit
@@ -920,7 +923,8 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents, attempts",
+            "job_id, user_id, status, completed_documents, total_documents, attempts, "
+            "collection_id, schema_id",
             (
                 "job_id, user_id, status, completed_documents, total_documents, "
                 "attempts, collection_id, schema_id, document_ids, language, "
@@ -1547,3 +1551,138 @@ class TestGetExtractionJobResultsPage:
 
         assert response.status_code == 422
         mock_supabase.rpc.assert_not_called()
+
+
+_COLLECTION_ID = "aaaaaaaa-1111-4222-8333-444444444444"
+_SCHEMA_ID = "bbbbbbbb-1111-4222-8333-444444444444"
+
+
+def _metadata_job_store(
+    job_row: dict, names: dict[str, dict | None], failing: tuple[str, ...] = ()
+) -> MagicMock:
+    """Store double that answers per table: the job row plus name lookups (#527)."""
+
+    def table(name: str) -> MagicMock:
+        chain = MagicMock()
+        chain.select.return_value = chain
+        chain.eq.return_value = chain
+        chain.limit.return_value = chain
+        chain.single.return_value = chain
+        if name in failing:
+            chain.execute.side_effect = RuntimeError("boom")
+            return chain
+        row = job_row if name == "extraction_jobs" else names.get(name)
+        chain.execute.return_value = MagicMock(data=[row] if row else [])
+        return chain
+
+    store = MagicMock()
+    store.table.side_effect = table
+    return store
+
+
+async def _get_job_with_store(client, headers, store):
+    _install_jwt_user_override(_USER_001)
+    mock_result = MagicMock()
+    mock_result.state = "STARTED"
+    mock_result.ready.return_value = False
+    mock_result.info = None
+    with (
+        patch(
+            "app.extraction_domain.jobs_router.AsyncResult", return_value=mock_result
+        ),
+        patch(
+            "app.extraction_domain.jobs_router.update_job_status_in_supabase",
+            return_value=True,
+        ),
+        patch("app.extraction_domain.jobs_router.supabase", store),
+    ):
+        return await client.get(
+            f"/extractions/{_GET_JOB_ID}",
+            headers={**headers, **_BEARER_HEADERS},
+        )
+
+
+class TestExtractionJobMetadata:
+    """GET /extractions/{job_id} carries collection/schema identity (#527)."""
+
+    @pytest.mark.unit
+    async def test_detail_returns_ids_and_resolved_names(
+        self, client, valid_api_headers
+    ) -> None:
+        store = _metadata_job_store(
+            {
+                "job_id": _GET_JOB_ID,
+                "user_id": _USER_001,
+                "status": "STARTED",
+                "collection_id": _COLLECTION_ID,
+                "schema_id": _SCHEMA_ID,
+            },
+            {
+                "collections": {"name": "Tax rulings"},
+                "extraction_schemas": {"name": "Base schema"},
+            },
+        )
+        response = await _get_job_with_store(client, valid_api_headers, store)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["collection_id"] == _COLLECTION_ID
+        assert data["collection_name"] == "Tax rulings"
+        assert data["schema_id"] == _SCHEMA_ID
+        assert data["schema_name"] == "Base schema"
+
+    @pytest.mark.unit
+    async def test_detail_never_selects_results_column(
+        self, client, valid_api_headers
+    ) -> None:
+        store = _metadata_job_store(
+            {"job_id": _GET_JOB_ID, "user_id": _USER_001, "status": "STARTED"}, {}
+        )
+        await _get_job_with_store(client, valid_api_headers, store)
+
+        for call in store.table.return_value.select.call_args_list:
+            assert "results" not in call.args[0]
+
+    @pytest.mark.unit
+    async def test_detail_name_lookup_failure_leaves_names_null(
+        self, client, valid_api_headers
+    ) -> None:
+        store = _metadata_job_store(
+            {
+                "job_id": _GET_JOB_ID,
+                "user_id": _USER_001,
+                "status": "STARTED",
+                "collection_id": _COLLECTION_ID,
+                "schema_id": _SCHEMA_ID,
+            },
+            {},
+            failing=("collections", "extraction_schemas"),
+        )
+        response = await _get_job_with_store(client, valid_api_headers, store)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["collection_id"] == _COLLECTION_ID
+        assert data["collection_name"] is None
+        assert data["schema_name"] is None
+
+    @pytest.mark.unit
+    async def test_detail_without_ids_returns_null_metadata(
+        self, client, valid_api_headers
+    ) -> None:
+        store = _metadata_job_store(
+            {"job_id": _GET_JOB_ID, "user_id": _USER_001, "status": "STARTED"}, {}
+        )
+        response = await _get_job_with_store(client, valid_api_headers, store)
+
+        data = response.json()
+        for key in ("collection_id", "collection_name", "schema_id", "schema_name"):
+            assert data[key] is None
+
+    @pytest.mark.unit
+    def test_batch_submit_contract_is_unchanged(self) -> None:
+        from app.models import BatchExtractionResponse, ExtractionJobDetailResponse
+
+        for key in ("collection_id", "collection_name", "schema_id", "schema_name"):
+            assert key not in BatchExtractionResponse.model_fields
+            assert key in ExtractionJobDetailResponse.model_fields

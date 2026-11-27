@@ -66,7 +66,7 @@ export default function CollectionsPage() {
  const data = await getCollections();
  pageLogger.info('Collections loaded successfully', {
  count: data.length,
- collections: data.map(c => ({ id: c.id, name: c.name, documentCount: c.documents.length }))
+ collections: data.map(c => ({ id: c.id, name: c.name, documentCount: c.document_count ?? c.documents.length }))
  });
  setCollections(data);
  } catch (error) {
@@ -444,7 +444,7 @@ export default function CollectionsPage() {
           {/* Collection Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
             {paginatedCollections.map((collection) => {
-              const docCount = collection.documents.length;
+              const docCount = collection.document_count ?? collection.documents.length;
 
               return (
                 <EditorialCard
