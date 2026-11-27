@@ -283,25 +283,10 @@ class TestSchemaGeneratorSessionIsolation:
 
         with (
             patch("app.api.schema_generator._generation_sessions", {}) as sessions,
-            patch("app.api.schema_generator.SchemaGenerator", return_value=mock_agent),
             patch(
-                "app.api.schema_generator.load_prompts",
-                return_value=dict.fromkeys(
-                    [
-                        "problem_definer_helper_prompt",
-                        "problem_definer_prompt",
-                        "schema_generator_prompt",
-                        "schema_assessment_prompt",
-                        "schema_refiner_prompt",
-                        "query_generator_prompt",
-                        "schema_data_assessment_prompt",
-                        "schema_data_assessment_merger_prompt",
-                        "schema_data_refiner_prompt",
-                    ],
-                    "",
-                ),
+                "app.api.schema_generator.build_schema_generator",
+                return_value=mock_agent,
             ),
-            patch("app.api.schema_generator.get_default_llm"),
         ):
             result = get_or_create_agent(
                 session_id="my-session",

@@ -28,8 +28,7 @@ backend/
 │   ├── feedback.py        # User feedback system
 │   └── ...
 ├── packages/              # Reusable packages
-│   ├── juddges_search/    # RAG search implementation
-│   └── schema_generator_agent/
+│   └── juddges_search/    # RAG search implementation
 ├── tests/                 # Test suite
 ├── scripts/               # Utility scripts
 └── pyproject.toml        # uv workspace root (dependencies; lock in uv.lock)

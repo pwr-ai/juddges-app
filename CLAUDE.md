@@ -54,10 +54,11 @@ docker compose up -d                                  # prod (local build)
 
 ### Backend sub-packages (`backend/packages/`)
 - `juddges_search` — RAG search (LangChain + Supabase pgvector), chat/QA chains. Imported as `from juddges_search.chains.chat import chat_chain`.
-- `schema_generator_agent` — LangGraph agent for extracting structured data from legal documents.
 - `juddges_mcp` — read-only MCP server (`search_judgments`, `get_judgment`, `get_extracted_fields`) over the judgment corpus, served over HTTP at `/mcp` and over stdio for local development.
 
-All are uv workspace members (`[tool.uv.workspace]` in `backend/pyproject.toml`), installed editable into the one backend environment by `uv sync`.
+Both are uv workspace members (`[tool.uv.workspace]` in `backend/pyproject.toml`), installed editable into the one backend environment by `uv sync`.
+
+Agentic schema generation (`/schemas/generate*`, `/schema-generator/chat`) is not a workspace package: it uses the PyPI package `schematize` (pinned in `backend/pyproject.toml`) through the adapter `backend/app/schemas_pkg/schematize_agent.py` (interrupt-based graph that ends after data-grounded refinement, Supabase chunk retriever, `SchemaFields` <-> JSON Schema converters).
 
 ### MCP server (`juddges_mcp`)
 - The tools in `juddges_mcp/tools/` are transport-agnostic and must stay that way: they read the caller from `juddges_mcp.principal` and never take a credential argument. Authentication belongs to the transport (`juddges_mcp/http.py`, `juddges_mcp/stdio.py`).

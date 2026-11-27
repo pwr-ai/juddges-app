@@ -60,22 +60,26 @@ class TestFormatResponseMessage:
     def test_returns_merged_data_assessment(self):
         state = {
             "merged_data_assessment": {
-                "overall_quality": "high",
-                "suggestions": ["Add more fields", "Improve types"],
+                "summary": "Fields fit the sampled judgments",
+                "confidence": "high",
+                "main_issues": ["Add more fields", "Improve types"],
+                "priority_areas": ["amount"],
             }
         }
         result = format_response_message(state)
-        assert "Schema Quality: high" in result
+        assert "Fields fit the sampled judgments" in result
+        assert "Confidence: high" in result
         assert "Add more fields" in result
+        assert "amount" in result
 
-    def test_returns_merged_data_assessment_without_suggestions(self):
+    def test_returns_merged_data_assessment_without_issues(self):
         state = {
             "merged_data_assessment": {
-                "overall_quality": "medium",
+                "confidence": "medium",
             }
         }
         result = format_response_message(state)
-        assert "Schema Quality: medium" in result
+        assert "Confidence: medium" in result
 
     def test_returns_problem_help(self):
         state = {"problem_help": "Please provide more details"}
@@ -106,19 +110,19 @@ class TestFormatResponseMessage:
         result = format_response_message(state)
         assert result == "Primary message"
 
-    def test_merged_data_assessment_empty_suggestions(self):
+    def test_merged_data_assessment_empty_issues(self):
         state = {
             "merged_data_assessment": {
-                "overall_quality": "low",
-                "suggestions": [],
+                "confidence": "low",
+                "main_issues": [],
             }
         }
         result = format_response_message(state)
-        assert "Schema Quality: low" in result
+        assert "Confidence: low" in result
 
     def test_merged_data_assessment_empty_dict(self):
         state = {"merged_data_assessment": {}}
-        # No quality field, no suggestions -> falls through to next check
+        # No summary/confidence/issues -> falls through to next check
         result = format_response_message(state)
         # Should fall through since no message_parts
         assert isinstance(result, str)
@@ -181,23 +185,10 @@ class TestGenerateSimpleResponseMessage:
 @pytest.mark.unit
 class TestGetOrCreateAgent:
     @patch("app.api.schema_generator._generation_sessions", {})
-    @patch("app.api.schema_generator.SchemaGenerator")
-    @patch("app.api.schema_generator.load_prompts")
-    @patch("app.api.schema_generator.get_default_llm")
-    def test_creates_new_agent(self, mock_llm, mock_prompts, mock_gen):
-        mock_prompts.return_value = {
-            "problem_definer_helper_prompt": "p1",
-            "problem_definer_prompt": "p2",
-            "schema_generator_prompt": "p3",
-            "schema_assessment_prompt": "p4",
-            "schema_refiner_prompt": "p5",
-            "query_generator_prompt": "p6",
-            "schema_data_assessment_prompt": "p7",
-            "schema_data_assessment_merger_prompt": "p8",
-            "schema_data_refiner_prompt": "p9",
-        }
+    @patch("app.api.schema_generator.build_schema_generator")
+    def test_creates_new_agent(self, mock_build):
         mock_agent = MagicMock()
-        mock_gen.return_value = mock_agent
+        mock_build.return_value = mock_agent
 
         mock_request = MagicMock()
         mock_request.app.state.checkpointer = MagicMock()
