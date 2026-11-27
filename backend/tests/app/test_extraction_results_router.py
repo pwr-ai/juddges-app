@@ -17,6 +17,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.extraction_domain.nl_filter_generator import BaseSchemaFilter
+from tests.app._fakes import FakeSupabaseClient, job_results_handler
 from tests.app.conftest import _install_jwt_user_override
 
 _USER_001 = "00000000-0000-4000-a000-000000000001"
@@ -27,6 +28,43 @@ _BEARER_HEADERS = {"Authorization": "Bearer fake-jwt-token"}
 # =============================================================================
 # GET /extractions/{job_id}/export
 # =============================================================================
+
+
+def _export_job(user_id: str = _USER_001) -> dict:
+    return {
+        "job_id": "job-1",
+        "user_id": user_id,
+        "collection_id": "col-1",
+        "schema_id": "schema-1",
+        "status": "SUCCESS",
+    }
+
+
+def _result_row(
+    position: int, bucket: str, data: dict, status: str = "completed"
+) -> dict:
+    return {
+        "job_id": "job-1",
+        "position": position,
+        "bucket": bucket,
+        "item": {
+            "document_id": f"doc-{position}",
+            "status": status,
+            "completed_at": "2025-01-01",
+            "extracted_data": data,
+        },
+    }
+
+
+def _export_client(job: dict | None, results: list[dict] | None = None):
+    return FakeSupabaseClient(
+        table_handlers={
+            "extraction_jobs": [job] if job else [],
+            "extraction_job_results": job_results_handler(results or []),
+            "collections": [{"name": "TestCollection"}],
+            "extraction_schemas": [{"name": "TestSchema"}],
+        }
+    )
 
 
 class TestExportExtractionResults:
@@ -54,106 +92,84 @@ class TestExportExtractionResults:
     @pytest.mark.unit
     async def test_job_not_found_returns_404(self, client, valid_api_headers) -> None:
         _install_jwt_user_override(_USER_001)
-        mock_response = MagicMock()
-        mock_response.data = None
+        fake = _export_client(job=None)
 
-        mock_supabase = MagicMock()
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_response
-
-        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+        with patch("app.extraction_domain.results_router.supabase", fake):
             response = await client.get(
                 "/extractions/job-missing/export?format=csv",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 404
+        assert [q.table for q in fake.table_calls] == ["extraction_jobs"]
 
     @pytest.mark.unit
     async def test_access_denied_returns_403(self, client, valid_api_headers) -> None:
         """User 099 (attacker) tries to export a job that belongs to other-user.
 
         The attacker authenticates as _USER_099 via JWT; the job in the DB has
-        a different user_id. The handler must deny access with 403.
+        a different user_id. The handler must deny access with 403 before any
+        result row is read.
         """
         _install_jwt_user_override(_USER_099)
-        mock_response = MagicMock()
-        mock_response.data = {
-            "job_id": "job-1",
-            "user_id": "other-user",
-            "collection_id": "col-1",
-            "schema_id": None,
-            "results": [{"status": "completed", "extracted_data": {"f": "v"}}],
-            "status": "SUCCESS",
-        }
+        fake = _export_client(
+            job=_export_job(user_id="other-user"),
+            results=[_result_row(1, "completed", {"f": "v"})],
+        )
 
-        mock_supabase = MagicMock()
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_response
-
-        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+        with patch("app.extraction_domain.results_router.supabase", fake):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 403
+        assert "extraction_job_results" not in [q.table for q in fake.table_calls]
 
     @pytest.mark.unit
     async def test_no_results_returns_400(self, client, valid_api_headers) -> None:
         _install_jwt_user_override(_USER_001)
-        mock_response = MagicMock()
-        mock_response.data = {
-            "job_id": "job-1",
-            "user_id": _USER_001,
-            "collection_id": "col-1",
-            "schema_id": None,
-            "results": [],
-            "status": "SUCCESS",
-        }
+        fake = _export_client(job=_export_job(), results=[])
 
-        mock_supabase = MagicMock()
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_response
-
-        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+        with patch("app.extraction_domain.results_router.supabase", fake):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 400
+            assert response.json()["detail"]["code"] == "NO_RESULTS"
+
+    @pytest.mark.unit
+    async def test_only_failed_results_returns_no_completed_400(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        fake = _export_client(
+            job=_export_job(),
+            results=[_result_row(1, "failed", {"f": "v"}, status="failed")],
+        )
+
+        with patch("app.extraction_domain.results_router.supabase", fake):
+            response = await client.get(
+                "/extractions/job-1/export?format=csv",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"]["code"] != "NO_RESULTS"
 
     @pytest.mark.unit
     async def test_export_csv_success(self, client, valid_api_headers) -> None:
-        """Test successful CSV export with completed results."""
+        """CSV export pages completed rows from extraction_job_results."""
         _install_jwt_user_override(_USER_001)
-        mock_job_response = MagicMock()
-        mock_job_response.data = {
-            "job_id": "job-1",
-            "user_id": _USER_001,
-            "collection_id": "col-1",
-            "schema_id": "schema-1",
-            "results": [
-                {
-                    "document_id": "doc-1",
-                    "status": "completed",
-                    "completed_at": "2025-01-01",
-                    "extracted_data": {"field_a": "value_a", "field_b": "value_b"},
-                },
+        fake = _export_client(
+            job=_export_job(),
+            results=[
+                _result_row(
+                    1, "completed", {"field_a": "value_a", "field_b": "value_b"}
+                ),
+                _result_row(2, "failed", {"field_a": "x"}, status="failed"),
             ],
-            "status": "SUCCESS",
-        }
+        )
 
-        mock_col_response = MagicMock()
-        mock_col_response.data = {"name": "TestCollection"}
-
-        mock_schema_response = MagicMock()
-        mock_schema_response.data = {"name": "TestSchema"}
-
-        mock_supabase = MagicMock()
-        # First call for job data
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.side_effect = [
-            mock_job_response,
-            mock_col_response,
-            mock_schema_response,
-        ]
-
-        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+        with patch("app.extraction_domain.results_router.supabase", fake):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
@@ -161,6 +177,18 @@ class TestExportExtractionResults:
             assert response.status_code == 200
             assert "text/csv" in response.headers["content-type"]
             assert "attachment" in response.headers.get("content-disposition", "")
+            assert "value_a" in response.text and "doc-1" in response.text
+            assert "doc-2" not in response.text
+
+        job_query = fake.table_calls[0]
+        assert job_query.table == "extraction_jobs"
+        assert "results" not in job_query.select
+        result_queries = [
+            q for q in fake.table_calls if q.table == "extraction_job_results"
+        ]
+        assert result_queries
+        assert result_queries[0].filter_values("eq", "job_id") == ["job-1"]
+        assert result_queries[0].filter_values("eq", "bucket") == ["completed"]
 
 
 # =============================================================================

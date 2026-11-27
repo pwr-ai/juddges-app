@@ -168,8 +168,7 @@ juddges-app/
 │   │   ├── analytics.py # Analytics endpoints
 │   │   └── ...          # Other feature routers
 │   ├── packages/         # Reusable Python packages
-│   │   ├── juddges_search/           # RAG search implementation
-│   │   └── schema_generator_agent/   # AI schema generation
+│   │   └── juddges_search/           # RAG search implementation
 │   └── tests/            # Backend tests
 │
 ├── supabase/             # Database configuration
@@ -236,26 +235,24 @@ from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.models import LegalDocument
 ```
 
-#### 2. `schema_generator_agent` (`backend/packages/schema_generator_agent/`)
+#### 2. `schematize` (PyPI dependency, adapter in `backend/app/schemas_pkg/schematize_agent.py`)
 
 AI-powered legal schema generation:
-- LangGraph-based agent workflows
-- Extracts structured data from legal documents
-- Generates JSON schemas for data extraction
+- LangGraph-based multi-agent pipeline (problem definition, schema generation, criteria and data-grounded refinement)
+- The adapter swaps the terminal prompts for a LangGraph interrupt, ends the run after data-grounded refinement and converts `SchemaFields` to JSON Schema
 
 Usage:
 ```python
-from schema_generator_agent.graph import create_agent_graph
+from app.schemas_pkg.schematize_agent import build_schema_generator
 ```
 
-Both packages are uv workspace members, installed in editable mode by `uv sync` (`backend/pyproject.toml`):
+`juddges_search` and `juddges_mcp` are uv workspace members, installed in editable mode by `uv sync` (`backend/pyproject.toml`):
 ```toml
 [tool.uv.workspace]
 members = ["packages/*"]
 
 [tool.uv.sources]
 juddges-search = { workspace = true }
-schema-generator-agent = { workspace = true }
 ```
 
 ### Database Architecture

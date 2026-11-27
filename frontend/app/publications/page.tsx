@@ -3,9 +3,13 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { PublicationCard } from "@/components/publications/publication-card";
 import {
- publications as referencePublications,
- sortPublications,
-} from "@/lib/data/publications";
+ PublicationList,
+} from "@/components/publications/verified-publications";
+import { sortPublications } from "@/lib/publications/sort";
+import {
+ partnerPublications,
+ publications as projectPublications,
+} from "@/lib/project-content";
 import { PublicationType, PublicationWithResources } from "@/types/publication";
 import { DropdownButton } from "@/lib/styles/components";
 import {
@@ -33,45 +37,23 @@ type FilterType = PublicationType |"all";
 type SortOption ="date"|"title";
 type CatalogStatus = "loading" | "success" | "error";
 
-function ReferenceBibliography() {
- const sortedReferences = sortPublications(referencePublications);
-
+function VerifiedPublications() {
  return (
- <section className="mt-16" aria-labelledby="reference-bibliography-heading">
- <Eyebrow as="p" tone="gold" className="mb-3">Editorial reference collection</Eyebrow>
+ <section aria-labelledby="project-publications-heading">
+ <Headline id="project-publications-heading" as="h2" size="sm" className="mb-2">
+ Project publications
+ </Headline>
+ <PublicationList publications={projectPublications} />
+
  <Headline
- id="reference-bibliography-heading"
+ id="partner-publications-heading"
  as="h2"
  size="sm"
- className="mb-4"
+ className="mb-2 mt-14"
  >
- Curated reference bibliography
+ Partner publications
  </Headline>
- <p className="mb-8 max-w-3xl leading-relaxed text-[color:var(--ink-soft)]">
- This bibliography is maintained editorially and displayed separately from the live catalog above.
- Its entries are reference material, not API results or fallback data.
- </p>
- <div className="grid grid-cols-1 gap-px border border-[color:var(--rule)] bg-[color:var(--rule)] md:grid-cols-2">
- {sortedReferences.map((publication) => (
- <article
- key={publication.id}
- className="bg-[color:var(--parchment)] p-5 sm:p-6"
- >
- <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--oxblood)]">
- {publication.year} · {publication.type}
- </p>
- <h3 className="mb-3 font-serif text-2xl leading-tight text-[color:var(--ink)]">
- {publication.title}
- </h3>
- <p className="mb-2 text-sm text-[color:var(--ink-soft)]">
- {publication.authors.map((author) => author.name).join(", ")}
- </p>
- <p className="text-sm italic text-[color:var(--ink-soft)]">
- {publication.venue}
- </p>
- </article>
- ))}
- </div>
+ <PublicationList publications={partnerPublications} />
  </section>
  );
 }
@@ -132,29 +114,9 @@ export default function PublicationsPage() {
 
  const hasActiveFilters = filterYear !=="all"|| filterType !=="all";
 
- if (catalogStatus === "loading") {
- return (
- <PaperBackground className="min-h-[520px]">
- <div className="container mx-auto max-w-[1200px] px-6 py-8 md:px-8 lg:px-12">
- <div
- role="status"
- aria-live="polite"
- aria-label="Loading publications"
- className="flex items-center justify-center min-h-[400px]"
- >
- <Loader2
- className="h-8 w-8 animate-spin text-[color:var(--oxblood)]"
- aria-hidden="true"
- />
- </div>
- </div>
- </PaperBackground>
- );
- }
-
- return (
+  return (
  <PaperBackground className="min-h-screen">
- <main className="container mx-auto max-w-[1200px] px-6 py-10 md:px-8 lg:px-12">
+ <div className="container mx-auto max-w-[1200px] px-6 py-10 md:px-8 lg:px-12">
  {/* Header */}
  <header className="mb-10">
  <div className="mb-4 flex items-start justify-between gap-6">
@@ -173,7 +135,24 @@ export default function PublicationsPage() {
  </p>
  </header>
 
+ <VerifiedPublications />
+
+ {isAdmin && catalogStatus === "loading" && (
+ <div
+ role="status"
+ aria-live="polite"
+ aria-label="Loading publications"
+ className="mt-16 flex items-center justify-center py-8"
+ >
+ <Loader2
+ className="h-6 w-6 animate-spin text-[color:var(--oxblood)]"
+ aria-hidden="true"
+ />
+ </div>
+ )}
+
  {catalogStatus === "error" ? (
+ !isAdmin ? null : (
  <section
  role="alert"
  className="border-y border-[color:var(--rule-strong)] bg-[color:var(--parchment-deep)] px-6 py-12 text-center"
@@ -187,7 +166,9 @@ export default function PublicationsPage() {
  </p>
  <EditorialButton onClick={fetchPublications}>Try again</EditorialButton>
  </section>
- ) : publications.length === 0 ? (
+ )
+ ) : catalogStatus === "loading" ? null : publications.length === 0 ? (
+ !isAdmin ? null : (
  <section className="border-y border-[color:var(--rule)] px-6 py-14 text-center">
  <BookOpen className="mx-auto mb-4 h-10 w-10 text-[color:var(--gold)]" />
  <Headline as="h2" size="xs" className="mb-3">No publications available</Headline>
@@ -195,8 +176,12 @@ export default function PublicationsPage() {
  The research catalog is currently empty. Published work will appear here when it is added.
  </p>
  </section>
+ )
  ) : (
- <>
+ <section className="mt-16" aria-labelledby="catalog-heading">
+ <Headline id="catalog-heading" as="h2" size="sm" className="mb-6">
+ Publications catalog
+ </Headline>
 
  {/* Filters */}
  <section className="mb-8 border border-[color:var(--rule)] bg-[color:var(--parchment-deep)] p-6">
@@ -303,10 +288,8 @@ export default function PublicationsPage() {
  </div>
  )}
  </div>
- </>
+ </section>
  )}
-
- <ReferenceBibliography />
 
  {/* Footer note */}
  <div className="mt-12 border-t border-[color:var(--rule)] pt-6 text-center text-sm text-[color:var(--ink-soft)]">
@@ -314,7 +297,7 @@ export default function PublicationsPage() {
  For citations, please refer to the publication venue or contact the authors directly.
  </p>
  </div>
- </main>
+ </div>
  </PaperBackground>
  );
 }

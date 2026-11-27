@@ -136,10 +136,6 @@ export const pl: Translations = {
     // Accessible names
     homeLinkLabel: 'JuDDGES — przejdź do strony głównej',
 
-    // Workflow phase labels
-    phasePlan: '1. Zaplanuj',
-    phaseSearch: '2. Wyszukaj',
-    phaseAnalyze: '3. Analizuj',
     flowAsk: 'Zapytaj',
     flowExplore: 'Zbadaj',
     flowCode: 'Koduj',
@@ -325,6 +321,7 @@ export const pl: Translations = {
     statsModelScore: 'ocena modelu',
     statsAddField: 'Dodaj pole',
     statsRemoveField: 'Usuń',
+    statsPickValue: 'Filtruj według wartości',
     statsExportCsv: 'Eksport CSV',
     statsExportCohort: 'Eksport definicji kohorty',
     statsEmpty: 'Żadne orzeczenie nie pasuje do filtrów.',

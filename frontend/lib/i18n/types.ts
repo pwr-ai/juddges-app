@@ -180,10 +180,6 @@ export interface NavigationTranslations {
   // Accessible names
   homeLinkLabel: string;
 
-  // Workflow phase labels
-  phasePlan: string;
-  phaseSearch: string;
-  phaseAnalyze: string;
 
   // Persona flows (#690) — group labels and stepper copy
   flowAsk: string;
@@ -385,6 +381,7 @@ export interface ExtractionTranslations {
   statsModelScore: string;
   statsAddField: string;
   statsRemoveField: string;
+  statsPickValue: string;
   statsExportCsv: string;
   statsExportCohort: string;
   statsEmpty: string;

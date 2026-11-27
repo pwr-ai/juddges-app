@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 
 jest.mock("@/contexts/LanguageContext", () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
@@ -9,9 +9,7 @@ jest.mock("@/components/charts", () => ({
     return (
       <ul data-testid="chart">
         {props.items.map((i) => (
-          <li key={i.name}>
-            <button onClick={() => props.onBarClick?.(i.name)}>{i.name}: {i.count}</button>
-          </li>
+          <li key={i.name}>{i.name}: {i.count}<button data-testid={`bar-${i.name}`} aria-label={`bar ${i.name}`} onClick={() => props.onBarClick?.(i.name)} /></li>
         ))}
       </ul>
     );
@@ -39,13 +37,52 @@ describe("FieldCard", () => {
     expect(items[0].count).toBe(60);
   });
 
-  it("bar click reports the real value, not the other/missing rows", () => {
+  it("value button reports the real value, and there is none for other/missing rows", () => {
     const onBarClick = jest.fn();
     render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" onBarClick={onBarClick} />);
-    fireEvent.click(screen.getByRole("button", { name: /dismissed/ }));
+    fireEvent.click(screen.getByRole("button", { name: "dismissed: 30" }));
     expect(onBarClick).toHaveBeenCalledWith("appeal_outcome", "dismissed");
-    fireEvent.click(screen.getByRole("button", { name: /statsOther/ }));
+    expect(screen.queryByRole("button", { name: /^extraction.statsOther: / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^extraction.statsMissing: / })).toBeNull();
     expect(onBarClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("bar click reports the value; other/missing bars do not fire; no handler means no drill", () => {
+    const onBarClick = jest.fn();
+    const { unmount } = render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" onBarClick={onBarClick} />);
+    fireEvent.click(screen.getByTestId("bar-dismissed"));
+    expect(onBarClick).toHaveBeenCalledWith("appeal_outcome", "dismissed");
+    fireEvent.click(screen.getByTestId("bar-extraction.statsOther"));
+    fireEvent.click(screen.getByTestId("bar-extraction.statsMissing"));
+    expect(onBarClick).toHaveBeenCalledTimes(1);
+    unmount();
+    render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" />);
+    expect(() => fireEvent.click(screen.getByTestId("bar-dismissed"))).not.toThrow();
+  });
+
+  it("labels value buttons with a percent sign under yAxis percent", () => {
+    render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="percent" onBarClick={jest.fn()} />);
+    expect(screen.getByRole("button", { name: "dismissed: 60%" })).toBeInTheDocument();
+  });
+
+  it("offers every real value as a focusable button for keyboard users (#741)", () => {
+    render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" onBarClick={jest.fn()} />);
+    const list = screen.getByRole("list", { name: "extraction.statsPickValue" });
+    const buttons = within(list).getAllByRole("button");
+    expect(buttons.map((b) => b.textContent)).toEqual(["dismissed: 30", "allowed: 15"]);
+    buttons[0].focus();
+    expect(buttons[0]).toHaveFocus();
+    expect(buttons[0]).toHaveAttribute("type", "button");
+  });
+
+  it("renders no value buttons when the field is not drillable", () => {
+    render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" />);
+    expect(screen.queryByRole("list", { name: "extraction.statsPickValue" })).toBeNull();
+  });
+
+  it("does not render an empty list for numeric buckets", () => {
+    render(<FieldCard field="num_victims" aggregate={{ kind: "numeric", buckets: [{ lo: 0, hi: 1, count: 2 }], null: 0, covered: 2, min: 0, max: 1 }} sampleN={2} yAxis="count" onBarClick={jest.fn()} />);
+    expect(screen.queryByRole("list", { name: "extraction.statsPickValue" })).toBeNull();
   });
 
   it("labels numeric buckets lo–hi and years ascending", () => {

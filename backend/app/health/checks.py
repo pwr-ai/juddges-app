@@ -12,6 +12,7 @@ from celery import Celery
 from loguru import logger
 from psycopg_pool import AsyncConnectionPool
 
+from app.core.redis_policy import async_retry
 from app.health.models import ServiceHealth, ServiceStatus
 
 
@@ -50,6 +51,7 @@ async def check_redis(timeout: float = 3.0) -> ServiceHealth:
             socket_connect_timeout=timeout,
             socket_timeout=timeout,
             decode_responses=True,
+            retry=async_retry(),
         )
 
         try:

@@ -46,6 +46,7 @@ from app.compare.models import (
     ExtensionReason,
 )
 from app.extraction_domain.completeness import completed_rows, is_empty_value
+from app.extraction_domain.job_results_store import iter_job_results
 
 __all__ = [
     "JOB_STATUS_SUCCESS",
@@ -64,7 +65,6 @@ __all__ = [
 JOB_STATUS_SUCCESS = "SUCCESS"
 
 _JOB_META_COLUMNS = "id, job_id, collection_id, schema_id, status, completed_at"
-_JOB_RESULTS_COLUMNS = "id, results"
 _SCHEMA_COLUMNS = "id, name, text"
 
 
@@ -165,17 +165,17 @@ def latest_success_jobs(
 
 
 def load_job_results(
-    client: Any, job_ids: list[str]
+    client: Any, jobs: list[dict[str, Any]]
 ) -> dict[str, list[dict[str, Any]]]:
-    """`job id -> results rows` for exactly the given jobs (the heavy JSONB read)."""
-    response = (
-        client.table("extraction_jobs")
-        .select(_JOB_RESULTS_COLUMNS)
-        .in_("id", job_ids)
-        .execute()
-    )
+    """`job id -> results items` for exactly the given job meta rows.
+
+    The heavy read: pages `extraction_job_results` (keyed by the text
+    `job_id`) instead of selecting `extraction_jobs.results`. Returns every
+    item (all buckets); `tally_schema_fields` filters by status itself.
+    """
     return {
-        str(row["id"]): list(row.get("results") or []) for row in response.data or []
+        str(job["id"]): list(iter_job_results(client, str(job["job_id"])))
+        for job in jobs
     }
 
 
@@ -225,7 +225,7 @@ def extension_for_pair(
     specs = comparable_fields_from_schema(
         {"properties": schema_properties(schema.get("text"))}, source=source
     )
-    results = load_job_results(client, [str(job["id"]) for job in jobs.values() if job])
+    results = load_job_results(client, [job for job in jobs.values() if job])
     by_side = {j: results.get(str(job["id"]), []) for j, job in jobs.items() if job}
     fields = tally_schema_fields(by_side, specs)
     totals = {j: len(completed_rows(rows)) for j, rows in by_side.items()}

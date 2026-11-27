@@ -26,7 +26,7 @@ from app.compare.schema_tally import (
 )
 from app.compare.service import FACET_RPC
 from app.server import app
-from tests.app._fakes import FakeSupabaseClient, TableQuery
+from tests.app._fakes import FakeSupabaseClient, TableQuery, job_results_handler
 
 pytestmark = [pytest.mark.unit]
 
@@ -288,12 +288,10 @@ def _job(job_id: str, collection_id: str, schema_id: str | None, results) -> dic
 
 
 def _jobs_handler(jobs: list[dict]):
-    """Serve the metadata query and the per-id results query from one list."""
+    """Serve the job metadata query; `results` is never selected from this table."""
 
     def _handle(query: TableQuery) -> list[dict]:
-        ids = query.filter_values("in", "id")
-        if ids:
-            return [j for j in jobs if j["id"] in ids[0]]
+        assert "results" not in (query.select or "")
         return [
             {k: v for k, v in j.items() if k != "results"}
             for j in jobs
@@ -302,6 +300,20 @@ def _jobs_handler(jobs: list[dict]):
         ]
 
     return _handle
+
+
+def _result_rows(jobs: list[dict]) -> list[dict]:
+    """Flatten the seeded `results` into `extraction_job_results` rows."""
+    return [
+        {
+            "job_id": j["job_id"],
+            "position": pos,
+            "bucket": "completed",
+            "item": item,
+        }
+        for j in jobs
+        for pos, item in enumerate(j["results"], start=1)
+    ]
 
 
 def _schema_rows(schema_id: str = SCHEMA) -> list[dict]:
@@ -328,6 +340,7 @@ def _client(jobs: list[dict], schemas: list[dict] | None = None) -> FakeSupabase
         rpc_handlers={FACET_RPC: _facet_rows},
         table_handlers={
             "extraction_jobs": _jobs_handler(jobs),
+            "extraction_job_results": job_results_handler(_result_rows(jobs)),
             "extraction_schemas": _schema_rows() if schemas is None else schemas,
         },
     )
@@ -398,15 +411,19 @@ async def test_pair_view_merges_base_and_extension_fields(
     assert verdict["coverage"]["PL"] == {"covered": 1, "total": 2, "ratio": 0.5}
 
     # Job selection is scoped to the caller; the schema is resolved before the
-    # heavy `results` read, which fetches only the two chosen jobs.
-    meta, schema, results = fake.table_calls
+    # heavy results read, which pages only the two chosen jobs from
+    # extraction_job_results (never `extraction_jobs.results`).
+    meta, schema, *results = fake.table_calls
     assert meta.table == "extraction_jobs"
     assert meta.filter_values("eq", "user_id") == [mock_user["id"]]
     assert schema.table == "extraction_schemas"
     assert schema.filter_values("eq", "id") == [SCHEMA]
-    assert results.table == "extraction_jobs"
-    assert results.select == "id, results"
-    assert sorted(results.filter_values("in", "id")[0]) == sorted([JOB_PL, JOB_UK])
+    assert {q.table for q in results} == {"extraction_job_results"}
+    assert all(q.select == "position, item" for q in results)
+    assert sorted(q.filter_values("eq", "job_id")[0] for q in results) == sorted(
+        [f"celery-{JOB_PL[-1]}", f"celery-{JOB_UK[-1]}"]
+    )
+    assert all("results" not in (q.select or "") for q in fake.table_calls[:2])
     assert pairs_db.calls == [(PAIR, mock_user["id"])]
 
 
@@ -555,7 +572,11 @@ async def test_pair_view_runs_blocking_reads_off_the_event_loop(
 
     fake = FakeSupabaseClient(
         rpc_handlers={FACET_RPC: _rows},
-        table_handlers={"extraction_jobs": _jobs, "extraction_schemas": _schema_rows()},
+        table_handlers={
+            "extraction_jobs": _jobs,
+            "extraction_job_results": job_results_handler(_result_rows(_MATCHING_JOBS)),
+            "extraction_schemas": _schema_rows(),
+        },
     )
     with patch("app.compare.router.supabase_client", fake):
         response = await authenticated_client.get(f"/compare/pairs/{PAIR}")
