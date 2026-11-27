@@ -1,0 +1,141 @@
+topic: pl_wymiar_kary_178a
+collection:
+  name: "Wymiar kary za jazdę w stanie nietrzeźwości (art. 178a k.k.) 2022-2026"
+  description: "Wyroki sądów rejonowych (K, nakazowe) i okręgowych jako odwoławczych (Ka) skazujące lub warunkowo umarzające za art. 178a § 1 lub § 4 k.k., z uzasadnieniem wymiaru kary. Poza zbiorem: wykroczenia z art. 87 k.w. (W), art. 177 w zw. z art. 178 bez art. 178a, postępowania wykonawcze (Kow/Ko), sprawy cywilne o regres ubezpieczyciela."
+  jurisdiction: PL+UK
+  period: {from: 2022-01-01, to: 2026-11-24}
+  size_estimate: "unknown; very large population (art. 178a is among the most frequent offences in district courts), but only a fraction is published with a uzasadnienie on the Portal Orzeczeń — expect a few thousand reachable via the union of the queries below (15 x 50 = 750 hits max per run; re-run per time slice)."
+  rationale: "Start 2022 gives a pre-reform baseline; three reform cut-offs to compare: 1.10.2023 (ustawa z 7.07.2022: § 1 only imprisonment up to 3 years, art. 37a, art. 69 § 1 'up to 1 year'), 14.03.2024 (art. 44b + obligatory przepadek pojazdu in art. 178a § 5), 29.01.2026 (art. 44b § 1a, nawiązka 5 000-500 000 zł instead of przepadek równowartości). Only ordinary courts: SN is not in the full corpus; administrative courts do not try offences."
+
+search_v2:
+  - id: q01
+    purpose: "Statutory phrase of § 1 — core recall, keyword-heavy"
+    body: {query: "art. 178a § 1 k.k. prowadził pojazd mechaniczny w stanie nietrzeźwości w ruchu lądowym", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q02
+    purpose: "Recidivism variant § 4 (prior conviction / driving during a court ban)"
+    body: {query: "art. 178a § 4 k.k. będąc uprzednio prawomocnie skazanym za prowadzenie pojazdu mechanicznego w stanie nietrzeźwości", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q03
+    purpose: "§ 4 + art. 244 — driving in breach of a court driving ban"
+    body: {query: "art. 178a § 4 i art. 244 k.k. w zw. z art. 11 § 2 k.k. w okresie obowiązywania zakazu prowadzenia pojazdów mechanicznych", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q04
+    purpose: "Vehicle forfeiture regime 2024-2026 (art. 44b, art. 178a § 5)"
+    body: {query: "przepadek pojazdu mechanicznego art. 44b k.k. art. 178a § 5 k.k. zawartość alkoholu co najmniej 1,5 promila", court_type: [ordinary_court], date_from: 2024-03-14, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q05
+    purpose: "Equivalent-value forfeiture (pojazd nie stanowił wyłącznej własności sprawcy)"
+    body: {query: "przepadek równowartości pojazdu pojazd nie stanowił wyłącznej własności sprawcy art. 44b § 2 k.k.", court_type: [ordinary_court], date_from: 2024-03-14, date_to: 2026-01-28, alpha: 0.3, limit: 50}
+  - id: q06
+    purpose: "Post-29.01.2026 regime: nawiązka instead of equivalent-value forfeiture"
+    body: {query: "nawiązka na rzecz Skarbu Państwa zamiast przepadku pojazdu art. 44b § 5 § 6 k.k. prowadzenie w stanie nietrzeźwości", court_type: [ordinary_court], date_from: 2026-01-29, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q07
+    purpose: "Exception 'wyjątkowy wypadek uzasadniony szczególnymi okolicznościami' (no forfeiture / no lifetime ban)"
+    body: {query: "wyjątkowy wypadek uzasadniony szczególnymi okolicznościami odstąpienie od orzeczenia przepadku pojazdu dożywotniego zakazu prowadzenia pojazdów", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q08
+    purpose: "Lifetime ban (art. 42 § 3-4) and ban length"
+    body: {query: "dożywotni zakaz prowadzenia wszelkich pojazdów mechanicznych art. 42 § 3 k.k. art. 178a § 4", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q09
+    purpose: "Świadczenie pieniężne na Fundusz — minimum amounts"
+    body: {query: "świadczenie pieniężne na rzecz Funduszu Pomocy Pokrzywdzonym oraz Pomocy Postpenitencjarnej art. 43a § 2 k.k. 5000 złotych nietrzeźwość", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q10
+    purpose: "Appellate review — rażąca niewspółmierność kary (sygnatura Ka)"
+    body: {query: "apelacja zarzut rażącej niewspółmierności kary art. 438 pkt 4 k.p.k. kierowanie samochodem w stanie nietrzeźwości zakaz prowadzenia pojazdów", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q11
+    purpose: "Conditional discontinuance (art. 66) for low-intensity § 1 cases"
+    body: {query: "warunkowe umorzenie postępowania karnego art. 66 k.k. prowadzenie pojazdu w stanie nietrzeźwości niski stopień społecznej szkodliwości", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q12
+    purpose: "Post-1.10.2023: art. 37a substitution of a fine / restriction of liberty for imprisonment"
+    body: {query: "art. 37a § 1 k.k. zamiast kary pozbawienia wolności orzekł karę grzywny art. 178a § 1 k.k. w brzmieniu od 1 października 2023", court_type: [ordinary_court], date_from: 2023-10-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q13
+    purpose: "Plea arrangements: art. 335 / art. 387 k.p.k."
+    body: {query: "wniosek o wydanie wyroku skazującego bez przeprowadzenia rozprawy art. 335 k.p.k. dobrowolne poddanie się karze art. 387 k.p.k. art. 178a § 1", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q14
+    purpose: "Drugs instead of alcohol (środek odurzający, THC, amfetamina)"
+    body: {query: "prowadził samochód pod wpływem środka odurzającego THC amfetamina badanie krwi art. 178a § 1 k.k.", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q15
+    purpose: "Descriptive sentencing reasoning (vector-heavy) — art. 53 directives, alcohol level, distance"
+    body: {query: "sąd wymierzając karę uwzględnił znaczne stężenie alkoholu, przejechany odcinek drogi, natężenie ruchu i uprzednią niekaralność oskarżonego, kierowca został zatrzymany do kontroli drogowej", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.8, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date BETWEEN DATE '2022-01-01' AND DATE '2026-11-24'
+    AND (
+      full_text ~* '178\s*a\s*§\s*[14]'
+      OR full_text ~* 'art\.?\s*178a'
+      OR EXISTS (SELECT 1 FROM unnest(cited_legislation) c WHERE c ~* '178\s*a')
+      OR EXISTS (SELECT 1 FROM unnest(keywords) k WHERE k ~* 'nietrzeźwo|stan(ie)? nietrzeźwości|prowadzenie pojazdu')
+    )
+    AND full_text ~* '(nietrzeźwo|środka odurzającego)'
+    AND COALESCE(case_number, '') !~* '\m(W|Kow|Ko)\M'
+  ORDER BY decision_date;
+
+filters:
+  case_number_patterns: ["II K", "III K", "IV K", "VII K", "XIV K", "II Ka", "IV Ka", "V Ka", "VI Ka", "IX Ka", "XI Ka"]
+  courts: ["Sąd Rejonowy (wydziały karne — I instancja)", "Sąd Okręgowy (wydziały karne odwoławcze — Ka)"]
+  exclude_case_number_patterns: ["W", "Kow", "Ko", "Kp", "C", "Ca"]
+
+inclusion_gate: {field: wymiar_kary_178a_dotyczy, keep: [tak]}
+negative_markers:
+  - "art. 87 § 1 k.w."
+  - "art. 87 § 1a k.w."
+  - "stanie po użyciu alkoholu"
+  - "obwiniony"
+  - "art. 177 § 2 k.k. w zw. z art. 178 § 1 k.k."
+  - "regres ubezpieczyciela"
+  - "art. 43 pkt 1 lit. a ustawy o ubezpieczeniach obowiązkowych"
+  - "o zatarcie skazania"
+  - "skrócenie okresu zakazu art. 84 k.k."
+  - "uniewinnia oskarżonego"
+
+analyses:
+  - "Pre/post 14.03.2024 and 29.01.2026: share of judgments with przepadek_pojazdu (pojazd / równowartość / nawiązka / wyjątkowy wypadek) per stezenie bucket (<1,0; 1,0-1,49; >=1,5 promila), only for czyn committed after the cut-off."
+  - "Pre/post 1.10.2023: distribution of rodzaj_kary for § 1 (grzywna via art. 37a vs pozbawienie wolności z warunkowym zawieszeniem vs bezwzględne), and median kara_pozbawienia_wolnosci_miesiace."
+  - "Regression of zakaz_prowadzenia_lata and swiadczenie_pieniezne_zl on stezenie_wartosc (normalized: mg/dm3 x ~2.1 = promile), przeslanki_par_4 and skutek_zdarzenia; regional variation by apelacja/court."
+  - "Appellate outcome rate (wynik_odwolawczy) by zarzut_razacej_niewspolmiernosci — how often Ka courts change the penalty and in which direction."
+  - "Cross-lingual: PL vs UK disqualification length and custody/suspension rates for comparable alcohol levels and recidivism (see uk_side.field_mapping)."
+
+uk_side:
+  notes: >-
+    UK curated corpus is mostly Court of Appeal (Criminal Division) sentencing appeals. Plain drink driving
+    (Road Traffic Act 1988 s.5 excess alcohol; s.4 unfit through drink or drugs; s.5A specified drug limits;
+    s.7(6) failing to provide a specimen) is summary-only and sentenced in magistrates' courts under the
+    Sentencing Council 'Excess alcohol (drive/attempt to drive)' guideline (disqualification minimum 12 months,
+    RTOA 1988 s.34(1); 3 years for a second relevant offence within 10 years, s.34(3)), so it rarely reaches the
+    CACD and is not eligible for an unduly lenient sentence reference (CJA 1988 s.36 covers indictable-only and
+    specified either-way offences). Expect UK hits mainly for s.3A (causing death by careless driving when under
+    the influence), s.1 (causing death by dangerous driving) with alcohol as an aggravating factor, and appeals
+    against the length of disqualification (incl. extension periods under RTOA 1988 s.35A). Vehicle
+    deprivation orders: Sentencing Act 2020 s.153 (closest analogue of przepadek pojazdu). Suspended sentences:
+    Sentencing Act 2020 s.264/s.277; the Sentencing Act 2026 (c.2, Royal Assent 22.01.2026) adds a presumption
+    that custodial terms of 12 months or less are suspended, in force for convictions on or after 22.03.2026
+    [?: commencement date from a Sentencing Council notice, not checked on legislation.gov.uk].
+  curated_sql: |
+    SELECT id, case_number, court_name, decision_date
+    FROM public.judgments
+    WHERE jurisdiction = 'UK'
+      AND decision_date BETWEEN DATE '2022-01-01' AND DATE '2026-11-24'
+      AND (
+        full_text ~* 'Road Traffic Act 1988'
+        OR EXISTS (SELECT 1 FROM unnest(cited_legislation) c WHERE c ~* 'Road Traffic')
+      )
+      AND full_text ~* '(excess alcohol|over the (prescribed|legal) limit|drink[- ]driv|unfit through drink|under the influence|specimen of breath|microgrammes of alcohol|section 3A|s\.?\s?3A)'
+    ORDER BY decision_date;
+  field_mapping:
+    - "wymiar_kary_178a_dotyczy <-> drink_drug_driving_applies"
+    - "kwalifikacja_prawna <-> offence_provision (RTA 1988 s.5 / s.4 / s.5A / s.3A / s.1)"
+    - "przeslanki_par_4 <-> previous_relevant_conviction_within_10_years (RTOA 1988 s.34(3))"
+    - "stan_sprawcy <-> substance_type (alcohol / drug / both)"
+    - "stezenie_wartosc + stezenie_jednostka <-> alcohol_reading + reading_unit (µg/100ml breath, mg/100ml blood; legal limit E&W 35 µg breath / 80 mg blood vs PL 0,25 mg/dm3 = 25 µg/100ml breath)"
+    - "skutek_zdarzenia <-> collision_or_harm_caused"
+    - "tryb_postepowania <-> plea_stage (guilty plea credit; no direct PL equivalent of art. 335/387, closest: early guilty plea)"
+    - "rodzaj_kary <-> sentence_type (fine / community order / custody / suspended sentence order)"
+    - "kara_pozbawienia_wolnosci_miesiace <-> custodial_term_months"
+    - "warunkowe_zawieszenie <-> suspended_sentence_order"
+    - "okres_proby_lata <-> operational_period_months (/12)"
+    - "grzywna_stawki x grzywna_stawka_zl <-> fine_amount_gbp (band-based fines, no day-fine units)"
+    - "zakaz_prowadzenia + zakaz_prowadzenia_lata <-> disqualification_type + disqualification_months (/12)"
+    - "swiadczenie_pieniezne_zl <-> victim_surcharge_gbp (functional analogue only)"
+    - "przepadek_pojazdu <-> vehicle_deprivation_order (Sentencing Act 2020 s.153)"
+    - "okolicznosci_lagodzace / okolicznosci_obciazajace <-> mitigating_factors / aggravating_factors (Sentencing Council step 2)"
+    - "zarzut_razacej_niewspolmiernosci <-> appeal_ground (manifestly excessive / unduly lenient reference)"
+    - "wynik_odwolawczy <-> appeal_outcome (dismissed / sentence reduced / sentence increased on reference / quashed)"

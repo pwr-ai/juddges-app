@@ -1,0 +1,128 @@
+# Topic: Kwalifikacja umowy – umowa cywilnoprawna (zlecenie, o dzieło, B2B) czy stosunek pracy
+# Why: Sądy pracy i ubezpieczeń społecznych rozstrzygają, czy zatrudnienie nazwane umową cywilnoprawną jest w istocie
+#      stosunkiem pracy (art. 22 § 1, § 1¹, § 1² k.p.; powództwo o ustalenie z art. 189 k.p.c. lub PIP z art. 63¹ k.p.c.)
+#      albo czy umowa o dzieło jest w rzeczywistości umową o świadczenie usług (tytuł ubezpieczenia – art. 6, 8, 9
+#      ustawy o systemie ubezpieczeń społecznych; decyzje ZUS). Sporne: wagi kryteriów (podporządkowanie, osobiste
+#      świadczenie, ryzyko), nazwa umowy vs rzeczywisty sposób wykonywania, praca platformowa (dyrektywa (UE) 2024/2831
+#      z 23.10.2024, termin transpozycji 2.12.2026). Od 8.07.2026 decyzja okręgowego inspektora pracy przekształcająca umowę
+#      w umowę o pracę, z odwołaniem do sądu pracy (ustawa z 11.03.2026 o zmianie ustawy o PIP oraz niektórych innych ustaw).
+# Key rulings: SN uchwała z 14.02.2012, III UZP 4/11 (wykład jako dzieło – cytowana w orzecznictwie SA/SO);
+#      SN II UK 315/10 (6.04.2011, powtarzalne tłumaczenia nie są dziełem); SN II UK 402/12 (4.07.2013, wykłady);
+#      SN II UK 133/06 (19.03.2007, obowiązek ubezpieczenia z mocy prawa); SN I PK 108/09 (14.12.2009, ustalenie
+#      stosunku pracy przy umowie cywilnoprawnej) – sygnatury i daty SN potwierdzone cytatami w orzeczeniach SO/SA (nie u źródła);
+#      TSUE: C-66/85 Lawrie-Blum (3.07.1986), C-256/01 Allonby (13.01.2004), C-413/13 FNV Kunsten (4.12.2014),
+#      C-692/19 Yodel Delivery Network (postanowienie 22.04.2020).
+#      Równoległy schemat UK: kwalifikacja_umowy_stosunek_pracy_uk.yaml.
+# Applies to collection: see kwalifikacja_umowy_stosunek_pracy.queries.yaml
+title: kwalifikacja_umowy_stosunek_pracy
+description: "Kwalifikacja prawna zatrudnienia: umowa cywilnoprawna (zlecenie, o dzieło, B2B) a stosunek pracy oraz tytuł do ubezpieczeń społecznych."
+type: object
+additionalProperties: false
+properties:
+  kwalifikacja_umowy_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Bramka włączenia. 'tak' gdy sąd ocenia charakter prawny zatrudnienia: czy umowa nazwana zleceniem, umową o dzieło, kontraktem B2B/menedżerskim jest stosunkiem pracy (art. 22 k.p., art. 189 k.p.c., art. 63¹ k.p.c.), albo czy umowa o dzieło jest w istocie umową o świadczenie usług/zleceniem dla celów ubezpieczeń społecznych (odwołanie od decyzji ZUS o objęciu ubezpieczeniem, art. 6, 8, 9 u.s.u.s.). 'nie' dla typowych fałszywych trafień: spór o wynagrodzenie z bezspornej umowy o pracę, pozorna umowa o pracę zawarta tylko dla świadczeń (art. 83 k.c. przy wysokim wynagrodzeniu przed zasiłkiem) bez sporu o kwalifikację umowy cywilnoprawnej, podleganie ubezpieczeniu z działalności gospodarczej bez oceny umowy z kontrahentem, spory o zapłatę z umowy o dzieło między przedsiębiorcami. 'niejasne' gdy kwalifikacja pojawia się tylko marginalnie."
+  tryb_postepowania:
+    type: string
+    enum: [powodztwo_o_ustalenie_stosunku_pracy_art_189_kpc, powodztwo_pip_art_63_1_kpc, odwolanie_od_decyzji_pip, odwolanie_od_decyzji_zus, roszczenia_pracownicze_z_przeslankowa_kwalifikacja, sprawa_podatkowa, sprawa_wykroczeniowa_art_281_kp, inne, nie_podano]
+    description: "Procesowa forma, w której sąd ocenia kwalifikację umowy. 'roszczenia_pracownicze_z_przeslankowa_kwalifikacja' gdy powód dochodzi np. wynagrodzenia za urlop, nadgodziny lub odszkodowania, a istnienie stosunku pracy jest przesłanką. 'odwolanie_od_decyzji_pip' gdy sąd pracy rozpoznaje odwołanie od decyzji okręgowego inspektora pracy przekształcającej umowę cywilnoprawną w umowę o pracę (od 8.07.2026). 'odwolanie_od_decyzji_zus' gdy spór dotyczy decyzji ZUS o podleganiu ubezpieczeniom lub o podstawie wymiaru składek. 'sprawa_wykroczeniowa_art_281_kp' gdy chodzi o wykroczenie zastąpienia umowy o pracę umową cywilnoprawną."
+  inicjator_sporu:
+    type: string
+    enum: [wykonawca, organ_ubezpieczen_spolecznych_zus, inspekcja_pracy_pip, organ_podatkowy, zwiazek_zawodowy, zleceniodawca_platnik, prokurator, inne, nie_podano]
+    description: "Kto zainicjował zakwestionowanie kwalifikacji umowy. W sprawach ZUS: jeśli ZUS z urzędu wydał decyzję o objęciu ubezpieczeniem, wpisz 'organ_ubezpieczen_spolecznych_zus' (nawet jeśli odwołanie wniósł płatnik). 'zleceniodawca_platnik' gdy zamawiający/płatnik sam dąży do ustalenia charakteru umowy. 'nie_podano' gdy nie da się ustalić."
+  rodzaj_umowy_nazwa:
+    type: string
+    enum: [umowa_zlecenia, umowa_o_swiadczenie_uslug, umowa_o_dzielo, kontrakt_b2b_dzialalnosc_gospodarcza, kontrakt_menedzerski, umowa_agencyjna, brak_umowy_pisemnej, kilka_rodzajow_umow, inne, nie_podano]
+    description: "Rodzaj umowy według nazwy nadanej przez strony (nie według oceny sądu). 'kilka_rodzajow_umow' gdy w spornym okresie występowały różne nazwy umów (np. zlecenie, potem o dzieło)."
+  kwalifikacja_sporna:
+    type: string
+    enum: [stosunek_pracy_czy_umowa_cywilnoprawna, stosunek_pracy_czy_samozatrudnienie_b2b, dzielo_czy_zlecenie_uslugi, inne, nie_podano]
+    description: "Którą granicę kwalifikacyjną sąd rozstrzyga: stosunek pracy vs zlecenie/dzieło; stosunek pracy vs działalność gospodarcza (B2B); umowa o dzieło vs umowa o świadczenie usług (typowo spór o składki ZUS, bez kwestii stosunku pracy)."
+  kryteria_wskazujace_na_zatrudnienie:
+    type: array
+    items:
+      type: string
+      enum: [podporzadkowanie_kierownictwo, osobiste_wykonywanie, prawo_zastepstwa, wzajemnosc_zobowiazan, stale_wynagrodzenie, czas_miejsce_wyznaczone, ryzyko_gospodarcze, wlaczenie_w_organizacje, narzedzia_zapewnione, ciaglosc_powtarzalnosc, rezultat_indywidualny, zarzadzanie_algorytmiczne, wola_stron_nazwa_umowy, wylacznosc_jeden_zleceniodawca, inne, brak]
+    description: "Kryteria, które sąd uznał za przemawiające za stosunkiem pracy (lub – przy sporze dzieło/zlecenie – za umową starannego działania). Przykłady: kierownictwo i polecenia przełożonego, obowiązek osobistego świadczenia, brak realnego prawa zastępstwa, stałe miesięczne wynagrodzenie niezależne od rezultatu, czas i miejsce wyznaczone przez zamawiającego, ryzyko po stronie zamawiającego, włączenie w strukturę (grafik, przełożony, mundur), narzędzia zamawiającego, ciągłe powtarzalne czynności, brak indywidualnego sprawdzalnego rezultatu, sterowanie przez aplikację/algorytm, praca wyłącznie na rzecz jednego podmiotu. Wpisz 'brak' gdy sąd nie wskazał żadnego."
+  kryteria_wskazujace_przeciw:
+    type: array
+    items:
+      type: string
+      enum: [podporzadkowanie_kierownictwo, osobiste_wykonywanie, prawo_zastepstwa, wzajemnosc_zobowiazan, stale_wynagrodzenie, czas_miejsce_wyznaczone, ryzyko_gospodarcze, wlaczenie_w_organizacje, narzedzia_zapewnione, ciaglosc_powtarzalnosc, rezultat_indywidualny, zarzadzanie_algorytmiczne, wola_stron_nazwa_umowy, wylacznosc_jeden_zleceniodawca, inne, brak]
+    description: "Kryteria (ta sama lista co wyżej), które sąd uznał za przemawiające przeciw stosunkowi pracy (za umową cywilnoprawną/samozatrudnieniem albo za umową o dzieło), np. swoboda w organizacji czasu pracy, realne prawo zastępstwa, ryzyko gospodarcze wykonawcy, własne narzędzia, indywidualny sprawdzalny rezultat, świadomy wybór formy umowy przez strony, praca dla wielu podmiotów. Wpisz 'brak' gdy sąd nie wskazał żadnego."
+  prawo_zastepstwa:
+    type: string
+    enum: [realne_nieograniczone, ograniczone_lub_pozorne, brak, nie_podano]
+    description: "Ustalenie sądu co do możliwości powierzenia wykonania osobie trzeciej. 'ograniczone_lub_pozorne' gdy klauzula istniała w umowie, ale w praktyce nie była wykonywana albo wymagała zgody zamawiającego. 'nie_podano' gdy sąd tego nie badał."
+  praca_platformowa:
+    type: string
+    enum: [tak, nie, nie_podano]
+    description: "Czy zatrudnienie odbywało się za pośrednictwem platformy cyfrowej/aplikacji (kurierzy, dostawcy jedzenia, przewóz osób, usługi zlecane przez aplikację), w tym przez pośrednika flotowego. 'nie_podano' gdy z uzasadnienia nie wynika sposób przydzielania pracy."
+  dyrektywa_platformowa_powolana:
+    type: string
+    enum: [tak, nie]
+    description: "Czy sąd powołuje dyrektywę Parlamentu Europejskiego i Rady (UE) 2024/2831 w sprawie poprawy warunków pracy za pośrednictwem platform internetowych (np. domniemanie stosunku pracy, zarządzanie algorytmiczne). 'nie' gdy brak wzmianki."
+  branza:
+    type: string
+    enum: [transport_dostawy, budownictwo, it_technologie, ochrona_mienia, sprzatanie_utrzymanie, ochrona_zdrowia, edukacja_szkolenia, handel, gastronomia_hotelarstwo, media_kultura_tworczosc, sport, produkcja, uslugi_profesjonalne, administracja_publiczna, inne, nie_podano]
+    description: "Branża, w której świadczono pracę, na podstawie opisu czynności i działalności zamawiającego."
+  nacisk_umowa_czy_rzeczywistosc:
+    type: string
+    enum: [decyduje_rzeczywisty_sposob_wykonywania, decyduje_tresc_umowy_i_wola_stron, ocena_mieszana, nie_podano]
+    description: "Na czym sąd oparł kwalifikację: 'decyduje_rzeczywisty_sposob_wykonywania' gdy sąd podkreśla, że o charakterze stosunku decyduje faktyczny sposób wykonywania pracy, a nie nazwa umowy (art. 22 § 1¹ k.p.); 'decyduje_tresc_umowy_i_wola_stron' gdy sąd eksponuje swobodę umów (art. 353¹ k.c.) i zgodny zamiar stron (art. 65 § 2 k.c.); 'ocena_mieszana' gdy oba elementy ważą podobnie."
+  przepisy_powolane:
+    type: array
+    items:
+      type: string
+      enum: [art_22_par_1_kp, art_22_par_1_1_kp, art_22_par_1_2_kp, art_189_kpc, art_63_1_kpc, art_6_usus, art_8_usus, art_9_usus, art_627_kc, art_734_kc, art_750_kc, art_353_1_kc, art_65_kc, art_58_kc, art_83_kc, art_281_kp, ustawa_o_pip_decyzja_przeksztalcajaca, inne, brak]
+    description: "Przepisy powoływane przez sąd w związku z kwalifikacją umowy: k.p. (art. 22 § 1, § 1¹, § 1², art. 281), k.p.c. (art. 189, art. 63¹), ustawa o systemie ubezpieczeń społecznych (art. 6, 8, 9), k.c. (art. 627 dzieło, art. 734 zlecenie, art. 750 usługi, art. 353¹, art. 65, art. 58, art. 83), przepisy ustawy o PIP o decyzji przekształcającej umowę (od 8.07.2026). Zaznacz wszystkie wymienione."
+  wczesniej_umowa_o_prace_ten_sam_podmiot:
+    type: string
+    enum: [tak, nie, nie_podano]
+    description: "Czy wykonawca przed sporną umową był zatrudniony na umowę o pracę u tego samego podmiotu (lub podmiotu powiązanego) przy tych samych czynnościach (przejście z etatu na zlecenie/B2B)."
+  kwalifikacja_ustalona_przez_sad:
+    type: string
+    enum: [stosunek_pracy, umowa_zlecenia_uslugi, umowa_o_dzielo, samozatrudnienie_b2b, kwalifikacja_mieszana_okresy, nie_rozstrzygnieto, nie_podano]
+    description: "Ostateczna kwalifikacja przyjęta przez sąd w tym orzeczeniu. 'kwalifikacja_mieszana_okresy' gdy dla różnych okresów lub umów sąd przyjął różne kwalifikacje. 'nie_rozstrzygnieto' przy uchyleniu do ponownego rozpoznania lub odrzuceniu/umorzeniu."
+  poziom_ochrony:
+    type: string
+    enum: [pelna_ochrona_pracownicza, ochrona_czesciowa, brak_ochrony_pracowniczej, nie_rozstrzygnieto]
+    description: "Znormalizowany wynik do porównań PL–UK: 'pelna_ochrona_pracownicza' = stosunek pracy; 'ochrona_czesciowa' = umowa zlecenia/o świadczenie usług (tytuł do ubezpieczeń, minimalna stawka godzinowa, bez ochrony kodeksowej); 'brak_ochrony_pracowniczej' = umowa o dzieło lub samozatrudnienie B2B; 'nie_rozstrzygnieto' gdy sąd nie przesądził."
+  wynik_dla_wykonawcy:
+    type: string
+    enum: [korzystny, czesciowo_korzystny, niekorzystny, nie_podano]
+    description: "Czy rozstrzygnięcie jest korzystne dla osoby wykonującej pracę (np. ustalono stosunek pracy lub objęcie ubezpieczeniem, o które zabiegała). Uwaga: gdy ZUS objął ubezpieczeniem, a wykonawca wraz z płatnikiem się odwoływał, oddalenie odwołania jest 'niekorzystny' dla wykonawcy; gdy wykonawca sam domagał się objęcia ubezpieczeniem, ustalenie podlegania jest 'korzystny'."
+  decyzja_organu_wynik:
+    type: string
+    enum: [odwolanie_oddalone_decyzja_utrzymana, decyzja_zmieniona, decyzja_uchylona_przekazana, nie_dotyczy]
+    description: "Tylko w sprawach z odwołania od decyzji organu (ZUS o podleganiu ubezpieczeniom lub okręgowego inspektora pracy o przekształceniu umowy): czy sąd oddalił odwołanie (decyzja się ostała), zmienił decyzję (np. art. 477¹⁴ § 2 k.p.c.) czy uchylił ją/przekazał sprawę. 'nie_dotyczy' gdy nie jest to sprawa z odwołania od decyzji organu."
+  konsekwencje:
+    type: array
+    items:
+      type: string
+      enum: [skladki_ubezpieczeniowe, zalegle_wynagrodzenie, wynagrodzenie_minimalne, urlop_wypoczynkowy, nadgodziny_czas_pracy, ochrona_przed_rozwiazaniem, swiadectwo_pracy_dokumentacja, uprawnienia_emerytalne_staz, podatek_dochodowy, ochrona_antydyskryminacyjna, prawa_zbiorowe_zwiazkowe, odpowiedzialnosc_wykroczeniowa, inne, brak, nie_podano]
+    description: "Skutki prawne kwalifikacji, które sąd rozstrzyga lub wskazuje w tym orzeczeniu: składki ZUS/objęcie ubezpieczeniami, zaległe wynagrodzenie, minimalne wynagrodzenie/stawka godzinowa, urlop lub ekwiwalent, nadgodziny, odszkodowanie/przywrócenie przy rozwiązaniu, świadectwo pracy, staż pracy/uprawnienia emerytalne, PIT, ochrona przed dyskryminacją, prawa związkowe, grzywna za wykroczenie z art. 281 k.p."
+  kwota_zasadzona_pln:
+    type: number
+    description: "Łączna kwota zasądzona na rzecz wykonawcy w PLN (wynagrodzenie, ekwiwalent, odszkodowanie), bez odsetek i kosztów. Wpisz 0 gdy nic nie zasądzono lub sprawa nie dotyczy zapłaty; sprawdź pole kwota_zasadzona_pln_podana."
+  kwota_zasadzona_pln_podana:
+    type: boolean
+    description: "true jeśli w orzeczeniu podano zasądzoną kwotę pieniężną na rzecz wykonawcy; false gdy brak zasądzenia lub kwoty."
+  okres_spornego_zatrudnienia_miesiace:
+    type: integer
+    description: "Długość spornego okresu zatrudnienia w miesiącach (zaokrąglona), wyliczona z dat podanych w orzeczeniu. Wpisz 0 gdy nie da się ustalić; sprawdź pole okres_spornego_zatrudnienia_podany."
+  okres_spornego_zatrudnienia_podany:
+    type: boolean
+    description: "true jeśli orzeczenie podaje daty lub długość spornego okresu zatrudnienia."
+  orzeczenia_powolane:
+    type: array
+    items:
+      type: string
+      enum: [sn_iii_uzp_4_11, sn_ii_uk_315_10, sn_ii_uk_402_12, sn_ii_uk_133_06, sn_i_pk_108_09, tsue_c_66_85_lawrie_blum, tsue_c_256_01_allonby, tsue_c_413_13_fnv_kunsten, tsue_c_692_19_yodel, inne_sn, inne_sa, inne_tsue, inne, brak]
+    description: "Kluczowe orzeczenia powołane przez sąd w kwestii kwalifikacji umowy: SN III UZP 4/11 (uchwała z 14.02.2012), II UK 315/10, II UK 402/12, II UK 133/06, I PK 108/09; TSUE C-66/85 Lawrie-Blum, C-256/01 Allonby, C-413/13 FNV Kunsten, C-692/19 Yodel. Inne orzeczenia SN, sądów apelacyjnych lub TSUE oznacz odpowiednio 'inne_sn', 'inne_sa', 'inne_tsue'. 'brak' gdy nie powołano żadnego."
+  traktowanie_orzeczen:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje powołane orzeczenia z pola orzeczenia_powolane: 'stosuje' (przyjmuje i stosuje pogląd), 'odroznia' (wskazuje odmienny stan faktyczny), 'polemizuje' (nie podziela poglądu), 'nie_dotyczy' (brak powołań)."
+required: [kwalifikacja_umowy_dotyczy, tryb_postepowania, inicjator_sporu, rodzaj_umowy_nazwa, kwalifikacja_sporna, kryteria_wskazujace_na_zatrudnienie, kryteria_wskazujace_przeciw, prawo_zastepstwa, praca_platformowa, dyrektywa_platformowa_powolana, branza, nacisk_umowa_czy_rzeczywistosc, przepisy_powolane, wczesniej_umowa_o_prace_ten_sam_podmiot, kwalifikacja_ustalona_przez_sad, poziom_ochrony, wynik_dla_wykonawcy, decyzja_organu_wynik, konsekwencje, kwota_zasadzona_pln, kwota_zasadzona_pln_podana, okres_spornego_zatrudnienia_miesiace, okres_spornego_zatrudnienia_podany, orzeczenia_powolane, traktowanie_orzeczen]

@@ -1,0 +1,119 @@
+# Topic: Zarzut wadliwej obsady sądu z udziałem sędziów powołanych na wniosek KRS ukształtowanej ustawą z 8.12.2017 ("neosędziowie")
+# Why: przekrojowy problem we wszystkich rodzajach spraw: czy udział sędziego powołanego w procedurze przed
+#   KRS w składzie po 2017 r. oznacza sprzeczność składu z przepisami prawa (art. 379 pkt 4 k.p.c., art. 439
+#   § 1 pkt 2 k.p.k., art. 183 § 2 pkt 4 p.p.s.a.), podstawę wyłączenia (art. 48-49 k.p.c., art. 41 k.p.k.,
+#   art. 19 p.p.s.a.) lub test niezależności (art. 42a usp, art. 29 § 4-25 ustawy o SN w brzmieniu ustawy z
+#   9.03.2023). Spór: automatyzm vs ocena indywidualna; kryteria oceny; skutek (nieważność/uchylenie/oddalenie).
+# Key rulings: SN uchwała połączonych Izb BSA I-4110-1/20 z 23.01.2020; ETPCz Reczkowicz v. Poland (22.07.2021),
+#   Dolińska-Ficek i Ozimek v. Poland (8.11.2021), Advance Pharma v. Poland (3.02.2022), Wałęsa v. Poland
+#   (23.11.2023); TSUE A.K. C-585/18, C-624/18, C-625/18 (19.11.2019), W.Ż. C-487/19 (6.10.2021), C-521/21
+#   (24.03.2026: samo powołanie z udziałem KRS po 2017 r. nie wystarcza; całościowa ocena okoliczności,
+#   kontrola w postępowaniu o wyłączenie) [zweryfikowane: data i teza]; TK U 2/20 (20.04.2020, o uchwale SN) [zweryfikowane].
+#   Uchwała NSA w tej materii — nie zweryfikowano, pominięta w enumach.
+# Applies to collection: see pl_wadliwosc_skladu_neosedziowie.queries.yaml
+title: pl_wadliwosc_skladu_neosedziowie
+description: "Schemat ekstrakcji dla orzeczeń rozpoznających zarzut wadliwej obsady sądu lub wniosek o wyłączenie sędziego powołanego na wniosek KRS ukształtowanej ustawą z 8 grudnia 2017 r."
+type: object
+additionalProperties: false
+properties:
+  wadliwosc_skladu_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Czy orzeczenie merytorycznie odnosi się do statusu sędziego powołanego na wniosek KRS ukształtowanej ustawą z 8.12.2017 (tzw. neo-KRS) albo do zarzutu wadliwej obsady sądu/wniosku o wyłączenie/testu niezależności z tego powodu. 'tak' — sąd ocenia taki zarzut, wniosek lub bada to z urzędu. 'nie' — typowe fałszywe trafienia: wadliwa obsada z innych przyczyn (sędzia wyłączony z mocy ustawy z powodu pokrewieństwa, delegacja sędziego, skład jednoosobowy zamiast trzyosobowego, ławnicy), sprawy dyscyplinarne bez oceny składu, sprawy o odwołanie od uchwał KRS (II GOK) bez oceny składu orzekającego, sama wzmianka o KRS. 'niejasne' — gdy nie da się ustalić."
+  kto_podnosi:
+    type: string
+    enum: [strona_powodowa_lub_skarzaca, strona_pozwana_lub_przeciwnik, oskarzony_lub_obronca, prokurator, rzecznik_praw_obywatelskich, uczestnik_postepowania, sad_z_urzedu, sedzia_sam_zglasza, inny, not_stated]
+    description: "Kto podniósł kwestię wadliwej obsady lub złożył wniosek o wyłączenie. 'sad_z_urzedu' — sąd bada ją bez wniosku (np. nieważność z urzędu w apelacji). 'sedzia_sam_zglasza' — żądanie wyłączenia przez samego sędziego (art. 49 k.p.c. / art. 41 k.p.k. z urzędu)."
+  instrument:
+    type: string
+    enum: [zarzut_apelacyjny, zarzut_zazaleniowy, zarzut_kasacyjny, skarga_kasacyjna_nsa, wniosek_o_wylaczenie, wniosek_o_test_niezaleznosci, skarga_o_wznowienie, skarga_nadzwyczajna, badanie_z_urzedu, inny, not_stated]
+    description: "Środek, w ramach którego rozpoznano kwestię składu."
+  podstawy_prawne:
+    type: array
+    items:
+      type: string
+      enum: [art_379_pkt_4_kpc, art_48_kpc, art_49_kpc, art_401_pkt_1_kpc, art_439_par_1_pkt_2_kpk, art_41_kpk, art_183_par_2_pkt_4_ppsa, art_19_ppsa, art_271_pkt_1_ppsa, art_42a_usp, art_29_ustawy_o_sn, art_45_konstytucji, art_6_ekpcz, art_19_teu, art_47_karty_praw_podstawowych, inne, not_stated]
+    description: "Wszystkie przepisy powołane jako podstawa zarzutu lub oceny składu: nieważność postępowania (art. 379 pkt 4 k.p.c., art. 439 § 1 pkt 2 k.p.k., art. 183 § 2 pkt 4 p.p.s.a.), wyłączenie (art. 48-49 k.p.c., art. 41 k.p.k., art. 19 p.p.s.a.), wznowienie (art. 401 pkt 1 k.p.c., art. 271 pkt 1 p.p.s.a.), test niezależności (art. 42a usp, art. 29 ustawy o SN), standard konstytucyjny i europejski (art. 45 Konstytucji, art. 6 EKPCz, art. 19 ust. 1 TUE, art. 47 Karty)."
+  kwestionowany_sad:
+    type: array
+    items:
+      type: string
+      enum: [sad_rejonowy, sad_okregowy, sad_apelacyjny, wsa, nsa, sn, ten_sam_sad_orzekajacy, not_stated]
+    description: "Sąd (instancja), którego obsady dotyczy zarzut: sąd I instancji, sąd odwoławczy, NSA, SN. 'ten_sam_sad_orzekajacy' — przy wniosku o wyłączenie członka składu, który rozpoznaje sprawę."
+  liczba_kwestionowanych_sedziow:
+    type: integer
+    description: "Liczba sędziów, których status jest kwestionowany. 0, gdy nie wskazano (wtedy liczba_kwestionowanych_sedziow_stated=false)."
+  liczba_kwestionowanych_sedziow_stated:
+    type: boolean
+    description: "true, jeśli z orzeczenia wynika liczba kwestionowanych sędziów."
+  rodzaj_powolania:
+    type: array
+    items:
+      type: string
+      enum: [pierwsze_powolanie_na_urzad_sedziego, awans_do_sadu_wyzszej_instancji, powolanie_do_sn, powolanie_do_nsa, powolanie_asesora, delegacja, not_stated]
+    description: "Charakter nominacji kwestionowanego sędziego dokonanej na wniosek KRS po 2017 r. (pierwsze powołanie z asesury lub spoza sądownictwa, awans, powołanie do SN/NSA)."
+  kryteria_oceniane:
+    type: array
+    items:
+      type: string
+      enum: [tryb_powolania_przez_krs_po_2017, wadliwosc_uksztaltowania_krs, ukrycie_list_poparcia, niewykonanie_postanowienia_nsa_o_wstrzymaniu, okolicznosci_indywidualne_powolania, postawa_i_dzialalnosc_sedziego, zwiazki_z_wladza_wykonawcza, staz_i_kwalifikacje, przebieg_kariery_przed_powolaniem, charakter_sprawy_i_udzial_panstwa, uplyw_czasu_od_powolania, obiektywne_watpliwosci_jednostki, inne, not_stated]
+    description: "Wszystkie kryteria, które sąd faktycznie ocenia przy rozpatrywaniu zarzutu (nie tylko wymienione przez stronę): sam tryb powołania przez KRS po 2017 r.; wadliwość ukształtowania KRS; okoliczności indywidualne powołania; postawa sędziego (np. działalność w KRS, rzecznik dyscyplinarny, publiczne wypowiedzi); związki z władzą wykonawczą (np. delegacja do Ministerstwa Sprawiedliwości); staż i kwalifikacje; niewykonanie postanowienia NSA wstrzymującego uchwałę KRS; charakter sprawy (np. Skarb Państwa jako strona); upływ czasu; obiektywne wątpliwości jednostki co do niezależności (test z wyroku A.K.)."
+  automatyzm_czy_ocena_indywidualna:
+    type: string
+    enum: [automatyzm_wadliwosci, ocena_indywidualna, brak_wadliwosci_co_do_zasady, nie_rozstrzygnieto]
+    description: "Podejście sądu: 'automatyzm_wadliwosci' — samo powołanie na wniosek KRS po 2017 r. przesądza o wadliwości składu (linia uchwały BSA I-4110-1/20 dla SN i niektórych orzeczeń); 'ocena_indywidualna' — konieczna całościowa ocena okoliczności (linia TSUE C-521/21, ETPCz); 'brak_wadliwosci_co_do_zasady' — sąd uznaje, że powołanie przez Prezydenta konwaliduje wadę / zarzut nie podlega badaniu; 'nie_rozstrzygnieto'."
+  dopuszczalnosc_badania:
+    type: string
+    enum: [badanie_dopuszczalne, badanie_niedopuszczalne, nie_odniesiono_sie]
+    description: "Czy sąd uznał, że ma kompetencję do badania statusu sędziego (np. wobec art. 29 § 2-3 ustawy o SN, art. 42a § 1-2 usp, prerogatywy Prezydenta, wyroków TK). 'badanie_niedopuszczalne' — sąd odmawia oceny."
+  rozstrzygniecie_zarzutu:
+    type: string
+    enum: [zarzut_uwzgledniony, zarzut_oddalony, zarzut_nierozpoznany_merytorycznie, wniosek_odrzucony_lub_pozostawiony_bez_rozpoznania, wniosek_o_wylaczenie_uwzgledniony, wniosek_o_wylaczenie_oddalony, test_niezaleznosci_negatywny_dla_sedziego, test_niezaleznosci_pozytywny_dla_sedziego, inne]
+    description: "Rozstrzygnięcie w przedmiocie zarzutu/wniosku dotyczącego statusu sędziego (nie wynik sprawy co do istoty)."
+  skutek:
+    type: string
+    enum: [uchylenie_i_zniesienie_postepowania, uchylenie_i_przekazanie_do_ponownego_rozpoznania, stwierdzenie_niewaznosci_postepowania, wylaczenie_sedziego, wznowienie_postepowania, oddalenie_zarzutu_bez_skutku, wyrok_utrzymany_z_innych_przyczyn, inny, not_stated]
+    description: "Skutek procesowy rozpoznania zarzutu: uchylenie wyroku z zniesieniem postępowania (art. 386 § 2 k.p.c.), uchylenie i przekazanie, stwierdzenie nieważności, wyłączenie sędziego, wznowienie, brak skutku (zarzut oddalony)."
+  powolane_orzeczenia:
+    type: array
+    items:
+      type: string
+      enum: [sn_bsa_i_4110_1_20, etpcz_reczkowicz, etpcz_dolinska_ficek_ozimek, etpcz_advance_pharma, etpcz_walesa, etpcz_inne, tsue_a_k_c_585_18, tsue_w_z_c_487_19, tsue_c_521_21, tsue_inne, tk_u_2_20, tk_inne, nsa_inne, sn_inne, inne, brak]
+    description: "Orzeczenia powołane w uzasadnieniu w kontekście statusu sędziów: uchwała SN BSA I-4110-1/20 (23.01.2020); ETPCz Reczkowicz (22.07.2021), Dolińska-Ficek i Ozimek (8.11.2021), Advance Pharma (3.02.2022), Wałęsa (23.11.2023); TSUE A.K. C-585/18 (19.11.2019), W.Ż. C-487/19 (6.10.2021), C-521/21 (24.03.2026); TK U 2/20; inne orzeczenia TK, NSA, SN. 'brak', gdy nie powołano."
+  stosunek_do_bsa_i_4110_1_20:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje uchwałę połączonych Izb SN BSA I-4110-1/20: 'stosuje' — opiera na niej ocenę; 'odroznia' — np. wskazuje na inną kategorię sędziego/sądu lub datę wydania orzeczenia (przed 23.01.2020); 'polemizuje' — odmawia jej zastosowania (np. powołując TK U 2/20); 'nie_dotyczy' — niepowołana."
+  stosunek_do_c_521_21:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje wyrok TSUE C-521/21 z 24.03.2026 (brak automatyzmu, całościowa ocena okoliczności): 'stosuje', 'odroznia', 'polemizuje' lub 'nie_dotyczy' (niepowołany, w tym orzeczenia sprzed 24.03.2026)."
+  stosunek_do_etpcz:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje orzecznictwo ETPCz w tej materii (Reczkowicz, Dolińska-Ficek i Ozimek, Advance Pharma, Wałęsa) łącznie."
+  zdanie_odrebne:
+    type: string
+    enum: [tak_w_kwestii_skladu, tak_w_innej_kwestii, nie, not_stated]
+    description: "Czy do orzeczenia zgłoszono zdanie odrębne, i czy dotyczy ono statusu sędziego/obsady sądu."
+  sedzia_kwestionowany_w_skladzie_orzekajacym:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy w składzie wydającym analizowane orzeczenie zasiada sędzia powołany na wniosek KRS po 2017 r. (jeśli uzasadnienie to ujawnia, np. przy rozpoznaniu wniosku o wyłączenie członka składu)."
+  izba_sn:
+    type: string
+    enum: [cywilna, karna, pracy_i_ubezpieczen_spolecznych, kontroli_nadzwyczajnej_i_spraw_publicznych, odpowiedzialnosci_zawodowej, dyscyplinarna, polaczone_izby, nie_dotyczy, not_stated]
+    description: "Izba Sądu Najwyższego, jeśli orzeczenie wydał SN lub zarzut dotyczy składu SN. 'nie_dotyczy' — orzeczenie sądu powszechnego/administracyjnego dotyczące innego sądu."
+  rodzaj_sprawy:
+    type: string
+    enum: [cywilna, gospodarcza, rodzinna, pracy, ubezpieczen_spolecznych, karna, wykroczeniowa, administracyjna, podatkowa, inna]
+    description: "Rodzaj sprawy głównej, w której podniesiono zarzut (według przedmiotu i wydziału)."
+  skarb_panstwa_strona:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy stroną postępowania jest Skarb Państwa, organ władzy publicznej lub prokurator (istotne dla oceny obiektywnych wątpliwości co do niezależności)."
+  orzeczenie_kwestionowane_data_przed_23_01_2020:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy kwestionowane orzeczenie (wydane z udziałem sędziego) zapadło przed 23.01.2020 — wg pkt 4 uchwały BSA I-4110-1/20 jej wykładnia co do sądów powszechnych i wojskowych dotyczy orzeczeń wydanych po dniu jej podjęcia, a co do SN — niezależnie od daty."
+required: [wadliwosc_skladu_dotyczy, kto_podnosi, instrument, podstawy_prawne, kwestionowany_sad, liczba_kwestionowanych_sedziow, liczba_kwestionowanych_sedziow_stated, rodzaj_powolania, kryteria_oceniane, automatyzm_czy_ocena_indywidualna, dopuszczalnosc_badania, rozstrzygniecie_zarzutu, skutek, powolane_orzeczenia, stosunek_do_bsa_i_4110_1_20, stosunek_do_c_521_21, stosunek_do_etpcz, zdanie_odrebne, sedzia_kwestionowany_w_skladzie_orzekajacym, izba_sn, rodzaj_sprawy, skarb_panstwa_strona, orzeczenie_kwestionowane_data_przed_23_01_2020]

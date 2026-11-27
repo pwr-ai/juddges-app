@@ -1,0 +1,98 @@
+topic: linia_orzecznicza_tracker
+collection:
+  name: "Sporne zagadnienia — rozbieżności w orzecznictwie, zagadnienia prawne, pytania prejudycjalne (PL 2018-2026)"
+  description: "Meta-schemat: primary use = apply to ANY topic collection (run it next to the topic schema to track how each judgment positions itself in the reasoning line). Standalone use = the 'sporne zagadnienia' collection built by the queries below: judgments of ordinary and administrative courts that expressly discuss a split in case law, refer a question of law (art. 390 k.p.c., art. 441 k.p.k., art. 187 p.p.s.a.), refer a preliminary question to the CJEU (art. 267 TFUE) or the TK, or stay proceedings pending a CJEU/SN/NSA/TK ruling. Out: judgments that merely cite case law without any split or referral (those remain in topic collections)."
+  jurisdiction: PL
+  period: {from: 2018-01-01, to: 2026-11-24}
+  size_estimate: "unknown; referrals (art. 390/441/187, art. 267 TFUE) are rare — probably hundreds to low thousands in the corpus; explicit 'rozbieżność w orzecznictwie' discussions are far more frequent (tens of thousands). Union of the 15 queries below (<=750 hits per run) is a seed; re-run per year slice (2018-2020, 2021-2023, 2024-2026) to widen."
+  rationale: "2018 start: the new Act on the Supreme Court (8.12.2017) in force 3.04.2018, incl. the abstract-resolution route (art. 83), plus the post-2018 wave of CJEU references from Polish courts (rule of law, CHF loans, consumer credit). Both court types, because the referral mechanisms differ (k.p.c./k.p.k. vs p.p.s.a.) and the 'adoption curve' analyses compare them. SN and TK themselves are not in the full corpus — their rulings appear only as citations."
+  use_with_any_topic: "To apply to an existing topic collection, run this schema on the same document ids as the topic schema; join on judgment id; filter linia_orzecznicza_dotyczy = tak."
+
+search_v2:
+  - id: q01
+    purpose: "Express split in case law — civil/criminal (keyword)"
+    body: {query: "w orzecznictwie występują rozbieżności zarysowały się dwa stanowiska Sąd podziela pogląd", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q02
+    purpose: "Express split in case law — administrative courts"
+    body: {query: "rozbieżności w orzecznictwie sądów administracyjnych dwie linie orzecznicze skład orzekający podziela stanowisko", court_type: [administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q03
+    purpose: "Civil referral to SN (art. 390 § 1 k.p.c.)"
+    body: {query: "na podstawie art. 390 § 1 k.p.c. przedstawić Sądowi Najwyższemu do rozstrzygnięcia zagadnienie prawne budzące poważne wątpliwości", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q04
+    purpose: "Criminal referral to SN (art. 441 § 1 k.p.k.)"
+    body: {query: "art. 441 § 1 k.p.k. przekazać Sądowi Najwyższemu do rozstrzygnięcia zagadnienie prawne wymagające zasadniczej wykładni ustawy", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q05
+    purpose: "NSA bench refers to an enlarged bench (art. 187 § 1 p.p.s.a.)"
+    body: {query: "art. 187 § 1 p.p.s.a. przedstawić do rozstrzygnięcia składowi siedmiu sędziów Naczelnego Sądu Administracyjnego zagadnienie prawne budzące poważne wątpliwości", court_type: [administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q06
+    purpose: "Preliminary reference to the CJEU — ordinary courts"
+    body: {query: "na podstawie art. 267 TFUE zwrócić się do Trybunału Sprawiedliwości Unii Europejskiej z pytaniem prejudycjalnym", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q07
+    purpose: "Preliminary reference to the CJEU — administrative courts"
+    body: {query: "przedstawić Trybunałowi Sprawiedliwości Unii Europejskiej pytanie prejudycjalne art. 267 TFUE zawiesić postępowanie art. 124 § 1 pkt 5 p.p.s.a.", court_type: [administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q08
+    purpose: "Stay pending a CJEU ruling in another case (civil)"
+    body: {query: "zawieszenie postępowania do czasu rozstrzygnięcia przez Trybunał Sprawiedliwości Unii Europejskiej pytania prejudycjalnego w sprawie C-", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q09
+    purpose: "Stay pending an SN resolution (zagadnienie prawne w sprawie III CZP)"
+    body: {query: "zawiesić postępowanie do czasu podjęcia przez Sąd Najwyższy uchwały w sprawie III CZP zagadnienie prawne", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q10
+    purpose: "Stay pending an NSA resolution (FPS/OPS/GPS)"
+    body: {query: "zawieszenie postępowania sądowoadministracyjnego do czasu podjęcia uchwały przez skład siedmiu sędziów NSA art. 125 § 1 pkt 1 p.p.s.a.", court_type: [administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q11
+    purpose: "Question of law to the Constitutional Tribunal (art. 193 Konstytucji)"
+    body: {query: "pytanie prawne do Trybunału Konstytucyjnego art. 193 Konstytucji czy przepis jest zgodny z Konstytucją zawieszenie postępowania", court_type: [ordinary_court, administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q12
+    purpose: "Binding resolutions — art. 269 p.p.s.a. and departure attempts"
+    body: {query: "art. 269 § 1 p.p.s.a. skład sądu administracyjnego nie podziela stanowiska zajętego w uchwale Naczelnego Sądu Administracyjnego", court_type: [administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q13
+    purpose: "Minority / isolated view, court departs from its own line (descriptive, vector-heavy)"
+    body: {query: "Sąd odstępuje od dotychczasowego stanowiska prezentowanego w orzecznictwie tego sądu i przychyla się do poglądu mniejszościowego, mając świadomość, że jest on odosobniony", court_type: [ordinary_court, administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.8, limit: 50}
+  - id: q14
+    purpose: "Dominant-line wording (ugruntowane / przeważające orzecznictwo) vs. split"
+    body: {query: "w orzecznictwie Sądu Najwyższego nie jest jednolicie rozstrzygana kwestia, przeważający pogląd, ugruntowana linia orzecznicza, odmienne stanowisko", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.7, limit: 50}
+  - id: q15
+    purpose: "Pro-EU interpretation following a CJEU judgment (prounijna wykładnia)"
+    body: {query: "wykładnia prounijna zgodnie z wyrokiem Trybunału Sprawiedliwości Unii Europejskiej sąd krajowy zobowiązany jest odmówić zastosowania przepisu", court_type: [ordinary_court, administrative_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date BETWEEN DATE '2018-01-01' AND DATE '2026-11-24'
+    AND (
+      full_text ~* 'rozbieżno(ść|ści) w (orzecznictwie|judykaturze)'
+      OR full_text ~* '(dwa|dwie|odmienne) (stanowiska|linie orzecznicze|nurty)'
+      OR full_text ~* 'art\.?\s*390\s*§\s*1\s*k\.?p\.?c'
+      OR full_text ~* 'art\.?\s*441\s*§\s*1\s*k\.?p\.?k'
+      OR full_text ~* 'art\.?\s*187\s*§\s*1\s*p\.?p\.?s\.?a'
+      OR full_text ~* '(art\.?\s*267\s*TFUE|pytani[ae] prejudycjaln)'
+      OR full_text ~* 'pytani[ae] prawn[ey] do Trybunału Konstytucyjnego'
+      OR full_text ~* 'zawie(sza|sić|szenie)[^.]{0,200}(Trybunał Sprawiedliwości|Sąd Najwyższy|uchwał)'
+      OR EXISTS (SELECT 1 FROM unnest(cited_legislation) c WHERE c ~* '(267.*TFUE|390.*k\.?p\.?c|441.*k\.?p\.?k|187.*p\.?p\.?s\.?a)')
+    )
+  ORDER BY decision_date;
+
+filters:
+  case_number_patterns: ["I C", "I ACa", "I ACz", "V ACa", "II Ca", "II Ka", "II AKa", "I FSK", "II FSK", "I OSK", "II OSK", "I GSK", "II GSK", "III OSK", "I SA/", "II SA/", "III SA/"]
+  courts: ["Sądy apelacyjne (najczęściej przedstawiają zagadnienia z art. 390 k.p.c. i art. 441 k.p.k.)", "Sądy okręgowe jako odwoławcze", "Naczelny Sąd Administracyjny (art. 187 p.p.s.a.)", "Wojewódzkie sądy administracyjne (pytania do TSUE, art. 269 p.p.s.a.)"]
+  sn_nsa_resolution_signature_patterns: ["III CZP", "I KZP", "III UZP", "III PZP", "I NZP", "BSA", "I FPS", "II FPS", "I OPS", "II OPS", "I GPS", "II GPS"]
+
+inclusion_gate: {field: linia_orzecznicza_dotyczy, keep: [tak]}
+standalone_collection_gate:
+  note: "For the 'sporne zagadnienia' collection keep only rows with linia_orzecznicza_dotyczy = tak AND at least one of: deklarowana_rozbieznosc_w_orzecznictwie = tak; zagadnienie_prawne_przedstawione != brak; zawieszenie_do_czasu_rozstrzygniecia not in [brak, not_stated]."
+negative_markers:
+  - "postanowienie o nadaniu klauzuli wykonalności"
+  - "zarządzenie o zwrocie pozwu"
+  - "wyrok bez uzasadnienia"
+  - "postanowienie o kosztach"
+  - "orzecznictwo jest jednolite"
+  - "odmawia przedstawienia zagadnienia prawnego"
+  - "brak podstaw do zawieszenia postępowania"
+
+analyses:
+  - "Adoption curve of a ruling: for a target signature (e.g. a III CZP or I FPS resolution, a CJEU C- judgment), monthly count and share of judgments in a topic collection whose powolane_sygnatury contains it, split by court type and appellate area (apelacja / WSA seat) — time from ruling to 50% adoption."
+  - "Treatment drift: per target ruling, share of stosunek_do_glownego_orzeczenia = stosuje / odroznia / polemizuje over time; spikes in 'polemizuje' as an early signal of a new split."
+  - "Split lifecycle: from first deklarowana_rozbieznosc = tak, through zagadnienie_prawne_przedstawione / zawieszenie (pending), to resolution — how quickly opowiada_sie_za_linia converges after an SN/NSA resolution or CJEU judgment."
+  - "Court-level profile: reliance on supra-national law (powoluje_tsue, powoluje_etpcz, wykladnia_dominujaca contains prounijna) and argument style (dominujacy_typ_argumentacji, stopien_szczegolowosci_uzasadnienia) by court and division."
+  - "Stay practice: frequency of zawieszenie_do_czasu_rozstrzygniecia (czeka_na_tsue_w_innej_sprawie vs odmowa_zawieszenia) per appellate area — a proxy for case-flow cost of unresolved splits."

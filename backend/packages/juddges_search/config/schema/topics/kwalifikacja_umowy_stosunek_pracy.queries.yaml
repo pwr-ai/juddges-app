@@ -1,0 +1,189 @@
+topic: kwalifikacja_umowy_stosunek_pracy
+collection:
+  name: "Kwalifikacja umowy: umowa cywilnoprawna a stosunek pracy (PL + UK employment status)"
+  description: "PL: sprawy sądów pracy i ubezpieczeń społecznych (SR/SO/SA), w których sąd ocenia, czy umowa zlecenia, o dzieło, B2B lub kontrakt menedżerski jest stosunkiem pracy (art. 22 k.p., art. 189 i 63¹ k.p.c.) albo czy umowa o dzieło jest w istocie umową o świadczenie usług dla celów ubezpieczeń społecznych (decyzje ZUS), plus sprawy podatkowe WSA/NSA o kryteria działalności gospodarczej (art. 5b u.p.d.o.f.). UK: rozstrzygnięcia o statusie employee/worker/self-employed. Poza zakresem: spory z bezspornej umowy o pracę, pozorne umowy o pracę zawierane dla świadczeń, spory o zapłatę między przedsiębiorcami."
+  jurisdiction: PL+UK
+  period: {from: 2015-01-01, to: 2026-11-24}
+  size_estimate: "unknown; rough guess several thousand PL candidates in the full corpus (each search_v2 query returns max 50, so the union of ~16 queries yields at most ~800 candidates per run — widen with further time slices if recall is insufficient). Curated: likely tens PL and tens UK."
+  rationale: "Od 8.07.2026 nowy tryb: decyzja OIP przekształcająca umowę i odwołanie do sądu pracy (q17) — kolejny punkt cięcia pre/post. Od 2015 r. pełne pokrycie portali orzeczeń sądów powszechnych; obejmuje okres przed i po Uber v Aslam (19.02.2021), IWGB v CAC (21.11.2023), dyrektywie (UE) 2024/2831 (23.10.2024) i Employment Rights Act 2025 (Royal Assent 18.12.2025), co pozwala porównywać linię orzeczniczą przed/po. SN nie jest w korpusie pełnym — jego linia jest widoczna przez powołania w orzeczeniach SO/SA (pole orzeczenia_powolane)."
+
+search_v2:
+  - id: q01
+    purpose: "Ustawowa formuła art. 22 § 1¹ k.p. (bez względu na nazwę umowy) — rdzeń zbioru"
+    body: {query: "art. 22 § 1¹ k.p. zatrudnienie w warunkach określonych w § 1 jest zatrudnieniem na podstawie stosunku pracy bez względu na nazwę zawartej przez strony umowy", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q02
+    purpose: "Art. 22 § 1² k.p. — niedopuszczalne zastąpienie umowy o pracę umową cywilnoprawną"
+    body: {query: "art. 22 § 1² k.p. nie jest dopuszczalne zastąpienie umowy o pracę umową cywilnoprawną przy zachowaniu warunków wykonywania pracy", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q03
+    purpose: "Powództwo o ustalenie istnienia stosunku pracy przy umowie zlecenia (art. 189 k.p.c.), opis podporządkowania"
+    body: {query: "powództwo o ustalenie istnienia stosunku pracy umowa zlecenia podporządkowanie kierownictwo pracodawcy czas i miejsce pracy wyznaczone", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q04
+    purpose: "Powództwo inspektora pracy (art. 63¹ k.p.c.)"
+    body: {query: "inspektor pracy Państwowa Inspekcja Pracy wytoczył powództwo o ustalenie istnienia stosunku pracy art. 63¹ k.p.c.", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q05
+    purpose: "Decyzje ZUS: umowa o dzieło przekwalifikowana na umowę o świadczenie usług, tytuł ubezpieczenia (art. 6, 8, 9 u.s.u.s.)"
+    body: {query: "decyzja ZUS podleganie obowiązkowym ubezpieczeniom emerytalnemu i rentowym umowa o dzieło w istocie umowa o świadczenie usług art. 750 k.c. płatnik składek", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q06
+    purpose: "Rozumowanie typowe dla sporów dzieło/zlecenie (brak sprawdzalnego rezultatu, powtarzalność)"
+    body: {query: "umowa o dzieło brak indywidualnie oznaczonego rezultatu poddającego się sprawdzianowi na istnienie wad powtarzalne czynności umowa starannego działania składki", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q07
+    purpose: "Samozatrudnienie / B2B u dotychczasowego pracodawcy"
+    body: {query: "pracownik założył działalność gospodarczą i świadczył tę samą pracę na rzecz byłego pracodawcy na podstawie umowy B2B ustalenie istnienia stosunku pracy", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q08
+    purpose: "Kontrakty menedżerskie i członkowie zarządu"
+    body: {query: "kontrakt menedżerski członek zarządu spółki stosunek pracy podporządkowanie art. 22 k.p. ustalenie", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q09
+    purpose: "Praca platformowa (kurierzy, przewóz osób, aplikacje), pośrednicy flotowi"
+    body: {query: "kierowca kurier dostawca jedzenia praca przez aplikację platforma pośrednik flotowy umowa zlecenia stosunek pracy ubezpieczenie społeczne", court_type: [ordinary_court], date_from: 2018-01-01, date_to: 2026-11-24, alpha: 0.7, limit: 50}
+  - id: q10
+    purpose: "Dyrektywa platformowa 2024/2831 i domniemanie stosunku pracy"
+    body: {query: "dyrektywa 2024/2831 poprawa warunków pracy za pośrednictwem platform internetowych domniemanie stosunku pracy zarządzanie algorytmiczne", court_type: [ordinary_court, administrative_court], date_from: 2024-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q11
+    purpose: "Prawo zastępstwa i osobiste świadczenie pracy jako kryterium"
+    body: {query: "możliwość powierzenia wykonania osobie trzeciej prawo do zastępstwa brak osobistego świadczenia pracy wyłącza stosunek pracy umowa zlecenia", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q12
+    purpose: "Wykroczenie z art. 281 § 1 pkt 1 k.p. (zastąpienie umowy o pracę umową cywilnoprawną)"
+    body: {query: "art. 281 § 1 pkt 1 k.p. zawarcie umowy cywilnoprawnej w warunkach w których zgodnie z art. 22 § 1 powinna być zawarta umowa o pracę wykroczenie", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q13
+    purpose: "Sprawy podatkowe: kryteria działalności gospodarczej vs stosunek podobny do pracy (art. 5b u.p.d.o.f.)"
+    body: {query: "art. 5b ust. 1 ustawy o podatku dochodowym od osób fizycznych czynności nie uznaje się za pozarolniczą działalność gospodarczą odpowiedzialność wobec osób trzecich ryzyko gospodarcze miejsce i czas wykonywania", court_type: [administrative_court], date_from: 2015-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q17
+    purpose: "Odwołania od decyzji okręgowego inspektora pracy przekształcających umowę w umowę o pracę (od 8.07.2026)"
+    body: {query: "odwołanie od decyzji okręgowego inspektora pracy stwierdzającej istnienie stosunku pracy przekształcenie umowy cywilnoprawnej w umowę o pracę", court_type: [ordinary_court], date_from: 2026-07-08, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q14
+    purpose: "Time slice 2015–2019 (ogólna fraza, aby obejść limit 50)"
+    body: {query: "ustalenie istnienia stosunku pracy umowa cywilnoprawna nazwa umowy nie decyduje o jej charakterze", court_type: [ordinary_court], date_from: 2015-01-01, date_to: 2019-12-31, alpha: 0.5, limit: 50}
+  - id: q15
+    purpose: "Time slice 2020–2022"
+    body: {query: "ustalenie istnienia stosunku pracy umowa cywilnoprawna nazwa umowy nie decyduje o jej charakterze", court_type: [ordinary_court], date_from: 2020-01-01, date_to: 2022-12-31, alpha: 0.5, limit: 50}
+  - id: q16
+    purpose: "Time slice 2023–2026"
+    body: {query: "ustalenie istnienia stosunku pracy umowa cywilnoprawna nazwa umowy nie decyduje o jej charakterze", court_type: [ordinary_court], date_from: 2023-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date >= DATE '2015-01-01'
+    AND (
+      (full_text ~* 'art\.\s*22\s*§\s*1'
+        AND full_text ~* '(umow\w*\s+(zlecenia|o\s+dzieło|cywilnopraw\w*|o\s+świadczenie\s+usług)|kontrakt\w*\s+(B2B|menedżersk\w*)|samozatrudni\w*)')
+      OR full_text ~* 'ustaleni\w*\s+istnienia\s+stosunku\s+pracy'
+      OR full_text ~* 'art\.\s*63\s*(¹|\(1\)|1)\s*k\.\s*p\.\s*c'
+      OR (full_text ~* 'umow\w*\s+o\s+dzieło'
+          AND full_text ~* '(ubezpiecze\w*\s+społeczn\w*|Zakład\w*\s+Ubezpieczeń\s+Społecznych|organ\w*\s+rentow\w*)')
+      OR array_to_string(cited_legislation, ' ') ~* 'art\.?\s*22\s*§\s*1\s*(¹|\(1\)|1|²|\(2\)|2)'
+      OR array_to_string(keywords, ' ') ~* '(stosunek\s+pracy|umowa\s+(zlecenia|o\s+dzieło)|samozatrudnienie)'
+    )
+  ORDER BY decision_date;
+
+uk_side:
+  schema: kwalifikacja_umowy_stosunek_pracy_uk.yaml
+  curated_sql: |
+    SELECT id, case_number, court_name, decision_date
+    FROM public.judgments
+    WHERE jurisdiction = 'UK'
+      AND decision_date >= DATE '2015-01-01'
+      AND (
+        full_text ~* '(section|s\.)\s*230\s*\(\s*3\s*\)'
+        OR full_text ~* 'limb\s*\(?b\)?\s+worker'
+        OR full_text ~* '(employment|worker)\s+status'
+        OR full_text ~* '(Autoclenz|Pimlico\s+Plumbers|Uber\s+BV|Ready\s+Mixed\s+Concrete|Carmichael\s+v\.?\s+National\s+Power|Professional\s+Game\s+Match\s+Officials)'
+        OR full_text ~* '(IR35|intermediaries\s+legislation)'
+      )
+      AND full_text ~* '(self-employed|independent\s+contractor|contract\s+for\s+services|worker)'
+    ORDER BY decision_date;
+  notes:
+    - "Courts/tribunals: Employment Tribunal (first instance; few reported), EAT, Court of Appeal, UKSC; tax status in FTT (Tax) and Upper Tribunal (Tax and Chancery); CAC and judicial review for union recognition (IWGB). Check which of these the curated UK set actually contains (court_name) before trusting recall."
+    - "Terms: employee / worker / limb (b) worker / self-employed / independent contractor / contract of service vs contract for services / mutuality of obligation / substitution clause / sham / business on own account / client or customer / IR35 / deemed employment / hypothetical contract."
+    - "No UK analogue of the PL umowa o dzieło vs zlecenie distinction for social security; the closest is a one-off commission (status_determined=defined_deliverable_contractor). The PL ZUS role is split in the UK between HMRC (NICs, PAYE, NMW enforcement) and tribunals."
+  field_mapping:
+    - "kwalifikacja_umowy_dotyczy <-> employment_status_applies  # tak/nie/niejasne = yes/no/unclear"
+    - "tryb_postepowania <-> proceeding_type  # approximate, see value_mapping"
+    - "inicjator_sporu <-> initiator  # positional"
+    - "rodzaj_umowy_nazwa <-> contract_label  # approximate, see value_mapping"
+    - "kwalifikacja_sporna <-> status_contested  # approximate, see value_mapping"
+    - "kryteria_wskazujace_na_zatrudnienie <-> criteria_pointing_to_employment  # positional (16 values)"
+    - "kryteria_wskazujace_przeciw <-> criteria_pointing_against  # positional (16 values)"
+    - "prawo_zastepstwa <-> substitution_right  # positional"
+    - "praca_platformowa <-> platform_work  # positional"
+    - "dyrektywa_platformowa_powolana <-> (none)  # PL-only"
+    - "(none) <-> echr_article_11_considered  # UK-only"
+    - "branza <-> sector  # positional (16 values)"
+    - "nacisk_umowa_czy_rzeczywistosc <-> contract_vs_reality  # positional"
+    - "przepisy_powolane <-> statutory_provisions  # not comparable value-by-value (different statutes)"
+    - "wczesniej_umowa_o_prace_ten_sam_podmiot <-> prior_employment_same_engager  # positional"
+    - "kwalifikacja_ustalona_przez_sad <-> status_determined  # see value_mapping"
+    - "poziom_ochrony <-> protection_tier  # positional; primary cross-lingual outcome comparator"
+    - "wynik_dla_wykonawcy <-> outcome_for_individual  # positional"
+    - "decyzja_organu_wynik <-> hmrc_determination_outcome  # positional"
+    - "konsekwencje <-> consequences  # positional (15 values)"
+    - "kwota_zasadzona_pln <-> amount_awarded_gbp  # convert currency before comparing"
+    - "kwota_zasadzona_pln_podana <-> amount_awarded_gbp_stated"
+    - "okres_spornego_zatrudnienia_miesiace <-> engagement_period_months"
+    - "okres_spornego_zatrudnienia_podany <-> engagement_period_stated"
+    - "orzeczenia_powolane <-> cited_rulings  # shared CJEU values: Lawrie-Blum, Allonby, FNV Kunsten, Yodel"
+    - "traktowanie_orzeczen <-> cited_rulings_treatment  # stosuje/odroznia/polemizuje/nie_dotyczy = applies/distinguishes/disagrees/not_applicable"
+  value_mapping:
+    tryb_postepowania:
+      powodztwo_o_ustalenie_stosunku_pracy_art_189_kpc: status_preliminary_hearing_or_claim
+      powodztwo_pip_art_63_1_kpc: regulatory_enforcement
+      odwolanie_od_decyzji_pip: regulatory_enforcement
+      odwolanie_od_decyzji_zus: tax_status_appeal_ir35_nic
+      roszczenia_pracownicze_z_przeslankowa_kwalifikacja: employment_rights_claim_with_status_as_precondition
+      sprawa_podatkowa: tax_status_appeal_ir35_nic
+      sprawa_wykroczeniowa_art_281_kp: regulatory_enforcement
+      inne: other
+      nie_podano: not_stated
+    rodzaj_umowy_nazwa:
+      umowa_zlecenia: casual_or_zero_hours_worker_agreement
+      umowa_o_swiadczenie_uslug: contract_for_services_freelance
+      umowa_o_dzielo: fixed_deliverable_commission
+      kontrakt_b2b_dzialalnosc_gospodarcza: personal_service_company_or_limited_company
+      kontrakt_menedzerski: office_holder_or_director_service
+      umowa_agencyjna: agency_or_umbrella
+      brak_umowy_pisemnej: no_written_contract
+      kilka_rodzajow_umow: multiple_labels
+      inne: other
+      nie_podano: not_stated
+    kwalifikacja_sporna:
+      stosunek_pracy_czy_umowa_cywilnoprawna: employee_vs_independent_contractor
+      stosunek_pracy_czy_samozatrudnienie_b2b: employee_vs_independent_contractor
+      dzielo_czy_zlecenie_uslugi: worker_vs_self_employed
+      inne: other
+      nie_podano: not_stated
+    kwalifikacja_ustalona_przez_sad:
+      stosunek_pracy: employee
+      umowa_zlecenia_uslugi: worker
+      umowa_o_dzielo: defined_deliverable_contractor
+      samozatrudnienie_b2b: self_employed_independent_contractor
+      kwalifikacja_mieszana_okresy: mixed_by_period
+      nie_rozstrzygnieto: not_determined
+      nie_podano: not_stated
+  value_mapping_caveat: "PL umowa zlecenia <-> UK worker is a functional (protection-tier) analogy, not a doctrinal equivalence; compare outcomes via poziom_ochrony <-> protection_tier."
+
+filters:
+  case_number_patterns: [" P ", "Pa ", "APa ", " U ", "Ua ", "AUa ", "Pz ", "W "]
+  courts:
+    - "Sądy rejonowe – wydziały pracy (sygn. P)"
+    - "Sądy okręgowe – wydziały pracy i ubezpieczeń społecznych (sygn. P, U, Pa, Ua)"
+    - "Sądy apelacyjne – wydziały pracy i ubezpieczeń społecznych (sygn. APa, AUa)"
+    - "WSA/NSA – izby finansowe (sprawy art. 5b u.p.d.o.f.; sygn. I SA, II FSK)"
+  notes: "Sygnatura 'W' (sprawy wykroczeniowe) tylko w połączeniu z art. 281 k.p.; 'U'/'AUa' to odwołania od decyzji ZUS (spór dzieło/zlecenie i podleganie ubezpieczeniom)."
+
+inclusion_gate: {field: kwalifikacja_umowy_dotyczy, keep: [tak]}
+uk_inclusion_gate: {field: employment_status_applies, keep: ["yes"]}
+negative_markers:
+  - "pozorność umowy o pracę zawartej w celu uzyskania świadczeń (art. 83 k.c.) przy bezspornie pracowniczym tytule"
+  - "podstawa wymiaru składek z umowy o pracę (zawyżone wynagrodzenie) bez sporu o rodzaj umowy"
+  - "spór o zapłatę wynagrodzenia za dzieło między przedsiębiorcami"
+  - "odpowiedzialność pracodawcy za wypadek przy pracy bez sporu o tytuł zatrudnienia"
+  - "UK: vicarious liability 'akin to employment' without a statutory status decision"
+  - "UK: status conceded by the respondent"
+
+analyses:
+  - "Pre/post porównanie: odsetek rozstrzygnięć z poziom_ochrony=pelna_ochrona_pracownicza vs protection_tier=full/partial przed i po Uber v Aslam (19.02.2021) oraz przed i po dyrektywie 2024/2831."
+  - "Które kryteria (kryteria_wskazujace_na_zatrudnienie/przeciw) decydują o wyniku w PL vs UK — np. waga prawa zastępstwa i ryzyka gospodarczego; model logistyczny wyniku od kryteriów."
+  - "Rola inicjatora: wyniki spraw z inicjatywy ZUS/PIP vs wykonawcy (PL) i HMRC vs worker/union (UK)."
+  - "Praca platformowa: liczba i wynik spraw z praca_platformowa=tak w czasie, wg branży."
+  - "Linia orzecznicza: częstotliwość powołań III UZP 4/11 i orzeczeń TSUE oraz ich traktowanie (stosuje/odroznia) w kolejnych latach."

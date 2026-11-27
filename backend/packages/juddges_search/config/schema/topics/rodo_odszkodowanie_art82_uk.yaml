@@ -1,0 +1,123 @@
+# Topic: Data protection compensation under UK GDPR art. 82 / DPA 2018 s.168-169 (UK side of rodo_odszkodowanie_art82)
+# Why: Data subjects claim compensation for material and non-material damage (distress) for infringements of the
+#      UK GDPR / DPA 2018, often pleaded with misuse of private information, breach of confidence and negligence, and
+#      increasingly as mass claims (GLOs, multi-claimant actions, CPR 19.8 representative actions). Contested: de minimis
+#      and seriousness thresholds, "loss of control" as damage, need to prove that data were actually read, viability of
+#      representative actions. ICO monetary penalty notices (DPA 2018 s.155) are reviewed by the First-tier Tribunal.
+# Key rulings: Vidal-Hall v Google [2015] EWCA Civ 311; Lloyd v Google LLC [2021] UKSC 50 (10.11.2021); Farley v Paymaster
+#      (1836) Ltd t/a Equiniti [2025] EWCA Civ 1117 (22.08.2025; UKSC permission to appeal granted 17.12.2025,
+#      UKSC 2025/0185, heard 7-8.10.2026, judgment pending as of 24.11.2026); post-2020 CJEU rulings are not binding but may be considered:
+#      C-300/21 (4.05.2023), C-340/21 (14.12.2023), C-456/22 (14.12.2023), C-687/21 (25.01.2024), C-741/21 (11.04.2024),
+#      C-590/22 (20.06.2024), C-182/22 & C-189/22 (20.06.2024), C-200/23 (4.10.2024), C-507/23 (4.10.2024).
+#      Parallel PL schema: rodo_odszkodowanie_art82.yaml (enums aligned in order; see field_mapping in queries).
+# Applies to collection: see rodo_odszkodowanie_art82.queries.yaml (uk_side)
+title: rodo_odszkodowanie_art82_uk
+description: "Compensation claims for data protection infringements under UK GDPR / DPA 2018 and review of ICO penalties."
+type: object
+additionalProperties: false
+properties:
+  data_protection_compensation_applies:
+    type: string
+    enum: ["yes", "no", unclear]
+    description: "Inclusion gate. 'yes' when (a) the court decides a claim for compensation for infringement of the (UK) GDPR, DPA 2018 or DPA 1998 (incl. claims pleaded together with misuse of private information, breach of confidence or negligence arising from a data breach), or (b) a tribunal/court reviews an ICO enforcement or monetary penalty notice. 'no' for typical false positives: MPI/privacy claims against media with no data protection claim, subject access requests used only as disclosure tactics without a compensation or enforcement issue, anonymity orders/reporting restrictions, FOIA requests refused on personal-data grounds. 'unclear' if data protection is only mentioned in passing."
+  proceeding_type:
+    type: string
+    enum: [civil_compensation_claim, review_of_ico_penalty, review_of_ico_other_decision, ico_complaint_progress_s166, other, not_stated]
+    description: "Strand of the case: civil compensation claim by data subject(s); appeal/review of an ICO monetary penalty notice (DPA 2018 s.155, s.162); appeal against another ICO notice (enforcement, information notice, reprimand); s.166 application regarding ICO handling of a complaint (counterpart of PL bezczynność UODO)."
+  legal_basis:
+    type: array
+    items:
+      type: string
+      enum: [uk_gdpr_art_82, dpa_2018_s168_169, misuse_of_private_information_breach_of_confidence, negligence, tort_other, contract, dpa_2018_s155_penalty, dpa_1998_s13, other, none]
+    description: "Legal bases relied on: UK GDPR art. 82; DPA 2018 s.168 (compensation incl. distress) and s.169; misuse of private information and/or breach of confidence; negligence; other tort; contract; ICO penalty under DPA 2018 s.155; DPA 1998 s.13 for older claims. Ordering mirrors the PL podstawa_roszczenia list."
+  breach_type:
+    type: array
+    items:
+      type: string
+      enum: [data_leak_cyberattack, unlawful_processing, unauthorised_disclosure, failure_to_give_access_or_information, unlawful_marketing, monitoring_cctv, inadequate_security_art_32, excessive_retention, failure_to_notify_breach_art_33_34, other]
+    description: "Infringement alleged: data leak or cyberattack; processing without lawful basis; disclosure to an unauthorised recipient (e.g. letters mis-sent, as in Farley; publication online); failure to comply with subject access/information duties (arts 12-15); direct marketing without consent or despite objection (incl. PECR); CCTV/employee monitoring; inadequate technical and organisational measures (art. 32); excessive retention; failure to notify the ICO or data subjects (arts 33-34). Mark all."
+  data_categories:
+    type: array
+    items:
+      type: string
+      enum: [name_address, national_insurance_or_id_number, identity_document, financial_banking, health, other_special_category_art_9, criminal_offence_data_art_10, contact_email_phone, image, employment_data, location, other, not_stated]
+    description: "Categories of personal data involved: name/address; national insurance number or other identifier; passport/driving licence; financial or bank data, salary, pension; health data; other special-category data (art. 9, e.g. union membership, biometrics); criminal offence data (art. 10); email/phone; images; employment/HR data; location data. Mark all."
+  controller_type:
+    type: string
+    enum: [bank_financial_institution, insurer, telecoms, retail_e_commerce, employer, healthcare_provider, public_authority, school_university, media_publisher, online_platform, debt_collection_law_firm, housing_association_landlord, other_business, individual, other, not_stated]
+    description: "Category of the defendant controller/processor (civil) or of the penalised organisation (regulatory). Use 'employer' only when the defendant is the claimant's own employer; a pension or payroll administrator sued as a separate company goes under 'bank_financial_institution' if it is a financial services firm, otherwise 'other_business'."
+  data_subjects_affected:
+    type: integer
+    description: "Number of data subjects affected by the infringement, if stated (e.g. size of breach, number of claimants in a mass claim). Use 0 if not stated; check data_subjects_affected_stated."
+  data_subjects_affected_stated:
+    type: boolean
+    description: "true if the judgment states the number of affected data subjects."
+  damage_claimed:
+    type: string
+    enum: [material, non_material, material_and_non_material, not_applicable, not_stated]
+    description: "Damage claimed: material (financial loss, costs), non-material (distress, anxiety, loss of control), or both. 'not_applicable' in ICO penalty cases."
+  damage_threshold_applied:
+    type: string
+    enum: [no_threshold, de_minimis, seriousness_threshold, not_stated]
+    description: "Threshold applied to non-material damage: 'no_threshold' (any proven damage suffices); 'de_minimis' (trivial claims excluded, Lloyd v Google / de minimis principle); 'seriousness_threshold' (damage must cross a threshold of seriousness); 'not_stated'."
+  fear_of_misuse:
+    type: string
+    enum: [accepted_as_damage, rejected, not_stated]
+    description: "Whether the court accepts the claimant's fear/anxiety that data may be misused (fraud, identity theft) as compensable damage, or rejects it as speculative/unproven."
+  loss_of_control:
+    type: string
+    enum: [accepted_as_damage, rejected, not_stated]
+    description: "Whether the court accepts loss of control over personal data, as such, as compensable damage (Lloyd v Google rejected 'loss of control' damages without proof for the representative class; contrast CJEU C-687/21, C-200/23)."
+  disclosure_to_third_parties_established:
+    type: string
+    enum: ["yes", "no", not_established]
+    description: "Whether the court finds that the data actually reached/were read by unauthorised persons. 'no' where it is found nobody accessed them; 'not_established' where unresolved (e.g. strike-out stage, as in Farley) or not applicable."
+  causation:
+    type: string
+    enum: [established, not_established, not_stated]
+    description: "Whether causation between the infringement and the damage was established. 'not_stated' where the court did not reach the issue or in penalty cases."
+  controller_exemption_art_82_3:
+    type: string
+    enum: [controller_proved_not_responsible, controller_failed_to_prove, not_stated]
+    description: "Whether the controller relied on art. 82(3) (not in any way responsible for the event giving rise to the damage) and with what result."
+  claim_outcome:
+    type: string
+    enum: [allowed_in_full, allowed_in_part, dismissed, struck_out_or_discontinued, remitted, not_applicable, not_stated]
+    description: "Result for the compensation claim in this decision (on appeal: the effect on the claim). Use 'struck_out_or_discontinued' for strike-out/summary judgment against the claimant. 'not_applicable' in ICO cases."
+  amount_claimed_gbp:
+    type: number
+    description: "Total compensation claimed per claimant (or in aggregate if only that is stated) in GBP, excluding interest and costs. Use 0 if not stated; check amount_claimed_gbp_stated."
+  amount_claimed_gbp_stated:
+    type: boolean
+    description: "true if the judgment states the amount claimed."
+  amount_awarded_gbp:
+    type: number
+    description: "Total compensation awarded in GBP, excluding interest and costs; 0 if dismissed. Check amount_awarded_gbp_stated."
+  amount_awarded_gbp_stated:
+    type: boolean
+    description: "true if the judgment decides the money claim and states the award (incl. 0 on dismissal); false if not applicable or not stated."
+  ico_review_outcome:
+    type: string
+    enum: [appeal_dismissed_notice_upheld, notice_quashed, notice_void, onward_appeal_dismissed, onward_appeal_allowed, appeal_struck_out_withdrawn, penalty_reduced_or_varied, not_applicable, not_stated]
+    description: "Only in reviews of ICO decisions: notice upheld, quashed, void, outcome of onward appeal (UT/CA), struck out/withdrawn, or penalty reduced/varied (the FTT may substitute a notice — no PL counterpart since WSA cannot vary a fine). 'not_applicable' in civil claims."
+  ico_penalty_amount_gbp:
+    type: number
+    description: "Amount of the ICO monetary penalty in GBP as stated (the amount under review; if reduced, record the original). Use 0 if not applicable; check ico_penalty_amount_gbp_stated."
+  ico_penalty_amount_gbp_stated:
+    type: boolean
+    description: "true if the judgment states the ICO penalty amount."
+  collective_proceedings:
+    type: string
+    enum: [representative_action_cpr_19_8, group_litigation_order_or_multi_claimant, individual_claim, not_applicable, not_stated]
+    description: "Form of proceedings: representative action under CPR 19.8 (formerly 19.6, as in Lloyd v Google); group litigation order or multi-claimant action (as in Farley); individual claim. 'not_applicable' in ICO cases."
+  cited_rulings:
+    type: array
+    items:
+      type: string
+      enum: [cjeu_c_300_21, cjeu_c_340_21, cjeu_c_456_22, cjeu_c_667_21, cjeu_c_687_21, cjeu_c_741_21, cjeu_c_590_22, cjeu_c_182_22_c_189_22, cjeu_c_200_23, cjeu_c_507_23, lloyd_v_google_2021_uksc_50, farley_v_paymaster_2025_ewca_civ_1117, vidal_hall_v_google_2015_ewca_civ_311, other_cjeu, other_uksc, other_court_of_appeal, other, none]
+    description: "Key authorities cited: CJEU C-300/21, C-340/21, C-456/22, C-667/21, C-687/21, C-741/21, C-590/22, C-182/22 & C-189/22, C-200/23, C-507/23; Lloyd v Google [2021] UKSC 50; Farley v Paymaster (Equiniti) [2025] EWCA Civ 1117 (or a later UKSC judgment in the same case — then use other_uksc as well); Vidal-Hall v Google [2015] EWCA Civ 311. Use 'other_*' for other authorities, 'none' if none."
+  cited_rulings_treatment:
+    type: string
+    enum: [applies, distinguishes, disagrees, not_applicable]
+    description: "How the court treats the authorities in cited_rulings: 'applies', 'distinguishes' (different facts), 'disagrees' (declines to follow, e.g. treats post-Brexit CJEU case law as unpersuasive), 'not_applicable' (none cited)."
+required: [data_protection_compensation_applies, proceeding_type, legal_basis, breach_type, data_categories, controller_type, data_subjects_affected, data_subjects_affected_stated, damage_claimed, damage_threshold_applied, fear_of_misuse, loss_of_control, disclosure_to_third_parties_established, causation, controller_exemption_art_82_3, claim_outcome, amount_claimed_gbp, amount_claimed_gbp_stated, amount_awarded_gbp, amount_awarded_gbp_stated, ico_review_outcome, ico_penalty_amount_gbp, ico_penalty_amount_gbp_stated, collective_proceedings, cited_rulings, cited_rulings_treatment]

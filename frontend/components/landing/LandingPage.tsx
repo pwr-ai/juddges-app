@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { GithubIcon } from "@/components/icons/brand";
 import { cn } from "@/lib/utils";
+import { PublicationList } from "@/components/publications/verified-publications";
 import {
   DropCap,
   EditorialButton,
@@ -38,7 +39,6 @@ import {
   projectFunding,
   publications,
   teamMembers,
-  type Publication,
 } from "@/lib/project-content";
 
 // ─────────────────────────────────────────────
@@ -930,26 +930,6 @@ function ResultsSection() {
   );
 }
 
-function PublicationItem({ publication }: { publication: Publication }) {
-  return (
-    <li className="py-5 border-b border-[color:var(--rule)]">
-      <a
-        href={publication.url}
-        className={cn("font-serif text-lg", textLinkClass)}
-        {...externalLinkProps}
-      >
-        {publication.title}
-      </a>
-      <p className="mt-1 text-[15px] text-[color:var(--ink-soft)]">
-        {publication.authors}
-      </p>
-      <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
-        {publication.venue} · {publication.year}
-      </p>
-    </li>
-  );
-}
-
 function PublicationsSection() {
   return (
     <Section id="publications">
@@ -970,20 +950,12 @@ function PublicationsSection() {
           className="mb-12"
         />
 
-        <ul>
-          {publications.map((publication) => (
-            <PublicationItem key={publication.url} publication={publication} />
-          ))}
-        </ul>
+        <PublicationList publications={publications} />
 
         <h3 className="mt-12 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
           Partner publications
         </h3>
-        <ul>
-          {partnerPublications.map((publication) => (
-            <PublicationItem key={publication.url} publication={publication} />
-          ))}
-        </ul>
+        <PublicationList publications={partnerPublications} />
       </div>
     </Section>
   );

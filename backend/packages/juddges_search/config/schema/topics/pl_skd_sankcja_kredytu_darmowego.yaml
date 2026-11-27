@@ -1,0 +1,143 @@
+# Topic: Sankcja kredytu darmowego (SKD) — art. 45 u.k.k. w zw. z art. 30 ust. 1 u.k.k.
+# Why: masowe spory (ok. 19,5 tys. pozwów od początku 2026 r. wg portali prawniczych [?]) o to, czy naruszenie
+#   obowiązków informacyjnych w umowie kredytu konsumenckiego pozbawia kredytodawcę odsetek i kosztów.
+#   Sporne: czy każde naruszenie art. 30 ust. 1 wystarcza, czy tylko istotne; odsetki od kredytowanych kosztów
+#   (prowizja, ubezpieczenie) a RRSO / całkowita kwota do zapłaty; warunki zmiany opłat; prawo odstąpienia;
+#   roczny termin z art. 45 ust. 5 (od wykonania umowy przez kredytodawcę czy przez obie strony); związanie
+#   sądu treścią oświadczenia; nadużycie prawa (art. 5 k.c.); cesja uprawnienia na fundusze/kancelarie; przedawnienie.
+# Key rulings: TSUE C-472/23 Lexitor (13.02.2025) — jednolita sankcja dopuszczalna, jeżeli naruszenie może podważyć
+#   ocenę zakresu zobowiązania; TSUE C-744/24 (23.04.2026) — odsetki od pozaodsetkowych kosztów kredytu a
+#   obowiązek jasnej informacji; TSUE C-565/12 LCL Le Crédit Lyonnais (27.03.2014); TSUE C-42/15 Home Credit
+#   Slovakia (9.11.2016); SN III CZP 15/25 — brak uchwały, postanowienie o zawieszeniu z 30.07.2025 do czasu
+#   wyroków TSUE w C-566/24, C-744/24, C-831/24 (C-566/24 i C-831/24: daty/treść wyroków niezweryfikowane [?]).
+#   SN III CZP 6/24 — nie zweryfikowano istnienia, pominięto [?]. Tekst jedn. u.k.k. Dz.U. 2025 poz. 1362;
+#   wersja art. 45 obowiązuje do 10.01.2027 (nowa regulacja kredytu konsumenckiego) [?].
+# Applies to collection: see pl_skd_sankcja_kredytu_darmowego.queries.yaml
+title: pl_skd_sankcja_kredytu_darmowego
+description: "Ekstrakcja przesłanek, zarzutów i wyniku w sprawach o sankcję kredytu darmowego (art. 45 ustawy o kredycie konsumenckim)."
+type: object
+additionalProperties: false
+properties:
+  skd_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Czy orzeczenie rzeczywiście dotyczy sankcji kredytu darmowego (art. 45 ustawy z 12.05.2011 o kredycie konsumenckim). 'tak' gdy: powód (konsument lub cesjonariusz) żąda zwrotu odsetek/kosztów kredytu na podstawie oświadczenia o SKD, kredytodawca dochodzi zapłaty a pozwany podnosi zarzut SKD, albo sąd ocenia naruszenie art. 29–33a u.k.k. pod kątem art. 45. 'nie' (typowe fałszywe trafienia): sprawy frankowe (art. 385¹ k.c.) bez wątku art. 45, sprawy WIBOR bez SKD, zwrot prowizji przy wcześniejszej spłacie (art. 49 u.k.k., Lexitor C-383/18) bez SKD, pozwy upominawcze o zapłatę rat bez analizy art. 45, kredyty hipoteczne objęte ustawą o kredycie hipotecznym. 'niejasne' gdy SKD jest tylko wzmiankowana."
+  rodzaj_kredytu:
+    type: string
+    enum: [gotowkowy, ratalny, samochodowy, konsolidacyjny, karta_kredytowa, limit_w_rachunku, pozyczka_pozabankowa, inny, not_stated]
+    description: "Rodzaj umowy kredytu konsumenckiego objętej sporem, według opisu w stanie faktycznym. 'ratalny' — kredyt na zakup towaru/usługi w punkcie sprzedaży; 'pozyczka_pozabankowa' — pożyczka od instytucji pożyczkowej. 'not_stated' gdy sąd nie określa rodzaju."
+  pozwany_typ:
+    type: string
+    enum: [bank_komercyjny, bank_spoldzielczy, skok, instytucja_pozyczkowa, inny, not_stated]
+    description: "Typ kredytodawcy będącego stroną sporu (zwykle pozwanego). Ustal z oznaczenia strony (S.A. bank, bank spółdzielczy, SKOK, spółka pożyczkowa). Jeżeli to kredytodawca jest powodem, wskaż jego typ tutaj."
+  powod_typ:
+    type: string
+    enum: [konsument, cesjonariusz_podmiot_profesjonalny, cesjonariusz_inny, kredytodawca, inny, not_stated]
+    description: "Kto wytoczył powództwo. 'konsument' — sam kredytobiorca; 'cesjonariusz_podmiot_profesjonalny' — spółka, fundusz sekurytyzacyjny lub podmiot powiązany z kancelarią, który nabył wierzytelność z tytułu SKD; 'cesjonariusz_inny' — np. osoba fizyczna; 'kredytodawca' — bank/pożyczkodawca dochodzi zapłaty, a SKD pojawia się jako zarzut konsumenta."
+  data_zawarcia_umowy:
+    type: string
+    format: date
+    description: "Data zawarcia umowy kredytu (YYYY-MM-DD). Jeżeli nie podano, zwróć 1900-01-01 i ustaw data_zawarcia_umowy_stated=false."
+  data_zawarcia_umowy_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie podaje datę zawarcia umowy kredytu (co najmniej dzień, miesiąc i rok)."
+  calkowita_kwota_kredytu_pln:
+    type: number
+    description: "Całkowita kwota kredytu w PLN w rozumieniu u.k.k. (kwota wypłacona/udostępniona konsumentowi, bez kredytowanych kosztów); jeśli sąd podaje tylko kwotę kredytu brutto (z prowizją), podaj tę kwotę. 0 i calkowita_kwota_kredytu_stated=false, gdy brak danych."
+  calkowita_kwota_kredytu_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie podaje kwotę kredytu."
+  koszty_kredytowane:
+    type: array
+    items:
+      type: string
+      enum: [prowizja, ubezpieczenie, oplata_przygotowawcza, oplata_za_udzielenie, inne, brak, not_stated]
+    description: "Pozaodsetkowe koszty kredytu, które zostały skredytowane (doliczone do kwoty kredytu i objęte oprocentowaniem). 'brak' gdy sąd stwierdza, że koszty nie były kredytowane; 'not_stated' gdy orzeczenie milczy."
+  kwota_prowizji_pln:
+    type: number
+    description: "Kwota prowizji (lub łącznie skredytowanych kosztów pozaodsetkowych, jeżeli sąd podaje tylko sumę) w PLN. 0 i kwota_prowizji_stated=false, gdy brak danych."
+  kwota_prowizji_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie podaje kwotę prowizji lub skredytowanych kosztów."
+  naruszenia_zarzucane:
+    type: array
+    items:
+      type: string
+      enum: [odsetki_od_kosztow_kredytowanych, bledne_rrso, bledna_calkowita_kwota_do_zaplaty, niejasne_warunki_zmiany_oplat_i_kosztow, brak_lub_bledna_informacja_o_odstapieniu, brak_informacji_o_wczesniejszej_splacie, bledna_informacja_o_oprocentowaniu, bledny_harmonogram_lub_informacja_o_ratach, brak_informacji_o_kosztach_ubezpieczenia, inne_naruszenie_art_30, naruszenie_formy_art_29, abuzywnosc_postanowien, not_stated]
+    description: "Naruszenia obowiązków informacyjnych wskazane przez stronę powołującą się na SKD (w oświadczeniu, pozwie lub zarzucie). Zaznacz wszystkie wymienione. 'abuzywnosc_postanowien' — gdy jako podstawę SKD wskazano niedozwolony charakter klauzul (np. prowizji)."
+  naruszenia_stwierdzone:
+    type: array
+    items:
+      type: string
+      enum: [odsetki_od_kosztow_kredytowanych, bledne_rrso, bledna_calkowita_kwota_do_zaplaty, niejasne_warunki_zmiany_oplat_i_kosztow, brak_lub_bledna_informacja_o_odstapieniu, brak_informacji_o_wczesniejszej_splacie, bledna_informacja_o_oprocentowaniu, bledny_harmonogram_lub_informacja_o_ratach, brak_informacji_o_kosztach_ubezpieczenia, inne_naruszenie_art_30, naruszenie_formy_art_29, abuzywnosc_postanowien, zadne]
+    description: "Naruszenia, które sąd uznał za rzeczywiście zaistniałe (niezależnie od tego, czy uznał je za wystarczające do SKD). 'zadne' — sąd nie stwierdził żadnego naruszenia albo nie badał naruszeń z przyczyn formalnych (np. upływ terminu)."
+  liczba_naruszen_stwierdzonych:
+    type: integer
+    description: "Liczba odrębnych naruszeń art. 29–33a u.k.k. stwierdzonych przez sąd (liczba pozycji w naruszenia_stwierdzone, z wyjątkiem 'zadne'). 0, gdy sąd nie stwierdził naruszeń."
+  standard_oceny_naruszenia:
+    type: string
+    enum: [kazde_naruszenie_wystarcza, tylko_naruszenie_istotne, wplyw_na_ocene_zobowiazania_przez_konsumenta, nie_rozstrzygnieto, not_stated]
+    description: "Jaki standard sąd przyjął dla zastosowania SKD: 'kazde_naruszenie_wystarcza' — formalne naruszenie któregokolwiek z przepisów z art. 45 ust. 1 wystarcza; 'tylko_naruszenie_istotne' — sąd wymaga naruszenia istotnego/rażącego, bagatelizuje drobne uchybienia; 'wplyw_na_ocene_zobowiazania_przez_konsumenta' — test z C-472/23 (czy naruszenie mogło podważyć możliwość oceny zakresu zobowiązania); 'nie_rozstrzygnieto' gdy sąd nie musiał tego oceniać (np. upływ terminu)."
+  ocena_odsetek_od_kosztow_kredytowanych:
+    type: string
+    enum: [dopuszczalne_brak_naruszenia, narusza_obowiazek_informacyjny, postanowienie_niedozwolone, nie_badano, nie_dotyczy]
+    description: "Jak sąd ocenił pobieranie odsetek od skredytowanych kosztów pozaodsetkowych (prowizji, ubezpieczenia) i ich wpływ na RRSO oraz całkowitą kwotę do zapłaty. 'dopuszczalne_brak_naruszenia' — praktyka dozwolona, RRSO prawidłowe; 'narusza_obowiazek_informacyjny' — prowadzi do błędnego RRSO/kwoty lub niejasnej informacji (linia C-744/24); 'postanowienie_niedozwolone' — sąd ocenia to w reżimie art. 385¹ k.c.; 'nie_dotyczy' — koszty nie były kredytowane."
+  oswiadczenie_o_skd_zlozone:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy konsument (przed cesją lub osobiście) złożył kredytodawcy pisemne oświadczenie o skorzystaniu z SKD (art. 45 ust. 1 u.k.k.). 'nie' gdy sąd stwierdza brak oświadczenia lub jego bezskuteczność z braku złożenia."
+  termin_roczny_zachowany:
+    type: string
+    enum: [tak, nie, nie_badano, not_stated]
+    description: "Czy oświadczenie złożono przed upływem roku od dnia wykonania umowy (art. 45 ust. 5 u.k.k.). 'nie' gdy sąd uznał, że uprawnienie wygasło; 'nie_badano' gdy kwestia nie była sporna."
+  poczatek_biegu_terminu_rocznego:
+    type: string
+    enum: [wykonanie_umowy_przez_kredytodawce, calkowita_splata_przez_konsumenta, inne, nie_rozstrzygnieto]
+    description: "Od jakiego zdarzenia sąd liczył roczny termin z art. 45 ust. 5: 'wykonanie_umowy_przez_kredytodawce' — od wypłaty/udostępnienia kredytu; 'calkowita_splata_przez_konsumenta' — od wykonania umowy przez obie strony (spłaty). 'nie_rozstrzygnieto' gdy sąd tego nie przesądza."
+  zakres_badania_naruszen:
+    type: string
+    enum: [sad_zwiazany_oswiadczeniem, sad_bada_z_urzedu_wszystkie_naruszenia, nie_rozstrzygnieto]
+    description: "Czy sąd uznał, że jest związany podstawami wskazanymi w oświadczeniu o SKD, czy bada z urzędu także inne naruszenia (zagadnienie z SN III CZP 15/25). 'nie_rozstrzygnieto' gdy sąd się nie wypowiada."
+  zarzut_naduzycia_prawa:
+    type: string
+    enum: [podniesiony_uwzgledniony, podniesiony_nieuwzgledniony, nie_podniesiono]
+    description: "Czy kredytodawca podniósł zarzut nadużycia prawa (art. 5 k.c.) — np. instrumentalne korzystanie z SKD, obrót roszczeniami przez cesjonariuszy, drobne uchybienia — i czy sąd go uwzględnił."
+  zarzut_przedawnienia:
+    type: string
+    enum: [podniesiony_uwzgledniony, podniesiony_czesciowo_uwzgledniony, podniesiony_nieuwzgledniony, nie_podniesiono]
+    description: "Czy podniesiono zarzut przedawnienia roszczenia o zwrot świadczeń spełnionych ponad kapitał i z jakim skutkiem. 'podniesiony_czesciowo_uwzgledniony' — przedawnienie części rat."
+  ocena_cesji:
+    type: string
+    enum: [cesja_skuteczna, cesja_nieskuteczna, brak_cesji, nie_badano]
+    description: "Gdy powodem jest cesjonariusz: czy sąd uznał przelew wierzytelności (lub uprawnienia do złożenia oświadczenia o SKD) za skuteczny i powoda za legitymowanego. 'cesja_nieskuteczna' obejmuje nieważność umowy cesji, niezbywalność uprawnienia, brak legitymacji czynnej. 'brak_cesji' gdy powodem jest konsument lub kredytodawca."
+  wynik_skd:
+    type: string
+    enum: [skd_zastosowana_w_calosci, skd_zastosowana_czesciowo, skd_odmowiona, rozstrzygniecie_procesowe, not_stated]
+    description: "Wynik merytoryczny w zakresie SKD (nie ogólny wynik instancji): 'skd_zastosowana_w_calosci' — kredytodawca pozbawiony odsetek i wszystkich kosztów; 'skd_zastosowana_czesciowo' — zasądzono część żądania (np. z powodu przedawnienia części rat lub uwzględnienia tylko części kosztów); 'skd_odmowiona' — powództwo oddalone / zarzut SKD nieuwzględniony; 'rozstrzygniecie_procesowe' — odrzucenie, umorzenie, uchylenie i przekazanie. W sprawie odwoławczej oceń skutek wyroku sądu II instancji."
+  podstawy_odmowy_skd:
+    type: array
+    items:
+      type: string
+      enum: [brak_naruszenia, naruszenie_nieistotne, uplyw_terminu_rocznego, naduzycie_prawa, przedawnienie, brak_legitymacji_cesjonariusza, brak_skutecznego_oswiadczenia, kredyt_poza_zakresem_ukk, inne, nie_dotyczy]
+    description: "Dlaczego sąd odmówił zastosowania SKD (w całości lub części). Zaznacz wszystkie podstawy wskazane w uzasadnieniu. 'nie_dotyczy' gdy SKD zastosowano w całości lub rozstrzygnięcie było procesowe."
+  kwota_zasadzona_pln:
+    type: number
+    description: "Kwota zasądzona na rzecz konsumenta/cesjonariusza z tytułu SKD (bez odsetek za opóźnienie i kosztów procesu) w PLN; przy oddaleniu 0. Jeśli kredytodawca był powodem — kwota, o którą sąd obniżył jego roszczenie wskutek SKD. 0 i kwota_zasadzona_stated=false, gdy brak danych."
+  kwota_zasadzona_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie pozwala ustalić kwotę zasądzoną (lub o którą obniżono roszczenie) z tytułu SKD, także 0 przy oddaleniu."
+  powolane_orzeczenia:
+    type: array
+    items:
+      type: string
+      enum: [tsue_c_744_24, tsue_c_472_23, tsue_c_565_12, tsue_c_42_15, tsue_c_566_24, tsue_c_831_24, tsue_c_383_18_lexitor, sn_iii_czp_15_25, inne, brak]
+    description: "Kluczowe orzeczenia z linii SKD powołane w uzasadnieniu (sygnatury TSUE: C-744/24 z 23.04.2026, C-472/23 Lexitor z 13.02.2025, C-565/12 LCL Le Crédit Lyonnais, C-42/15 Home Credit Slovakia, C-566/24, C-831/24, C-383/18 Lexitor z 11.09.2019; SN III CZP 15/25). 'inne' — powołano inne orzeczenia dotyczące SKD; 'brak' — nie powołano orzecznictwa."
+  stosunek_do_powolanych_orzeczen:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Dominujący sposób, w jaki sąd traktuje powołane kluczowe orzeczenia: 'stosuje' — przyjmuje wykładnię i opiera na niej rozstrzygnięcie; 'odroznia' — uznaje, że nie przystają do stanu faktycznego; 'polemizuje' — krytykuje lub odmawia przyjęcia wykładni; 'nie_dotyczy' — nie powołano orzeczeń."
+  stosunek_do_c_744_24:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_powolano]
+    description: "Jak sąd traktuje konkretnie wyrok TSUE C-744/24 z 23.04.2026 (odsetki od kosztów kredytu). Pozwala porównać orzecznictwo przed i po tym wyroku. 'nie_powolano' gdy wyrok nie jest wymieniony."
+required: [skd_dotyczy, rodzaj_kredytu, pozwany_typ, powod_typ, data_zawarcia_umowy, data_zawarcia_umowy_stated, calkowita_kwota_kredytu_pln, calkowita_kwota_kredytu_stated, koszty_kredytowane, kwota_prowizji_pln, kwota_prowizji_stated, naruszenia_zarzucane, naruszenia_stwierdzone, liczba_naruszen_stwierdzonych, standard_oceny_naruszenia, ocena_odsetek_od_kosztow_kredytowanych, oswiadczenie_o_skd_zlozone, termin_roczny_zachowany, poczatek_biegu_terminu_rocznego, zakres_badania_naruszen, zarzut_naduzycia_prawa, zarzut_przedawnienia, ocena_cesji, wynik_skd, podstawy_odmowy_skd, kwota_zasadzona_pln, kwota_zasadzona_stated, powolane_orzeczenia, stosunek_do_powolanych_orzeczen, stosunek_do_c_744_24]

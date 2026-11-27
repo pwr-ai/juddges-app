@@ -1,0 +1,135 @@
+# Topic: Spory o WIBOR w kredytach hipotecznych w PLN (klauzula zmiennego oprocentowania)
+# Why: kredytobiorcy kwestionują postanowienia o zmiennym oprocentowaniu opartym na WIBOR (art. 385¹ k.c.,
+#   obowiązek informacyjny, rekomendacja S KNF, transparentność, BMR 2016/1011). Spór dotyczy abuzywności,
+#   skutku (nieważność całej umowy vs usunięcie WIBOR z pozostawieniem marży), daty umowy względem BMR,
+#   odsetek maksymalnych oraz zabezpieczenia (zawieszenie płatności rat).
+# Key rulings: TSUE C-471/24 PKO BP z 12.02.2026 (wskaźnik referencyjny co do zasady nie powoduje znaczącej
+#   nierównowagi; bank nie musi ujawniać pełnej metodologii; umowa z 2019 r.) [zweryfikowane];
+#   pending TSUE C-586/25 i C-630/25 (połączone; m.in. umowy sprzed stosowania BMR) [zweryfikowane: istnienie
+#   i połączenie; zakres pytań częściowo [?]]; pending C-607/25 (odsetki maksymalne) [zakres [?]].
+#   Rozporządzenie BMR (UE) 2016/1011 stosowane od 1.01.2018. Reforma WIBOR -> WIRON/POLSTR [?: nazwa
+#   docelowego wskaźnika zmieniała się]. ~420 orzeczeń w I poł. 2026, głównie oddalenia [?].
+# Applies to collection: see pl_wibor_klauzula_zmiennego_oprocentowania.queries.yaml
+title: pl_wibor_klauzula_zmiennego_oprocentowania
+description: "Schemat ekstrakcji dla spraw o kwestionowanie klauzuli zmiennego oprocentowania opartego na WIBOR w kredytach w PLN."
+type: object
+additionalProperties: false
+properties:
+  wibor_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Czy orzeczenie rzeczywiście dotyczy sporu o postanowienia umowy kredytu (pożyczki) w PLN, w których oprocentowanie zmienne oparto na wskaźniku WIBOR (zarzut abuzywności, nieważności, braku informacji o ryzyku WIBOR, żądanie zwrotu odsetek wg WIBOR lub zabezpieczenie w takiej sprawie). 'tak' — sąd ocenia te zarzuty lub rozstrzyga o zabezpieczeniu w takiej sprawie. 'nie' — typowe fałszywe trafienia: kredyty frankowe CHF/EUR (WIBOR wspomniany pobocznie lub LIBOR), sprawy windykacyjne banku bez zarzutów co do WIBOR, odsetki ustawowe, umowy leasingu/faktoringu z WIBOR bez zarzutów konsumenckich, sprawy karne, podatkowe. 'niejasne' — gdy z treści nie da się ustalić."
+  data_umowy:
+    type: string
+    format: date
+    description: "Data zawarcia umowy kredytu (RRRR-MM-DD). Gdy podany tylko miesiąc/rok — pierwszy dzień miesiąca/roku. Gdy brak — wpisz 1900-01-01 i ustaw data_umowy_stated=false."
+  data_umowy_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie podaje datę zawarcia umowy (choćby rok); false w przeciwnym razie."
+  umowa_przed_bmr:
+    type: string
+    enum: [tak_przed_2018_01_01, nie_od_2018_01_01, aneks_po_bmr_do_umowy_wczesniejszej, nie_ustalono]
+    description: "Czy umowa została zawarta przed rozpoczęciem stosowania rozporządzenia BMR (UE) 2016/1011, tj. przed 1.01.2018. Wybierz 'aneks_po_bmr_do_umowy_wczesniejszej', gdy umowę zawarto wcześniej, a klauzulę WIBOR wprowadzono/zmieniono aneksem po tej dacie. 'nie_ustalono', gdy nie da się ustalić."
+  rodzaj_kredytu:
+    type: string
+    enum: [kredyt_hipoteczny_mieszkaniowy, kredyt_hipoteczny_inny_cel, pozyczka_hipoteczna, kredyt_konsolidacyjny, kredyt_gotowkowy_konsumencki, kredyt_firmowy, inny, not_stated]
+    description: "Rodzaj umowy, której dotyczy spór, według opisu w uzasadnieniu."
+  status_kredytobiorcy:
+    type: string
+    enum: [konsument, przedsiebiorca, sporny, not_stated]
+    description: "Status kredytobiorcy (art. 22¹ k.c.) przyjęty przez sąd. 'sporny' — gdy bank kwestionował status konsumenta, a sąd nie rozstrzygnął tego wyraźnie."
+  typ_oprocentowania:
+    type: string
+    enum: [zmienne_wibor, okresowo_stale_potem_wibor, stale_z_przejsciem_na_zmienne, zmienne_wibor_po_aneksie, inny, not_stated]
+    description: "Konstrukcja oprocentowania w umowie: czysto zmienne (WIBOR + marża), okresowo stałe (np. 5 lat) z późniejszym przejściem na WIBOR, zmiana na WIBOR aneksem itp."
+  tenor_wibor:
+    type: string
+    enum: [wibor_1m, wibor_3m, wibor_6m, wibor_12m, inny, not_stated]
+    description: "Tenor wskaźnika WIBOR wskazany w umowie (np. WIBOR 3M, WIBOR 6M)."
+  podstawy_zarzutow:
+    type: array
+    items:
+      type: string
+      enum: [abuzywnosc_art_385_1_kc, brak_transparentnosci_klauzuli, niedoinformowanie_o_ryzyku_zmiennej_stopy, brak_symulacji_wzrostu_rat, naruszenie_rekomendacji_s_knf, naruszenie_rozporzadzenia_bmr, wadliwosc_lub_manipulacja_wskaznika_wibor, brak_wplywu_na_tresc_umowy, sprzecznosc_z_zasadami_wspolzycia_art_58_kc, naruszenie_ustawy_o_kredycie_hipotecznym, naruszenie_odsetek_maksymalnych, nieuczciwa_praktyka_rynkowa, inne, not_stated]
+    description: "Wszystkie podstawy zarzutów kredytobiorcy wobec klauzuli WIBOR wymienione w orzeczeniu (żądania powoda lub zarzuty pozwanego-kredytobiorcy). Zaznacz każdą wyraźnie podniesioną. 'not_stated', gdy zarzuty nie zostały opisane."
+  bank_przedstawil_symulacje:
+    type: string
+    enum: [tak, nie, sporne, not_stated]
+    description: "Czy sąd ustalił, że bank przedstawił kredytobiorcy symulacje wysokości rat przy wzroście stopy procentowej lub pisemne ostrzeżenie o ryzyku zmiennej stopy (np. oświadczenie o ryzyku, rekomendacja S KNF). 'sporne' — strony się różnią, a sąd tego nie ustalił."
+  ocena_obowiazku_informacyjnego:
+    type: string
+    enum: [wykonany_nalezycie, wykonany_wadliwie, niewykonany, nieoceniany, not_stated]
+    description: "Jak sąd ocenił wykonanie przez bank obowiązku informacyjnego o ryzyku zmiennej stopy i o WIBOR. 'nieoceniany' — sąd nie badał tej kwestii (np. oddalenie z innych przyczyn)."
+  klauzula_wibor_abuzywna:
+    type: string
+    enum: [tak, nie, czesciowo, nie_badano, not_stated]
+    description: "Ostateczna ocena sądu, czy postanowienie o oprocentowaniu opartym na WIBOR (lub jego element) jest niedozwolone w rozumieniu art. 385¹ § 1 k.c. 'czesciowo' — abuzywność np. tylko klauzuli o zmianie wskaźnika lub zasad informowania."
+  klauzula_glowne_swiadczenie:
+    type: string
+    enum: [glowne_swiadczenie, nie_glowne_swiadczenie, nie_rozstrzygnieto, not_stated]
+    description: "Czy sąd uznał postanowienie o oprocentowaniu WIBOR za określające główne świadczenie stron (art. 385¹ § 1 zd. 2 k.c.)."
+  zadanie_powoda:
+    type: array
+    items:
+      type: string
+      enum: [ustalenie_niewaznosci_umowy, ustalenie_bezskutecznosci_klauzuli_wibor, ustalenie_oprocentowania_wedlug_samej_marzy, zaplata_nadplaconych_odsetek, zaplata_wszystkich_swiadczen, zwrot_kosztow_kredytu, inne, not_stated]
+    description: "Wszystkie żądania kredytobiorcy (główne i ewentualne). W sprawach z powództwa banku — żądania z powództwa wzajemnego lub zarzuty kredytobiorcy; jeśli brak, 'not_stated'."
+  strona_inicjujaca:
+    type: string
+    enum: [kredytobiorca, bank, inny, not_stated]
+    description: "Kto wniósł powództwo / wniosek rozpoznawany w orzeczeniu."
+  wniosek_o_zabezpieczenie:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy orzeczenie dotyczy wniosku o zabezpieczenie roszczenia (np. zawieszenie obowiązku spłaty rat, zakaz wypowiedzenia umowy, spłata rat wg samej marży) albo czy taki wniosek został w nim wspomniany."
+  zabezpieczenie_wynik:
+    type: string
+    enum: [udzielone_w_calosci, udzielone_czesciowo, oddalone, odrzucone_lub_umorzone, uchylone_w_zazaleniu, nie_dotyczy, not_stated]
+    description: "Wynik wniosku o zabezpieczenie. 'nie_dotyczy', gdy wniosek_o_zabezpieczenie='nie'."
+  zabezpieczenie_brak_uprawdopodobnienia:
+    type: string
+    enum: [tak, nie, nie_dotyczy]
+    description: "Czy sąd odmówił zabezpieczenia z powodu braku uprawdopodobnienia roszczenia (art. 730¹ k.p.c.) — 'tak'; 'nie', gdy odmówił z innego powodu lub udzielił; 'nie_dotyczy', gdy brak wniosku o zabezpieczenie."
+  rozstrzygniecie_wibor:
+    type: string
+    enum: [uwzglednione_w_calosci, uwzglednione_czesciowo, oddalone, odrzucone_lub_umorzone, apelacja_kredytobiorcy_oddalona, apelacja_banku_oddalona, wyrok_zmieniony_na_korzysc_kredytobiorcy, wyrok_zmieniony_na_korzysc_banku, uchylone_do_ponownego_rozpoznania, postepowanie_zawieszone, zabezpieczenie_rozstrzygniete, inne]
+    description: "Rozstrzygnięcie w zakresie roszczeń dotyczących WIBOR w tym orzeczeniu (nie ogólny wynik sprawy). 'postepowanie_zawieszone' — np. zawieszenie do czasu wyroku TSUE (C-586/25, C-630/25, C-607/25). 'zabezpieczenie_rozstrzygniete' — postanowienie wyłącznie w przedmiocie zabezpieczenia."
+  umowa_wazna:
+    type: string
+    enum: [wazna_w_calosci, wazna_bez_wibor_z_marza, wazna_z_innym_wskaznikiem, niewazna, nie_rozstrzygnieto]
+    description: "Skutek dla umowy przyjęty przez sąd: umowa ważna w całości; ważna po wyeliminowaniu WIBOR z pozostawieniem marży; ważna z zastąpieniem wskaźnika innym; nieważna w całości; 'nie_rozstrzygnieto' (np. zabezpieczenie, zawieszenie, uchylenie)."
+  kwota_dochodzona_pln:
+    type: number
+    description: "Łączna kwota pieniężna dochodzona przez kredytobiorcę w PLN (bez odsetek i kosztów), według ostatecznie sprecyzowanego żądania. Gdy brak — 0 i kwota_dochodzona_pln_stated=false."
+  kwota_dochodzona_pln_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie podaje kwotę dochodzoną przez kredytobiorcę."
+  kwota_zasadzona_pln:
+    type: number
+    description: "Kwota zasądzona na rzecz kredytobiorcy w PLN (bez odsetek i kosztów). 0, gdy nic nie zasądzono lub brak danych (wtedy kwota_zasadzona_pln_stated=false)."
+  kwota_zasadzona_pln_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie wskazuje kwotę zasądzoną (w tym 0 przy oddaleniu powództwa o zapłatę)."
+  bmr_powolane:
+    type: string
+    enum: [tak_jako_argument_za_bankiem, tak_jako_argument_za_kredytobiorca, tak_neutralnie, nie]
+    description: "Czy sąd powołuje rozporządzenie BMR (UE) 2016/1011 (np. nadzór KNF nad administratorem WIBOR, art. 28 BMR) i w czyim interesie służy ten argument."
+  bieglego_powolano:
+    type: string
+    enum: [tak, wniosek_oddalony, nie, not_stated]
+    description: "Czy sąd dopuścił dowód z opinii biegłego (np. ekonomisty, ds. rynków finansowych, metodologii WIBOR) — 'tak'; 'wniosek_oddalony' — wniosek dowodowy pominięty/oddalony."
+  powolane_orzeczenia:
+    type: array
+    items:
+      type: string
+      enum: [tsue_c_471_24, tsue_c_586_25, tsue_c_630_25, tsue_c_607_25, tsue_inne, sn, sady_apelacyjne, inne, brak]
+    description: "Orzeczenia powołane w uzasadnieniu w kontekście WIBOR: TSUE C-471/24 (PKO BP, 12.02.2026), zawisłe C-586/25 i C-630/25 (połączone), C-607/25, inne wyroki TSUE (np. dyrektywa 93/13), Sąd Najwyższy, sądy apelacyjne. 'brak', gdy nie powołano żadnego."
+  stosunek_do_c_471_24:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje wyrok TSUE C-471/24: 'stosuje' — opiera na nim rozstrzygnięcie; 'odroznia' — wskazuje, że stan faktyczny jest inny (np. umowa sprzed BMR, brak informacji o ryzyku); 'polemizuje' — krytykuje lub odmawia przyjęcia; 'nie_dotyczy' — wyrok niepowołany."
+  pozwany_bank:
+    type: string
+    enum: [pko_bp, pekao, santander_bank_polska, mbank, ing_bank_slaski, bank_millennium, bnp_paribas, credit_agricole, alior_bank, bank_pocztowy, citi_handlowy, velobank, bos, bank_spoldzielczy, inny, not_stated]
+    description: "Bank będący stroną sporu (pozwany lub powód). Użyj nazwy banku wskazanego jako strona; Getin Noble Bank — 'inny', VeloBank — 'velobank'. Bank spółdzielczy — 'bank_spoldzielczy'."
+required: [wibor_dotyczy, data_umowy, data_umowy_stated, umowa_przed_bmr, rodzaj_kredytu, status_kredytobiorcy, typ_oprocentowania, tenor_wibor, podstawy_zarzutow, bank_przedstawil_symulacje, ocena_obowiazku_informacyjnego, klauzula_wibor_abuzywna, klauzula_glowne_swiadczenie, zadanie_powoda, strona_inicjujaca, wniosek_o_zabezpieczenie, zabezpieczenie_wynik, zabezpieczenie_brak_uprawdopodobnienia, rozstrzygniecie_wibor, umowa_wazna, kwota_dochodzona_pln, kwota_dochodzona_pln_stated, kwota_zasadzona_pln, kwota_zasadzona_pln_stated, bmr_powolane, bieglego_powolano, powolane_orzeczenia, stosunek_do_c_471_24, pozwany_bank]

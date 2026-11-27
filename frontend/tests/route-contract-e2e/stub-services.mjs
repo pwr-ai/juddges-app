@@ -817,6 +817,14 @@ const server = createServer((request, response) => {
     return;
   }
 
+  // /publications reads the DB-backed catalog through the BFF; the stub has
+  // no rows, so the page must render its verified list from an empty catalog.
+  if (request.method === 'GET' && url.pathname === '/publications') {
+    logRequest(request, url);
+    sendJson(response, 200, []);
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/collections') {
     logRequest(request, url);
     collectionListResponse(response);
