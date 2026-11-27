@@ -30,3 +30,8 @@ export function formatSnakeCaseToHumanReadable(value: string): string {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
+
+/** English count noun: singular for exactly 1, else `plural` (default `${singular}s`). */
+export function pluralizeEn(count: number, singular: string, plural?: string): string {
+  return count === 1 ? singular : (plural ?? `${singular}s`)
+}

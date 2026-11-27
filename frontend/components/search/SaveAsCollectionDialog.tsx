@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CollectionFromFilterError, createCollectionFromFilter } from "@/lib/api/collections";
+import { pluralizeEn } from "@/lib/utils";
 import type { BaseSchemaFilters } from "@/types/base-schema-filter";
 
 interface SaveAsCollectionDialogProps {
@@ -53,6 +54,7 @@ export function SaveAsCollectionDialog({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [succeeded, setSucceeded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const blockedReason = total === 0 ? "No results to save." : undefined;
@@ -61,6 +63,7 @@ export function SaveAsCollectionDialog({
     if (saving) return;
     setOpen(next);
     if (next) {
+      setSucceeded(false);
       setName((defaultName.trim() || fallbackName()).slice(0, 255));
       setError(null);
     }
@@ -68,7 +71,7 @@ export function SaveAsCollectionDialog({
 
   const handleSave = async () => {
     const trimmedName = name.trim();
-    if (trimmedName === "") return;
+    if (saving || succeeded || trimmedName === "") return;
     setSaving(true);
     setError(null);
     try {
@@ -83,6 +86,7 @@ export function SaveAsCollectionDialog({
       if (!created) {
         throw new Error("Collection was not created");
       }
+      setSucceeded(true);
       router.push(`/collections/${created.collection.id}`);
       // router.push doesn't always unmount this component (e.g. same-route
       // navigation, or a test that mocks the router) — without this the
@@ -116,7 +120,7 @@ export function SaveAsCollectionDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            Save {total.toLocaleString()} judgment{total === 1 ? "" : "s"} as a collection
+            Save {total.toLocaleString()} {pluralizeEn(total, "judgment")} as a collection
           </DialogTitle>
           <DialogDescription>
             Every judgment matching the current filters is added. You can extract, sample and
@@ -131,6 +135,12 @@ export function SaveAsCollectionDialog({
             value={name}
             maxLength={255}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                void handleSave();
+              }
+            }}
             disabled={saving}
           />
         </div>
@@ -153,7 +163,7 @@ export function SaveAsCollectionDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave} disabled={saving || name.trim() === ""}>
+          <Button type="button" onClick={handleSave} disabled={saving || succeeded || name.trim() === ""}>
             {saving ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>

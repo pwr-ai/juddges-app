@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorCard } from "@/lib/styles/components";
 import logger from "@/lib/logger";
+import { pluralizeEn } from "@/lib/utils";
 import {
   useExtractionFacet,
   singleJurisdiction,
@@ -364,7 +365,7 @@ function ExtractionSearchPage() {
                   ? "Searching…"
                   : total === 0
                     ? "No results"
-                    : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
+                    : `${total.toLocaleString()} ${pluralizeEn(total, "judgment")}`}
                 {isFetching && !isLoading && " (updating…)"}
               </p>
             )}

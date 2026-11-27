@@ -13,7 +13,7 @@ import {
 } from "@/lib/api/topics";
 import { PageContainer } from "@/lib/styles/components";
 import { EditorialCard, Eyebrow, Headline, Rule } from "@/components/editorial";
-import { cn } from "@/lib/utils";
+import { cn, pluralizeEn } from "@/lib/utils";
 
 /** Build a /search link that pre-fills the query with a topic label. */
 function topicSearchHref(topicId: string): string {
@@ -121,7 +121,7 @@ export default function TopicsPage(): React.JSX.Element {
     const generated = formatDateTime(meta.generated_at);
     if (generated) parts.push(`Snapshot from ${generated}`);
     parts.push(
-      `${meta.total_concepts.toLocaleString()} topic${meta.total_concepts === 1 ? "" : "s"}`,
+      `${meta.total_concepts.toLocaleString()} ${pluralizeEn(meta.total_concepts, "topic")}`,
     );
     if (meta.jurisdictions.length > 0) {
       parts.push(meta.jurisdictions.map((j) => j.toUpperCase()).join("+"));
