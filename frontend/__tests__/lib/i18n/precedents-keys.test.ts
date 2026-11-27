@@ -33,4 +33,15 @@ describe("precedents translations", () => {
       expect(locale.precedents.resolvedCase).toContain("{{caseNumber}}");
     }
   });
+
+  // AC-3 (reworded: unknown buckets no longer count as "a value")
+  it("words cohortEmpty as 'no known value' in both locales", () => {
+    expect(en.precedents.cohortEmpty).toBe(
+      "No similar cases carry a known value for this field.",
+    );
+    expect(pl.precedents.cohortEmpty).not.toBe(
+      "Żadna z podobnych spraw nie ma wartości dla tego pola.",
+    );
+    expect(pl.precedents.cohortEmpty.length).toBeGreaterThan(0);
+  });
 });

@@ -175,6 +175,96 @@ describe("topBucket", () => {
     expect(topBucket(agg)).toEqual({ value: "dismissed", count: 2 });
     expect(topBucket(groupCohort([], "appeal_outcome"))).toBeNull();
   });
+
+  // AC-1
+  it("skips a larger outcome_unknown bucket for the largest known one", () => {
+    const agg = groupCohort(
+      [
+        item("a", { appeal_outcome: ["outcome_unknown"] }),
+        item("b", { appeal_outcome: ["outcome_unknown"] }),
+        item("c", { appeal_outcome: ["outcome_unknown"] }),
+        item("d", { appeal_outcome: ["dismissed"] }),
+      ],
+      "appeal_outcome",
+    );
+
+    expect(topBucket(agg)).toEqual({ value: "dismissed", count: 1 });
+  });
+
+  // AC-1
+  it.each(["appeal_unknown", "gender_unknown", "dont_know", "DONT_KNOW"])(
+    "skips the %s placeholder even as the larger bucket",
+    (placeholder) => {
+      const agg = groupCohort(
+        [
+          item("a", { appeal_outcome: [placeholder] }),
+          item("b", { appeal_outcome: [placeholder] }),
+          item("c", { appeal_outcome: ["dismissed"] }),
+        ],
+        "appeal_outcome",
+      );
+
+      expect(topBucket(agg)).toEqual({ value: "dismissed", count: 1 });
+    },
+  );
+
+  // AC-1
+  it("skips several unknown buckets ranked ahead of a known one", () => {
+    const agg = groupCohort(
+      [
+        item("a", { appeal_outcome: ["outcome_unknown"] }),
+        item("b", { appeal_outcome: ["outcome_unknown"] }),
+        item("c", { appeal_outcome: ["outcome_unknown"] }),
+        item("d", { appeal_outcome: ["appeal_unknown"] }),
+        item("e", { appeal_outcome: ["appeal_unknown"] }),
+        item("f", { appeal_outcome: ["allowed"] }),
+      ],
+      "appeal_outcome",
+    );
+
+    expect(topBucket(agg)).toEqual({ value: "allowed", count: 1 });
+  });
+
+  // AC-3
+  it("returns null when every bucket is unknown", () => {
+    const agg = groupCohort(
+      [
+        item("a", { appeal_outcome: ["outcome_unknown"] }),
+        item("b", { appeal_outcome: ["dont_know"] }),
+      ],
+      "appeal_outcome",
+    );
+
+    expect(topBucket(agg)).toBeNull();
+  });
+
+  // AC-1
+  it('does not skip a value that merely contains "unknown"', () => {
+    const agg = groupCohort(
+      [
+        item("a", { appeal_outcome: ["unknown_reason_given"] }),
+        item("b", { appeal_outcome: ["outcome_unknown"] }),
+        item("c", { appeal_outcome: ["outcome_unknown"] }),
+      ],
+      "appeal_outcome",
+    );
+
+    expect(topBucket(agg)).toEqual({ value: "unknown_reason_given", count: 1 });
+  });
+
+  // AC-4
+  it("leaves unknown buckets in groupCohort output so the chart still draws them", () => {
+    const agg = groupCohort(
+      [
+        item("a", { appeal_outcome: ["outcome_unknown"] }),
+        item("b", { appeal_outcome: ["dismissed"] }),
+      ],
+      "appeal_outcome",
+    );
+
+    if (agg.kind !== "categorical") throw new Error("expected categorical");
+    expect(agg.values.map((v) => v.value)).toEqual(["dismissed", "outcome_unknown"]);
+  });
 });
 
 describe("COHORT_GROUP_FIELDS", () => {
