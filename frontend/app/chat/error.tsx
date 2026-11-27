@@ -24,7 +24,7 @@ export default function ChatError({ error, reset }: ErrorProps): React.JSX.Eleme
  }, [error, errorLogger]);
 
  return (
- <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-16">
+ <div className="min-h-full flex items-center justify-center px-4 py-16">
  <div className="w-full max-w-2xl">
  <ErrorCard
  title="Chat Error"
