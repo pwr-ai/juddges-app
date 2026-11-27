@@ -338,7 +338,7 @@ function SidebarTrigger({
  onClick,
  ...props
 }: React.ComponentProps<typeof Button>): React.JSX.Element {
- const { toggleIconMode, iconMode, isMobile, toggleSidebar } = useSidebar()
+ const { toggleIconMode, iconMode, isMobile, toggleSidebar, openMobile } = useSidebar()
 
  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
  onClick?.(event)
@@ -358,7 +358,14 @@ function SidebarTrigger({
  data-slot="sidebar-trigger"
  className={cn("size-7 h-9 w-9 rounded-md bg-muted/50 border border-border/30 shadow-sm transition-colors hover:bg-muted", className)}
  onClick={handleClick}
- aria-label={iconMode ? "Disable Icon Mode": "Enable Icon Mode"}
+ // The same button opens the navigation drawer on mobile and switches icon
+ // mode on desktop, so its accessible name must follow what it does.
+ aria-label={
+ isMobile
+ ? openMobile ? "Close navigation menu" : "Open navigation menu"
+ : iconMode ? "Disable Icon Mode": "Enable Icon Mode"
+ }
+ aria-expanded={isMobile ? openMobile : undefined}
  size="md"
  variant="default"
  disableHover={true}

@@ -126,7 +126,9 @@ test.describe('shell landmarks and contrast', () => {
     await setSyntheticSession(context);
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto('/collections');
-    await page.getByRole('button', { name: 'Toggle Sidebar' }).first().click();
+    const trigger = page.getByRole('button', { name: 'Open navigation menu' });
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await trigger.click();
     const drawer = page.getByRole('dialog');
     await expect(drawer).toBeVisible();
     await expect(drawer.getByRole('link', { name: /collections/i }).first()).toBeVisible();
