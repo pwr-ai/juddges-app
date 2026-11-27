@@ -8,7 +8,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "uvicorn>=0.23.2,<0.55.0",
-    "gunicorn>=23,<27",
+    "gunicorn>=23,<28",
     "langserve[server]>=0.3.2,<0.4",
     "langchain-community>=0.4.1",
     "langchain-openai>=1.1.14,<2",
