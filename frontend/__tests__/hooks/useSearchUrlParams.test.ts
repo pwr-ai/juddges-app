@@ -83,6 +83,28 @@ describe('useSearchUrlParams q encoding', () => {
     expect(new URL(url, 'http://x').searchParams.get('q')).toBe(QUERY);
   });
 
+  it('writes the submitted full-corpus query immediately without a router navigation', () => {
+    const replaceState = jest.spyOn(window.history, 'replaceState');
+    const originalUrl = window.location.href;
+    try {
+      mockStoreQuery = QUERY;
+      const { result } = renderHook(() =>
+        useSearchUrlParams({ ...baseOptions, engine: 'full' })
+      );
+      act(() => result.current.updateUrlParams());
+
+      expect(window.location.pathname).toBe('/search');
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('engine')).toBe('full');
+      expect(params.get('q')).toBe(QUERY);
+      expect(replaceState).toHaveBeenCalledTimes(1);
+      expect(mockReplace).not.toHaveBeenCalled();
+    } finally {
+      replaceState.mockRestore();
+      window.history.replaceState(null, '', originalUrl);
+    }
+  });
+
   it('reads q exactly as URLSearchParams decodes it', () => {
     mockStoreQuery = '';
     mockSearchParams = new URLSearchParams({ q: '100% pewności' });

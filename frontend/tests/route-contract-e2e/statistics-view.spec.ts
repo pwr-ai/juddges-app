@@ -54,4 +54,21 @@ test.describe('statistics view contract', () => {
 
     await expect(page).toHaveURL(/\/search\/extractions(\?|$)(?!.*view=stats)/);
   });
+
+  test('drills back to the list from a value button with the keyboard alone (#741)', async ({
+    page,
+    context,
+  }) => {
+    await setSyntheticSession(context);
+
+    await page.goto('/search/extractions?view=stats&n=100&seed=7&fields=appeal_outcome');
+
+    const card = page.locator('section[aria-label="Appeal outcome"]');
+    const value = card.getByRole('list', { name: /filter by value/i }).getByRole('button').first();
+    await value.focus();
+    await expect(value).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(page).toHaveURL(/\/search\/extractions(\?|$)(?!.*view=stats)/);
+  });
 });

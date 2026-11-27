@@ -321,6 +321,7 @@ export const pl: Translations = {
     statsModelScore: 'ocena modelu',
     statsAddField: 'Dodaj pole',
     statsRemoveField: 'Usuń',
+    statsPickValue: 'Filtruj według wartości',
     statsExportCsv: 'Eksport CSV',
     statsExportCohort: 'Eksport definicji kohorty',
     statsEmpty: 'Żadne orzeczenie nie pasuje do filtrów.',
