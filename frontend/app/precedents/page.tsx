@@ -444,6 +444,7 @@ export default function PrecedentsPage() {
           ) : cohortFilter ? null : (
             <EmptyState
               title="No precedents found"
+              titleAs="h2"
               description="Try broadening your search query or adjusting the filters."
               icon={Scale}
             />
@@ -456,13 +457,14 @@ export default function PrecedentsPage() {
         <div className="space-y-6">
           <EmptyState
             title="Find relevant precedents"
+            titleAs="h2"
             description="Describe a fact pattern, legal issue, or question to discover matching case law."
             icon={Scale}
           />
 
           {/* Example queries */}
           <div className="space-y-3">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-ink-soft">Example queries</h3>
+            <h2 className="text-xs font-mono uppercase tracking-wider text-ink-soft">Example queries</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 'Odliczenie VAT od wydatków na samochód firmowy używany częściowo do celów prywatnych',

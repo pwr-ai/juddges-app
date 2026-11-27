@@ -1,0 +1,125 @@
+# Topic: Spory o lokalizację OZE (farmy wiatrowe, fotowoltaika, biogazownie) i planowanie przestrzenne
+# Why: Lokalizacja OZE zależy od aktów planistycznych (MPZP, ZPI, plan ogólny, dawniej studium)
+#   i decyzji (środowiskowa, WZ, pozwolenie na budowę). Sporne: minimalna odległość wiatraków od
+#   zabudowy (10H → 700 m), dopuszczalność ZPI dla elektrowni wiatrowych, ochrona przyrody i krajobrazu,
+#   udział społeczeństwa i istotne naruszenie trybu uchwalania planów.
+# Legal bases: ustawa z 20.05.2016 o inwestycjach w zakresie elektrowni wiatrowych (art. 4 — 10H;
+#   nowelizacja z 9.03.2023, w mocy od 23.04.2023 [?]: min. 700 m przy lokalizacji na podstawie MPZP);
+#   nowelizacja obniżająca odległość do 500 m zawetowana przez Prezydenta RP w sierpniu 2025 r.
+#   (21.08.2025 [?]); ustawa z 27.03.2003 o planowaniu i zagospodarowaniu przestrzennym po reformie
+#   z 7.07.2023 (plan ogólny gminy, zintegrowany plan inwestycyjny, art. 28 — istotne naruszenie);
+#   ustawa z 3.10.2008 o udostępnianiu informacji o środowisku ... (decyzja o środowiskowych
+#   uwarunkowaniach, ooś); art. 101 i art. 91 ustawy o samorządzie gminnym.
+# Key rulings: NSA z 15.04.2026, II OSK 7/26 — ZPI może być podstawą lokalizacji elektrowni wiatrowych
+#   (uchylenie stanowiska WSA w Opolu, sygn. I SA/Op 479/25 — sygnatura wg Portalu Prawa
+#   Samorządowego; wydział I nietypowy dla spraw planistycznych [?]). Wyrok TK dot. ustawy
+#   odległościowej (2020) [?] — nie ujęty w enum.
+# Applies to collection: see pl_oze_wiatraki_planowanie.queries.yaml
+title: pl_oze_wiatraki_planowanie
+description: "Ekstrakcja cech orzeczeń WSA/NSA w sporach o lokalizację instalacji OZE (elektrownie wiatrowe, fotowoltaika, biogazownie) na gruncie planowania przestrzennego i decyzji środowiskowych."
+type: object
+additionalProperties: false
+properties:
+  oze_planowanie_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Bramka włączenia. 'tak' — orzeczenie rozstrzyga spór, w którym przedmiotem aktu lub decyzji jest lokalizacja instalacji odnawialnego źródła energii (elektrownia/farma wiatrowa, farma fotowoltaiczna, biogazownia, ewentualnie towarzyszący magazyn energii/infrastruktura przyłączeniowa) — uchwała planistyczna, ZPI, plan ogólny, studium, decyzja środowiskowa, WZ, pozwolenie na budowę, rozstrzygnięcie nadzorcze. 'nie' — typowe fałszywe trafienia: podatek od nieruchomości od elektrowni wiatrowych (sprawy podatkowe), dotacje/taryfy URE, mikroinstalacje PV na dachu budynku bez sporu planistycznego, sprawy budowlane innych obiektów, w których OZE jest tylko wspomniane, linie przesyłowe bez OZE. 'niejasne' — gdy nie wiadomo, czy akt dotyczy OZE."
+  typ_instalacji:
+    type: string
+    enum: [elektrownia_wiatrowa, farma_fotowoltaiczna, biogazownia, wiatrowa_i_fotowoltaiczna, magazyn_energii, inne_oze, other, not_stated]
+    description: "Rodzaj instalacji OZE, której dotyczy spór. 'wiatrowa_i_fotowoltaiczna' gdy akt przewiduje oba rodzaje (np. plan z terenami EW i PV). 'inne_oze' np. elektrownia wodna, pompy ciepła, biomasa poza biogazownią."
+  moc_mw:
+    type: number
+    description: "Łączna moc instalacji w MW (MWp dla PV, MWe dla biogazowni), jak podana w wyroku. kW przelicz na MW (1000 kW = 1 MW). Gdy brak — 0 i moc_mw_stated=false."
+  moc_mw_stated:
+    type: boolean
+    description: "true jeśli wyrok podaje moc instalacji; false w przeciwnym razie."
+  liczba_turbin:
+    type: integer
+    description: "Liczba planowanych elektrowni wiatrowych (turbin), jeśli podana. 0 gdy nie podano lub nie dotyczy wiatraków."
+  liczba_turbin_stated:
+    type: boolean
+    description: "true jeśli wyrok podaje liczbę turbin; false w przeciwnym razie."
+  instrument_planistyczny:
+    type: string
+    enum: [mpzp, zpi, plan_ogolny, studium_uikzp, decyzja_wz, decyzja_lokalizacji_celu_publicznego, brak_planu, other, not_stated]
+    description: "Na podstawie jakiego instrumentu planistycznego ma nastąpić (lub nastąpiła) lokalizacja instalacji: miejscowy plan (mpzp), zintegrowany plan inwestycyjny (zpi), plan ogólny gminy (plan_ogolny), studium uwarunkowań i kierunków zagospodarowania (studium_uikzp; przed reformą 2023), decyzja o warunkach zabudowy (decyzja_wz), decyzja o lokalizacji inwestycji celu publicznego. 'brak_planu' gdy sąd ustala brak wymaganej podstawy planistycznej (np. wiatrak bez MPZP)."
+  przedmiot_skargi:
+    type: string
+    enum: [uchwala_mpzp, uchwala_zpi, uchwala_plan_ogolny, uchwala_studium, uchwala_o_przystapieniu, decyzja_srodowiskowa, decyzja_wz, pozwolenie_na_budowe, rozstrzygniecie_nadzorcze, other, not_stated]
+    description: "Akt zaskarżony do WSA (dla NSA — akt, którego dotyczył wyrok WSA): uchwała w sprawie MPZP, ZPI, planu ogólnego, studium, uchwała o przystąpieniu do sporządzenia planu, decyzja o środowiskowych uwarunkowaniach, decyzja WZ, pozwolenie na budowę, rozstrzygnięcie nadzorcze wojewody stwierdzające nieważność uchwały planistycznej."
+  skarzacy_typ:
+    type: string
+    enum: [mieszkancy_wlasciciele_nieruchomosci, inwestor, gmina, wojewoda, organizacja_ekologiczna, stowarzyszenie_mieszkancow, prokurator, sasiednia_gmina, other, not_stated]
+    description: "Kto wniósł skargę do WSA: osoby fizyczne – właściciele/mieszkańcy sąsiednich nieruchomości (art. 101 u.s.g. lub strona postępowania), inwestor/spółka energetyczna, gmina (np. na rozstrzygnięcie nadzorcze), wojewoda (skarga na uchwałę po upływie terminu nadzoru — art. 93 u.s.g.), organizacja ekologiczna, stowarzyszenie lub komitet mieszkańców, prokurator, sąsiednia gmina."
+  organ:
+    type: string
+    enum: [rada_gminy, wojt_burmistrz_prezydent, rdos, gdos, wojewoda, sko, starosta, other, not_stated]
+    description: "Organ, którego akt lub decyzję zaskarżono: rada gminy (uchwały planistyczne), wójt/burmistrz/prezydent miasta (decyzja środowiskowa, WZ — I instancja), RDOŚ/GDOŚ (uzgodnienia, decyzje środowiskowe dla przedsięwzięć na terenach zamkniętych), wojewoda (rozstrzygnięcie nadzorcze, pozwolenie na budowę w II instancji), SKO (odwołania od decyzji wójta), starosta (pozwolenie na budowę)."
+  odleglosc_od_zabudowy_m:
+    type: number
+    description: "Odległość elektrowni wiatrowej (lub instalacji) od najbliższego budynku mieszkalnego w metrach, ustalona lub przywołana przez sąd (np. 700, 1500). Gdy wyrok podaje tylko regułę 10H z wysokością, przelicz (10 × wysokość całkowita). Gdy brak — 0 i _stated=false."
+  odleglosc_od_zabudowy_m_stated:
+    type: boolean
+    description: "true jeśli wyrok podaje konkretną odległość od zabudowy; false w przeciwnym razie."
+  regula_odleglosciowa:
+    type: string
+    enum: [10h, min_700_m, inna_odleglosc, nie_dotyczy, not_stated]
+    description: "Którą regułę odległościową ustawy z 20.05.2016 sąd stosuje lub ocenia: '10h' (10-krotność wysokości, stan przed nowelizacją z 2023 r. lub poza MPZP), 'min_700_m' (minimalna odległość 700 m po nowelizacji 2023), 'inna_odleglosc' (np. strefy z mpzp, odległość od form ochrony przyrody). 'nie_dotyczy' dla PV, biogazowni i spraw bez sporu o odległość."
+  zarzuty:
+    type: array
+    items:
+      type: string
+      enum: [odleglosc_od_zabudowy, ochrona_przyrody_natura_2000, ochrona_ptakow_nietoperzy, krajobraz, halas_infradzwieki, procedura_uchwalania, partycypacja_spoleczna, zgodnosc_ze_studium_lub_planem_ogolnym, prawo_wlasnosci_wladztwo_planistyczne, braki_oceny_oddzialywania_na_srodowisko, spadek_wartosci_nieruchomosci, uciazliwosci_zapachowe, inne]
+    description: "Zarzuty podniesione w skardze lub skardze kasacyjnej (nie tylko te uwzględnione). 'procedura_uchwalania' = wady trybu (ogłoszenia, uzgodnienia, wyłożenie); 'partycypacja_spoleczna' = konsultacje, uwagi, dyskusja publiczna; 'prawo_wlasnosci_wladztwo_planistyczne' = nadużycie władztwa, naruszenie art. 6 upzp / art. 140 k.c.; 'uciazliwosci_zapachowe' typowo dla biogazowni. Można zaznaczyć kilka; ['inne'] gdy żaden nie pasuje."
+  konsultacje_spoleczne_naruszone:
+    type: string
+    enum: [tak, nie, nie_podnoszono, not_stated]
+    description: "Czy sąd uznał, że naruszono udział społeczeństwa (konsultacje, rozpatrzenie uwag, wyłożenie projektu, udział w ooś). 'nie' gdy sąd zarzut oddalił; 'nie_podnoszono' gdy zarzutu nie było."
+  ocena_oddzialywania_na_srodowisko:
+    type: string
+    enum: [raport_oos_sporzadzony, odstapiono_od_raportu, brak_wymaganej_oceny, nie_dotyczy, not_stated]
+    description: "Status oceny oddziaływania na środowisko w sprawie: przeprowadzono ooś z raportem, odstąpiono od obowiązku raportu, sąd stwierdził brak wymaganej oceny (dla planu — strategiczna ocena; dla decyzji — ooś przedsięwzięcia). 'nie_dotyczy' gdy kwestia nie występuje."
+  natura_2000_w_obszarze:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy instalacja lub obszar planu znajduje się na obszarze Natura 2000 lub w jego bezpośrednim sąsiedztwie (lub innej formie ochrony przyrody — park krajobrazowy, obszar chronionego krajobrazu), wg ustaleń sądu."
+  rozstrzygniecie:
+    type: string
+    enum: [skarga_oddalona, stwierdzenie_niewaznosci_uchwaly, stwierdzenie_wydania_z_naruszeniem_prawa, uchylenie_decyzji, stwierdzenie_niewaznosci_decyzji, uchylenie_rozstrzygniecia_nadzorczego, skarga_odrzucona, umorzenie, skarga_kasacyjna_oddalona, wyrok_wsa_uchylony, other]
+    description: "Rozstrzygnięcie wg sentencji. 'stwierdzenie_wydania_z_naruszeniem_prawa' — gdy uchwała nie mogła być unieważniona (art. 94 u.s.g. / art. 147 § 1 p.p.s.a.). Dla wyroków NSA użyj 'skarga_kasacyjna_oddalona' lub 'wyrok_wsa_uchylony' (także gdy NSA sam rozpoznał skargę)."
+  wynik_dla_inwestycji:
+    type: string
+    enum: [korzystny_dla_inwestycji, niekorzystny_dla_inwestycji, mieszany, neutralny_formalny, not_stated]
+    description: "Skutek orzeczenia dla realizacji instalacji OZE: 'korzystny' gdy akt umożliwiający inwestycję się utrzymuje lub upada akt ją blokujący; 'niekorzystny' gdy upada plan/decyzja umożliwiająca inwestycję; 'mieszany' przy częściowym unieważnieniu; 'neutralny_formalny' przy odrzuceniu/umorzeniu bez merytorycznej oceny."
+  zakres_stwierdzenia_niewaznosci:
+    type: string
+    enum: [calosc, czesc, nie_dotyczy, not_stated]
+    description: "Gdy sąd stwierdził nieważność uchwały planistycznej (lub utrzymał rozstrzygnięcie nadzorcze): w całości czy w części (np. tylko teren elektrowni wiatrowych, wybrane działki lub paragrafy). 'nie_dotyczy' gdy nieważności nie stwierdzono lub przedmiotem jest decyzja."
+  podstawa_wadliwosci:
+    type: string
+    enum: [istotne_naruszenie_zasad_sporzadzania, istotne_naruszenie_trybu, naruszenie_wlasciwosci_organu, naruszenie_przepisow_odleglosciowych, naruszenie_przepisow_srodowiskowych, brak_wadliwosci, nie_dotyczy, not_stated]
+    description: "Główna podstawa, z której sąd wywiódł wadliwość aktu (art. 28 ust. 1 upzp: zasady sporządzania / tryb / właściwość; lub naruszenie ustawy odległościowej, przepisów o ochronie środowiska i przyrody). 'brak_wadliwosci' gdy sąd nie stwierdził wad; 'nie_dotyczy' przy rozstrzygnięciach formalnych."
+  interes_prawny_skarzacego_uznany:
+    type: string
+    enum: [tak, nie, nie_dotyczy, not_stated]
+    description: "Czy sąd uznał, że skarżący wykazał naruszenie swojego interesu prawnego lub uprawnienia (art. 101 ust. 1 u.s.g.) albo przymiot strony w postępowaniu decyzyjnym (np. obszar oddziaływania). 'nie' zwykle prowadzi do oddalenia/odrzucenia; 'nie_dotyczy' dla skarg wojewody, prokuratora, gminy."
+  zpi_dla_wiatrakow:
+    type: string
+    enum: [sad_dopuszcza_zpi, sad_wyklucza_zpi, nie_dotyczy]
+    description: "Stanowisko sądu, czy zintegrowany plan inwestycyjny może być podstawą lokalizacji elektrowni wiatrowych (spór rozstrzygnięty przez NSA w II OSK 7/26 na rzecz dopuszczalności). 'nie_dotyczy' gdy kwestia nie występuje."
+  przepisy_reformy_2023:
+    type: string
+    enum: [stare_przepisy_studium_wz, nowe_przepisy_plan_ogolny_zpi, przepisy_przejsciowe, nie_dotyczy, not_stated]
+    description: "Według jakiego stanu prawnego planowania przestrzennego sąd ocenia sprawę: przepisy sprzed reformy z 7.07.2023 (studium, dotychczasowe WZ), nowe przepisy (plan ogólny, ZPI, nowe zasady WZ), lub sąd wprost rozważa przepisy przejściowe."
+  powolane_orzeczenia_kluczowe:
+    type: array
+    items:
+      type: string
+      enum: [ii_osk_7_26, i_sa_op_479_25, inne_wyroki_nsa, wyroki_wsa, orzeczenia_tk, orzeczenia_tsue, brak]
+    description: "Orzeczenia powołane w uzasadnieniu: 'ii_osk_7_26' — wyrok NSA z 15.04.2026 (ZPI dla wiatraków); 'i_sa_op_479_25' — wyrok WSA w Opolu w tej samej sprawie; 'inne_wyroki_nsa', 'wyroki_wsa' dla innych orzeczeń sądów administracyjnych; 'orzeczenia_tk' (np. o ustawie odległościowej); 'orzeczenia_tsue' (np. dyrektywy ooś/siedliskowa). ['brak'] gdy nie powołano orzeczeń."
+  stosunek_do_ii_osk_7_26:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje wyrok NSA II OSK 7/26: 'stosuje' (przyjmuje dopuszczalność ZPI dla wiatraków), 'odroznia' (wskazuje odmienny stan faktyczny), 'polemizuje' (nie podziela). 'nie_dotyczy' gdy go nie powołano (zawsze dla orzeczeń sprzed 15.04.2026)."
+required: [oze_planowanie_dotyczy, typ_instalacji, moc_mw, moc_mw_stated, liczba_turbin, liczba_turbin_stated, instrument_planistyczny, przedmiot_skargi, skarzacy_typ, organ, odleglosc_od_zabudowy_m, odleglosc_od_zabudowy_m_stated, regula_odleglosciowa, zarzuty, konsultacje_spoleczne_naruszone, ocena_oddzialywania_na_srodowisko, natura_2000_w_obszarze, rozstrzygniecie, wynik_dla_inwestycji, zakres_stwierdzenia_niewaznosci, podstawa_wadliwosci, interes_prawny_skarzacego_uznany, zpi_dla_wiatrakow, przepisy_reformy_2023, powolane_orzeczenia_kluczowe, stosunek_do_ii_osk_7_26]

@@ -161,7 +161,7 @@ export function StatisticsView(props: StatisticsViewProps) {
       <div className="grid gap-4 md:grid-cols-2">
         {fields.map((field) =>
           data.fields[field] ? (
-            <FieldCard key={field} field={field} aggregate={data.fields[field]} sampleN={data.sample_n} yAxis={yAxis}
+            <FieldCard key={field} field={field} aggregate={data.fields[field]} sampleN={data.sample_n} yAxis={yAxis} headingLevel="h2"
               onBarClick={isDrillable(field) ? addValue : undefined}
               onRemove={fields.length > 1 ? (f) => onFields(fields.filter((x) => x !== f)) : undefined} />
           ) : null,

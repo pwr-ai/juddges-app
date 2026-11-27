@@ -310,6 +310,7 @@ export default function AdminBlogPage(): React.JSX.Element {
                 key={post.id}
                 post={post}
                 showActions={true}
+                headingLevel="h2"
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />

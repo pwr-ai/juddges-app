@@ -495,6 +495,7 @@ export default function SchemasPage() {
  {filteredSchemas.length === 0 ? (
  <EmptyState
  title="No Schemas Found"
+ titleAs="h2"
  description="Get started by creating your first extraction schema"
  icon={FileJson}
  variant="default"
@@ -515,7 +516,6 @@ export default function SchemasPage() {
  schema={schema}
  viewMode={viewMode}
  extractionCount={stats[schema.id] || 0}
- onClick={() => router.push(`/schemas/${schema.id}`)}
  currentUserId={user?.id}
  onDelete={fetchSchemas}
  />
@@ -610,7 +610,6 @@ export default function SchemasPage() {
  schema={schema}
  viewMode={viewMode}
  extractionCount={stats[schema.id] || 0}
- onClick={() => router.push(`/schemas/${schema.id}`)}
  currentUserId={user?.id}
  onDelete={fetchSchemas}
  />
@@ -700,7 +699,6 @@ export default function SchemasPage() {
  schema={schema}
  viewMode={viewMode}
  extractionCount={stats[schema.id] || 0}
- onClick={() => router.push(`/schemas/${schema.id}`)}
  currentUserId={user?.id}
  onDelete={fetchSchemas}
  />

@@ -22,8 +22,10 @@ jest.mock('next/link', () => {
   return MockLink;
 });
 
+let mockUser: { id: string; app_metadata: { is_admin?: boolean } } | null = null;
+
 jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: null, loading: false }),
+  useAuth: () => ({ user: mockUser, loading: false }),
 }));
 
 jest.mock('@/lib/api/publications', () => ({
@@ -76,6 +78,7 @@ describe('PublicationsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.mocked(getPublications).mockReset();
+    mockUser = null;
   });
 
   it('shows real API records to an anonymous visitor', async () => {
@@ -89,11 +92,8 @@ describe('PublicationsPage', () => {
     expect(screen.getByText('Showing 1 publication')).toBeInTheDocument();
     expect(screen.queryByText('Manage Publications')).not.toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Curated reference bibliography' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Unseen Influence: Computational Propaganda/i),
-    ).toBeInTheDocument();
+      screen.queryByRole('heading', { name: 'Curated reference bibliography' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Year filter: All years' }),
     ).toHaveAttribute('aria-label', 'Year filter: All years');
@@ -105,7 +105,8 @@ describe('PublicationsPage', () => {
     ).toHaveAttribute('aria-label', 'Sort publications: Date (newest first)');
   });
 
-  it('announces the loading state to assistive technology', () => {
+  it('announces the loading state to assistive technology (admin)', () => {
+    mockUser = { id: 'admin-1', app_metadata: { is_admin: true } };
     jest.mocked(getPublications).mockReturnValue(new Promise(() => undefined));
 
     render(<PublicationsPage />);
@@ -114,7 +115,40 @@ describe('PublicationsPage', () => {
     expect(status).toHaveAttribute('aria-live', 'polite');
   });
 
-  it('shows an explicit empty catalog state without static fallback records', async () => {
+  it('renders the verified project publications when the catalog is empty (#762)', async () => {
+    jest.mocked(getPublications).mockResolvedValue([]);
+
+    render(<PublicationsPage />);
+
+    const link = await screen.findByRole('link', { name: /Bridging AI and Law/ });
+    expect(link).toHaveAttribute('href', 'https://openreview.net/forum?id=hWjsyTSWrY');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByRole('heading', { name: 'Project publications' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Partner publications' })).toBeInTheDocument();
+    expect(screen.getByText(/Judges on Trial/)).toBeInTheDocument();
+
+    // AppLayoutWrapper already provides the page's <main> landmark.
+    expect(screen.queryByRole('main')).not.toBeInTheDocument();
+    expect(screen.queryByText('No publications available')).not.toBeInTheDocument();
+    expect(screen.queryByText(/FactSelfCheck/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Unseen Influence/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Illusion of Progress/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Filter & Sort/)).not.toBeInTheDocument();
+  });
+
+  it('hides the catalog error from a non-admin visitor', async () => {
+    jest.mocked(getPublications).mockRejectedValue(new Error('backend unavailable'));
+
+    render(<PublicationsPage />);
+
+    await screen.findByRole('link', { name: /Bridging AI and Law/ });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/temporarily unavailable/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the empty catalog state for admins', async () => {
+    mockUser = { id: 'admin-1', app_metadata: { is_admin: true } };
     jest.mocked(getPublications).mockResolvedValue([]);
 
     render(<PublicationsPage />);
@@ -122,18 +156,11 @@ describe('PublicationsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'No publications available' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'The research catalog is currently empty. Published work will appear here when it is added.',
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Clear all filters')).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Curated reference bibliography' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Bridging AI and Law/ })).toBeInTheDocument();
   });
 
-  it('shows an error with a retry that can recover to real data', async () => {
+  it('shows admins an error with a retry that can recover to real data', async () => {
+    mockUser = { id: 'admin-1', app_metadata: { is_admin: true } };
     const user = userEvent.setup();
     jest
       .mocked(getPublications)
@@ -144,12 +171,6 @@ describe('PublicationsPage', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('We could not load the publications catalog.');
-    expect(
-      screen.getByRole('heading', { name: 'Curated reference bibliography' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Unseen Influence: Computational Propaganda/i),
-    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 

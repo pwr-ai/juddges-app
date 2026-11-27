@@ -55,6 +55,7 @@ export default function StatusPage() {
     return (
       <div className="min-h-screen bg-parchment py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-ink font-display mb-8">System Status</h1>
           <div className="bg-parchment-deep/50 border border-oxblood/40 rounded-none p-6">
             <h2 className="text-xl font-semibold text-oxblood mb-2 font-display">
               Failed to Load Status
@@ -76,6 +77,7 @@ export default function StatusPage() {
     return (
       <div className="min-h-screen bg-parchment py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-ink font-display mb-8">System Status</h1>
           <div className="flex items-center justify-center py-24">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-oxblood"></div>
             <span className="ml-4 text-ink-soft text-sm">Loading status...</span>

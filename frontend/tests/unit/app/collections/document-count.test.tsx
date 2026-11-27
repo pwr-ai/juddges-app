@@ -23,8 +23,9 @@ describe('CollectionsPage document count (#738)', () => {
       { ...base, id: 'c1', name: 'Counted', documents: [], document_count: 5 },
     ]);
     render(<CollectionsPage />);
-    const card = await waitFor(() => screen.getByRole('button', { name: /Collection: Counted/ }));
-    expect(card).toHaveAttribute('aria-label', expect.stringContaining('5 documents'));
+    // The card is no longer a role=button wrapper (nested-interactive); its title is a link.
+    const link = await waitFor(() => screen.getByRole('link', { name: 'Counted' }));
+    const card = link.closest('[data-clickable]') as HTMLElement;
     expect(card).toHaveTextContent('5 documents');
   });
 
@@ -33,8 +34,9 @@ describe('CollectionsPage document count (#738)', () => {
       { ...base, id: 'c2', name: 'Legacy', documents: [1, 2, 3] },
     ]);
     render(<CollectionsPage />);
-    const card = await waitFor(() => screen.getByRole('button', { name: /Collection: Legacy/ }));
-    expect(card).toHaveAttribute('aria-label', expect.stringContaining('3 documents'));
+    // The card is no longer a role=button wrapper (nested-interactive); its title is a link.
+    const link = await waitFor(() => screen.getByRole('link', { name: 'Legacy' }));
+    const card = link.closest('[data-clickable]') as HTMLElement;
     expect(card).toHaveTextContent('3 documents');
   });
 });

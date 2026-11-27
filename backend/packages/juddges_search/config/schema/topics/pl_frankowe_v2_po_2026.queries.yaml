@@ -1,0 +1,98 @@
+topic: pl_frankowe_v2_po_2026
+collection:
+  name: "Kredyty frankowe 2025–2026 — rozliczenia, przedawnienie, III CZP 8/26"
+  description: "Członkowie istniejącej linii orzeczniczej CHF (reasoning line e2fbd45e-e9f8-4588-bc21-f7ed6eb12c5b, ~5090 wyroków, wynik kredytobiorca vs bank z chf_extraction.wynik_sprawy) PLUS wyroki sądów powszechnych z pełnego korpusu z 2025-01-01..2026-11-24 dotyczące rozliczeń po upadku umowy, przedawnienia roszczeń banku, klauzuli NBP+marża, zatrzymania/potrącenia, zabezpieczeń i obsady sądu. Poza zakresem: kredyty złotowe WIBOR, SKD, kredyty w EUR/USD bez CHF."
+  jurisdiction: PL
+  period: {from: 2025-01-01, to: 2026-11-24}
+  size_estimate: "~5090 (istniejąca linia, wszystkie lata) + do ~700 unikalnych z 14 zapytań v2 po 50 (górna granica 14×50, po deduplikacji mniej); unknown dokładnie"
+  rationale: "Delta-schemat ma sens na całej linii (można go doekstrahować na 5090 członkach), a uzupełnienie 2025–2026 łapie nowe typy spraw (powództwa banków, przedawnienie) i pozwala porównać okresy przed/po TSUE 16.04.2026 (C-752/24 i in.) oraz przed/po SN III CZP 8/26 (24.06.2026)."
+
+search_v2:
+  - id: q01
+    purpose: "Niepodzielność klauzuli kurs średni NBP + marża (III CZP 8/26)"
+    body: {query: "kurs średni NBP skorygowany o marżę banku eliminacja wyłącznie marży niepodzielność postanowienia III CZP 8/26", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q02
+    purpose: "Wzorzec GE Money / BPH — po uchwale"
+    body: {query: "GE Money Bank Bank BPH kredyt indeksowany do CHF uchwała pełnego składu Izby Cywilnej Sądu Najwyższego z 24 czerwca 2026", court_type: [ordinary_court], date_from: 2026-06-24, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q03
+    purpose: "Powództwo banku o zwrot kapitału — przedawnienie, bieg od zakwestionowania umowy"
+    body: {query: "powództwo banku o zwrot wypłaconego kapitału kredytu frankowego przedawnienie bieg od pierwszego zakwestionowania umowy przez konsumenta C-752/24", court_type: [ordinary_court], date_from: 2026-04-16, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q04
+    purpose: "Przedawnienie roszczenia banku przed wyrokami z 16.04.2026 (porównanie)"
+    body: {query: "przedawnienie roszczenia banku o zwrot kapitału kredytu indeksowanego do franka szwajcarskiego wymagalność oświadczenie konsumenta", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-04-15, alpha: 0.4, limit: 50}
+  - id: q05
+    purpose: "Przerwanie biegu przedawnienia pozwem banku w toku sprawy konsumenta (Jangielak)"
+    body: {query: "przerwanie biegu przedawnienia pozew banku wniesiony przed zakończeniem sprawy z powództwa kredytobiorcy Jangielak", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q06
+    purpose: "Przedawnienie z urzędu przeciwko konsumentowi / art. 117^1 k.c. (II CSKP 1062/23)"
+    body: {query: "art. 117 § 2(1) k.c. sąd uwzględnia przedawnienie z urzędu roszczenia przedsiębiorcy przeciwko konsumentowi art. 117(1) k.c. kredyt frankowy", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q07
+    purpose: "Ścierbek / Drózdzik (C-261/25, C-262/25)"
+    body: {query: "C-261/25 C-262/25 Ścierbek Drózdzik przedawnienie roszczenia banku kredyt frankowy", court_type: [ordinary_court], date_from: 2026-07-02, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q08
+    purpose: "Wynagrodzenie za korzystanie z kapitału (C-520/21)"
+    body: {query: "żądanie banku wynagrodzenia za korzystanie z kapitału waloryzacja świadczenia C-520/21 nieważna umowa kredytu CHF", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q09
+    purpose: "Odsetki od kapitału dla banku (C-902/24)"
+    body: {query: "odsetki za opóźnienie od kapitału na rzecz banku od dnia następującego po uprawomocnieniu wyroku ustalającego nieważność C-902/24", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q10
+    purpose: "Zarzut zatrzymania vs potrącenia — dopuszczalność"
+    body: {query: "zarzut zatrzymania banku umowa kredytu nie jest umową wzajemną art. 496 k.c. zarzut potrącenia ewentualny kredyt frankowy", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q11
+    purpose: "Wymagalność roszczenia kredytobiorcy i odsetki — wezwanie vs oświadczenie vs pouczenie"
+    body: {query: "odsetki od dnia następnego po doręczeniu wezwania do zapłaty czy od oświadczenia o skutkach nieważności po pouczeniu przez sąd kredyt frankowy", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q12
+    purpose: "Zabezpieczenie — wstrzymanie spłat rat"
+    body: {query: "zabezpieczenie roszczenia kredytobiorcy wstrzymanie obowiązku spłaty rat kredytu frankowego zakaz wypowiedzenia umowy", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q13
+    purpose: "Obsada sądu — sędzia powołany po 2018 r."
+    body: {query: "nienależyta obsada sądu sędzia powołany na wniosek Krajowej Rady Sądownictwa ukształtowanej ustawą z 2017 r. nieważność postępowania kredyt frankowy", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q14
+    purpose: "Ugody frankowe — kwestionowanie ugody / aneksu ugodowego"
+    body: {query: "ugoda z bankiem konwersja kredytu frankowego na złotowy program ugód kwestionowanie ważności ugody", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.7, limit: 50}
+
+curated_sql: |
+  SELECT j.id, j.case_number, j.court_name, j.decision_date
+  FROM public.judgments j
+  WHERE j.id IN (
+          SELECT m.judgment_id FROM public.reasoning_line_members m
+          WHERE m.reasoning_line_id = 'e2fbd45e-e9f8-4588-bc21-f7ed6eb12c5b'
+        )
+  UNION
+  SELECT j.id, j.case_number, j.court_name, j.decision_date
+  FROM public.judgments j
+  WHERE j.jurisdiction = 'PL'
+    AND j.decision_date BETWEEN DATE '2025-01-01' AND DATE '2026-11-24'
+    AND j.full_text ~* '(franka?\s+szwajcarsk|\mCHF\M)'
+    AND (
+          j.full_text ~* '(przedawni|zatrzymani|potrąceni|wynagrodzeni[ae]\s+za\s+korzystanie|marż[aąy]|III\s+CZP\s+8/26|C-75[23]/24|C-901/24|C-26[12]/25|C-902/24|zabezpieczeni)'
+    )
+  ORDER BY decision_date;
+
+filters:
+  case_number_patterns: ["I C", "XXVIII C", "XXVIII Cz", "I ACa", "V ACa", "VI ACa", "I ACz", "II C", "XV C", "I Co"]
+  courts:
+    - "Sąd Okręgowy w Warszawie"   # XXVIII Wydział Cywilny (frankowy)
+    - "Sąd Apelacyjny w Warszawie"
+    - "Sąd Okręgowy w Gdańsku"
+    - "Sąd Okręgowy w Krakowie"
+    - "Sąd Okręgowy w Łodzi"
+    - "Sąd Okręgowy we Wrocławiu"
+    - "Sąd Okręgowy w Katowicach"
+    - "Sąd Apelacyjny w Gdańsku"
+    - "Sąd Apelacyjny w Katowicach"
+
+inclusion_gate: {field: kredyt_chf_dotyczy, keep: [tak]}
+negative_markers:
+  - "wskaźnik referencyjny WIBOR"
+  - "sankcja kredytu darmowego"
+  - "kredyt indeksowany do euro"
+  - "polisolokata"
+  - "ubezpieczeniowy fundusz kapitałowy"
+
+analyses:
+  - "Pre/post 24.06.2026: rozkład ocena_klauzuli_nbp_marza i skutek_abuzywnosci dla bank_wzorzec=ge_money_bph vs inne banki; stosunek_do_iii_czp_8_26 wg sądu."
+  - "Pre/post 16.04.2026: poczatek_biegu_przedawnienia_banku i przedawnienie_roszczenia_banku_ocena w sprawach strona_inicjujaca=bank_zwrot_kapitalu; odsetek przedawnionych roszczeń banku."
+  - "Odsetki dla banku (odsetki_od_kapitalu_dla_banku) przed i po C-902/24 oraz mediana kwota_kapitalu_na_rzecz_banku_pln."
+  - "Zatrzymanie vs potrącenie w czasie (zarzut_zatrzymania_ocena × zarzut_potracenia_charakter) — przejście banków na potrącenie ewentualne."
+  - "Łączenie z linią e2fbd45e: outcome_direction (kredytobiorca/bank) w zależności od zarzut_wadliwej_obsady_sadu i ugoda_frankowa."

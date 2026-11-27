@@ -390,7 +390,7 @@ export default function BlogPage(): React.JSX.Element {
             )}
           >
             {posts.map((post) => (
-              <BlogPostCard key={post.id} post={post} />
+              <BlogPostCard key={post.id} post={post} headingLevel="h2" />
             ))}
           </div>
         ) : (

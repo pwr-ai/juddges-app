@@ -1,0 +1,96 @@
+topic: pl_oze_wiatraki_planowanie
+collection:
+  name: "Lokalizacja OZE a planowanie przestrzenne (WSA/NSA 2020–2026)"
+  description: "Orzeczenia WSA i NSA w sporach o lokalizację elektrowni wiatrowych, farm fotowoltaicznych i biogazowni: uchwały MPZP/ZPI/plan ogólny/studium, rozstrzygnięcia nadzorcze, decyzje środowiskowe, WZ, pozwolenia na budowę. Poza zakresem: podatek od nieruchomości od wiatraków, sprawy taryfowe/URE, dotacje, mikroinstalacje bez sporu planistycznego."
+  jurisdiction: PL
+  period: {from: 2020-01-01, to: 2026-11-24}
+  size_estimate: "unknown; szacunkowo 1–3 tys. orzeczeń (wiele spraw PV/WZ i decyzji środowiskowych dla farm PV od 2020 r.; sprawy wiatrowe rzadsze do 2023 r.) — 15 zapytań × 50 daje do ~750 kandydatów przed deduplikacją"
+  rationale: "2020 obejmuje boom PV i ostatnie lata 10H; pozwala porównać okres przed/po nowelizacji ustawy wiatrakowej (2023: 700 m), przed/po reformie planowania (7.07.2023: plan ogólny, ZPI) oraz przed/po wyroku NSA II OSK 7/26 (15.04.2026)."
+
+search_v2:
+  - id: q01
+    purpose: "Rdzeń wiatrowy: MPZP dla elektrowni wiatrowych, stwierdzenie nieważności uchwały"
+    body: {query: "uchwała w sprawie miejscowego planu zagospodarowania przestrzennego elektrownie wiatrowe stwierdzenie nieważności", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q02
+    purpose: "Reguła 10H — ustawa o inwestycjach w zakresie elektrowni wiatrowych"
+    body: {query: "art. 4 ustawy o inwestycjach w zakresie elektrowni wiatrowych odległość dziesięciokrotność wysokości elektrowni wiatrowej od budynku mieszkalnego", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q03
+    purpose: "Po nowelizacji 2023 — 700 m"
+    body: {query: "minimalna odległość 700 m elektrownia wiatrowa miejscowy plan nowelizacja ustawy wiatrakowej", court_type: [administrative_court], date_from: 2023-04-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q04
+    purpose: "ZPI dla farm wiatrowych — linia II OSK 7/26 i wcześniejsze rozstrzygnięcia nadzorcze"
+    body: {query: "zintegrowany plan inwestycyjny elektrownia wiatrowa rozstrzygnięcie nadzorcze wojewody inwestycja główna umowa urbanistyczna", court_type: [administrative_court], date_from: 2024-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q05
+    purpose: "Powołania II OSK 7/26 po wyroku"
+    body: {query: "II OSK 7/26 zintegrowany plan inwestycyjny", court_type: [administrative_court], date_from: 2026-04-15, date_to: 2026-11-24, alpha: 0.1, limit: 50}
+  - id: q06
+    purpose: "Farmy fotowoltaiczne — warunki zabudowy, dobre sąsiedztwo, grunty rolne"
+    body: {query: "decyzja o warunkach zabudowy farma fotowoltaiczna instalacja odnawialnego źródła energii o mocy powyżej 500 kW grunty rolne", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q07
+    purpose: "Decyzja o środowiskowych uwarunkowaniach dla farmy wiatrowej / PV"
+    body: {query: "decyzja o środowiskowych uwarunkowaniach farma wiatrowa raport o oddziaływaniu przedsięwzięcia na środowisko Natura 2000 ptaki nietoperze", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q08
+    purpose: "Biogazownie — decyzja środowiskowa, uciążliwości zapachowe"
+    body: {query: "biogazownia rolnicza decyzja o środowiskowych uwarunkowaniach uciążliwości zapachowe skarga mieszkańców", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q09
+    purpose: "Skargi mieszkańców z art. 101 u.s.g. na plany wiatrowe — interes prawny"
+    body: {query: "skarga właściciela nieruchomości art. 101 ustawy o samorządzie gminnym naruszenie interesu prawnego plan miejscowy farma wiatrowa hałas krajobraz", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q10
+    purpose: "Istotne naruszenie trybu i zasad sporządzania planu (art. 28 upzp), zgodność ze studium"
+    body: {query: "istotne naruszenie zasad sporządzania planu miejscowego zgodność ze studium uwarunkowań tereny elektrowni wiatrowych fotowoltaiki art. 28 ust. 1", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q11
+    purpose: "Partycypacja społeczna, konsultacje, rozpatrzenie uwag"
+    body: {query: "wyłożenie projektu planu do publicznego wglądu dyskusja publiczna konsultacje społeczne rozpatrzenie uwag mieszkańców farma wiatrowa fotowoltaiczna", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q12
+    purpose: "Plan ogólny gminy po reformie 2023 a OZE"
+    body: {query: "plan ogólny gminy strefa planistyczna instalacje odnawialnych źródeł energii ustawa z 7 lipca 2023", court_type: [administrative_court], date_from: 2023-09-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q13
+    purpose: "Pozwolenie na budowę elektrowni wiatrowej / farmy PV"
+    body: {query: "pozwolenie na budowę elektrowni wiatrowej farmy fotowoltaicznej skarga sąsiada obszar oddziaływania obiektu", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q14
+    purpose: "Opisowe, wysoki alpha — spór lokalnej społeczności z inwestorem OZE"
+    body: {query: "mieszkańcy sprzeciwiają się budowie farmy wiatrowej w pobliżu domów gmina uchwaliła plan na wniosek inwestora", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.8, limit: 50}
+  - id: q15
+    purpose: "Uchwała o przystąpieniu do sporządzenia planu i rozstrzygnięcia nadzorcze wojewody w sprawach OZE"
+    body: {query: "rozstrzygnięcie nadzorcze wojewody stwierdzające nieważność uchwały planistycznej w zakresie terenów elektrowni wiatrowych skarga gminy", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date BETWEEN '2020-01-01' AND '2026-11-24'
+    AND (
+      case_number ~* '(II\s*SA/|II\s*OSK|I\s*SA/|IV\s*SA/|II\s*OW)'
+      OR court_name ~* 'administracyjny'
+    )
+    AND (
+      full_text ~* '(elektrowni[a-ząę]* wiatrow|farm[a-ząę]* wiatrow|turbin[a-ząę]* wiatrow|fotowoltai|biogazowni|odnawialn[a-ząę]* źród[a-ząę]* energii)'
+      OR array_to_string(keywords, ' ') ~* '(wiatrow|fotowoltai|biogaz|OZE)'
+    )
+    AND (
+      full_text ~* '(planu? zagospodarowania przestrzennego|zintegrowan[a-ząę]* plan[a-ząę]* inwestycyjn|plan[a-ząę]* ogóln|studium uwarunkowań|warunk[a-ząę]* zabudowy|środowiskowych uwarunkowaniach|pozwoleni[a-ząę]* na budowę|rozstrzygnięci[a-ząę]* nadzorcz)'
+      OR array_to_string(cited_legislation, ' ') ~* '(planowaniu i zagospodarowaniu|elektrowni wiatrowych|udostępnianiu informacji o środowisku)'
+    )
+  ORDER BY decision_date;
+
+filters:
+  case_number_patterns: ["II SA/", "II OSK", "IV SA/Wa", "I SA/Op 479/25", "II OSK 7/26"]
+  case_symbols: ["6150 (miejscowy plan zagospodarowania przestrzennego) [?]", "6153 (warunki zabudowy) [?]", "6136 / 613x (ochrona środowiska, decyzje środowiskowe) [?]", "6014 (pozwolenie na budowę) [?]"]
+  courts: ["Naczelny Sąd Administracyjny", "WSA w Opolu", "WSA w Warszawie", "WSA w Szczecinie", "WSA w Gdańsku", "WSA w Olsztynie", "WSA w Bydgoszczy", "WSA w Poznaniu", "WSA w Łodzi", "WSA w Lublinie", "WSA we Wrocławiu", "WSA w Białymstoku", "WSA w Gorzowie Wielkopolskim", "WSA w Rzeszowie", "WSA w Kielcach", "WSA w Krakowie", "WSA w Gliwicach"]
+
+inclusion_gate: {field: oze_planowanie_dotyczy, keep: [tak]}
+negative_markers:
+  - "podatek od nieruchomości od elektrowni wiatrowej"
+  - "wartość budowli elektrowni wiatrowej do opodatkowania"
+  - "Prezes Urzędu Regulacji Energetyki taryfa"
+  - "koncesja na wytwarzanie energii"
+  - "mikroinstalacja na dachu budynku"
+  - "dofinansowanie ze środków RPO / NFOŚiGW"
+  - "linia elektroenergetyczna wysokiego napięcia (bez OZE)"
+
+analyses:
+  - "Odsetek stwierdzeń nieważności uchwał planistycznych dla wiatraków vs PV vs biogazowni, w podziale na skarżącego (mieszkańcy, wojewoda, inwestor)."
+  - "Przed/po 23.04.2023 (nowelizacja wiatrakowa) i przed/po reformie planowania z 7.07.2023: zmiana rozkładu regula_odleglosciowa, odleglosc_od_zabudowy_m i instrument_planistyczny."
+  - "Linia ZPI: zpi_dla_wiatrakow i stosunek_do_ii_osk_7_26 w czasie — czy WSA po 15.04.2026 dostosowują się do NSA."
+  - "Ranking zarzutów (zarzuty) skutecznych vs nieskutecznych: łączenie z podstawa_wadliwosci i wynik_dla_inwestycji."
+  - "Geografia: WSA (z sygnatury) × typ_instalacji × wynik_dla_inwestycji — regiony najbardziej sporne dla OZE."

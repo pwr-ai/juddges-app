@@ -326,7 +326,7 @@ export default function EcosystemPage(): React.JSX.Element {
               </div>
               <div className="flex items-center gap-2 mb-2">
                 <step.icon className="size-5 text-primary" />
-                <h4 className="font-semibold">{step.title}</h4>
+                <h3 className="font-semibold">{step.title}</h3>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                 {step.description}

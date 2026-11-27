@@ -1,0 +1,125 @@
+# Topic: Employment status – employee vs worker vs self-employed (UK side of kwalifikacja_umowy_stosunek_pracy)
+# Why: UK courts and tribunals decide whether an individual engaged as "self-employed", freelance, via a PSC or a
+#      platform is an employee (ERA 1996 s.230(1)) or a limb (b) worker (s.230(3)(b); WTR 1998 reg.2; NMWA 1998 s.54;
+#      TULRCA 1992 s.296), or self-employed. Contested: purposive reading of the contract vs written terms (Autoclenz,
+#      Uber), genuine substitution (Pimlico, Deliveroo), mutuality of obligation (Carmichael), control (Ready Mixed
+#      Concrete). Employment Rights Act 2025 (Royal Assent 18.12.2025) – status-related changes phased in.
+# Key rulings: Ready Mixed Concrete (South East) Ltd v Minister of Pensions [1968] 2 QB 497; Carmichael v National
+#      Power [1999] UKHL 47; Autoclenz v Belcher [2011] UKSC 41; Pimlico Plumbers v Smith [2018] UKSC 29;
+#      Uber BV v Aslam [2021] UKSC 5; IWGB v CAC (Deliveroo) [2023] UKSC 43; HMRC v PGMOL (UKSC 2024; neutral
+#      citation [2024] UKSC 29 [?]); CJEU C-256/01 Allonby (13.01.2004), C-692/19 Yodel (order 22.04.2020),
+#      C-66/85 Lawrie-Blum, C-413/13 FNV Kunsten.
+#      Parallel PL schema: kwalifikacja_umowy_stosunek_pracy.yaml (enums aligned in order; see field_mapping in queries).
+# Applies to collection: see kwalifikacja_umowy_stosunek_pracy.queries.yaml (uk_side)
+title: kwalifikacja_umowy_stosunek_pracy_uk
+description: "Legal classification of an engagement in UK law: employee, worker or self-employed contractor."
+type: object
+additionalProperties: false
+properties:
+  employment_status_applies:
+    type: string
+    enum: ["yes", "no", unclear]
+    description: "Inclusion gate. 'yes' when the court/tribunal decides or reviews the employment status of an individual (employee under ERA 1996 s.230(1), worker under s.230(3)(b)/WTR/NMWA/TULRCA s.296, or self-employed), including IR35/NIC status disputes before the tax tribunals and union-recognition cases turning on worker status. 'no' for typical false positives: disputes under an undisputed contract of employment, vicarious liability cases using 'akin to employment' without deciding statutory status, discrimination claims where status is conceded, commercial disputes between companies. 'unclear' if status is only mentioned in passing."
+  proceeding_type:
+    type: string
+    enum: [status_preliminary_hearing_or_claim, appeal_eat_or_appellate_court, tax_status_appeal_ir35_nic, union_recognition_cac, employment_rights_claim_with_status_as_precondition, regulatory_enforcement, other, not_stated]
+    description: "Procedural setting in which status is decided: ET preliminary hearing/claim on status; appeal to EAT, Court of Appeal or UKSC; FTT/UT tax appeal on IR35, PAYE or NICs; CAC/judicial review on statutory recognition; claim for holiday pay, NMW, unfair dismissal etc. where status is a precondition; enforcement (e.g. HMRC NMW enforcement)."
+  initiator:
+    type: string
+    enum: [worker, social_security_authority, labour_inspectorate, tax_authority_hmrc, trade_union, employer_engager, public_prosecutor, other, not_stated]
+    description: "Who challenged the label of the engagement. Use 'tax_authority_hmrc' for IR35/NIC/PAYE determinations and HMRC NMW enforcement; 'labour_inspectorate' for EAS/GLAA/Fair Work Agency; 'trade_union' for IWGB/GMB-type claims; 'employer_engager' when the engager itself seeks the determination."
+  contract_label:
+    type: string
+    enum: [casual_or_zero_hours_worker_agreement, contract_for_services_freelance, fixed_deliverable_commission, personal_service_company_or_limited_company, office_holder_or_director_service, agency_or_umbrella, no_written_contract, multiple_labels, other, not_stated]
+    description: "How the parties labelled the engagement in writing (not the court's finding): casual/zero-hours worker agreement, freelance contract for services, commission for a defined deliverable, engagement via a PSC/limited company, director/office-holder service arrangement, agency/umbrella, no written contract, several labels over time."
+  status_contested:
+    type: string
+    enum: [employee_vs_independent_contractor, worker_vs_self_employed, employee_vs_worker, other, not_stated]
+    description: "Which status boundary the court decides: employee vs independent contractor (incl. IR35 hypothetical contract); limb (b) worker vs genuinely self-employed (business on own account, client/customer exception); employee vs worker."
+  criteria_pointing_to_employment:
+    type: array
+    items:
+      type: string
+      enum: [control_subordination, personal_performance, substitution_right, mutuality_of_obligation, fixed_remuneration, time_place_set_by_principal, economic_risk, integration_in_organisation, tools_provided, continuity_regularity, defined_deliverable, algorithmic_management, parties_intention_label, exclusivity_single_client, other, none]
+    description: "Factors the court found pointing towards employee/worker status, e.g. control over how/when work is done, obligation of personal performance, no genuine substitution, mutuality of obligation, fixed pay or pay set by the engager, time/place set by the engager, engager bears the economic risk, integration (uniform, branding, rota), engager's tools, continuous regular work, no defined deliverable, control via app/algorithm, exclusivity. 'none' if none identified."
+  criteria_pointing_against:
+    type: array
+    items:
+      type: string
+      enum: [control_subordination, personal_performance, substitution_right, mutuality_of_obligation, fixed_remuneration, time_place_set_by_principal, economic_risk, integration_in_organisation, tools_provided, continuity_regularity, defined_deliverable, algorithmic_management, parties_intention_label, exclusivity_single_client, other, none]
+    description: "Factors (same list) the court found pointing against employment/worker status, e.g. freedom to choose when/whether to work, genuine right of substitution, individual bears financial risk and can profit from sound management, own equipment, defined deliverable, genuine contractual intention of self-employment, multiple clients. 'none' if none identified."
+  substitution_right:
+    type: string
+    enum: [genuine_unfettered, fettered_or_sham, none, not_stated]
+    description: "Finding on the right to send a substitute: 'genuine_unfettered' (as in Deliveroo), 'fettered_or_sham' (clause exists but limited to approved substitutes or never operated in practice, as in Pimlico/Autoclenz), 'none', 'not_stated' if not examined."
+  platform_work:
+    type: string
+    enum: ["yes", "no", not_stated]
+    description: "Whether work was allocated or performed through a digital platform/app (ride-hailing, food delivery, courier apps), including via a fleet intermediary."
+  echr_article_11_considered:
+    type: string
+    enum: ["yes", "no"]
+    description: "Whether the court considers Article 11 ECHR (freedom of association / collective bargaining) in determining who is a worker or employment relationship (as in IWGB v CAC). UK-only field, no PL counterpart."
+  sector:
+    type: string
+    enum: [transport_delivery, construction, it_technology, security, cleaning_facilities, healthcare, education_training, retail, hospitality, media_culture_creative, sport, manufacturing, professional_services, public_administration, other, not_stated]
+    description: "Sector in which the work was performed, from the description of the work and of the engager's business."
+  contract_vs_reality:
+    type: string
+    enum: [reality_of_performance_prevails, written_terms_prevail, mixed, not_stated]
+    description: "Basis of the classification: 'reality_of_performance_prevails' where the court looks behind the written terms to the true agreement/purposive statutory reading (Autoclenz, Uber); 'written_terms_prevail' where the written contract is treated as determinative absent sham; 'mixed' where both weigh comparably."
+  statutory_provisions:
+    type: array
+    items:
+      type: string
+      enum: [era_1996_s230_1_employee, era_1996_s230_3_b_worker, wtr_1998_reg_2, nmwa_1998_s54, equality_act_2010_s83, tulrca_1992_s296, itepa_2003_ir35, ssca_1992_s2, employment_rights_act_2025, other, none]
+    description: "Status-defining provisions relied on: ERA 1996 s.230(1) and s.230(3)(b), Working Time Regulations 1998 reg.2, National Minimum Wage Act 1998 s.54, Equality Act 2010 s.83 (employment under a contract personally to do work), TULRCA 1992 s.296, ITEPA 2003 Part 2 Ch.8/Ch.10 (IR35), SSCBA 1992 s.2 (employed/self-employed earner), Employment Rights Act 2025. Mark all mentioned."
+  prior_employment_same_engager:
+    type: string
+    enum: ["yes", "no", not_stated]
+    description: "Whether the individual had previously been an employee of the same (or associated) engager doing the same work before moving to the contested arrangement."
+  status_determined:
+    type: string
+    enum: [employee, worker, self_employed_independent_contractor, defined_deliverable_contractor, mixed_by_period, not_determined, not_stated]
+    description: "Final status found in this decision. 'defined_deliverable_contractor' only where the court frames the engagement as a one-off commission for a defined result (closest analogue of the PL umowa o dzieło). 'mixed_by_period' where different periods/engagements receive different status. 'not_determined' on remittal or where the appeal is decided on another point."
+  protection_tier:
+    type: string
+    enum: [full_employment_protection, partial_protection, no_employment_protection, not_determined]
+    description: "Normalised outcome for PL–UK comparison: employee = 'full_employment_protection'; limb (b) worker = 'partial_protection' (NMW, holiday pay, whistleblowing, discrimination, no unfair dismissal); self-employed = 'no_employment_protection'; 'not_determined' if status not decided."
+  outcome_for_individual:
+    type: string
+    enum: [favourable, partly_favourable, unfavourable, not_stated]
+    description: "Whether the result favours the individual doing the work (e.g. worker/employee status found when they claimed it). In tax-status appeals brought by an engager or PSC, rate from the individual's perspective only if they took a position; otherwise 'not_stated'."
+  hmrc_determination_outcome:
+    type: string
+    enum: [appeal_dismissed_determination_upheld, determination_varied, determination_set_aside_or_remitted, not_applicable]
+    description: "Only in appeals against an HMRC status/NIC/PAYE determination: whether the determination stood, was varied, or was set aside/remitted. 'not_applicable' otherwise. Counterpart of the PL decyzja_zus_wynik."
+  consequences:
+    type: array
+    items:
+      type: string
+      enum: [national_insurance_contributions, unpaid_wages, minimum_wage, holiday_pay, overtime_working_time, dismissal_protection, written_statement_records, pension_auto_enrolment, income_tax_paye, discrimination_protection, collective_rights_union_recognition, penalty_or_enforcement, other, none, not_stated]
+    description: "Legal consequences decided or identified: NICs, unpaid wages, NMW arrears, holiday pay, working-time/overtime, unfair dismissal/redundancy rights, s.1 written statement, auto-enrolment pension, PAYE income tax, discrimination protection, statutory recognition/collective bargaining, penalties or naming/enforcement."
+  amount_awarded_gbp:
+    type: number
+    description: "Total sum awarded to the individual in GBP (wages, holiday pay, compensation), excluding interest and costs. Use 0 when nothing is awarded or no money claim is decided; check amount_awarded_gbp_stated."
+  amount_awarded_gbp_stated:
+    type: boolean
+    description: "true if the decision states a monetary award to the individual; false otherwise."
+  engagement_period_months:
+    type: integer
+    description: "Length of the contested engagement in months (rounded), from dates in the decision. Use 0 if unknown; check engagement_period_stated."
+  engagement_period_stated:
+    type: boolean
+    description: "true if the decision states dates or the length of the contested engagement."
+  cited_rulings:
+    type: array
+    items:
+      type: string
+      enum: [ready_mixed_concrete_1968, carmichael_1999_ukhl_47, autoclenz_2011_uksc_41, pimlico_2018_uksc_29, uber_2021_uksc_5, iwgb_deliveroo_2023_uksc_43, hmrc_v_pgmol_uksc_2024, cjeu_c_66_85_lawrie_blum, cjeu_c_256_01_allonby, cjeu_c_413_13_fnv_kunsten, cjeu_c_692_19_yodel, other_uksc_ukhl, other_court_of_appeal_eat, other_cjeu, other, none]
+    description: "Key authorities cited on status: Ready Mixed Concrete [1968] 2 QB 497, Carmichael [1999] UKHL 47, Autoclenz [2011] UKSC 41, Pimlico Plumbers [2018] UKSC 29, Uber v Aslam [2021] UKSC 5, IWGB v CAC (Deliveroo) [2023] UKSC 43, HMRC v PGMOL (UKSC 2024); CJEU Lawrie-Blum, Allonby, FNV Kunsten, Yodel. Use the 'other_*' values for other authorities, 'none' if none cited."
+  cited_rulings_treatment:
+    type: string
+    enum: [applies, distinguishes, disagrees, not_applicable]
+    description: "How the court treats the authorities in cited_rulings: 'applies' (follows/applies), 'distinguishes' (different facts), 'disagrees' (declines to follow, doubts or reads narrowly), 'not_applicable' (none cited)."
+required: [employment_status_applies, proceeding_type, initiator, contract_label, status_contested, criteria_pointing_to_employment, criteria_pointing_against, substitution_right, platform_work, echr_article_11_considered, sector, contract_vs_reality, statutory_provisions, prior_employment_same_engager, status_determined, protection_tier, outcome_for_individual, hmrc_determination_outcome, consequences, amount_awarded_gbp, amount_awarded_gbp_stated, engagement_period_months, engagement_period_stated, cited_rulings, cited_rulings_treatment]
