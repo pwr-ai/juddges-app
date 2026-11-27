@@ -25,10 +25,9 @@ interface AxeViolation {
 }
 
 async function runAxe(page: Page): Promise<AxeViolation[]> {
-  // Let the landing page's entrance animations finish: axe computes contrast
-  // from the live opacity, so a mid-fade frame reports false positives.
-  await page.waitForTimeout(1500);
-  await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
+  if (!(await page.evaluate(() => 'axe' in window))) {
+    await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
+  }
   return page.evaluate(async (rules) => {
     const axe = (window as unknown as {
       axe: { run: (ctx: Document, opts: unknown) => Promise<{ violations: AxeViolation[] }> };
@@ -41,6 +40,18 @@ async function runAxe(page: Page): Promise<AxeViolation[]> {
       nodes: v.nodes.map((n) => ({ target: n.target })),
     }));
   }, RULES);
+}
+
+/**
+ * axe computes contrast from live opacity, so a frame in the middle of the
+ * landing page's entrance fades reports false positives. Retry until the page
+ * settles instead of sleeping a fixed time; a real violation persists and
+ * still fails once the timeout runs out.
+ */
+async function expectNoViolations(page: Page): Promise<void> {
+  await expect(async () => {
+    expect(await runAxe(page)).toEqual([]);
+  }).toPass({ timeout: 10_000 });
 }
 
 test.describe('shell landmarks and contrast', () => {
@@ -60,7 +71,7 @@ test.describe('shell landmarks and contrast', () => {
       await page.goto('/');
       await expect(page.getByRole('main')).toBeVisible();
 
-      expect(await runAxe(page)).toEqual([]);
+      await expectNoViolations(page);
     });
 
     test(`signed-in /collections has no landmark or contrast violations at ${viewport.name}px`, async ({
@@ -72,7 +83,7 @@ test.describe('shell landmarks and contrast', () => {
       await page.goto('/collections');
       await expect(page.getByRole('main')).toBeVisible();
 
-      expect(await runAxe(page)).toEqual([]);
+      await expectNoViolations(page);
     });
   }
 
