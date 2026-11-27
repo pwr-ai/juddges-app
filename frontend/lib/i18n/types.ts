@@ -385,6 +385,7 @@ export interface ExtractionTranslations {
   statsModelScore: string;
   statsAddField: string;
   statsRemoveField: string;
+  statsPickValue: string;
   statsExportCsv: string;
   statsExportCohort: string;
   statsEmpty: string;

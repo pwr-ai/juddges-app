@@ -89,7 +89,7 @@ describe("StatisticsView", () => {
       error: null,
     };
     const p = renderView({ fields: ["court_name"] });
-    fireEvent.click(screen.getByRole("button", { name: /^Court of Appeal: / }));
+    expect(screen.queryByRole("button", { name: /^Court of Appeal: / })).toBeNull();
     expect(p.onDrillBack).not.toHaveBeenCalled();
   });
 
