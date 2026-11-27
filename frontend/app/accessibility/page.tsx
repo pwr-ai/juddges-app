@@ -33,7 +33,7 @@ export default function AccessibilityPage() {
  <div className="space-y-6">
  <Card>
  <CardHeader>
- <CardTitle>Our Commitment</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Our Commitment</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>
@@ -47,7 +47,7 @@ export default function AccessibilityPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Accessibility Features</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Accessibility Features</CardTitle>
  <CardDescription>
  We implement various features to make our platform more accessible
  </CardDescription>
@@ -109,7 +109,7 @@ export default function AccessibilityPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Standards Compliance</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Standards Compliance</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>
@@ -126,7 +126,7 @@ export default function AccessibilityPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Known Limitations</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Known Limitations</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>
@@ -146,7 +146,7 @@ export default function AccessibilityPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Assistive Technologies</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Assistive Technologies</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>
@@ -166,7 +166,7 @@ export default function AccessibilityPage() {
 
  <Card>
  <CardHeader>
- <CardTitle className="flex items-center gap-2">
+ <CardTitle role="heading" aria-level={2} className="flex items-center gap-2">
  <Mail className="h-5 w-5"/>
  Feedback and Contact
  </CardTitle>
@@ -195,7 +195,7 @@ export default function AccessibilityPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Assessment and Testing</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Assessment and Testing</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>
@@ -215,7 +215,7 @@ export default function AccessibilityPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Continuous Improvement</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Continuous Improvement</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>

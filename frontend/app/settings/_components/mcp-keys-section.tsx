@@ -108,10 +108,10 @@ export function McpKeysSection() {
     <section aria-label="MCP access" className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="flex items-center gap-2 font-medium">
+          <h2 className="flex items-center gap-2 font-medium">
             <KeyRound className="h-4 w-4" aria-hidden />
             MCP access
-          </h3>
+          </h2>
           <p className="text-sm text-muted-foreground">
             Keys let an AI client search your Juddges corpus. A key is shown
             only once — store it in your client&apos;s configuration.

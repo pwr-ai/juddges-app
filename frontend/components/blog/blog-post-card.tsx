@@ -24,6 +24,8 @@ interface BlogPostCardProps {
 	showActions?: boolean;
 	onEdit?: (id: string) => void;
 	onDelete?: (id: string) => void;
+	/** Title heading level; use h2 when the card sits directly under the page h1. */
+	headingLevel?: "h2" | "h3";
 }
 
 function formatDate(dateString: string | undefined): string {
@@ -45,6 +47,7 @@ export function BlogPostCard({
 	showActions = false,
 	onEdit,
 	onDelete,
+	headingLevel: Heading = "h3",
 }: BlogPostCardProps): React.JSX.Element {
 	const router = useRouter();
 	const postUrl = `/blog/${post.slug}`;
@@ -166,7 +169,7 @@ export function BlogPostCard({
 
 				{/* Title */}
 				<Link href={postUrl}>
-					<h3
+					<Heading
 						className={cn(
 							"font-serif text-lg font-bold text-ink mb-2",
 							"line-clamp-2 leading-snug",
@@ -174,7 +177,7 @@ export function BlogPostCard({
 						)}
 					>
 						{post.title}
-					</h3>
+					</Heading>
 				</Link>
 
 				{/* Excerpt */}

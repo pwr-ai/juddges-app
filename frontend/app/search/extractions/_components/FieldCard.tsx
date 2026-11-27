@@ -15,6 +15,8 @@ export interface FieldCardProps {
   yAxis: "count" | "percent";
   onBarClick?: (field: string, value: string) => void;
   onRemove?: (field: string) => void;
+  /** Heading level of the card title; pick the level that follows the surrounding section heading. */
+  headingLevel?: "h2" | "h3";
 }
 
 interface Row {
@@ -37,7 +39,7 @@ function rowsFor(agg: FieldAggregate, other: string, missing: string): Row[] {
 }
 
 /** One field's distribution over the sample (#708). Single series, single hue. */
-export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemove }: FieldCardProps) {
+export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemove, headingLevel: Heading = "h3" }: FieldCardProps) {
   const { t } = useTranslation();
   const rows = rowsFor(aggregate, t("extraction.statsOther"), t("extraction.statsMissing"));
   const items = rows.map((r) => ({
@@ -50,7 +52,7 @@ export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemo
     <section className="border border-[color:var(--rule)] bg-[color:var(--parchment)] p-4" aria-label={aggregateFieldLabel(field)}>
       <header className="mb-2 flex items-start justify-between gap-2">
         <div>
-          <h3 className="font-serif text-base text-[color:var(--ink)]">{aggregateFieldLabel(field)}</h3>
+          <Heading className="font-serif text-base text-[color:var(--ink)]">{aggregateFieldLabel(field)}</Heading>
           <p className="font-mono text-[11px] text-[color:var(--ink-soft)]">
             {aggregate.covered.toLocaleString("en-US")} / {sampleN.toLocaleString("en-US")}
             {isModelScore && ` · ${t("extraction.statsModelScore")}`}

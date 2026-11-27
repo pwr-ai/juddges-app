@@ -37,7 +37,7 @@ export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardPro
     >
       <div className="flex flex-col h-full space-y-4">
         <div className="flex items-start justify-between gap-3 min-h-[3rem]">
-          <h4 className="font-semibold text-base line-clamp-2 flex-1 min-w-0 text-ink">{job.collection_name}</h4>
+          <h3 className="font-semibold text-base line-clamp-2 flex-1 min-w-0 text-ink">{job.collection_name}</h3>
           <StatusBadge
             status={job.status}
             label={statusLabel[job.status]}
