@@ -59,16 +59,18 @@ test.describe('collections list contract', () => {
     await expect(main.getByRole('heading', { name: 'Collections', level: 1 })).toBeVisible();
 
     // 2 documents: EXTRACTABLE_DOCUMENT_IDS in stub-services.mjs.
-    await expect(
-      main.getByRole('button', {
-        name: 'Collection: Route contract extraction collection. 2 documents. Click to open.',
-      }),
-    ).toBeVisible();
+    // The card is no longer a role=button wrapper (nested-interactive): its
+    // title is a link, and the document count is plain text inside the card.
+    const extractionCard = main
+      .locator('[data-clickable]')
+      .filter({ has: page.getByRole('link', { name: 'Route contract extraction collection' }) });
+    await expect(extractionCard).toBeVisible();
+    await expect(extractionCard).toContainText('2 documents');
     // 0 documents: flowDocumentIds, cleared by this test's own reset above.
-    await expect(
-      main.getByRole('button', {
-        name: 'Collection: Route contract flow collection. 0 documents. Click to open.',
-      }),
-    ).toBeVisible();
+    const flowCard = main
+      .locator('[data-clickable]')
+      .filter({ has: page.getByRole('link', { name: 'Route contract flow collection' }) });
+    await expect(flowCard).toBeVisible();
+    await expect(flowCard).toContainText('0 documents');
   });
 });
