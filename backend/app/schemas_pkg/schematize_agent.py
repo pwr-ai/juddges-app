@@ -409,8 +409,11 @@ def build_schema_generator(
         use_interrupt=False,
         graph_compilation_kwargs={"checkpointer": checkpointer},
         recursion_limit=GRAPH_RECURSION_LIMIT,
+        # Measured live (gpt-5-mini): one criteria round + one data round put the
+        # resume call at ~245 s against the ~300 s Next proxy budget. Data-grounded
+        # refinement is the more valuable loop, so the criteria loop only assesses.
         min_refinement_rounds=0,
-        max_refinement_rounds=1,
+        max_refinement_rounds=0,
         min_data_refinement_rounds=0,
         max_data_refinement_rounds=1,
         data_assessment_top_k=20,

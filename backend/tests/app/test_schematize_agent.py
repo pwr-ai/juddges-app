@@ -222,7 +222,7 @@ class TestGraphTopology:
 
     def test_latency_budget(self):
         gen = _generator()
-        assert gen.max_refinement_rounds == 1
+        assert gen.max_refinement_rounds == 0
         assert gen.min_refinement_rounds == 0
         assert gen.max_data_refinement_rounds == 1
         assert gen.min_data_refinement_rounds == 0
