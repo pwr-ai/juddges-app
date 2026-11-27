@@ -851,6 +851,39 @@ const server = createServer((request, response) => {
     return;
   }
 
+  // Public blog list (guest /blog). One published post so the card heading
+  // level is part of what the a11y spec checks.
+  if (request.method === 'GET' && url.pathname === '/blog/categories') {
+    logRequest(request, url);
+    sendJson(response, 200, {
+      data: [{ id: 'cat-research', name: 'research', post_count: 1 }],
+    });
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/blog/posts') {
+    logRequest(request, url);
+    sendJson(response, 200, {
+      data: [
+        {
+          id: 'post-route-contract',
+          slug: 'route-contract-post',
+          title: 'Route contract blog post',
+          excerpt: 'A fixture post for the blog list.',
+          author: { name: 'Route Contract' },
+          status: 'published',
+          published_at: '2025-01-01T00:00:00Z',
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+          tags: ['research'],
+          category: 'research',
+        },
+      ],
+      pagination: { total: 1, page: 1, limit: 6, total_pages: 1, has_next: false, has_prev: false },
+    });
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/schemas/db') {
     logRequest(request, url);
     schemasDbResponse(response);
