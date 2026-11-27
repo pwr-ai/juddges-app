@@ -716,6 +716,14 @@ const server = createServer((request, response) => {
     return;
   }
 
+  // /status in its error state: the a11y spec asserts the page keeps its h1
+  // when the backend status call fails.
+  if (request.method === 'GET' && url.pathname === '/health/status') {
+    logRequest(request, url);
+    sendJson(response, 503, { detail: 'route-contract: status unavailable' });
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/rest/v1/chats') {
     logRequest(request, url);
     chatsResponse(url, response);
