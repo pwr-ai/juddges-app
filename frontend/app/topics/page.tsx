@@ -145,6 +145,9 @@ export default function TopicsPage(): React.JSX.Element {
 
       <Rule weight="ink" />
 
+      {/* Cards below render their titles as h3; this keeps the outline h1 > h2 > h3. */}
+      <h2 className="sr-only">Topic overview</h2>
+
       {/* Trending topics with PL/UK split */}
       <EditorialCard
         eyebrow="Last 30 days"

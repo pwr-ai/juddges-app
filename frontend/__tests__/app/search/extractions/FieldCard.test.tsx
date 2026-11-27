@@ -96,4 +96,12 @@ describe("FieldCard", () => {
     render(<FieldCard field="deep_complexity_score" aggregate={{ kind: "numeric", buckets: [], null: 0, covered: 0, min: null, max: null }} sampleN={0} yAxis="count" />);
     expect(screen.getByText(/statsModelScore/)).toBeInTheDocument();
   });
+
+  it("renders its title as h3 by default and as h2 when headingLevel=h2", () => {
+    const { rerender } = render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" />);
+    expect(screen.getByRole("heading", { level: 3 })).toBeInTheDocument();
+    rerender(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" headingLevel="h2" />);
+    expect(screen.getByRole("heading", { level: 2 })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
+  });
 });

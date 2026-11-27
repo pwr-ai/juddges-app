@@ -216,12 +216,18 @@ export default function HelpPage() {
     <div className="grid md:grid-cols-3 gap-6 mb-16">
       <LightCard
         padding="lg"
-        className="hover:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
-        onClick={() => (window.location.href = '/contact')}
+        className="relative hover:border-rule-strong focus-within:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
       >
         <div className="flex flex-col h-full">
           <MessageSquare className="size-10 text-oxblood mb-4" />
-          <h3 className="font-semibold text-lg mb-3 font-display">Contact Support</h3>
+          <h2 className="font-semibold text-lg mb-3 font-display">
+            <Link
+              href="/contact"
+              className="after:absolute after:inset-0 after:content-['']"
+            >
+              Contact Support
+            </Link>
+          </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Get personalized help from our team
           </p>
@@ -230,12 +236,18 @@ export default function HelpPage() {
 
       <LightCard
         padding="lg"
-        className="hover:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
-        onClick={() => (window.location.href = '/about')}
+        className="relative hover:border-rule-strong focus-within:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
       >
         <div className="flex flex-col h-full">
           <BookOpen className="size-10 text-oxblood mb-4" />
-          <h3 className="font-semibold text-lg mb-3 font-display">About the Project</h3>
+          <h2 className="font-semibold text-lg mb-3 font-display">
+            <Link
+              href="/about"
+              className="after:absolute after:inset-0 after:content-['']"
+            >
+              About the Project
+            </Link>
+          </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Learn about the JuDDGES research project
           </p>
@@ -244,12 +256,18 @@ export default function HelpPage() {
 
       <LightCard
         padding="lg"
-        className="hover:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
-        onClick={() => window.open('https://github.com/pwr-ai/juddges-app', '_blank')}
+        className="relative hover:border-rule-strong focus-within:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
       >
         <div className="flex flex-col h-full">
           <FileText className="size-10 text-oxblood mb-4" />
-          <h3 className="font-semibold text-lg mb-3 font-display">Documentation</h3>
+          <h2 className="font-semibold text-lg mb-3 font-display">
+            <Link
+              href="https://github.com/pwr-ai/juddges-app" target="_blank" rel="noopener noreferrer"
+              className="after:absolute after:inset-0 after:content-['']"
+            >
+              Documentation
+            </Link>
+          </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             View technical documentation on GitHub
           </p>
@@ -262,7 +280,7 @@ export default function HelpPage() {
       {filteredCategories.length === 0 ? (
         <LightCard padding="lg" className="text-center rounded-none border border-rule">
           <Search className="size-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-3 font-display">No results found</h3>
+          <h2 className="text-xl font-semibold mb-3 font-display">No results found</h2>
           <p className="text-muted-foreground">
             Try different keywords or{" "}
             <Link href="/contact" className="text-oxblood hover:underline">

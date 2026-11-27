@@ -11,9 +11,9 @@ interface RecentExtractionsProps {
 export function RecentExtractions({ jobs, onOpen, onRetry }: RecentExtractionsProps) {
   return (
     <div className="mb-8 -mt-4">
-      <h3 className="editorial-display text-lg text-ink mb-6">
+      <h2 className="editorial-display text-lg text-ink mb-6">
         Recent Extractions
-      </h3>
+      </h2>
       {jobs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {jobs.map((job) => (

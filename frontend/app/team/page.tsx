@@ -30,7 +30,7 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
  </div>
  )}
  </div>
- <h3 className="text-xl font-bold mb-2">{member.name}</h3>
+ <h2 className="text-xl font-bold mb-2">{member.name}</h2>
  <Badge variant="secondary"className="mb-4">
  {member.role}
  </Badge>

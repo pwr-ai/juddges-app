@@ -56,6 +56,8 @@ export interface EmptyStateProps {
  className?: string;
  /** Variant type */
  variant?: 'search' | 'default';
+ /** Heading level of the title; use h2 when the empty state sits directly under the page h1 */
+ titleAs?: 'h2' | 'h3';
 }
 
 /**
@@ -108,6 +110,7 @@ export function EmptyState({
  query,
  tip,
  tipPosition = 'above',
+ titleAs: TitleTag = 'h3',
  primaryAction,
  secondaryAction,
  actions,
@@ -153,9 +156,9 @@ export function EmptyState({
         </div>
 
         {/* Headline */}
-        <h3 className="font-serif font-medium text-lg sm:text-xl text-ink mb-2 text-center">
+        <TitleTag className="font-serif font-medium text-lg sm:text-xl text-ink mb-2 text-center">
           {title}
-        </h3>
+        </TitleTag>
 
         {/* Description and query badge */}
         {(description || query) && (

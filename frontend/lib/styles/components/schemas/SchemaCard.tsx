@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { Clock, Database, CheckCircle2, Calendar, Play, Eye, Trash2, Pencil, Copy, MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BaseCard } from '../base-card';
 import { SchemaStatusBadge, VerifiedBadge } from '../schema-status-badge';
@@ -32,8 +33,6 @@ export interface SchemaCardProps {
  schema: ExtractionSchema;
  /** View mode: 'list' or 'grid' */
  viewMode?: 'list' | 'grid';
- /** Click handler for the card */
- onClick?: () => void;
  /** Optional extraction count */
  extractionCount?: number;
  /** Optional className for additional styling */
@@ -53,7 +52,6 @@ export interface SchemaCardProps {
 export function SchemaCard({
  schema,
  viewMode = 'list',
- onClick,
  extractionCount = 0,
  className,
  currentUserId,
@@ -187,11 +185,10 @@ export function SchemaCard({
  <div
     className={cn(
       "shrink-0 flex items-center justify-center -space-x-1",
-      "rounded-none",
+      "relative z-10 rounded-none",
       "bg-parchment border border-rule",
       "transition-colors"
     )}
- onClick={(e) => e.stopPropagation()}
  >
  <Tooltip>
  <TooltipTrigger asChild>
@@ -257,7 +254,6 @@ export function SchemaCard({
 
  return (
  <BaseCard
- onClick={onClick}
  variant="light"
  className={cn(
 "group relative rounded-none transition-colors h-full",
@@ -266,7 +262,7 @@ export function SchemaCard({
  isListMode ? "w-full": "",
  className
  )}
- clickable={!!onClick}
+ clickable={false}
  >
  <div className={cn(
 "flex h-full",
@@ -295,9 +291,11 @@ export function SchemaCard({
  {/* Title with Status and Verified Badge */}
  <div className="mb-3">
  <div className="flex items-center gap-2">
- <h3 className="font-serif font-medium text-ink leading-tight group-hover:text-oxblood transition-colors tracking-tight text-base line-clamp-2 flex-1">
+ <h2 className="font-serif font-medium text-ink leading-tight group-hover:text-oxblood transition-colors tracking-tight text-base line-clamp-2 flex-1">
+ <Link href={`/schemas/${schema.id}`} className="after:absolute after:inset-0 after:content-['']">
  {schema.name}
- </h3>
+ </Link>
+ </h2>
  <div className="flex items-center gap-1.5 shrink-0">
  {schema.status && (
  <SchemaStatusBadge status={schema.status} size="sm"/>
@@ -373,9 +371,11 @@ export function SchemaCard({
  {/* 3. Title with Status and Verified Badge */}
  <div className="flex items-center justify-between gap-2 mb-1">
  <div className="flex items-center gap-2 min-w-0 flex-1">
- <h3 className="font-serif font-medium text-ink leading-tight group-hover:text-oxblood transition-colors tracking-tight text-sm line-clamp-2">
+ <h2 className="font-serif font-medium text-ink leading-tight group-hover:text-oxblood transition-colors tracking-tight text-sm line-clamp-2">
+ <Link href={`/schemas/${schema.id}`} className="after:absolute after:inset-0 after:content-['']">
  {schema.name}
- </h3>
+ </Link>
+ </h2>
  <div className="flex items-center gap-1.5 shrink-0">
  {schema.status && (
  <SchemaStatusBadge status={schema.status} size="sm"/>

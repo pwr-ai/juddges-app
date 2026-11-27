@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -364,8 +365,9 @@ export default function CollectionsPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-ink-soft">Sort by:</span>
+                <label htmlFor="collections-sort" className="text-xs font-mono text-ink-soft">Sort by:</label>
                 <select
+                  id="collections-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'created' | 'updated' | 'name')}
                   className="text-xs font-mono px-2 py-1 rounded-none border border-rule bg-parchment text-ink focus-visible:border-ink"
@@ -385,6 +387,7 @@ export default function CollectionsPage() {
         searchQuery ? (
           <EmptyState
             title="No Matching Collections"
+            titleAs="h2"
             description={`No collections found matching "${searchQuery}". Try a different search term.`}
             icon={Search}
             variant="default"
@@ -398,6 +401,7 @@ export default function CollectionsPage() {
           <EmptyState
             icon={FolderOpen}
             title="No Research Collections Yet"
+            titleAs="h2"
             description="Create your first collection to start organizing legal documents for your research, cases, or projects."
             tipPosition="below"
             primaryAction={{
@@ -451,25 +455,20 @@ export default function CollectionsPage() {
                   key={collection.id}
                   flat
                   clickable
-                  onClick={() => handleCardClick(collection.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleCardClick(collection.id);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
                   className="p-5 flex flex-col min-h-[250px] group cursor-pointer"
-                  aria-label={`Collection: ${collection.name}. ${docCount} documents. Click to open.`}
                 >
                   {/* Header */}
                   <div className="flex flex-col gap-2 mb-3">
                     <div className="flex items-start gap-2.5">
                       <FolderOpen className="h-5 w-5 text-oxblood shrink-0 mt-0.5" />
-                      <h3 className="text-base font-serif font-semibold text-ink group-hover:text-oxblood line-clamp-2 leading-tight transition-colors">
-                        {collection.name}
-                      </h3>
+                      <h2 className="text-base font-serif font-semibold text-ink group-hover:text-oxblood line-clamp-2 leading-tight transition-colors">
+                        <Link
+                          href={`/collections/${collection.id}`}
+                          className="after:absolute after:inset-0 after:content-['']"
+                        >
+                          {collection.name}
+                        </Link>
+                      </h2>
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
@@ -503,15 +502,12 @@ export default function CollectionsPage() {
                     </div>
 
                     {/* Action Buttons - Revealed on hover */}
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pt-2 border-t border-rule">
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 pt-2 border-t border-rule">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCardClick(collection.id);
-                        }}
-                        className="flex-1 rounded-none border-rule text-ink font-mono text-xs hover:border-ink hover:bg-parchment-deep"
+                        onClick={() => handleCardClick(collection.id)}
+                        className="relative z-10 flex-1 rounded-none border-rule text-ink font-mono text-xs hover:border-ink hover:bg-parchment-deep"
                         aria-label="Open collection"
                       >
                         <Eye className="h-3.5 w-3.5 mr-1" />
@@ -520,11 +516,8 @@ export default function CollectionsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteCollection(collection.id);
-                        }}
-                        className="rounded-none border-rule text-oxblood font-mono text-xs hover:border-oxblood hover:bg-parchment-deep"
+                        onClick={() => handleDeleteCollection(collection.id)}
+                        className="relative z-10 rounded-none border-rule text-oxblood font-mono text-xs hover:border-oxblood hover:bg-parchment-deep"
                         aria-label="Delete collection"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

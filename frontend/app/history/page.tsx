@@ -204,9 +204,9 @@ export default function SearchHistoryPage(): React.JSX.Element {
       ) : filteredHistory.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-rule rounded-none bg-parchment-deep/30">
           <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold text-foreground font-display">
+          <h2 className="text-lg font-semibold text-foreground font-display">
             {searchFilter ? "No matching queries" : "No search history yet"}
-          </h3>
+          </h2>
           <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1 mb-6">
             {searchFilter
               ? `No searches matching "${searchFilter}" were found in your recent history.`

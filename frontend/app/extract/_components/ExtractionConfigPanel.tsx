@@ -66,7 +66,7 @@ export function ExtractionConfigPanel({
         {/* Configuration Panel */}
         <div>
           <EditorialCard>
-            <h3 className="editorial-display text-lg text-ink mb-6">New Extraction</h3>
+            <h2 className="editorial-display text-lg text-ink mb-6">New Extraction</h2>
             <div className="space-y-6">
               {hasUrlPreselection && (
                 <div className="flex items-center gap-2 text-xs text-ink-soft">

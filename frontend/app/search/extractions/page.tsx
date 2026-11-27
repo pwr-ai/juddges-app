@@ -117,9 +117,9 @@ function ResultRow({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold leading-tight truncate">
+          <h2 className="font-semibold leading-tight truncate">
             {row.title ?? row.case_number ?? row.id}
-          </h3>
+          </h2>
           {row.case_number && row.title && (
             <p className="mt-0.5 font-mono text-[11px] text-[color:var(--ink-soft)]">
               {row.case_number}

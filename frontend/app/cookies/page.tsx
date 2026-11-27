@@ -35,7 +35,7 @@ export default function CookiePolicyPage() {
  <div className="space-y-6">
  <Card>
  <CardHeader>
- <CardTitle className="flex items-center gap-2">
+ <CardTitle role="heading" aria-level={2} className="flex items-center gap-2">
  <Cookie className="h-5 w-5"/>
  What are cookies?
  </CardTitle>
@@ -51,7 +51,7 @@ export default function CookiePolicyPage() {
 
  <Card>
  <CardHeader>
- <CardTitle className="flex items-center gap-2">
+ <CardTitle role="heading" aria-level={2} className="flex items-center gap-2">
  <Shield className="h-5 w-5"/>
  How we use cookies
  </CardTitle>
@@ -87,7 +87,7 @@ export default function CookiePolicyPage() {
 
  <Card>
  <CardHeader>
- <CardTitle className="flex items-center gap-2">
+ <CardTitle role="heading" aria-level={2} className="flex items-center gap-2">
  <Settings className="h-5 w-5"/>
  Your Cookie Choices
  </CardTitle>
@@ -107,7 +107,7 @@ export default function CookiePolicyPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Third-Party Services</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Third-Party Services</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>
@@ -125,7 +125,7 @@ export default function CookiePolicyPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Updates to this Policy</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Updates to this Policy</CardTitle>
  </CardHeader>
  <CardContent className="prose prose-sm max-w-none">
  <p>
@@ -138,7 +138,7 @@ export default function CookiePolicyPage() {
 
  <Card>
  <CardHeader>
- <CardTitle>Contact Us</CardTitle>
+ <CardTitle role="heading" aria-level={2}>Contact Us</CardTitle>
  </CardHeader>
  <CardContent>
  <p className="text-sm text-muted-foreground mb-4">

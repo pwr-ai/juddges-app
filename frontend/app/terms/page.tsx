@@ -38,7 +38,7 @@ export default function TermsPage(): React.ReactElement {
         <div className="flex items-start gap-3">
           <AlertTriangle className="size-6 text-gold mt-0.5 shrink-0" />
           <div className="space-y-2">
-            <h3 className="font-semibold text-ink font-display">Important Legal Notice</h3>
+            <h2 className="font-semibold text-ink font-display">Important Legal Notice</h2>
             <p className="text-sm text-ink-soft leading-relaxed">
               JuDDGES is a research platform providing AI-powered legal information for educational and research
               purposes only. This platform does not provide legal advice and should not be used as a substitute
