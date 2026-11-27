@@ -37,14 +37,10 @@ packages_dir = backend_dir / "packages"
 # Add backend app directory for imports like "from app.models import..."
 sys.path.insert(0, str(backend_dir))
 
-# Add individual package directories (both have nested structure schema_name/schema_name/)
-# This allows both "from juddges_search.xxx" and "from schema_generator_agent.xxx" to work
+# Add individual package directories (nested structure package_name/package_name/)
 # For packages with nested structure: packages/package_name/package_name/
 # Add the inner package directories to sys.path
 sys.path.insert(0, str(packages_dir / "juddges_search" / "juddges_search"))
-sys.path.insert(
-    0, str(packages_dir / "schema_generator_agent" / "schema_generator_agent")
-)
 
 # Silence Loguru output during tests; assertions should inspect behavior directly.
 logger.remove()

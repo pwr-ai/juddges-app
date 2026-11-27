@@ -19,6 +19,8 @@ from app.rate_limiter import limiter
 try:
     import redis.asyncio as redis
 
+    from app.core.redis_policy import async_retry
+
     redis_client = redis.Redis(
         host=os.getenv("REDIS_HOST", "redis"),
         port=int(os.getenv("REDIS_PORT", "6379")),
@@ -26,6 +28,7 @@ try:
         decode_responses=True,
         socket_connect_timeout=2,
         socket_timeout=2,
+        retry=async_retry(),
     )
     REDIS_AVAILABLE = True
     logger.info("Redis client initialized for dashboard caching")

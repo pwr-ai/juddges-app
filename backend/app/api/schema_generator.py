@@ -25,11 +25,6 @@ from juddges_search.models import DocumentType
 from langgraph.types import Command
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
-from schema_generator_agent.agents.agent_state import AgentState
-from schema_generator_agent.agents.schema_generator import (
-    SchemaGenerator,
-    load_prompts,
-)
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 
@@ -44,6 +39,14 @@ from app.errors import (
 
 # Import from schemas module to reuse session management
 from app.schemas_pkg import _generation_sessions
+from app.schemas_pkg.schematize_agent import (
+    JuddgesSchemaGenerator,
+    build_initial_state,
+    build_schema_generator,
+    confidence_from_assessment,
+    graph_config,
+    state_to_response,
+)
 
 router = APIRouter(prefix="/schema-generator", tags=["schema-generator-chat"])
 
@@ -241,7 +244,7 @@ def get_or_create_agent(
     user_id: str,
     document_type: DocumentType,
     request: Request,
-) -> SchemaGenerator:
+) -> JuddgesSchemaGenerator:
     """
     Get existing agent or create new one for the session.
 
@@ -257,7 +260,7 @@ def get_or_create_agent(
         request: FastAPI request object (for app.state.checkpointer)
 
     Returns:
-        SchemaGenerator instance scoped to this user's session
+        JuddgesSchemaGenerator instance scoped to this user's session
     """
     cache_key = _namespaced_key(user_id, session_id)
 
@@ -271,24 +274,7 @@ def get_or_create_agent(
     logger.info(
         f"Creating new generation agent for session: {session_id} (user: {user_id})"
     )
-    llm = get_default_llm(use_mini_model=True)
-    prompts = load_prompts(document_type=document_type)
-
-    agent = SchemaGenerator(
-        llm,
-        document_type,
-        prompts["problem_definer_helper_prompt"],
-        prompts["problem_definer_prompt"],
-        prompts["schema_generator_prompt"],
-        prompts["schema_assessment_prompt"],
-        prompts["schema_refiner_prompt"],
-        prompts["query_generator_prompt"],
-        prompts["schema_data_assessment_prompt"],
-        prompts["schema_data_assessment_merger_prompt"],
-        prompts["schema_data_refiner_prompt"],
-        use_interrupt=True,
-        graph_compilation_kwargs={"checkpointer": request.app.state.checkpointer},
-    )
+    agent = build_schema_generator(request.app.state.checkpointer)
 
     _generation_sessions[cache_key] = (agent, datetime.now(UTC))
     return agent
@@ -304,26 +290,35 @@ def format_response_message(agent_state: dict[str, Any]) -> str:
     Returns:
         Formatted message for the user
     """
-    # Check if we have a problem definition (initial response)
-    if agent_state.get("problem_definition"):
-        return agent_state["problem_definition"]
-
     # Check for assessment results
     if agent_state.get("merged_data_assessment"):
         assessment = agent_state["merged_data_assessment"]
         message_parts = []
 
-        if assessment.get("overall_quality"):
-            message_parts.append(f"Schema Quality: {assessment['overall_quality']}")
+        if assessment.get("summary"):
+            message_parts.append(assessment["summary"])
 
-        if assessment.get("suggestions"):
+        if assessment.get("confidence"):
+            message_parts.append(f"Confidence: {assessment['confidence']}")
+
+        if assessment.get("main_issues"):
             message_parts.append(
-                "\nSuggestions:\n"
-                + "\n".join(f"- {s}" for s in assessment["suggestions"])
+                "\nMain issues:\n"
+                + "\n".join(f"- {s}" for s in assessment["main_issues"])
+            )
+
+        if assessment.get("priority_areas"):
+            message_parts.append(
+                "\nPriority areas:\n"
+                + "\n".join(f"- {s}" for s in assessment["priority_areas"])
             )
 
         if message_parts:
             return "\n".join(message_parts)
+
+    # Check if we have a problem definition (initial response)
+    if agent_state.get("problem_definition"):
+        return agent_state["problem_definition"]
 
     # Check for user feedback prompt
     if agent_state.get("problem_help"):
@@ -406,29 +401,14 @@ async def schema_chat(
                 f"(user: {user.id})"
             )
 
-            initial_state = AgentState(
-                messages=[],
-                user_input=params.message,
-                problem_help=None,
-                user_feedback=None,
-                problem_definition=None,
-                query=None,
-                current_schema=params.current_schema or {},
-                schema_history=[],
-                refinement_rounds=0,
-                assessment_result=None,
-                merged_data_assessment=None,
-                data_refinement_rounds=0,
-                conversation_id=session_id,
-                collection_id=params.collection_id,
-                confidence_score=None,
-                session_metadata={"created_at": datetime.now(UTC).isoformat()},
-            )
+            initial_state = build_initial_state(params.message, params.current_schema)
 
             try:
-                response = await agent.graph.ainvoke(
-                    input=initial_state,
-                    config={"configurable": {"thread_id": thread_id}},
+                response = state_to_response(
+                    await agent.graph.ainvoke(
+                        input=initial_state,
+                        config=graph_config(thread_id),
+                    )
                 )
             except Exception as e:
                 logger.exception(
@@ -462,9 +442,11 @@ async def schema_chat(
             logger.info(f"Refining existing session: {session_id} (user: {user.id})")
 
             try:
-                response = await agent.graph.ainvoke(
-                    Command(resume=params.message),
-                    config={"configurable": {"thread_id": thread_id}},
+                response = state_to_response(
+                    await agent.graph.ainvoke(
+                        Command(resume=params.message),
+                        config=graph_config(thread_id),
+                    )
                 )
             except Exception as e:
                 logger.exception(
@@ -493,21 +475,16 @@ async def schema_chat(
                 ).to_http_exception()
 
         # Extract response data
-        confidence = None
-        if response.get("merged_data_assessment"):
-            confidence = response["merged_data_assessment"].get("confidence_score", 0.8)
-        elif response.get("confidence_score"):
-            confidence = response["confidence_score"]
+        confidence = confidence_from_assessment(response.get("merged_data_assessment"))
 
         refinement_rounds = response.get("refinement_rounds", 0)
         data_refinement_rounds = response.get("data_refinement_rounds", 0)
         current_schema = response.get("current_schema")
 
         # Check if schema needs refinement
-        needs_refinement = False
-        if response.get("merged_data_assessment"):
-            quality = response["merged_data_assessment"].get("overall_quality", "")
-            needs_refinement = quality.lower() not in ["high", "excellent"]
+        needs_refinement = bool(
+            (response.get("merged_data_assessment") or {}).get("needs_refinement")
+        )
 
         # Format response message
         message = format_response_message(response)

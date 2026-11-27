@@ -21,6 +21,8 @@ import os
 import redis.asyncio as redis
 from loguru import logger
 
+from app.core.redis_policy import async_retry
+
 _CACHE_DB = int(os.getenv("EMBEDDING_CACHE_REDIS_DB", "2"))
 _CACHE_TTL = int(os.getenv("EMBEDDING_CACHE_TTL_SECONDS", "86400"))  # 24h
 _CACHE_PREFIX = os.getenv("EMBEDDING_CACHE_PREFIX", "emb")
@@ -49,6 +51,7 @@ def _get_client() -> redis.Redis:
             password=os.getenv("REDIS_AUTH") or None,
             db=_CACHE_DB,
             decode_responses=True,
+            retry=async_retry(),
         )
         logger.info(
             f"Embedding cache: Redis db={_CACHE_DB} "

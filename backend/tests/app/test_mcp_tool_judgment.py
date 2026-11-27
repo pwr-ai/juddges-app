@@ -393,7 +393,7 @@ class TestGetExtractedFields:
 # Cost guard: these tools must only read stored values. Derived from the
 # module's own imports, so it holds without a fixture that could drift.
 _FORBIDDEN_ROOTS = {
-    "schema_generator_agent",
+    "schematize",
     "openai",
     "anthropic",
     "langchain",

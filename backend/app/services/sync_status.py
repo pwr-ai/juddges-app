@@ -30,11 +30,17 @@ def _get_redis():
     try:
         import redis
 
+        from app.core.redis_policy import sync_retry
+
         host = os.getenv("REDIS_HOST", "localhost")
         port = int(os.getenv("REDIS_PORT", "6379"))
         password = os.getenv("REDIS_AUTH") or None
         return redis.Redis(
-            host=host, port=port, password=password, decode_responses=True
+            host=host,
+            port=port,
+            password=password,
+            decode_responses=True,
+            retry=sync_retry(),
         )
     except Exception:
         return None
