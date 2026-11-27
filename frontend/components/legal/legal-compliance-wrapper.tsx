@@ -81,32 +81,39 @@ export function LegalComplianceWrapper({ children }: { children: React.ReactNode
     }
   };
 
-  // Don't render modals while checking or if no user
-  if (isChecking || loading || !user) {
-    return <>{children}</>;
-  }
+  // The tree shape must not depend on auth state. This used to return
+  // `<>{children}</>` while checking and `<>{children}<Modal/>...</>` after:
+  // callers pass several siblings as `children` (an array), which sat at a
+  // different position in the two shapes, so React unmounted and remounted the
+  // whole page subtree once auth resolved (#600). Keep `children` at index 0 of
+  // one fragment and only toggle the trailing slot.
+  const showModals = !(isChecking || loading || !user);
 
   return (
     <>
       {children}
-      <ProfessionalAcknowledgment
-        open={showAcknowledgment}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleAcknowledgmentComplete();
-          }
-        }}
-      />
-      <WelcomeModal
-        open={showWelcome || tourOpen}
-        onOpenChange={(open) => {
-          setShowWelcome(open);
-          if (!open) {
-            closeTour();
-          }
-        }}
-        onComplete={handleWelcomeComplete}
-      />
+      {showModals ? (
+        <>
+          <ProfessionalAcknowledgment
+            open={showAcknowledgment}
+            onOpenChange={(open) => {
+              if (!open) {
+                handleAcknowledgmentComplete();
+              }
+            }}
+          />
+          <WelcomeModal
+            open={showWelcome || tourOpen}
+            onOpenChange={(open) => {
+              setShowWelcome(open);
+              if (!open) {
+                closeTour();
+              }
+            }}
+            onComplete={handleWelcomeComplete}
+          />
+        </>
+      ) : null}
     </>
   );
 }
