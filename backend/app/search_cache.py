@@ -83,6 +83,8 @@ def _get_client():
     try:
         import redis.asyncio as redis
 
+        from app.core.redis_policy import async_retry
+
         _client = redis.Redis(
             host=os.getenv("REDIS_HOST", "localhost"),
             port=int(os.getenv("REDIS_PORT", "6379")),
@@ -93,6 +95,7 @@ def _get_client():
             decode_responses=True,
             socket_connect_timeout=2,
             socket_timeout=2,
+            retry=async_retry(),
         )
         logger.info(
             f"Search response cache: Redis db={_CACHE_DB} "
