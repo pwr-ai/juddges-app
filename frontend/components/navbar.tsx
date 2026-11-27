@@ -554,7 +554,7 @@ export function Navbar(): React.ReactElement {
         ) : (
           // Unauthenticated user controls
           <>
-            <nav className="hidden sm:flex items-center gap-6 mr-2">
+            <nav aria-label="Public pages" className="hidden sm:flex items-center gap-6 mr-2">
               {[
                 { href: "/about", label: "About" },
                 { href: "/changelog", label: "Changelog" },

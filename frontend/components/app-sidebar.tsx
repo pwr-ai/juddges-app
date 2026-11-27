@@ -120,7 +120,7 @@ export function AppSidebar(): React.JSX.Element {
  if (!user) {
  return (
  <TooltipProvider delayDuration={300}>
- <Sidebar collapsible="offcanvas">
+ <Sidebar collapsible="offcanvas" role="navigation" aria-label={t('navigation.mainLabel')}>
  <SidebarHeader className="px-4 py-4 border-b border-border relative overflow-visible">
  <Link href="/" aria-label={t('navigation.homeLinkLabel')} className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
  <JuddgesLogo
@@ -191,7 +191,7 @@ export function AppSidebar(): React.JSX.Element {
 
  return (
  <TooltipProvider delayDuration={300}>
- <Sidebar collapsible="offcanvas">
+ <Sidebar collapsible="offcanvas" role="navigation" aria-label={t('navigation.mainLabel')}>
  <SidebarHeader className="px-4 py-4 border-b border-border relative overflow-visible">
  <Link href="/" aria-label={t('navigation.homeLinkLabel')} className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
  <JuddgesLogo
