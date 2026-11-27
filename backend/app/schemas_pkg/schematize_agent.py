@@ -155,6 +155,113 @@ def json_schema_to_schema_fields(
 
 
 # ---------------------------------------------------------------------------
+# Field unification
+# ---------------------------------------------------------------------------
+
+# Fields the LLM adds to describe the extraction itself rather than the judgment.
+BOOKKEEPING_FIELD_NAMES = frozenset(
+    {
+        "coder_notes",
+        "notes_for_review",
+        "source_document_id",
+        "source_type",
+        "source_location",
+        "document_url",
+        "judgment_link",
+        "metadata_completeness",
+        "document_scope",
+        "analyst_notes",
+    }
+)
+_BOOKKEEPING_PREFIXES = ("extraction_", "record_")
+_VARIANT_SUFFIXES = (
+    "_raw_text",
+    "_as_stated",
+    "_structured",
+    "_details",
+    "_global",
+    "_other",
+    "_quick",
+    "_list",
+    "_text",
+    "_raw",
+)
+_VARIANT_PREFIX = "applied_"
+
+
+def _is_bookkeeping(name: str) -> bool:
+    return (
+        "provenance" in name
+        or name.endswith("_placeholder")
+        or name.startswith(_BOOKKEEPING_PREFIXES)
+        or name in BOOKKEEPING_FIELD_NAMES
+    )
+
+
+def _base_key(name: str) -> str:
+    base = name.removeprefix(_VARIANT_PREFIX)
+    for suffix in _VARIANT_SUFFIXES:
+        if base.endswith(suffix) and len(base) > len(suffix):
+            return base.removesuffix(suffix)
+    return base
+
+
+def unify_schema_fields(schema: SchemaFields | None) -> SchemaFields | None:
+    """
+    Drop bookkeeping fields and collapse duplicate variants of one concept.
+
+    Fields sharing a base key (name minus one variant suffix / ``applied_`` prefix)
+    form a group of which one survives: the field named exactly like the base, else
+    the first non-string one, else the first. Original order is preserved. Never
+    returns an empty schema: if nothing would remain, ``schema`` is returned as is.
+    """
+    if schema is None:
+        return None
+
+    fields = list(schema.fields)
+    candidates = [f for f in fields if not _is_bookkeeping(f.name)]
+    dropped = [f.name for f in fields if _is_bookkeeping(f.name)]
+
+    groups: dict[str, list[Any]] = {}
+    for field in candidates:
+        groups.setdefault(_base_key(field.name), []).append(field)
+
+    keep: set[int] = set()
+    for base, group in groups.items():
+        chosen = (
+            next((f for f in group if f.name == base), None)
+            or next((f for f in group if str(f.type_) != "string"), None)
+            or group[0]
+        )
+        keep.add(id(chosen))
+        dropped.extend(f.name for f in group if f is not chosen)
+
+    kept = [f for f in candidates if id(f) in keep]
+    if not kept:
+        return schema
+    if dropped:
+        logger.info(f"Schema unification dropped {len(dropped)} fields: {dropped}")
+    if len(kept) == len(fields):
+        return schema
+    return SchemaFields(fields=kept)
+
+
+def _unified_node(agent: Any):
+    """Wrap a schema-writing agent so the state it returns is already unified."""
+
+    def node(state: AgentState) -> dict[str, Any]:
+        update = agent(state)
+        if update.get("current_schema") is not None:
+            update = dict(update)
+            update["current_schema"] = unify_schema_fields(update["current_schema"])
+            if update.get("schema_history"):
+                update["schema_history"] = [update["current_schema"]]
+        return update
+
+    return node
+
+
+# ---------------------------------------------------------------------------
 # State <-> API
 # ---------------------------------------------------------------------------
 
@@ -330,7 +437,7 @@ class JuddgesSchemaGenerator(SchemaGenerator):
             builder.add_edge("llm_problem_definer", "llm_query_generator")
 
         builder.add_node("llm_query_generator", self.query_generator)
-        builder.add_node("llm_schema_generator", self.schema_generator)
+        builder.add_node("llm_schema_generator", _unified_node(self.schema_generator))
         builder.add_edge("llm_query_generator", "llm_schema_generator")
 
         # Upstream routers return "summarizer" when the pipeline is done; we have
@@ -343,7 +450,7 @@ class JuddgesSchemaGenerator(SchemaGenerator):
             builder.add_edge("llm_schema_generator", after_refinement)
         else:
             builder.add_node("llm_schema_assessment", self.schema_assessment)
-            builder.add_node("llm_schema_refiner", self.schema_refiner)
+            builder.add_node("llm_schema_refiner", _unified_node(self.schema_refiner))
             builder.add_edge("llm_schema_generator", "llm_schema_assessment")
             builder.add_conditional_edges(
                 "llm_schema_assessment",
@@ -362,7 +469,9 @@ class JuddgesSchemaGenerator(SchemaGenerator):
             builder.add_node(
                 "llm_schema_data_assessment_merger", self.schema_data_assessment_merger
             )
-            builder.add_node("llm_schema_data_refiner", self.schema_data_refiner)
+            builder.add_node(
+                "llm_schema_data_refiner", _unified_node(self.schema_data_refiner)
+            )
             builder.add_conditional_edges(
                 "llm_schema_data_assessment",
                 self.route_after_data_assessment,
@@ -384,8 +493,24 @@ class JuddgesSchemaGenerator(SchemaGenerator):
         return builder.compile(**(compilation_kwargs or {}))
 
 
+# Appended to the prompts that write the schema. No braces: they are templates.
+FIELD_DESIGN_RULES = (
+    "\n\n### Field design rules\n"
+    "Define one field per concept. Do not add bookkeeping fields (provenance, "
+    "confidence, extraction notes, source/document metadata) or duplicate "
+    "variants of the same field (raw/structured/text).\n"
+)
+_SCHEMA_WRITING_PROMPTS = (
+    "schema_generator_prompt",
+    "schema_refiner_prompt",
+    "schema_data_refiner_prompt",
+)
+
+
 def _build_prompts() -> SchemaGeneratorPrompts:
-    prompts = load_prompts(language="en", system_type="law")
+    prompts = dict(load_prompts(language="en", system_type="law"))
+    for name in _SCHEMA_WRITING_PROMPTS:
+        prompts[name] = prompts[name].rstrip() + FIELD_DESIGN_RULES
     return SchemaGeneratorPrompts(
         **{f.name: prompts[f.name] for f in dataclasses.fields(SchemaGeneratorPrompts)}
     )
