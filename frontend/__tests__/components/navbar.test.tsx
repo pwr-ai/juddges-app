@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -48,6 +48,14 @@ jest.mock('@/contexts/AuthContext', () => ({
     signOut: jest.fn(),
   }),
 }));
+
+// Real English strings, so assertions read what a user sees.
+jest.mock('@/contexts/LanguageContext', () => {
+  const { en } = jest.requireActual('@/lib/i18n/translations/en');
+  const t = (key: string) =>
+    key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], en) ?? key;
+  return { useTranslation: () => ({ t }) };
+});
 
 jest.mock('@/contexts/CollectionDetailContext', () => ({
   useCollectionDetail: () => ({
@@ -156,6 +164,13 @@ describe('Navbar', () => {
       render(<Navbar />);
       expect(screen.getByText('Login')).toBeInTheDocument();
       expect(screen.getByText('Sign Up')).toBeInTheDocument();
+    });
+
+    it('offers only public pages to guests', () => {
+      render(<Navbar />);
+      const nav = screen.getByRole('navigation', { name: 'Public pages' });
+      expect(within(nav).getByText('Publications').closest('a')).toHaveAttribute('href', '/publications');
+      expect(nav.querySelector('a[href="/changelog"]')).toBeNull();
     });
 
     it('renders About link', () => {
