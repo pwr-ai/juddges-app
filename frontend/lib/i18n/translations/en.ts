@@ -136,10 +136,6 @@ export const en: Translations = {
     // Accessible names
     homeLinkLabel: 'JuDDGES — go to the home page',
 
-    // Workflow phase labels
-    phasePlan: '1. Plan',
-    phaseSearch: '2. Search',
-    phaseAnalyze: '3. Analyze',
     flowAsk: 'Ask',
     flowExplore: 'Explore',
     flowCode: 'Code',
