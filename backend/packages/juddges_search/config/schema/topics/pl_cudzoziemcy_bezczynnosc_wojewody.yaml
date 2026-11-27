@@ -50,7 +50,10 @@ properties:
     description: "true jeśli czas trwania postępowania wynika z wyroku (wprost lub z dat), false gdy nie da się go ustalić."
   ustawowy_termin_dni:
     type: integer
-    description: "Termin załatwienia sprawy w dniach, który sąd uznał za właściwy (np. 60 dni z art. 112a u.o.c., 30/60 dni z art. 35 k.p.a., 90 dni dla rezydenta długoterminowego UE, inny wynikający z ustawy szczególnej lub wyznaczony przez organ na podstawie art. 36 k.p.a.). Zwróć 0, jeżeli sąd nie wskazuje terminu."
+    description: "Termin załatwienia sprawy w dniach, który sąd uznał za właściwy (np. 60 dni z art. 112a u.o.c., 30/60 dni z art. 35 k.p.a., 90 dni dla rezydenta długoterminowego UE, inny wynikający z ustawy szczególnej lub wyznaczony przez organ na podstawie art. 36 k.p.a.). Zwróć 0, jeżeli sąd nie wskazuje terminu (wtedy ustawowy_termin_dni_stated = false)."
+  ustawowy_termin_dni_stated:
+    type: boolean
+    description: "true jeśli sąd wskazał termin załatwienia sprawy i ustawowy_termin_dni zawiera tę wartość; false gdy terminu nie wskazano (wartość 0 w ustawowy_termin_dni należy wtedy pominąć)."
   ponaglenie_zlozone:
     type: string
     enum: [tak, nie, not_stated]
@@ -109,7 +112,10 @@ properties:
     description: "Jak sąd ocenił przyczyny zwłoki wskazane przez organ: 'nie' — typowo gdy sąd stwierdza, że problemy organizacyjne i kadrowe nie zwalniają z obowiązku terminowego działania; 'tak' — gdy uznał zwłokę za usprawiedliwioną (np. braki wniosku z winy cudzoziemca); 'czesciowo' — gdy uznał część okresu za usprawiedliwioną. 'not_stated' gdy sąd się nie odnosi."
   koszty_zasadzone_kwota_pln:
     type: number
-    description: "Kwota zwrotu kosztów postępowania sądowego zasądzona od organu na rzecz skarżącego w PLN (wpis + ewentualnie wynagrodzenie pełnomocnika i opłata od pełnomocnictwa). 0 gdy kosztów nie zasądzono lub kwoty nie podano."
+    description: "Kwota zwrotu kosztów postępowania sądowego zasądzona od organu na rzecz skarżącego w PLN (wpis + ewentualnie wynagrodzenie pełnomocnika i opłata od pełnomocnictwa). 0 gdy kosztów nie zasądzono lub kwoty nie podano (rozróżnia to koszty_zasadzone_kwota_stated)."
+  koszty_zasadzone_kwota_stated:
+    type: boolean
+    description: "true jeśli sentencja zasądza koszty i podaje ich kwotę; false gdy kosztów nie zasądzono albo kwoty nie podano."
   obywatelstwo_cudzoziemca:
     type: string
     enum: [ukraina, bialorus, indie, gruzja, filipiny, kolumbia, other, not_stated]
@@ -124,4 +130,4 @@ properties:
     type: string
     enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
     description: "Jak sąd traktuje uchwałę II OPS 5/19: 'stosuje' (np. odrzuca skargę wniesioną po załatwieniu sprawy), 'odroznia' (wskazuje, że sytuacja jest inna, np. sprawę załatwiono dopiero po wniesieniu skargi), 'polemizuje' (krytycznie). 'nie_dotyczy' gdy uchwały nie powołano."
-required: [cudzoziemcy_bezczynnosc_dotyczy, typ_skargi, typ_zezwolenia, wojewoda, data_wniosku, data_wniosku_stated, czas_trwania_postepowania_miesiace, czas_trwania_postepowania_miesiace_stated, ustawowy_termin_dni, ponaglenie_zlozone, organ_wyzszego_stopnia_rozpatrzyl, rozstrzygniecie_skargi, sad_zobowiazal_do_zalatwienia, termin_zobowiazania_dni, termin_zobowiazania_dni_stated, bezczynnosc_stwierdzona, razace_naruszenie_prawa, grzywna_wymierzona, grzywna_kwota_pln, suma_pieniezna_przyznana, suma_pieniezna_kwota_pln, sprawa_zalatwiona_przed_wyrokiem, przyczyny_wskazywane_przez_organ, sad_uznal_przyczyny_za_usprawiedliwiajace, koszty_zasadzone_kwota_pln, obywatelstwo_cudzoziemca, powolane_orzeczenia_kluczowe, stosunek_do_ii_ops_5_19]
+required: [cudzoziemcy_bezczynnosc_dotyczy, typ_skargi, typ_zezwolenia, wojewoda, data_wniosku, data_wniosku_stated, czas_trwania_postepowania_miesiace, czas_trwania_postepowania_miesiace_stated, ustawowy_termin_dni, ustawowy_termin_dni_stated, ponaglenie_zlozone, organ_wyzszego_stopnia_rozpatrzyl, rozstrzygniecie_skargi, sad_zobowiazal_do_zalatwienia, termin_zobowiazania_dni, termin_zobowiazania_dni_stated, bezczynnosc_stwierdzona, razace_naruszenie_prawa, grzywna_wymierzona, grzywna_kwota_pln, suma_pieniezna_przyznana, suma_pieniezna_kwota_pln, sprawa_zalatwiona_przed_wyrokiem, przyczyny_wskazywane_przez_organ, sad_uznal_przyczyny_za_usprawiedliwiajace, koszty_zasadzone_kwota_pln, koszty_zasadzone_kwota_stated, obywatelstwo_cudzoziemca, powolane_orzeczenia_kluczowe, stosunek_do_ii_ops_5_19]

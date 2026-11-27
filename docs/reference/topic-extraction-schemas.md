@@ -58,5 +58,43 @@ through Schema Studio or add it as a system schema.
 - Judgments found through `search_v2` that have no `judgments` row have to be
   ingested before they can be extracted or added to a collection.
   `scripts/ingest_chf_judgments.py` does this for the CHF set.
-- The `curated_sql` queries and the size estimates have not been run against
-  the database.
+## Measured candidate volumes (2026-11-27)
+
+`search_v2` is the union of unique judgments returned by all of a topic's
+queries against the Weaviate v2 corpus. It is a **lower bound**: in a query that
+reached `limit` 50 (the "saturated" column), more matches exist beyond the cut.
+`curated_sql` is `count(*)` of the topic's curated query over `public.judgments`,
+run in a read-only transaction. Both are candidate counts measured before the
+inclusion gate is applied.
+
+| Slug | search_v2 unique | saturated | curated PL | curated UK |
+|---|---|---|---|---|
+| `pl_skd_sankcja_kredytu_darmowego` | 296 | 11/14 | 87 | 0 |
+| `pl_frankowe_v2_po_2026` | 116 (2025 only) | 3/14 | 5090 (CHF line) | — |
+| `pl_wibor_klauzula_zmiennego_oprocentowania` | 426 | 12/14 | 854 (mostly CHF false positives) | — |
+| `pl_wadliwosc_skladu_neosedziowie` | 481 | 13/14 | 11 | — |
+| `pl_cudzoziemcy_bezczynnosc_wojewody` | 656 | 14/15 | 0 | — |
+| `pl_oze_wiatraki_planowanie` | 610 | 14/15 | 0 | — |
+| `kwalifikacja_umowy_stosunek_pracy` | 687 | 16/17 | 8 | 1 |
+| `rodo_odszkodowanie_art82` | 544 | 11/16 | 0 | 1 |
+| `pl_wymiar_kary_178a` | 529 | 14/15 | 9 | 5 |
+| `linia_orzecznicza_tracker` | 689 | 15/15 | 652 | — |
+
+What the numbers show:
+
+- **Neither corpus reaches 2026.** In the full corpus, only a handful of
+  judgments per topic are dated 2025. The curated PL set (11,140 rows,
+  `JuDDGES/pl-court-raw`) ends in 2024-12, and the curated UK set (about 6,100
+  rows) ends in 2024-05. Every 2026 ruling these schemas track (III CZP 8/26,
+  C-471/24, C-744/24, C-521/21, C-752/24) is therefore later than the data. The
+  current corpus can give only the pre-ruling baseline. Measuring a
+  before/after effect needs fresh judgments ingested.
+- **The curated set holds no administrative-court judgments**, so the
+  foreigners and RES topics come from the full corpus only.
+- **WIBOR in the curated set means CHF.** 1,653 of the 1,654 curated PL
+  judgments that mention WIBOR also mention CHF or the franc. The curated WIBOR
+  query needs the gate, or an explicit `NOT ~* 'CHF|frank'`, before its
+  results are usable.
+- Only the CHF line and the reasoning-line tracker have a meaningful curated
+  base. All other topics need their `search_v2` candidates ingested before
+  extraction (see Limits).
