@@ -10,8 +10,8 @@ import {
   COHORT_GROUP_FIELDS,
   type CohortFilter,
   type CohortGroupField,
+  cohortHeadline,
   groupCohort,
-  topBucket,
 } from "@/lib/precedents/cohort-grouping";
 import { FieldCard } from "@/app/search/extractions/_components/FieldCard";
 
@@ -41,7 +41,7 @@ export function CohortInsights({
   const [field, setField] = useState<CohortGroupField>(COHORT_GROUP_FIELDS[0]);
 
   const aggregate = useMemo(() => groupCohort(cohort, field), [cohort, field]);
-  const headline = topBucket(aggregate);
+  const headline = useMemo(() => cohortHeadline(cohort, field), [cohort, field]);
 
   if (cohort.length === 0) return null;
 
