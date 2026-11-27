@@ -5,8 +5,8 @@ jest.mock("@/contexts/LanguageContext", () => ({
   useTranslation: () => ({ t: (k: string, v?: Record<string, unknown>) => (v ? `${k}:${JSON.stringify(v)}` : k) }),
 }));
 jest.mock("@/components/charts", () => ({
-  HorizontalBarChart: (p: { items: { name: string }[]; onBarClick?: (n: string) => void }) => (
-    <div>{p.items.map((i) => <button key={i.name} onClick={() => p.onBarClick?.(i.name)}>{i.name}</button>)}</div>
+  HorizontalBarChart: (p: { items: { name: string }[] }) => (
+    <div>{p.items.map((i) => <span key={i.name}>{i.name}</span>)}</div>
   ),
 }));
 const aggregate = {
@@ -61,7 +61,7 @@ describe("StatisticsView", () => {
 
   it("a bar click drills back narrowing the field's filter to that value (any-of semantics)", () => {
     const p = renderView({ filters: { appeal_outcome: ["allowed"] } });
-    fireEvent.click(screen.getByRole("button", { name: "dismissed" }));
+    fireEvent.click(screen.getByRole("button", { name: /^dismissed: / }));
     expect(p.onDrillBack).toHaveBeenCalledWith({ appeal_outcome: ["dismissed"] });
   });
 
@@ -75,7 +75,7 @@ describe("StatisticsView", () => {
       error: null,
     };
     const p = renderView({ fields: ["did_offender_confess"] });
-    fireEvent.click(screen.getByRole("button", { name: "true" }));
+    fireEvent.click(screen.getByRole("button", { name: /^true: / }));
     expect(p.onDrillBack).toHaveBeenCalledWith({ did_offender_confess: true });
   });
 
@@ -89,7 +89,7 @@ describe("StatisticsView", () => {
       error: null,
     };
     const p = renderView({ fields: ["court_name"] });
-    fireEvent.click(screen.getByRole("button", { name: "Court of Appeal" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Court of Appeal: / }));
     expect(p.onDrillBack).not.toHaveBeenCalled();
   });
 

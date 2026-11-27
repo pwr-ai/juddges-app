@@ -16,13 +16,12 @@ jest.mock("@/contexts/LanguageContext", () => ({
 jest.mock("@/components/charts", () => ({
   HorizontalBarChart: (props: {
     items: { name: string; count: number }[];
-    onBarClick?: (name: string) => void;
   }) => (
     <div data-testid="chart">
       {props.items.map((i) => (
-        <button key={i.name} onClick={() => props.onBarClick?.(i.name)}>
-          {i.name}: {i.count}
-        </button>
+        <span key={i.name}>
+          {i.name}
+        </span>
       ))}
     </div>
   ),
