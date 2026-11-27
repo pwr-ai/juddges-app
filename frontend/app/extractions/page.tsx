@@ -284,16 +284,31 @@ function ExtractionsContent() {
  const extractionContext = job.extraction_context || 'Extract structured information from legal documents using the provided schema.';
 
  if (documentIds.length === 0) {
+ // Last resort: the list row carries no document_ids. Page through the
+ // results 200 at a time instead of loading the whole job.
  try {
- const jobDetailsResponse = await fetch(`/api/extractions?job_id=${job.job_id}`);
- if (jobDetailsResponse.ok) {
- const jobDetails = await jobDetailsResponse.json();
- if (jobDetails.results && Array.isArray(jobDetails.results)) {
- documentIds = jobDetails.results.map((r: DocumentExtractionResult) => r.document_id).filter(Boolean);
+ const RESULTS_PAGE_LIMIT = 200;
+ const collected: string[] = [];
+ for (let offset = 0; ; offset += RESULTS_PAGE_LIMIT) {
+ const pageResponse = await fetch(
+ `/api/extractions/${job.job_id}/results?offset=${offset}&limit=${RESULTS_PAGE_LIMIT}`
+ );
+ if (!pageResponse.ok) {
+ // A partial id list would re-run a different job; give up instead.
+ collected.length = 0;
+ break;
  }
+ const pagePayload = await pageResponse.json();
+ const pageResults: DocumentExtractionResult[] = Array.isArray(pagePayload?.results)
+ ? pagePayload.results
+ : [];
+ collected.push(...pageResults.map((r) => r.document_id).filter(Boolean));
+ const total = typeof pagePayload?.filtered_total === 'number' ? pagePayload.filtered_total : 0;
+ if (pageResults.length === 0 || offset + RESULTS_PAGE_LIMIT >= total) break;
  }
+ documentIds = collected;
  } catch (error) {
- logger.warn('Could not fetch job details for document_ids:', error);
+ logger.warn('Could not fetch job results for document_ids:', error);
  }
  }
 

@@ -205,6 +205,15 @@ class ReasoningLineTimeline(BaseModel):
     )
     total_classified: int
     total_unclassified: int
+    outcome_labels: dict[str, str] | None = Field(
+        default=None,
+        description=(
+            "Optional per-line display names for the outcome categories, keyed "
+            "by for/against/mixed/procedural (from reasoning_lines.metadata."
+            "outcome_labels), e.g. {'for': 'Kredytobiorca wygrywa'}. Null when "
+            "the line uses the generic for/against wording."
+        ),
+    )
 
 
 # ===== Milestone 5: Language Drift Detection Models =====

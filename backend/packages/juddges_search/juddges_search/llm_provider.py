@@ -10,6 +10,8 @@ import os
 from functools import lru_cache
 from typing import Any, Protocol, runtime_checkable
 
+from juddges_search.llms import LLM_NAME
+
 
 @runtime_checkable
 class LLMProvider(Protocol):
@@ -31,6 +33,10 @@ def _build_chat_openai(model: str, base_url: str | None, temperature: float):
     """
     from langchain_openai import ChatOpenAI
 
+    # Reasoning models (GPT-5+, o-series) only accept the default temperature.
+    # langchain-openai strips it for "gpt-5*" names but not for newer ones.
+    if model.startswith(("gpt-5", "gpt-6", "o1", "o3", "o4")):
+        return ChatOpenAI(model=model, base_url=base_url)
     return ChatOpenAI(model=model, base_url=base_url, temperature=temperature)
 
 
@@ -48,7 +54,7 @@ def get_llm_provider(
     chain factories directly.
     """
     return _build_chat_openai(
-        model or os.environ.get("LLM_NAME", "gpt-5"),
+        model or os.environ.get("LLM_NAME") or LLM_NAME,
         base_url or os.environ.get("LLM_BASE_URL"),
         temperature,
     )

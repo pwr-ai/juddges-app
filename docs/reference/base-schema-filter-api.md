@@ -61,6 +61,34 @@ PostgREST matches by argument names, and a second overload answers HTTP 300.
 Pinned by `backend/tests/db/test_migration_chain.py`
 (`EXPECTED_RPC_ARGS`, `test_rpc_has_exactly_one_overload`).
 
+## `GET /extractions/base-schema/facets/{field}` and `/histogram/{field}`
+
+Value counts (`{field, counts: [{value, count}], total}`) and numeric
+distribution buckets for one extracted field, used by the `/search/extractions`
+filters. Both take an optional `jurisdiction=PL|UK` query parameter (any other
+value is HTTP 422); without it they are corpus-wide, exactly as before. The
+frontend sends it only when exactly one jurisdiction is selected in the scope
+filter (`singleJurisdiction` in `lib/extractions/base-schema-filter-api.ts`),
+and forwards it through the Next.js proxies.
+
+- Facets: unscoped calls `get_extracted_facet_counts(field_path)`; scoped calls
+  `get_extracted_facet_counts_by_jurisdiction` (below) with
+  `p_filters = {"jurisdiction": [X]}`. The scoped path counts distinct
+  documents (not array elements) and is capped at the same 200 values.
+- Histogram: `get_numeric_field_histogram(field, bucket_count, p_jurisdiction DEFAULT NULL)`
+  (migration `20261123000001_numeric_histogram_jurisdiction_scope.sql`, which
+  drops the 2-argument form so there is a single overload). The scoped call
+  also narrows the min/max range to that jurisdiction.
+
+Count semantics differ between the two paths: scoped counts are **distinct
+documents** and exclude whitespace-only text values; unscoped counts are **array
+elements** (a document repeating a value in one array counts per occurrence) and
+exclude only NULL/empty values.
+
+**Deploy order:** apply migration `20261123000001` *before* deploying the
+backend. Backend-first makes scoped histogram calls fail (`PGRST202`, surfaced as
+HTTP 500); unscoped calls are unaffected.
+
 ## RPC `public.get_extracted_facet_counts_by_jurisdiction(p_filters, field_path, p_text_query)`
 
 Sibling of `get_extracted_facet_counts(field_path)` (which stays untouched):

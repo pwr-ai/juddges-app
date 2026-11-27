@@ -1,14 +1,19 @@
 import { render, screen } from '@testing-library/react';
 
-import { OutcomeTimeline } from '@/components/reasoning-lines/OutcomeTimeline';
+import { OutcomeTimeline, formatShare } from '@/components/reasoning-lines/OutcomeTimeline';
 import type { ReasoningLineTimeline } from '@/types/reasoning-lines';
 
 // recharts (+ d3 ESM) cannot be transformed by jest here and the chart is
 // irrelevant to the trend badge — stub it out.
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  BarChart: () => null,
-  Bar: () => null,
+  BarChart: ({ children, stackOffset }: { children: React.ReactNode; stackOffset?: string }) => (
+    <div data-testid="bar-chart" data-stack-offset={stackOffset}>
+      {children}
+    </div>
+  ),
+  // Render each series' display name so the legend labels can be asserted.
+  Bar: ({ name }: { name: string }) => <span data-testid="series">{name}</span>,
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
@@ -72,5 +77,54 @@ describe('OutcomeTimeline trend badge', () => {
     render(<OutcomeTimeline data={timeline('shifting')} />);
 
     expect(screen.queryByText('Niewystarczajace dane')).not.toBeInTheDocument();
+  });
+});
+
+describe('OutcomeTimeline series labels', () => {
+  it('uses the generic labels when the line has no outcome_labels', () => {
+    render(<OutcomeTimeline data={timeline('stable_split')} />);
+
+    expect(screen.getAllByTestId('series').map((el) => el.textContent)).toEqual([
+      'Za',
+      'Przeciw',
+      'Mieszane',
+      'Proceduralne',
+    ]);
+  });
+
+  it('names the series after the parties when the line provides outcome_labels', () => {
+    const data = {
+      ...timeline('shifting'),
+      outcome_labels: {
+        for: 'Kredytobiorca wygrywa',
+        against: 'Bank wygrywa',
+        mixed: 'Częściowo',
+      },
+    };
+
+    render(<OutcomeTimeline data={data} />);
+
+    expect(screen.getAllByTestId('series').map((el) => el.textContent)).toEqual([
+      'Kredytobiorca wygrywa',
+      'Bank wygrywa',
+      'Częściowo',
+      'Proceduralne',
+    ]);
+  });
+});
+
+describe('OutcomeTimeline 100% bars', () => {
+  it('normalises every period to a 100% stacked bar', () => {
+    render(<OutcomeTimeline data={timeline('shifting')} />);
+
+    expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-stack-offset', 'expand');
+  });
+
+  it.each([
+    [720, 817, '720 (88%)'],
+    [0, 10, '0 (0%)'],
+    [3, 0, '3'],
+  ])('formats %i of %i classified as %s', (count, classified, expected) => {
+    expect(formatShare(count, classified)).toBe(expected);
   });
 });

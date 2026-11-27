@@ -40,10 +40,15 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  const cleanedDocumentIds = documentIds?.map(id => cleanDocumentIdForUrl(String(id))) || [];
 
  // Only fetch when expanded
- const { data: documents, isLoading, error } = useSourceDocuments({
+ const { data: documents, isLoading, error, refetch } = useSourceDocuments({
  documentIds: cleanedDocumentIds,
  enabled: isExpandedState && cleanedDocumentIds.length > 0,
  });
+
+ const isAuthError = (error as { status?: number } | null)?.status === 401;
+ const sourcesErrorMessage = isAuthError
+ ? 'Your session has expired. Please sign in again.'
+ : 'Failed to load sources. Please try again.';
 
  // Scroll function
  const performScroll = useCallback(() => {
@@ -156,12 +161,21 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  {error && (
  <div className="flex items-center gap-2 font-mono text-xs text-oxblood p-3 bg-parchment-deep rounded-none border border-oxblood/40">
  <AlertCircle className="h-4 w-4 shrink-0"/>
- <span>Failed to load sources. Please try again.</span>
+ <span>{sourcesErrorMessage}</span>
+ {!isAuthError && (
+ <button
+ type="button"
+ onClick={() => refetch()}
+ className="ml-auto underline underline-offset-2 hover:text-oxblood"
+ >
+ Retry
+ </button>
+ )}
  </div>
  )}
 
  {/* Loading state - show when loading OR when expanded but no documents yet */}
- {(isLoading || (!documents && isExpandedState)) && (
+ {(isLoading || (!documents && !error && isExpandedState)) && (
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
  {cleanedDocumentIds.slice(0, 3).map((id, index) => (
  <div
@@ -284,12 +298,21 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  {error && (
  <div className="flex items-center gap-2 border-l-2 border-l-oxblood bg-parchment-deep p-3 text-sm text-ink">
  <AlertCircle className="h-4 w-4 shrink-0"/>
- <span>Failed to load sources. Please try again.</span>
+ <span>{sourcesErrorMessage}</span>
+ {!isAuthError && (
+ <button
+ type="button"
+ onClick={() => refetch()}
+ className="ml-auto underline underline-offset-2 hover:text-oxblood"
+ >
+ Retry
+ </button>
+ )}
  </div>
  )}
 
  {/* Loading state - show when loading OR when expanded but no documents yet */}
- {(isLoading || (!documents && isExpandedState)) && (
+ {(isLoading || (!documents && !error && isExpandedState)) && (
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
  {cleanedDocumentIds.slice(0, 3).map((id, index) => (
  <div

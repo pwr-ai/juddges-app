@@ -8,6 +8,16 @@ const apiLogger = logger.child('jobs-api');
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
 
+// Every extraction_jobs column except `results`. The list never reads it, and a
+// corpus-sized job stores tens of MB there; the detail page loads it per job.
+const JOB_LIST_COLUMNS = [
+  'id', 'job_id', 'user_id', 'collection_id', 'schema_id', 'status',
+  'document_ids', 'total_documents', 'completed_documents',
+  'language', 'prompt_id', 'extraction_context', 'error_message',
+  'heartbeat_at', 'cancel_requested_at', 'attempts',
+  'created_at', 'updated_at', 'started_at', 'completed_at',
+].join(', ');
+
 // Helper to refresh job status from backend
 async function refreshJobStatusFromBackend(
   jobId: string,
@@ -92,7 +102,8 @@ async function refreshJobStatusFromBackend(
       .from('extraction_jobs')
       .update(updateData)
       .eq('job_id', jobId)
-      .select();
+      // Narrow on purpose: echoing the whole row back would return `results`.
+      .select('job_id, status');
 
     if (updateError) {
       apiLogger.error('Failed to update job status in Supabase after refresh', updateError, {
@@ -135,7 +146,7 @@ export async function GET() {
     // Fetch extraction jobs from Supabase
     const jobsQueryResult = await supabase
       .from('extraction_jobs')
-      .select('*')
+      .select(JOB_LIST_COLUMNS)
       .eq('user_id', userData.user.id)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -190,7 +201,7 @@ export async function GET() {
         // Re-fetch jobs from Supabase after refresh to get updated statuses
         const { data: refreshedJobs, error: refreshedError } = await supabase
           .from('extraction_jobs')
-          .select('*')
+          .select(JOB_LIST_COLUMNS)
           .eq('user_id', userData.user.id)
           .order('created_at', { ascending: false })
           .limit(100);

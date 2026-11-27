@@ -4,6 +4,7 @@ import type {
   DiscoveryResponse,
   CreateReasoningLineRequest,
   ReasoningLineDetail,
+  ReasoningLineMember,
   ReasoningLineSummary,
   ReasoningLineStatus,
   DeleteReasoningLineResponse,
@@ -103,15 +104,20 @@ export async function listReasoningLines(
 }
 
 /**
- * Get full detail of a reasoning line including its member judgments.
- * GET /reasoning-lines/{id}
+ * Get full detail of a reasoning line. Members are included by default; pass
+ * `includeMembers: false` to skip them and load them lazily with
+ * `getReasoningLineMembers`.
+ * GET /reasoning-lines/{id}[?include_members=false]
  */
 export async function getReasoningLineDetail(
-  id: string
+  id: string,
+  options: { includeMembers?: boolean } = {}
 ): Promise<ReasoningLineDetail> {
-  apiLogger.info('getReasoningLineDetail called', { id });
+  const { includeMembers = true } = options;
+  apiLogger.info('getReasoningLineDetail called', { id, includeMembers });
 
-  const response = await fetch(`${API_BASE}/reasoning-lines/${id}`, {
+  const query = includeMembers ? '' : '?include_members=false';
+  const response = await fetch(`${API_BASE}/reasoning-lines/${id}${query}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -122,6 +128,31 @@ export async function getReasoningLineDetail(
       .catch(() => ({ error: 'Failed to get reasoning line detail' }));
     apiLogger.error('Get reasoning line detail API error:', response.status, errorData);
     throw new Error('Nie udalo sie pobrac szczegulow linii orzeczniczej.');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get the member judgments of a reasoning line.
+ * GET /reasoning-lines/{id}/members
+ */
+export async function getReasoningLineMembers(
+  id: string
+): Promise<ReasoningLineMember[]> {
+  apiLogger.info('getReasoningLineMembers called', { id });
+
+  const response = await fetch(`${API_BASE}/reasoning-lines/${id}/members`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ error: 'Failed to get reasoning line members' }));
+    apiLogger.error('Get reasoning line members API error:', response.status, errorData);
+    throw new Error('Nie udalo sie pobrac orzeczen w linii orzeczniczej.');
   }
 
   return response.json();

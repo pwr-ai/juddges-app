@@ -5,6 +5,30 @@ from typing import Any
 
 import numpy as np
 
+_OUTCOME_KEYS: tuple[str, ...] = ("for", "against", "mixed", "procedural")
+
+
+def _outcome_labels_from_metadata(metadata: Any) -> dict[str, str] | None:
+    """Return the line's custom outcome display names, or None.
+
+    ``reasoning_lines.metadata.outcome_labels`` lets a line name its outcome
+    categories after the parties (e.g. borrower vs bank) instead of the
+    generic for/against wording. Unknown keys and non-string or blank values
+    are dropped so a malformed metadata blob never breaks the timeline.
+    """
+    if not isinstance(metadata, dict):
+        return None
+    raw = metadata.get("outcome_labels")
+    if not isinstance(raw, dict):
+        return None
+    labels = {
+        key: value.strip()
+        for key, value in raw.items()
+        if key in _OUTCOME_KEYS and isinstance(value, str) and value.strip()
+    }
+    return labels or None
+
+
 # Polish + English stopwords (same set used in cluster_math.py for consistency)
 _DRIFT_STOPWORDS: set[str] = {
     "w",

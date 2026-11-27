@@ -161,7 +161,10 @@ Polish descriptions.
 
 ### Walk through the example
 
-Open [`/schemas/base`](https://juddges.com/schemas/base).
+Open [`/schemas/base`](https://juddges.com/schemas/base). The same two
+schemas are also listed on [`/schemas`](https://juddges.com/schemas) as
+*Base Schema (PL)* and *Base Schema (EN)* — verified system schemas that
+every signed-in user can browse and run extractions with.
 
 1. **Read the header.** The `universal_legal_document_base_schema`
    identifier is the canonical name used everywhere — JSON exports,

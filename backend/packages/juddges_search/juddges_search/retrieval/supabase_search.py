@@ -145,7 +145,7 @@ class SupabaseSearchClient:
             query_builder = (
                 self.client.table("document_chunks")
                 .select("*, judgments!inner(jurisdiction, court_name, decision_date)")
-                .text_search("chunk_text", query, config="simple")
+                .text_search("chunk_text", query, options={"config": "simple", "type": "web_search"})
             )
 
             # Apply filters

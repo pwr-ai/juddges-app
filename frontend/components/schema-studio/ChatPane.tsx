@@ -10,6 +10,7 @@ import { ChatInput } from "@/lib/styles/components";
 import type { SchemaMessage } from "./types";
 import { ExtractionInstructionsPanel } from "./ExtractionInstructionsPanel";
 import { logger } from "@/lib/logger";
+import { buildExistingFieldPayload } from "@/lib/schema-editor/existing-fields";
 
 /**
  * Props for the ChatPane component
@@ -119,13 +120,10 @@ export function ChatPane({
  setIsGenerating(true);
 
  try {
- // Convert existing fields to the format expected by the API
+ // Existing fields: the full property definition (enum, items, format, ...)
+ // plus the legacy field_name/field_type/description keys.
  const existingFields = currentSchemaFields
- ? Object.entries(currentSchemaFields).map(([name, field]) => ({
- field_name: name,
- field_type: (field as Record<string, unknown>).type || "string",
- description: (field as Record<string, unknown>).description || "",
- }))
+ ? Object.entries(currentSchemaFields).map(([name, field]) => buildExistingFieldPayload(name, field))
  : null;
 
  // Call the simple schema generation API

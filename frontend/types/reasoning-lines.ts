@@ -175,7 +175,16 @@ export interface ReasoningLineTimeline {
   trend_slope: number;
   total_classified: number;
   total_unclassified: number;
+  /**
+   * Per-line display names for the outcome categories (from
+   * `reasoning_lines.metadata.outcome_labels`), e.g. borrower vs bank.
+   * Missing keys fall back to the generic Za/Przeciw/Mieszane/Proceduralne.
+   */
+  outcome_labels?: Partial<Record<OutcomeKey, string>> | null;
 }
+
+/** Outcome categories a member judgment can be classified into */
+export type OutcomeKey = 'for' | 'against' | 'mixed' | 'procedural';
 
 /** A single window in the drift analysis */
 export interface DriftWindow {

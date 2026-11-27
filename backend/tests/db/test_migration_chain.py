@@ -140,6 +140,9 @@ EXPECTED_RPC_ARGS = {
         "field_path",
         "p_text_query",
     ],
+    # backend/app/extraction_domain/results_router.py — GET /base-schema/histogram/{field};
+    # p_jurisdiction was added by dropping the 2-arg form (20261123000001).
+    "get_numeric_field_histogram": ["field", "bucket_count", "p_jurisdiction"],
     # backend/app/extraction_domain/results_router.py — POST /base-schema/aggregate (#707)
     "aggregate_extracted_data": [
         "p_filters",

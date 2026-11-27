@@ -13,6 +13,8 @@ import {
   BarChart3,
   Activity,
   Link2,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,6 +28,7 @@ import { EditorialCard, StatusBadge } from '@/components/editorial';
 import { Button } from '@/components/ui/button';
 import {
   getReasoningLineDetail,
+  getReasoningLineMembers,
   deleteReasoningLine,
   getReasoningLineTimeline,
   classifyOutcomes,
@@ -33,7 +36,7 @@ import {
   getRelatedLines,
 } from '@/lib/api/reasoning-lines';
 import type { ReasoningLineMember } from '@/types/reasoning-lines';
-import type { DriftAnalysisResponse, RelatedLine } from '@/types/reasoning-lines';
+import type { DriftAnalysisResponse, OutcomeKey, ReasoningLineTimeline, RelatedLine } from '@/types/reasoning-lines';
 import Link from 'next/link';
 import { OutcomeTimeline } from '@/components/reasoning-lines/OutcomeTimeline';
 import { DriftChart } from '@/components/reasoning-lines/DriftChart';
@@ -72,6 +75,14 @@ export default function ReasoningLineDetailPage() {
   const [revealed, setRevealed] = useState({ id, count: MEMBERS_PAGE_SIZE });
   const visibleCount = revealed.id === id ? revealed.count : MEMBERS_PAGE_SIZE;
 
+  // The members list is collapsed by default and only fetched once expanded
+  // Tagged with the line id so navigating to another line collapses it again
+  const [membersOpen, setMembersOpen] = useState<{ id: string; open: boolean }>({
+    id,
+    open: false,
+  });
+  const membersExpanded = membersOpen.id === id && membersOpen.open;
+
   // Confirmation state for delete
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -81,8 +92,15 @@ export default function ReasoningLineDetailPage() {
   // Fetch detail
   const detailQuery = useQuery({
     queryKey: ['reasoning-line', id],
-    queryFn: () => getReasoningLineDetail(id),
+    queryFn: () => getReasoningLineDetail(id, { includeMembers: false }),
     enabled: !!id,
+  });
+
+  // Fetch members only when the user expands the list (big lines hold thousands)
+  const membersQuery = useQuery({
+    queryKey: ['reasoning-line-members', id],
+    queryFn: () => getReasoningLineMembers(id),
+    enabled: !!id && membersExpanded,
   });
 
   // Fetch timeline (GET — auto-fetched when id is available)
@@ -121,6 +139,7 @@ export default function ReasoningLineDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['reasoning-line-timeline', id] });
       // Also refetch the detail to get updated outcome_direction on members
       queryClient.invalidateQueries({ queryKey: ['reasoning-line', id] });
+      queryClient.invalidateQueries({ queryKey: ['reasoning-line-members', id] });
     },
     onError: (error) => {
       logger.error('Classifying reasoning line outcomes failed', error);
@@ -196,7 +215,7 @@ export default function ReasoningLineDetailPage() {
   }
 
   // Sort members chronologically by decision_date
-  const sortedMembers = [...line.members].sort(
+  const sortedMembers = [...(membersQuery.data ?? [])].sort(
     (a, b) => new Date(a.decision_date).getTime() - new Date(b.decision_date).getTime()
   );
 
@@ -353,55 +372,94 @@ export default function ReasoningLineDetailPage() {
         </div>
       </EditorialCard>
 
-      {/* Timeline of member judgments */}
+      {/* Timeline of member judgments (collapsed until requested) */}
       <div className="space-y-4">
-        <h2 className="text-lg font-serif font-semibold text-ink flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-oxblood" />
-          {t('reasoningLines.membersHeading', { count: sortedMembers.length })}
+        <h2 className="text-lg font-serif font-semibold text-ink">
+          <button
+            type="button"
+            onClick={() => setMembersOpen({ id, open: !membersExpanded })}
+            aria-expanded={membersExpanded}
+            aria-controls="reasoning-line-members"
+            title={
+              membersExpanded
+                ? t('reasoningLines.membersCollapse')
+                : t('reasoningLines.membersExpand')
+            }
+            className="flex w-full items-center gap-2 text-left hover:text-oxblood focus-visible:outline focus-visible:outline-2 focus-visible:outline-oxblood"
+          >
+            <BarChart3 className="h-5 w-5 text-oxblood" />
+            <span>{t('reasoningLines.membersHeading', { count: line.case_count })}</span>
+            {membersExpanded ? (
+              <ChevronDown className="h-4 w-4 text-ink-soft" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-ink-soft" aria-hidden="true" />
+            )}
+          </button>
         </h2>
 
-        {sortedMembers.length === 0 ? (
-          <EmptyState
-            title={t('reasoningLines.membersEmptyTitle')}
-            description={t('reasoningLines.membersEmptyDescription')}
-            icon={Scale}
-          />
-        ) : (
-          <div className="relative">
-            {/* Vertical timeline line */}
-            <div className="absolute left-[23px] top-0 bottom-0 w-px bg-rule" />
+        <div id="reasoning-line-members" hidden={!membersExpanded}>
+          {membersExpanded && membersQuery.isLoading && (
+            <LoadingIndicator
+              variant="inline"
+              size="sm"
+              message={t('reasoningLines.membersLoading')}
+            />
+          )}
 
-            <div className="space-y-3">
-              {sortedMembers.slice(0, visibleCount).map((member, index) => (
-                <TimelineEntry
-                  key={member.judgment_id}
-                  member={member}
-                  index={index}
-                  isLast={index === sortedMembers.length - 1}
-                />
-              ))}
-            </div>
+          {membersExpanded && membersQuery.isError && (
+            <ErrorCard
+              message={t('reasoningLines.membersError')}
+              onRetry={() => membersQuery.refetch()}
+              retryLabel={t('common.retry')}
+            />
+          )}
 
-            {sortedMembers.length > visibleCount && (
-              <div className="mt-4 flex flex-col items-center gap-2">
-                <p className="text-xs font-mono text-ink-soft">
-                  {t('reasoningLines.membersShowing', {
-                    shown: visibleCount,
-                    total: sortedMembers.length,
-                  })}
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRevealed({ id, count: visibleCount + MEMBERS_PAGE_SIZE })}
-                  className="text-xs font-mono rounded-none border-rule"
-                >
-                  {t('reasoningLines.membersShowMore')}
-                </Button>
+          {membersExpanded && membersQuery.isSuccess && sortedMembers.length === 0 && (
+            <EmptyState
+              title={t('reasoningLines.membersEmptyTitle')}
+              description={t('reasoningLines.membersEmptyDescription')}
+              icon={Scale}
+            />
+          )}
+
+          {membersExpanded && membersQuery.isSuccess && sortedMembers.length > 0 && (
+            <div className="relative">
+              {/* Vertical timeline line */}
+              <div className="absolute left-[23px] top-0 bottom-0 w-px bg-rule" />
+
+              <div className="space-y-3">
+                {sortedMembers.slice(0, visibleCount).map((member, index) => (
+                  <TimelineEntry
+                    key={member.judgment_id}
+                    member={member}
+                    index={index}
+                    isLast={index === sortedMembers.length - 1}
+                    outcomeLabels={timelineQuery.data?.outcome_labels}
+                  />
+                ))}
               </div>
-            )}
-          </div>
-        )}
+
+              {sortedMembers.length > visibleCount && (
+                <div className="mt-4 flex flex-col items-center gap-2">
+                  <p className="text-xs font-mono text-ink-soft">
+                    {t('reasoningLines.membersShowing', {
+                      shown: visibleCount,
+                      total: sortedMembers.length,
+                    })}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRevealed({ id, count: visibleCount + MEMBERS_PAGE_SIZE })}
+                    className="text-xs font-mono rounded-none border-rule"
+                  >
+                    {t('reasoningLines.membersShowMore')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ----------------------------------------------------------------- */}
@@ -597,10 +655,13 @@ function TimelineEntry({
   member,
   index,
   isLast,
+  outcomeLabels,
 }: {
   member: ReasoningLineMember;
   index: number;
   isLast: boolean;
+  /** The line's party names for outcomes; raw direction when absent */
+  outcomeLabels?: ReasoningLineTimeline['outcome_labels'];
 }) {
   const similarityPct = Math.round(member.similarity_to_centroid * 100);
   const similarityTone =
@@ -662,7 +723,8 @@ function TimelineEntry({
                   )}
                   {member.outcome_direction && (
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-none border border-rule text-ink bg-transparent">
-                      {member.outcome_direction}
+                      {outcomeLabels?.[member.outcome_direction as OutcomeKey] ??
+                        member.outcome_direction}
                     </span>
                   )}
                 </div>

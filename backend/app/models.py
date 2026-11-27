@@ -521,6 +521,26 @@ class DocumentExtractionResponse(BaseModel):
     extracted_data: dict | None = None
 
 
+class ExtractionJobResultCounts(BaseModel):
+    completed: int
+    failed: int
+    other: int
+
+
+class ExtractionJobResultsPage(BaseModel):
+    """One page of a job's per-document results (offset/limit over the array)."""
+
+    job_id: str
+    offset: int
+    limit: int
+    total: int = Field(..., description="All results stored on the job")
+    filtered_total: int = Field(
+        ..., description="Results matching the status filter (the pager total)"
+    )
+    counts: ExtractionJobResultCounts
+    results: list[DocumentExtractionResponse]
+
+
 class BatchExtractionResponse(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True
@@ -1017,6 +1037,7 @@ class SearchChunksRequest(BaseModel):
     )
     facets: list[str] | None = Field(
         default=None,
+        max_length=20,
         description=(
             "Meilisearch facets to compute on this search. Each name must be "
             "in the index'''s filterableAttributes. Used by the frontend "
@@ -1031,6 +1052,15 @@ class SearchChunksRequest(BaseModel):
             "that match this prefix/substring."
         ),
     )
+
+    @field_validator("facets")
+    @classmethod
+    def validate_facet_names(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None:
+            bad = [n for n in v if not re.fullmatch(r"[a-z0-9_]+", n)]
+            if bad:
+                raise ValueError(f"invalid facet name(s): {bad}")
+        return v
 
     @field_validator("languages")
     @classmethod

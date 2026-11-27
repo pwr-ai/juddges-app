@@ -12,6 +12,7 @@ Complete API documentation for the Juddges Legal Research Platform.
   - [Search](#search)
   - [Chat & Q&A](#chat-qa)
   - [Collections](#collections)
+  - [Extraction Jobs](#extraction-jobs)
   - [Analytics](#analytics)
   - [Schemas](#schemas)
   - [Feedback](#feedback)
@@ -882,6 +883,49 @@ the underlying data is wrong for UK criminal appeals (see
 **Errors:** `422 NL_FILTER_INVALID` (the LLM produced a value outside the
 allowed enums; rephrase the question), `502 NL_FILTER_FAILED` (translation
 failed for another reason).
+
+### Extraction Jobs
+
+#### Get Extraction Job Results (paginated)
+
+```http
+GET /extractions/{job_id}/results?offset=0&limit=50&status=completed
+Authorization: Bearer <supabase-jwt>
+```
+
+One page of an owned job's per-document results. Prefer this over
+`GET /extractions/{job_id}` for large (corpus-wide) jobs: the page is read
+inside Postgres (`get_extraction_job_results_page` RPC) from
+`extraction_job_results`, a per-result table that a trigger keeps in sync with
+`extraction_jobs.results`, so the whole results array is never loaded. Export
+(`GET /extractions/{job_id}/export`) and the compare-pair extension tally read
+the same table in keyset-paged batches.
+
+| Query | Default | Notes |
+|---|---|---|
+| `offset` | `0` | `>= 0` |
+| `limit` | `50` | `1..200` |
+| `status` | none | `completed` (completed/success) or `failed` (failed/failure); omit for all |
+
+```json
+{
+  "job_id": "11111111-2222-4333-8444-555555555555",
+  "offset": 0,
+  "limit": 50,
+  "total": 6150,
+  "filtered_total": 6100,
+  "counts": {"completed": 6100, "failed": 40, "other": 10},
+  "results": [
+    {"collection_id": "...", "document_id": "...", "status": "completed",
+     "created_at": "...", "updated_at": "...", "extracted_data": {}}
+  ]
+}
+```
+
+`total` and `counts` always cover every result; `filtered_total` honours
+`status` and is the total to page over. Errors: `404` (unknown job, not yours,
+or non-UUID id), `422` (out-of-range `offset`/`limit`, unknown `status`),
+`503` (job store unavailable).
 
 ### Analytics
 

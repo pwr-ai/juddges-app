@@ -5115,6 +5115,40 @@
             "title": "Documents",
             "type": "array"
           },
+          "facetDistribution": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facetdistribution"
+          },
+          "facetStats": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "number"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facetstats"
+          },
           "pagination": {
             "$ref": "#/components/schemas/DocumentPagination"
           },
@@ -6004,6 +6038,77 @@
           "job_id"
         ],
         "title": "ExtractionJobLink",
+        "type": "object"
+      },
+      "ExtractionJobResultCounts": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "other": {
+            "title": "Other",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "completed",
+          "failed",
+          "other"
+        ],
+        "title": "ExtractionJobResultCounts",
+        "type": "object"
+      },
+      "ExtractionJobResultsPage": {
+        "description": "One page of a job's per-document results (offset/limit over the array).",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/ExtractionJobResultCounts"
+          },
+          "filtered_total": {
+            "description": "Results matching the status filter (the pager total)",
+            "title": "Filtered Total",
+            "type": "integer"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentExtractionResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total": {
+            "description": "All results stored on the job",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "offset",
+          "limit",
+          "total",
+          "filtered_total",
+          "counts",
+          "results"
+        ],
+        "title": "ExtractionJobResultsPage",
         "type": "object"
       },
       "ExtractionJobSummary": {
@@ -10414,6 +10519,21 @@
             "title": "Line Id",
             "type": "string"
           },
+          "outcome_labels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional per-line display names for the outcome categories, keyed by for/against/mixed/procedural (from reasoning_lines.metadata.outcome_labels), e.g. {'for': 'Kredytobiorca wygrywa'}. Null when the line uses the generic for/against wording.",
+            "title": "Outcome Labels"
+          },
           "points": {
             "items": {
               "$ref": "#/components/schemas/TimelinePoint"
@@ -11632,6 +11752,7 @@
                 "items": {
                   "type": "string"
                 },
+                "maxItems": 20,
                 "type": "array"
               },
               {
@@ -18200,15 +18321,15 @@
             }
           },
           {
-            "description": "Max documents to return",
+            "description": "Max documents to return. 0 is allowed only together with `facets` (facet-only call).",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
               "default": 10,
-              "description": "Max documents to return",
+              "description": "Max documents to return. 0 is allowed only together with `facets` (facet-only call).",
               "maximum": 100,
-              "minimum": 1,
+              "minimum": 0,
               "title": "Limit",
               "type": "integer"
             }
@@ -18242,6 +18363,46 @@
               ],
               "description": "Optional Meilisearch filter expression",
               "title": "Filters"
+            }
+          },
+          {
+            "description": "Filterable attributes to return value counts for (repeat the param; max 20). Adds `facetDistribution` to the response.",
+            "in": "query",
+            "name": "facets",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filterable attributes to return value counts for (repeat the param; max 20). Adds `facetDistribution` to the response.",
+              "title": "Facets"
+            }
+          },
+          {
+            "description": "Narrow the values of each requested facet to those matching this text (Meilisearch facet-search, run per facet).",
+            "in": "query",
+            "name": "facet_query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Narrow the values of each requested facet to those matching this text (Meilisearch facet-search, run per facet).",
+              "title": "Facet Query"
             }
           },
           {
@@ -23304,6 +23465,28 @@
               "title": "Field",
               "type": "string"
             }
+          },
+          {
+            "description": "Restrict counts to one jurisdiction; omit for the whole corpus",
+            "in": "query",
+            "name": "jurisdiction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PL",
+                    "UK"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict counts to one jurisdiction; omit for the whole corpus",
+              "title": "Jurisdiction"
+            }
           }
         ],
         "responses": {
@@ -23439,6 +23622,28 @@
               "minimum": 1,
               "title": "Bucket Count",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Restrict the distribution to one jurisdiction; omit for the whole corpus",
+            "in": "query",
+            "name": "jurisdiction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PL",
+                    "UK"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict the distribution to one jurisdiction; omit for the whole corpus",
+              "title": "Jurisdiction"
             }
           }
         ],
@@ -24137,6 +24342,108 @@
           }
         ],
         "summary": "Export extraction results",
+        "tags": [
+          "extraction"
+        ]
+      }
+    },
+    "/extractions/{job_id}/results": {
+      "get": {
+        "description": "Paginated per-document results of an owned extraction job. The page is sliced inside the database, so large jobs do not load the whole result array. `counts` and `total` cover all results; `filtered_total` honours the `status` filter.",
+        "operationId": "get_extraction_job_results_page_extractions__job_id__results_get",
+        "parameters": [
+          {
+            "description": "Extraction job ID (task ID)",
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "description": "Extraction job ID (task ID)",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of results to skip",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Number of results to skip",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Page size",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Only results with this outcome",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "completed",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only results with this outcome",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJobResultsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get one page of an extraction job's results",
         "tags": [
           "extraction"
         ]
@@ -26671,7 +26978,7 @@
         ]
       },
       "get": {
-        "description": "Retrieve a single reasoning line by ID, including all member judgments\nwith their metadata joined from the judgments table.",
+        "description": "Retrieve a single reasoning line by ID, including (by default) all member\njudgments with their metadata joined from the judgments table.",
         "operationId": "get_reasoning_line_reasoning_lines__line_id__get",
         "parameters": [
           {
@@ -26681,6 +26988,18 @@
             "schema": {
               "title": "Line Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Include member judgments. Pass false for large lines and load them lazily via GET /{line_id}/members.",
+            "in": "query",
+            "name": "include_members",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Include member judgments. Pass false for large lines and load them lazily via GET /{line_id}/members.",
+              "title": "Include Members",
+              "type": "boolean"
             }
           }
         ],
@@ -26817,6 +27136,61 @@
           }
         ],
         "summary": "Detect language drift within a reasoning line over time",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/{line_id}/members": {
+      "get": {
+        "description": "Return the members of a reasoning line, ordered by position in the line.",
+        "operationId": "get_reasoning_line_members_reasoning_lines__line_id__members_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReasoningLineMember"
+                  },
+                  "title": "Response Get Reasoning Line Members Reasoning Lines  Line Id  Members Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the member judgments of a reasoning line",
         "tags": [
           "reasoning-lines"
         ]

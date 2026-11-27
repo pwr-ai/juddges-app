@@ -160,7 +160,6 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
     "/api/chats/11111111-2222-3333-4444-555555555555/messages",
     "/api/chats/11111111-2222-9333-8444-555555555555/messages",
     "/api/chats/11111111-2222-4333-7444-555555555555/messages",
-    `/API/chats/${CHAT_ID}/messages`,
     `/api/CHATS/${CHAT_ID}/messages`,
     `/api/chats/${CHAT_ID}/export`,
     `/api/chats/${CHAT_ID}/messages/extra`,
@@ -172,6 +171,15 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
   ])("keeps neighboring path %s protected", async (path) => {
     const response = await updateSession(
       new NextRequest(`http://localhost:3000${path}`),
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it(`keeps the uppercase /API/ lookalike page-protected (redirect)`, async () => {
+    const response = await updateSession(
+      new NextRequest(`http://localhost:3000/API/chats/${CHAT_ID}/messages`),
     );
 
     expect(response.status).toBe(307);
@@ -272,8 +280,8 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
       }),
     );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/auth/login");
+    expect(response.status).toBe(401);
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("continues to the page when the authenticated user owns the chat", async () => {

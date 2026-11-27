@@ -138,6 +138,28 @@ describe("GET /api/jobs", () => {
     expect(queriedTables).not.toContain("user_profiles");
   });
 
+  it("never selects the per-document results column for the list", async () => {
+    // A corpus-sized job stores ~30 MB of results; selecting `*` made every
+    // /extractions page load pull all of it (60 MB for the two base-schema jobs).
+    const supabase = mockSupabaseAuth(USER_ID);
+
+    const jobsLimitMock = jest.fn().mockResolvedValue({ data: [], error: null });
+    const jobsOrderMock = jest.fn().mockReturnValue({ limit: jobsLimitMock });
+    const jobsEqMock = jest.fn().mockReturnValue({ order: jobsOrderMock });
+    const jobsSelectMock = jest.fn().mockReturnValue({ eq: jobsEqMock });
+    supabase.from = jest.fn().mockReturnValue({ select: jobsSelectMock });
+
+    await GET();
+
+    expect(jobsSelectMock).toHaveBeenCalled();
+    for (const [columns] of jobsSelectMock.mock.calls) {
+      const selected = String(columns).split(",").map((c) => c.trim());
+      expect(selected).not.toContain("*");
+      expect(selected).not.toContain("results");
+      expect(selected).toEqual(expect.arrayContaining(["job_id", "status", "document_ids"]));
+    }
+  });
+
   it("returns empty jobs list when no jobs exist", async () => {
     const supabase = mockSupabaseAuth(USER_ID);
 

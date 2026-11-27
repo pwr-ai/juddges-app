@@ -29,6 +29,7 @@ const LINE_SUBRESOURCE_METHODS: Readonly<Record<string, readonly string[]>> = {
   'drift-analysis': ['POST'],
   'analyze-outcomes': ['POST'],
   related: ['GET'],
+  members: ['GET'],
 };
 
 function allowedMethods(path: readonly string[]): readonly string[] | null {

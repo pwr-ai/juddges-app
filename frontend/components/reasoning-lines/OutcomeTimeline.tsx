@@ -17,7 +17,7 @@ import {
   Minus,
   AlertTriangle,
 } from 'lucide-react';
-import type { ReasoningLineTimeline, TimelinePoint } from '@/types/reasoning-lines';
+import type { OutcomeKey, ReasoningLineTimeline, TimelinePoint } from '@/types/reasoning-lines';
 import { ChartFigure } from '@/components/editorial';
 import { OUTCOME_SERIES, rechartsTheme } from '@/lib/charts/reasoning-palette';
 
@@ -28,13 +28,24 @@ import { OUTCOME_SERIES, rechartsTheme } from '@/lib/charts/reasoning-palette';
 /** Color mapping for outcome categories — see lib/charts/reasoning-palette.ts */
 const OUTCOME_COLORS = OUTCOME_SERIES;
 
-/** Polish labels for outcome categories */
-const OUTCOME_LABELS: Record<string, string> = {
-  for_count: 'Za',
-  against_count: 'Przeciw',
-  mixed_count: 'Mieszane',
-  procedural_count: 'Proceduralne',
+/** Default Polish labels for outcome categories; a line can override them
+ *  through `outcome_labels` (e.g. "Kredytobiorca wygrywa" / "Bank wygrywa"). */
+const OUTCOME_LABELS: Record<OutcomeKey, string> = {
+  for: 'Za',
+  against: 'Przeciw',
+  mixed: 'Mieszane',
+  procedural: 'Proceduralne',
 };
+
+/** Stacking order of the bars, bottom to top */
+const OUTCOME_KEYS: readonly OutcomeKey[] = ['for', 'against', 'mixed', 'procedural'];
+
+/** Tooltip text for one series: count and its share of the period's
+ *  classified judgments, e.g. "720 (88%)". */
+function formatShare(count: number, classified: number): string {
+  if (classified <= 0) return `${count}`;
+  return `${count} (${Math.round((count / classified) * 100)}%)`;
+}
 
 /** Polish labels for the backend trend vocabulary (app/reasoning_lines/schemas.py);
  *  `color` is the text tone on a rule-bordered pill */
@@ -72,16 +83,25 @@ interface OutcomeTimelineProps {
 }
 
 export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
-  // Transform timeline points for recharts
+  const labels = useMemo(
+    () => ({ ...OUTCOME_LABELS, ...(data.outcome_labels ?? {}) }),
+    [data.outcome_labels]
+  );
+
+  // Transform timeline points for recharts. Series keys stay stable
+  // (for/against/...); the visible names come from `labels`.
   const chartData = useMemo(
     () =>
       data.points.map((point: TimelinePoint) => ({
         name: point.period_label,
-        Za: point.for_count,
-        Przeciw: point.against_count,
-        Mieszane: point.mixed_count,
-        Proceduralne: point.procedural_count,
-        // Keep raw data for tooltip
+        for: point.for_count,
+        against: point.against_count,
+        mixed: point.mixed_count,
+        procedural: point.procedural_count,
+        // Keep raw data for tooltip; shares are of classified judgments,
+        // the same base the 100% bars are normalised to.
+        _classified:
+          point.for_count + point.against_count + point.mixed_count + point.procedural_count,
         _total: point.total,
         _forRatio: point.for_ratio,
       })),
@@ -121,7 +141,13 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
         {/* Chart */}
         <div style={{ width: '100%', height }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+            {/* stackOffset="expand": every period is a 100% bar, so years with
+                few judgments compare on share, not on volume. */}
+            <BarChart
+              data={chartData}
+              stackOffset="expand"
+              margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke={rechartsTheme.grid} />
               <XAxis
                 dataKey="name"
@@ -130,7 +156,9 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
                 axisLine={{ stroke: rechartsTheme.axis }}
               />
               <YAxis
-                allowDecimals={false}
+                domain={[0, 1]}
+                ticks={[0, 0.25, 0.5, 0.75, 1]}
+                tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
                 tick={{ fill: rechartsTheme.tick, fontSize: 11 }}
                 tickLine={false}
                 axisLine={{ stroke: rechartsTheme.axis }}
@@ -138,37 +166,26 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
               <Tooltip
                 contentStyle={rechartsTheme.tooltip}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                formatter={(value: any) => [`${value}`]}
+                formatter={(value: any, name: any, item: any) => [
+                  formatShare(Number(value), item?.payload?._classified ?? 0),
+                  name,
+                ]}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 labelFormatter={(label: any) => `Okres: ${label}`}
               />
               <Legend
                 wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
               />
-              <Bar
-                dataKey="Za"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.for_count}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="Przeciw"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.against_count}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="Mieszane"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.mixed_count}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="Proceduralne"
-                stackId="outcomes"
-                fill={OUTCOME_COLORS.procedural_count}
-                radius={[0, 0, 0, 0]}
-              />
+              {OUTCOME_KEYS.map((key) => (
+                <Bar
+                  key={key}
+                  dataKey={key}
+                  name={labels[key]}
+                  stackId="outcomes"
+                  fill={OUTCOME_COLORS[`${key}_count`]}
+                  radius={[0, 0, 0, 0]}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -177,4 +194,4 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
   );
 }
 
-export { OUTCOME_COLORS, OUTCOME_LABELS, TREND_CONFIG };
+export { OUTCOME_COLORS, OUTCOME_LABELS, TREND_CONFIG, formatShare };

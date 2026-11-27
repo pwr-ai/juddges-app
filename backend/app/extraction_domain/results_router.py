@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from juddges_search.info_extraction import BaseSchemaExtractor
@@ -13,6 +14,7 @@ from pydantic import ValidationError
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.extraction_domain.aggregate_fields import validate_fields
 from app.extraction_domain.base_schema_promote import promote_to_typed_columns
+from app.extraction_domain.job_results_store import RESULTS_TABLE, iter_job_results
 from app.extraction_domain.nl_filter_generator import generate_base_schema_filter
 from app.extraction_domain.shared import supabase
 from app.models import (
@@ -35,6 +37,10 @@ from app.models import (
 from app.services.search_analytics import record_search_query
 
 router = APIRouter()
+
+# get_extracted_facet_counts caps its result at 200 values; keep the
+# per-jurisdiction path consistent with it.
+FACET_VALUE_LIMIT = 200
 
 
 @router.get(
@@ -97,7 +103,7 @@ async def export_extraction_results(
         # Fetch job data from Supabase
         job_response = (
             supabase.table("extraction_jobs")
-            .select("job_id, user_id, collection_id, schema_id, results, status")
+            .select("job_id, user_id, collection_id, schema_id, status")
             .eq("job_id", job_id)
             .single()
             .execute()
@@ -126,17 +132,28 @@ async def export_extraction_results(
                 },
             )
 
-        results = job_data.get("results", [])
+        # Page completed results straight from extraction_job_results; the
+        # job row's `results` JSONB is never selected (corpus jobs: ~15 MB).
+        results = list(iter_job_results(supabase, job_id, bucket="completed"))
 
         if not results:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "No Results",
-                    "message": "This job has no results to export",
-                    "code": "NO_RESULTS",
-                },
+            has_any = (
+                supabase.table(RESULTS_TABLE)
+                .select("position")
+                .eq("job_id", job_id)
+                .limit(1)
+                .execute()
+                .data
             )
+            if not has_any:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "No Results",
+                        "message": "This job has no results to export",
+                        "code": "NO_RESULTS",
+                    },
+                )
 
         # Fetch collection and schema names for filename
         collection_name = "extraction"
@@ -706,6 +723,10 @@ async def nl_to_filter(
 )
 async def get_facet_counts(
     field: str = Path(description="Field name to get facet counts for"),
+    jurisdiction: Literal["PL", "UK"] | None = Query(
+        default=None,
+        description="Restrict counts to one jurisdiction; omit for the whole corpus",
+    ),
     # Auth decision (issue #250, Part 3): read-only corpus-wide aggregate; no
     # per-user data exposed.  BFF-gated.  Intentionally unauthenticated at the
     # FastAPI layer — see filter_by_extracted_data for rationale.
@@ -727,14 +748,36 @@ async def get_facet_counts(
         )
 
     try:
-        # Call the stored function for facet counts
-        response = supabase.rpc(
-            "get_extracted_facet_counts", {"field_path": field}
-        ).execute()
+        if jurisdiction is None:
+            # Corpus-wide counts (original behavior).
+            response = supabase.rpc(
+                "get_extracted_facet_counts", {"field_path": field}
+            ).execute()
+            rows = response.data or []
+        else:
+            # Per-jurisdiction RPC (distinct documents, same 'completed' scope).
+            # It has no LIMIT and returns a value-less row for a jurisdiction
+            # without data, so mirror the corpus-wide shape here.
+            response = supabase.rpc(
+                "get_extracted_facet_counts_by_jurisdiction",
+                {
+                    "p_filters": {"jurisdiction": [jurisdiction]},
+                    "field_path": field,
+                    "p_text_query": None,
+                },
+            ).execute()
+            rows = sorted(
+                (
+                    row
+                    for row in (response.data or [])
+                    if row.get("jurisdiction") == jurisdiction and row.get("value")
+                ),
+                key=lambda row: (-row["count"], str(row["value"])),
+            )[:FACET_VALUE_LIMIT]
 
         counts = [
             FacetCount(value=row["value"], count=row["count"])
-            for row in (response.data or [])
+            for row in rows
             if row.get("value")
         ]
 
@@ -768,6 +811,10 @@ async def get_numeric_histogram(
     bucket_count: int = Query(
         default=20, ge=1, le=100, description="Number of equal-width buckets"
     ),
+    jurisdiction: Literal["PL", "UK"] | None = Query(
+        default=None,
+        description="Restrict the distribution to one jurisdiction; omit for the whole corpus",
+    ),
     # Auth decision (issue #250, Part 3): read-only corpus-wide aggregate; no
     # per-user data exposed.  BFF-gated.  Intentionally unauthenticated at the
     # FastAPI layer — see filter_by_extracted_data for rationale.
@@ -784,10 +831,10 @@ async def get_numeric_histogram(
         )
 
     try:
-        response = supabase.rpc(
-            "get_numeric_field_histogram",
-            {"field": field, "bucket_count": bucket_count},
-        ).execute()
+        rpc_args: dict[str, Any] = {"field": field, "bucket_count": bucket_count}
+        if jurisdiction is not None:
+            rpc_args["p_jurisdiction"] = jurisdiction
+        response = supabase.rpc("get_numeric_field_histogram", rpc_args).execute()
 
         buckets = [
             HistogramBucket(

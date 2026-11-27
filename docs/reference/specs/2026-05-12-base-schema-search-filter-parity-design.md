@@ -201,7 +201,7 @@ Drive the dispatch from `FILTER_FIELD_BY_NAME[field].control` rather than a swit
 - New helper `fetchBaseFieldFacets(fields: string[], query?: string)` in `lib/api/search.ts` that calls Meili's `searchableAttributes` → `facets` parameter via the existing `/api/search/documents` proxy (extended to forward `facets[]` / `q`). Returns `Record<field, Record<value, count>>`.
 - Hook `useBaseFieldFacets(activeTagFields: string[])` in `hooks/`: requests facets for currently-mounted `tag_array` controls; debounces typing input; caches per-field per-query for 60s.
 - `TagArrayControl` calls the hook when the input is focused or typed into.
-- Backend: extend `backend/app/judgments_pkg/__init__.py:/search` to forward `facets[]` to Meili and return `facetDistribution` to the frontend. Cap at the top 20 values per field; allow `facetQuery` for typed substring narrowing.
+- Backend: extend `backend/app/judgments_pkg/__init__.py:/search` to forward `facets[]` to Meili and return `facetDistribution` to the frontend. Cap at the top 20 values per field; allow `facetQuery` for typed substring narrowing (served by Meili's `/facet-search` per facet, since `/search` does not accept `facetQuery`).
 
 ### 5.5 Store (`lib/store/searchStore.ts`)
 

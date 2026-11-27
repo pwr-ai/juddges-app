@@ -1,6 +1,6 @@
 [project]
 name = "juddges"
-version = "1.5.36"
+version = "1.5.48"
 description = "Juddges App - AI-powered judicial decision search for Polish and UK courts"
 authors = [{ name = "Lukasz Augustyniak", email = "aisolutions@lukaszaugustyniak.com" }]
 license = "Apache-2.0"
@@ -8,7 +8,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "uvicorn>=0.23.2,<0.55.0",
-    "gunicorn>=23,<27",
+    "gunicorn>=23,<28",
     "langserve[server]>=0.3.2,<0.4",
     "langchain-community>=0.4.1",
     "langchain-openai>=1.1.14,<2",
@@ -31,7 +31,7 @@ dependencies = [
     "litellm>=1.78.0,<2.0.0,!=1.107.0",  # 1.107.0 was a compromised PyPI release (2026-10-21)
     "pandas>=2.2,<4.0",
     "openpyxl>=3.1.0,<4",
-    "cachetools>=5.5,<8.0",
+    "cachetools>=5.5,<9.0",
     "email-validator>=2.0.0,<3.0.0",
     "weaviate-client>=4.16,<5",
 ]

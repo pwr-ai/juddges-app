@@ -54,6 +54,18 @@ export const jobIdQuerySchema = z.object({
 export type JobIdQuery = z.infer<typeof jobIdQuerySchema>;
 
 /**
+ * Paged extraction results query. Bounds mirror the backend
+ * (`GET /extractions/{job_id}/results`: limit 1..200, status completed|failed).
+ */
+export const extractionResultsQuerySchema = z.object({
+  offset: z.coerce.number().int().min(0).default(0),
+  limit: z.coerce.number().int().min(1).max(200).default(20),
+  status: z.enum(['completed', 'failed']).optional()
+}).strict();
+
+export type ExtractionResultsQuery = z.infer<typeof extractionResultsQuerySchema>;
+
+/**
  * Schema creation request
  */
 export const schemaCreationRequestSchema = z.object({
