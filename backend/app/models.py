@@ -570,6 +570,30 @@ class BatchExtractionResponse(BaseModel):
     )
 
 
+class ExtractionJobDetailResponse(BatchExtractionResponse):
+    """Single-job read (`GET /extractions/{job_id}`).
+
+    Extends the batch-submit response with the collection and schema the job
+    ran against, so a client can label the job without extra round trips. Kept
+    separate so the submit contract stays as it was.
+    """
+
+    collection_id: str | None = Field(
+        default=None, description="Collection the job ran against, from the job row."
+    )
+    collection_name: str | None = Field(
+        default=None,
+        description="Collection name; null when unresolved or the lookup failed.",
+    )
+    schema_id: str | None = Field(
+        default=None, description="Extraction schema ID, from the job row."
+    )
+    schema_name: str | None = Field(
+        default=None,
+        description="Schema name; null when unresolved or the lookup failed.",
+    )
+
+
 class SimilarDocumentsRequest(BaseModel):
     document_ids: list[str] = Field(
         description="One or more document IDs to find similar documents for",

@@ -5909,33 +5909,6 @@ export interface components {
              */
             documents: components["schemas"]["LegalDocument"][];
         };
-        /** BatchExtractionResponse */
-        BatchExtractionResponse: {
-            /**
-             * Attempts
-             * @description How many times a worker has claimed this job. Greater than 1 means the job was interrupted and resumed rather than run once.
-             */
-            attempts?: number | null;
-            /**
-             * Completed Documents
-             * @description Documents that have finished processing, from the job row.
-             */
-            completed_documents?: number | null;
-            /**
-             * Job Id
-             * @description Job ID (also known as task_id for backward compatibility)
-             */
-            job_id: string;
-            /** Results */
-            results?: components["schemas"]["DocumentExtractionResponse"][] | null;
-            /** Status */
-            status: string;
-            /**
-             * Total Documents
-             * @description Documents the job was submitted with, from the job row.
-             */
-            total_documents?: number | null;
-        };
         /**
          * BatchResponseMetadata
          * @description Represents response metadata used for batches of input/output LangServe
@@ -8175,6 +8148,60 @@ export interface components {
              * @description Full-text search query across text fields
              */
             text_query?: string | null;
+        };
+        /**
+         * ExtractionJobDetailResponse
+         * @description Single-job read (`GET /extractions/{job_id}`).
+         *
+         *     Extends the batch-submit response with the collection and schema the job
+         *     ran against, so a client can label the job without extra round trips. Kept
+         *     separate so the submit contract stays as it was.
+         */
+        ExtractionJobDetailResponse: {
+            /**
+             * Attempts
+             * @description How many times a worker has claimed this job. Greater than 1 means the job was interrupted and resumed rather than run once.
+             */
+            attempts?: number | null;
+            /**
+             * Collection Id
+             * @description Collection the job ran against, from the job row.
+             */
+            collection_id?: string | null;
+            /**
+             * Collection Name
+             * @description Collection name; null when unresolved or the lookup failed.
+             */
+            collection_name?: string | null;
+            /**
+             * Completed Documents
+             * @description Documents that have finished processing, from the job row.
+             */
+            completed_documents?: number | null;
+            /**
+             * Job Id
+             * @description Job ID (also known as task_id for backward compatibility)
+             */
+            job_id: string;
+            /** Results */
+            results?: components["schemas"]["DocumentExtractionResponse"][] | null;
+            /**
+             * Schema Id
+             * @description Extraction schema ID, from the job row.
+             */
+            schema_id?: string | null;
+            /**
+             * Schema Name
+             * @description Schema name; null when unresolved or the lookup failed.
+             */
+            schema_name?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Total Documents
+             * @description Documents the job was submitted with, from the job row.
+             */
+            total_documents?: number | null;
         };
         /** ExtractionJobLink */
         ExtractionJobLink: {
@@ -17579,7 +17606,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BatchExtractionResponse"];
+                    "application/json": components["schemas"]["ExtractionJobDetailResponse"];
                 };
             };
             /** @description Validation Error */
