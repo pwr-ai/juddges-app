@@ -290,10 +290,6 @@ def format_response_message(agent_state: dict[str, Any]) -> str:
     Returns:
         Formatted message for the user
     """
-    # Check if we have a problem definition (initial response)
-    if agent_state.get("problem_definition"):
-        return agent_state["problem_definition"]
-
     # Check for assessment results
     if agent_state.get("merged_data_assessment"):
         assessment = agent_state["merged_data_assessment"]
@@ -319,6 +315,10 @@ def format_response_message(agent_state: dict[str, Any]) -> str:
 
         if message_parts:
             return "\n".join(message_parts)
+
+    # Check if we have a problem definition (initial response)
+    if agent_state.get("problem_definition"):
+        return agent_state["problem_definition"]
 
     # Check for user feedback prompt
     if agent_state.get("problem_help"):

@@ -222,7 +222,7 @@ class TestGraphTopology:
 
     def test_latency_budget(self):
         gen = _generator()
-        assert gen.max_refinement_rounds == 2
+        assert gen.max_refinement_rounds == 1
         assert gen.min_refinement_rounds == 0
         assert gen.max_data_refinement_rounds == 1
         assert gen.min_data_refinement_rounds == 0
@@ -237,7 +237,10 @@ class TestGraphTopology:
 
 @pytest.fixture
 def fake_agents(monkeypatch):
-    calls: list[str] = []
+    class Calls(list):
+        assessment_results: list[str]
+
+    calls = Calls()
 
     def patch_call(cls, fn):
         def wrapper(self, state):
@@ -269,7 +272,13 @@ def fake_agents(monkeypatch):
         SchemaAssessmentAgent,
         lambda s: {"assessment_result": {"needs_refinement": False}},
     )
-    patch_call(SchemaDataAssessmentAgent, lambda s: {"data_assessment_results": ["ok"]})
+
+    async def fake_process(self, *args):
+        calls.append("SchemaDataAssessmentAgent")
+        return [AIMessage(content="ok")], list(calls.assessment_results)
+
+    calls.assessment_results = ["ok"]
+    monkeypatch.setattr(SchemaDataAssessmentAgent, "_process_documents", fake_process)
     patch_call(
         SchemaDataAssessmentMergerAgent,
         lambda s: {
@@ -358,3 +367,125 @@ class TestFakeRun:
         assert schema_fields_to_json_schema(restored) == schema_fields_to_json_schema(
             _FIELDS
         )
+
+    async def test_empty_retrieval_skips_merger_and_ends(self, fake_agents):
+        fake_agents.assessment_results.clear()
+        gen = _generator(MemorySaver())
+        cfg = sa.graph_config("empty")
+        await gen.graph.ainvoke(sa.build_initial_state("q"), config=cfg)
+        state = await gen.graph.ainvoke(Command(resume="fb"), config=cfg)
+        assert "SchemaDataAssessmentAgent" in fake_agents
+        assert "SchemaDataAssessmentMergerAgent" not in fake_agents
+        assert state["merged_data_assessment"] is None
+        assert state["current_schema"] is not None
+
+    async def test_resume_on_finished_thread_returns_state(self, fake_agents):
+        """Pins current behaviour: no pending interrupt, so the final state is returned."""
+        gen = _generator(MemorySaver())
+        cfg = sa.graph_config("finished")
+        await gen.graph.ainvoke(sa.build_initial_state("q"), config=cfg)
+        first = await gen.graph.ainvoke(Command(resume="fb"), config=cfg)
+        again = await gen.graph.ainvoke(Command(resume="more"), config=cfg)
+        assert schema_fields_to_json_schema(
+            again["current_schema"]
+        ) == schema_fields_to_json_schema(first["current_schema"])
+
+
+@pytest.mark.unit
+class TestDataAssessmentNode:
+    async def test_async_node_runs_twice_on_the_calling_loop(self):
+        import asyncio
+
+        loops: list[asyncio.AbstractEventLoop] = []
+
+        class FakeChain:
+            async def ainvoke(self, inputs):
+                loops.append(asyncio.get_running_loop())
+                await asyncio.sleep(0)
+                return AIMessage(content="assessment")
+
+        gen = _generator()
+        assert asyncio.iscoroutinefunction(gen.data_assessment_node)
+        gen.schema_data_assessment.chain = FakeChain()
+        docs = [_chunk("a", 1, "text a"), _chunk("b", 1, "text b")]
+        state = {
+            **sa.build_initial_state("q"),
+            "query": "tax",
+            "problem_help": "h",
+            "user_feedback": "f",
+            "problem_definition": "d",
+            "current_schema": _FIELDS,
+        }
+        with patch.object(sa, "search_chunks", AsyncMock(return_value=docs)):
+            first = await gen.data_assessment_node(state)
+            second = await gen.data_assessment_node(state)
+
+        running = asyncio.get_running_loop()
+        assert loops and all(loop is running for loop in loops)
+        assert first["data_assessment_results"] == ["assessment"] * 2
+        assert second["data_assessment_results"] == ["assessment"] * 2
+        assert len(second["token_usage"]) == 2
+
+    def test_route_after_data_assessment(self):
+        gen = _generator()
+        assert (
+            gen.route_after_data_assessment({"data_assessment_results": []})
+            == "__end__"
+        )
+        assert (
+            gen.route_after_data_assessment({"data_assessment_results": ["x"]})
+            == "llm_schema_data_assessment_merger"
+        )
+
+    def test_skip_data_grounded_builds(self):
+        gen = JuddgesSchemaGenerator(
+            MagicMock(),
+            SupabaseChunkRetriever(),
+            sa._build_prompts(),
+            graph_compilation_kwargs={"checkpointer": MemorySaver()},
+            skip_data_grounded=True,
+        )
+        nodes = set(gen.graph.get_graph().nodes)
+        assert "llm_schema_data_assessment" not in nodes
+        assert "llm_schema_assessment" in nodes
+
+
+@pytest.mark.unit
+class TestLlmAndConverterEdges:
+    def test_llm_settings(self):
+        with patch.object(sa, "get_default_llm") as m:
+            m.return_value = MagicMock()
+            build_schema_generator(MemorySaver(), retriever=SupabaseChunkRetriever())
+        kwargs = m.call_args.kwargs
+        assert kwargs["use_mini_model"] is True
+        assert kwargs["request_timeout"] == 150.0
+        assert kwargs["max_retries"] == 0
+        assert kwargs["max_completion_tokens"] == 16000
+
+    def test_empty_enum_becomes_string(self):
+        schema = schema_fields_to_json_schema(
+            {
+                "fields": [
+                    {
+                        "name": "kind",
+                        "type_": "enum",
+                        "enum_values": [],
+                        "description": "d",
+                    }
+                ]
+            }
+        )
+        assert schema["properties"]["kind"] == {"type": "string", "description": "d"}
+
+    def test_flattening_arrays_warns(self):
+        from loguru import logger
+
+        messages: list[str] = []
+        sink = logger.add(lambda m: messages.append(str(m)), level="WARNING")
+        try:
+            json_schema_to_schema_fields(
+                {"properties": {"tags": {"type": "array", "items": {"type": "string"}}}}
+            )
+        finally:
+            logger.remove(sink)
+        assert any("tags" in m and "array" in m for m in messages)

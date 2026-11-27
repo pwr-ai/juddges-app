@@ -13,6 +13,7 @@ in a ``summarizer -> human_message -> chat`` loop where ``input()`` blocks, and
   ``state_to_response`` which turns graph state into JSON-serialisable values.
 """
 
+import asyncio
 import dataclasses
 from typing import Any
 
@@ -27,10 +28,17 @@ from schematize import (
     SchemaGeneratorPrompts,
     load_prompts,
 )
+from schematize.agents.agent_state import msg_usage
 from schematize.agents.schema_generator import HumanFeedbackWithInterrupt
 
 # Latency budget: the Next.js proxy gives the whole request ~300 s.
 GRAPH_RECURSION_LIMIT = 50
+# Structured schema outputs are large; the shared default (30 s) times out.
+# openai-level retries are off because schematize's RetryingChain retries
+# already (max_retries=1), keeping the worst case under the proxy budget.
+GENERATOR_REQUEST_TIMEOUT_SECONDS = 150.0
+GENERATOR_MAX_COMPLETION_TOKENS = 16000
+GENERATOR_LLM_MAX_RETRIES = 0
 
 _CONFIDENCE_LEVELS = {"high": 0.9, "medium": 0.7, "low": 0.4}
 _FIELD_TYPE_TO_JSON = {
@@ -77,8 +85,11 @@ def schema_fields_to_json_schema(
             continue
         type_ = str(field.get("type_") or "string")
         prop: dict[str, Any]
-        if type_ == "enum":
-            prop = {"type": "string", "enum": list(field.get("enum_values") or [])}
+        enum_values = list(field.get("enum_values") or [])
+        if type_ == "enum" and enum_values:
+            prop = {"type": "string", "enum": enum_values}
+        elif type_ == "enum":
+            prop = {"type": "string"}  # an empty enum would reject every value
         else:
             prop = {"type": _FIELD_TYPE_TO_JSON.get(type_, "string")}
         if field.get("description"):
@@ -125,6 +136,11 @@ def json_schema_to_schema_fields(
             )
             continue
         json_type = prop.get("type")
+        if json_type in ("array", "object") or isinstance(json_type, list):
+            logger.warning(
+                f"Flattening unsupported JSON Schema type {json_type!r} of "
+                f"field '{name}' to string"
+            )
         type_ = {
             "string": "string",
             "integer": "integer",
@@ -228,12 +244,18 @@ class SupabaseChunkRetriever:
 
     async def __call__(self, query: str, max_docs: int = 100) -> list[str]:
         try:
-            chunks = await search_chunks(
-                query, max_chunks=max_docs * self.chunks_per_document
+            # search_chunks does blocking sync I/O under an async signature; run it
+            # in a worker thread with its own loop so the main loop stays free.
+            chunks = await asyncio.to_thread(
+                lambda: asyncio.run(
+                    search_chunks(query, max_chunks=max_docs * self.chunks_per_document)
+                )
             )
         except Exception as e:
             logger.error(f"Schema data-assessment retrieval failed: {e}")
             return []
+        if not chunks:
+            logger.warning(f"Schema data-assessment retrieval found nothing: {query!r}")
 
         grouped: dict[str, list[Any]] = {}
         for chunk in chunks:
@@ -259,6 +281,40 @@ class SupabaseChunkRetriever:
 class JuddgesSchemaGenerator(SchemaGenerator):
     """``SchemaGenerator`` with an interrupt-based, server-safe graph."""
 
+    async def data_assessment_node(self, state: AgentState) -> dict[str, Any]:
+        """
+        Async replacement for ``SchemaDataAssessmentAgent.__call__``.
+
+        Upstream wraps ``_process_documents`` in ``asyncio.run`` which, under
+        ``graph.ainvoke``, executes in a throwaway loop; the shared ChatOpenAI's
+        async httpx pool then binds to a loop that is closed afterwards. Awaiting
+        it here keeps everything on the request's loop.
+        """
+        agent = self.schema_data_assessment
+        responses, results = await agent._process_documents(
+            state["query"],
+            state["user_input"],
+            state["problem_help"],
+            state["user_feedback"],
+            state["problem_definition"],
+            state["current_schema"],
+        )
+        if not results:
+            logger.warning(
+                "Schema data assessment got no documents; skipping data-grounded refinement"
+            )
+        return {
+            "messages": responses,
+            "data_assessment_results": results,
+            "token_usage": [msg_usage(r, type(agent).__name__) for r in responses],
+        }
+
+    def route_after_data_assessment(self, state: AgentState) -> str:
+        """No documents means nothing to ground on: finish instead of merging nothing."""
+        if not state.get("data_assessment_results"):
+            return END
+        return "llm_schema_data_assessment_merger"
+
     def build_graph(self, compilation_kwargs: dict[str, Any] | None = None):
         builder: Any = StateGraph(AgentState)
 
@@ -279,13 +335,12 @@ class JuddgesSchemaGenerator(SchemaGenerator):
 
         # Upstream routers return "summarizer" when the pipeline is done; we have
         # no summarizer/chat phase, so that means END.
-        done = {"summarizer": END}
+        after_refinement = (
+            END if self.skip_data_grounded else "llm_schema_data_assessment"
+        )
 
         if self.skip_refinement:
-            builder.add_edge(
-                "llm_schema_generator",
-                END if self.skip_data_grounded else "llm_schema_data_assessment",
-            )
+            builder.add_edge("llm_schema_generator", after_refinement)
         else:
             builder.add_node("llm_schema_assessment", self.schema_assessment)
             builder.add_node("llm_schema_refiner", self.schema_refiner)
@@ -295,25 +350,34 @@ class JuddgesSchemaGenerator(SchemaGenerator):
                 self.route_after_assessment,
                 {
                     "llm_schema_refiner": "llm_schema_refiner",
-                    "llm_schema_data_assessment": "llm_schema_data_assessment",
-                    **done,
+                    "llm_schema_data_assessment": after_refinement,
+                    "summarizer": END,
                 },
             )
             builder.add_edge("llm_schema_refiner", "llm_schema_assessment")
 
         if not self.skip_data_grounded:
-            builder.add_node("llm_schema_data_assessment", self.schema_data_assessment)
+            # Async node: runs on the request's event loop (see data_assessment_node).
+            builder.add_node("llm_schema_data_assessment", self.data_assessment_node)
             builder.add_node(
                 "llm_schema_data_assessment_merger", self.schema_data_assessment_merger
             )
             builder.add_node("llm_schema_data_refiner", self.schema_data_refiner)
-            builder.add_edge(
-                "llm_schema_data_assessment", "llm_schema_data_assessment_merger"
+            builder.add_conditional_edges(
+                "llm_schema_data_assessment",
+                self.route_after_data_assessment,
+                {
+                    "llm_schema_data_assessment_merger": "llm_schema_data_assessment_merger",
+                    END: END,
+                },
             )
             builder.add_conditional_edges(
                 "llm_schema_data_assessment_merger",
                 self.route_after_data_assessment_merger,
-                {"llm_schema_data_refiner": "llm_schema_data_refiner", **done},
+                {
+                    "llm_schema_data_refiner": "llm_schema_data_refiner",
+                    "summarizer": END,
+                },
             )
             builder.add_edge("llm_schema_data_refiner", "llm_schema_data_assessment")
 
@@ -332,17 +396,24 @@ def build_schema_generator(
 ) -> JuddgesSchemaGenerator:
     """Factory used by both the /schemas/generate and /schema-generator/chat endpoints."""
     return JuddgesSchemaGenerator(
-        llm if llm is not None else get_default_llm(use_mini_model=True),
+        llm
+        if llm is not None
+        else get_default_llm(
+            use_mini_model=True,
+            request_timeout=GENERATOR_REQUEST_TIMEOUT_SECONDS,
+            max_retries=GENERATOR_LLM_MAX_RETRIES,
+            max_completion_tokens=GENERATOR_MAX_COMPLETION_TOKENS,
+        ),
         retriever if retriever is not None else SupabaseChunkRetriever(),
         _build_prompts(),
         use_interrupt=False,
         graph_compilation_kwargs={"checkpointer": checkpointer},
         recursion_limit=GRAPH_RECURSION_LIMIT,
         min_refinement_rounds=0,
-        max_refinement_rounds=2,
+        max_refinement_rounds=1,
         min_data_refinement_rounds=0,
         max_data_refinement_rounds=1,
         data_assessment_top_k=20,
         data_assessment_num_examples=3,
-        max_retries=2,
+        max_retries=1,
     )

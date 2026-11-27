@@ -81,6 +81,15 @@ class TestFormatResponseMessage:
         result = format_response_message(state)
         assert "Confidence: medium" in result
 
+    def test_assessment_preferred_over_problem_definition(self):
+        state = {
+            "problem_definition": "Problem text",
+            "merged_data_assessment": {"summary": "Grounded", "main_issues": ["x"]},
+        }
+        result = format_response_message(state)
+        assert "Grounded" in result and "- x" in result
+        assert "Problem text" not in result
+
     def test_returns_problem_help(self):
         state = {"problem_help": "Please provide more details"}
         result = format_response_message(state)
