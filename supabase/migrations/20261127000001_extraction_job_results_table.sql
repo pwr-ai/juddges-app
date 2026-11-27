@@ -18,6 +18,10 @@
 -- Backend-only: RLS on with no policies, and no grants to anon/authenticated.
 -- The backend reads it with the service role after checking job ownership.
 
+-- Fail fast instead of queueing every extraction_jobs reader behind the DDL
+-- locks if a worker write is in flight.
+SET lock_timeout = '5s';
+
 CREATE TABLE IF NOT EXISTS public.extraction_job_results (
     job_id      text    NOT NULL
                 REFERENCES public.extraction_jobs (job_id)
@@ -35,7 +39,9 @@ CREATE INDEX IF NOT EXISTS idx_extraction_job_results_bucket
     ON public.extraction_job_results (job_id, bucket, position);
 
 ALTER TABLE public.extraction_job_results ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.extraction_job_results FROM PUBLIC, anon, authenticated;
+-- service_role reads it; only the sync functions (as owner) write it.
+REVOKE ALL ON TABLE public.extraction_job_results
+    FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.extraction_job_results TO service_role;
 
 -- Status bucket of one stored result. Same mapping the paged RPC used:
@@ -57,7 +63,8 @@ AS $$
 $$;
 
 -- Mirror one job's results array into extraction_job_results.
--- Upserts by position and only rewrites rows whose item changed; drops
+-- Upserts only positions whose item is new or changed (filtered before the
+-- INSERT, so unchanged rows are never locked or WAL-logged), and drops
 -- positions past the end of the array (results shrank or became NULL).
 CREATE OR REPLACE FUNCTION public.sync_extraction_job_results_from(
     p_job_id text,
@@ -80,15 +87,18 @@ BEGIN
            public.extraction_result_bucket(e.item),
            e.item
       FROM jsonb_array_elements(v_results) WITH ORDINALITY AS e(item, ord)
+      LEFT JOIN public.extraction_job_results x
+             ON x.job_id = p_job_id
+            AND x.position = e.ord
+     WHERE x.item IS DISTINCT FROM e.item
     ON CONFLICT (job_id, position) DO UPDATE
        SET document_id = EXCLUDED.document_id,
            bucket      = EXCLUDED.bucket,
-           item        = EXCLUDED.item
-     WHERE r.item IS DISTINCT FROM EXCLUDED.item;
+           item        = EXCLUDED.item;
 
-    DELETE FROM public.extraction_job_results
-     WHERE job_id = p_job_id
-       AND position > jsonb_array_length(v_results);
+    DELETE FROM public.extraction_job_results d
+     WHERE d.job_id = p_job_id
+       AND d.position > jsonb_array_length(v_results);
 END;
 $$;
 
@@ -117,22 +127,20 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.sync_extraction_job_results_from(text, jsonb)
-    FROM PUBLIC, anon, authenticated;
+    FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.sync_extraction_job_results(text)
     FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.trg_extraction_jobs_sync_results()
-    FROM PUBLIC, anon, authenticated;
+    FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.sync_extraction_job_results(text) TO service_role;
 
-DROP TRIGGER IF EXISTS trg_extraction_jobs_sync_results_ins ON public.extraction_jobs;
-CREATE TRIGGER trg_extraction_jobs_sync_results_ins
+CREATE OR REPLACE TRIGGER trg_extraction_jobs_sync_results_ins
     AFTER INSERT ON public.extraction_jobs
     FOR EACH ROW
     WHEN (NEW.results IS NOT NULL)
     EXECUTE FUNCTION public.trg_extraction_jobs_sync_results();
 
-DROP TRIGGER IF EXISTS trg_extraction_jobs_sync_results_upd ON public.extraction_jobs;
-CREATE TRIGGER trg_extraction_jobs_sync_results_upd
+CREATE OR REPLACE TRIGGER trg_extraction_jobs_sync_results_upd
     AFTER UPDATE OF results ON public.extraction_jobs
     FOR EACH ROW
     WHEN (NEW.results IS DISTINCT FROM OLD.results)
@@ -140,6 +148,9 @@ CREATE TRIGGER trg_extraction_jobs_sync_results_upd
 
 -- Backfill every existing job. Reads extraction_jobs only; never updates it,
 -- so the updated_at trigger does not fire and /api/jobs does not re-poll Celery.
+-- Apply while no extraction job is running: a worker write that commits
+-- between this statement's snapshot and its upsert would be overwritten with
+-- the older array (it heals on that job's next write).
 SELECT public.sync_extraction_job_results_from(j.job_id, j.results)
   FROM public.extraction_jobs j
  WHERE j.results IS NOT NULL;

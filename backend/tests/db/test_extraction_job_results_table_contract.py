@@ -163,3 +163,17 @@ def test_sync_functions_are_not_callable_by_clients(conn, as_role) -> None:
                 role,
                 "SELECT public.sync_extraction_job_results_from('x', '[]'::jsonb)",
             )
+
+
+def test_service_role_reads_but_cannot_write_mirror(conn, as_role) -> None:
+    with pytest.raises(Exception, match="permission denied"):
+        as_role(
+            "service_role",
+            "DELETE FROM public.extraction_job_results WHERE job_id = 'x'",
+        )
+    with pytest.raises(Exception, match="permission denied"):
+        as_role(
+            "service_role",
+            "SELECT public.sync_extraction_job_results_from('x', '[]'::jsonb)",
+        )
+    assert as_role("service_role", "SELECT public.sync_extraction_job_results('x')")
