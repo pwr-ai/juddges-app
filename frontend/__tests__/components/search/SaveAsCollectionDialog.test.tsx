@@ -5,32 +5,10 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const createCollectionFromFilter = jest.fn();
 
+// AC-3
 jest.mock("@/lib/api/collections", () => ({
+  ...jest.requireActual("@/lib/api/collections"),
   createCollectionFromFilter: (...args: unknown[]) => createCollectionFromFilter(...args),
-  CollectionFromFilterError: class extends Error {
-    code: string;
-    status: number;
-    total?: number;
-    cap?: number;
-    jurisdiction?: string | null;
-
-    constructor(
-      message: string,
-      code: string,
-      status: number,
-      total?: number,
-      cap?: number,
-      jurisdiction?: string | null,
-    ) {
-      super(message);
-      this.name = "CollectionFromFilterError";
-      this.code = code;
-      this.status = status;
-      this.total = total;
-      this.cap = cap;
-      this.jurisdiction = jurisdiction;
-    }
-  },
 }));
 
 import { CollectionFromFilterError } from "@/lib/api/collections";
@@ -77,13 +55,101 @@ describe("SaveAsCollectionDialog", () => {
       }),
     );
 
-    // router.push doesn't unmount the component in this test, so if `saving`
-    // stayed true the dialog would be stuck un-closable (Cancel disabled,
-    // button reading "Saving…") whenever navigation doesn't actually unmount.
+    // AC-1: once created, Save stays disabled (no double-submit window) but
+    // Cancel stays enabled so the dialog can never be stuck un-closable.
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /^save$/i })).not.toBeDisabled(),
+      expect(screen.getByRole("button", { name: /cancel/i })).not.toBeDisabled(),
     );
-    expect(screen.getByRole("button", { name: /cancel/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /^save$/i })).toBeDisabled();
+  });
+
+  // AC-2
+  it("ignores a second Save click while the first request is in flight", async () => {
+    let resolve!: (v: unknown) => void;
+    createCollectionFromFilter.mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<SaveAsCollectionDialog filters={filters} textQuery="" total={5} defaultName="q" />);
+    fireEvent.click(screen.getByRole("button", { name: /save as collection/i }));
+    const input = screen.getByLabelText(/collection name/i);
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(createCollectionFromFilter).toHaveBeenCalledTimes(1);
+    resolve({
+      collections: [{ jurisdiction: "PL", collection: { id: "c9" }, added_count: 5 }],
+      total_matched: 5,
+      pair_id: null,
+    });
+    await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
+  });
+
+  // AC-1, AC-2
+  it("does not create twice when Enter is pressed again after success", async () => {
+    createCollectionFromFilter.mockResolvedValue({
+      collections: [{ jurisdiction: "PL", collection: { id: "c9" }, added_count: 5 }],
+      total_matched: 5,
+      pair_id: null,
+    });
+    render(<SaveAsCollectionDialog filters={filters} textQuery="" total={5} defaultName="q" />);
+    fireEvent.click(screen.getByRole("button", { name: /save as collection/i }));
+    const input = screen.getByLabelText(/collection name/i);
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(createCollectionFromFilter).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+
+  // AC-1
+  it("clears the succeeded latch when the dialog is reopened", async () => {
+    createCollectionFromFilter.mockResolvedValue({
+      collections: [{ jurisdiction: "PL", collection: { id: "c9" }, added_count: 5 }],
+      total_matched: 5,
+      pair_id: null,
+    });
+    render(<SaveAsCollectionDialog filters={filters} textQuery="" total={5} defaultName="q" />);
+    fireEvent.click(screen.getByRole("button", { name: /save as collection/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /cancel/i })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByLabelText(/collection name/i)).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /save as collection/i }));
+    expect(screen.getByRole("button", { name: /^save$/i })).not.toBeDisabled();
+  });
+
+  // AC-2
+  it("saves on Enter in the name input and redirects", async () => {
+    createCollectionFromFilter.mockResolvedValue({
+      collections: [{ jurisdiction: "PL", collection: { id: "c9" }, added_count: 5 }],
+      total_matched: 5,
+      pair_id: null,
+    });
+    render(<SaveAsCollectionDialog filters={filters} textQuery="" total={5} defaultName="q" />);
+    fireEvent.click(screen.getByRole("button", { name: /save as collection/i }));
+    fireEvent.keyDown(screen.getByLabelText(/collection name/i), { key: "Enter" });
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/collections/c9"));
+    expect(createCollectionFromFilter).toHaveBeenCalledTimes(1);
+  });
+
+  // AC-2
+  it("ignores Enter when the name is empty", () => {
+    render(<SaveAsCollectionDialog filters={filters} textQuery="" total={5} defaultName="q" />);
+    fireEvent.click(screen.getByRole("button", { name: /save as collection/i }));
+    const input = screen.getByLabelText(/collection name/i);
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(createCollectionFromFilter).not.toHaveBeenCalled();
+  });
+
+  // AC-2
+  it("ignores Enter during IME composition", () => {
+    render(<SaveAsCollectionDialog filters={filters} textQuery="" total={5} defaultName="q" />);
+    fireEvent.click(screen.getByRole("button", { name: /save as collection/i }));
+    const input = screen.getByLabelText(/collection name/i);
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    expect(createCollectionFromFilter).not.toHaveBeenCalled();
   });
 
   it("pluralizes the dialog title like the results bar", () => {

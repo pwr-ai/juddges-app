@@ -27,4 +27,18 @@ describe("buildDocumentHref", () => {
       `/documents/abc?f=${encodeFilters(filters)}&q=fraud&page=3&nl=women+convicted+of+fraud#base-fields`,
     );
   });
+  // AC-6
+  it("has no ? and no #base-fields when filters prune to empty", () => {
+    expect(buildDocumentHref("abc", { filters: { keywords: [] } })).toBe("/documents/abc");
+  });
+  // AC-6
+  it("has no ? and no #base-fields for blank string filters, query and question", () => {
+    expect(
+      buildDocumentHref("abc", {
+        filters: { case_name: "  " },
+        textQuery: "  ",
+        nlQuestion: "  ",
+      }),
+    ).toBe("/documents/abc");
+  });
 });

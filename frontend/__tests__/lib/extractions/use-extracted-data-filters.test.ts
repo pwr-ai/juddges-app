@@ -167,6 +167,43 @@ describe("useExtractedDataFilters — nlQuestion in the URL (?nl=)", () => {
     expect(result.current.nlQuestion).toBeUndefined();
   });
 
+  // AC-5
+  it("reads a bare ?nl= as undefined, not an empty string", () => {
+    mockSearchParams = new URLSearchParams("nl=");
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.nlQuestion).toBeUndefined();
+  });
+
+  // AC-5
+  it("reads a whitespace-only ?nl= as undefined", () => {
+    mockSearchParams = new URLSearchParams("nl=+++");
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.nlQuestion).toBeUndefined();
+  });
+
+  // AC-5
+  it("truncates an over-long ?nl= to 255 characters on read", () => {
+    mockSearchParams = new URLSearchParams("nl=" + "a".repeat(300));
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.nlQuestion).toHaveLength(255);
+  });
+
+  // AC-7
+  it("applyNlResult with an empty question removes nl from the URL and state, keeping q", () => {
+    mockSearchParams = new URLSearchParams("nl=fraud");
+    const { result } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.nlQuestion).toBe("fraud");
+
+    act(() => {
+      result.current.applyNlResult({}, "tax", "");
+    });
+
+    expect(result.current.nlQuestion).toBeUndefined();
+    const lastUrl = mockReplace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).not.toContain("nl=");
+    expect(lastUrl).toContain("q=tax");
+  });
+
   it("applyNlResult round-trips the natural-language question into the URL", () => {
     const { result } = renderHook(() => useExtractedDataFilters());
 
