@@ -136,6 +136,7 @@ export const pl: Translations = {
     // Accessible names
     homeLinkLabel: 'JuDDGES — przejdź do strony głównej',
     mainLabel: 'Nawigacja główna',
+    publicLabel: 'Strony publiczne',
 
     flowAsk: 'Zapytaj',
     flowExplore: 'Zbadaj',

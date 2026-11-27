@@ -106,4 +106,29 @@ test.describe('shell landmarks and contrast', () => {
       expect(box!.height).toBeGreaterThanOrEqual(24);
     }
   });
+
+  test('guest navbar offers only public pages', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    const nav = page.getByRole('navigation', { name: 'Public pages' });
+    await expect(nav.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
+    await expect(nav.getByRole('link', { name: 'Publications' })).toHaveAttribute('href', '/publications');
+    // /changelog is auth-gated: a guest following it would hit the login wall.
+    await expect(nav.locator('a[href="/changelog"]')).toHaveCount(0);
+  });
+
+  test('the open mobile sidebar is still a dialog holding the main navigation', async ({
+    page,
+    context,
+  }) => {
+    // role="navigation" is passed to the Sidebar root; on mobile that root is a
+    // Sheet, and the role must not override the drawer's dialog semantics.
+    await setSyntheticSession(context);
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto('/collections');
+    await page.getByRole('button', { name: 'Toggle Sidebar' }).first().click();
+    const drawer = page.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('link', { name: /collections/i }).first()).toBeVisible();
+  });
 });
