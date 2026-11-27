@@ -75,7 +75,7 @@ export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemo
           if (row?.value !== null && row?.value !== undefined && onBarClick) onBarClick(field, row.value);
         }}
       />
-      {onBarClick && (
+      {onBarClick && rows.some((r) => r.value !== null) && (
         <ul
           aria-label={t("extraction.statsPickValue")}
           className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:flex focus-within:flex-wrap focus-within:gap-2"
@@ -88,7 +88,7 @@ export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemo
                   onClick={() => onBarClick(field, r.value as string)}
                   className="font-mono text-[11px] text-[color:var(--ink-soft)] underline hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--pwr-red)]"
                 >
-                  {r.name}: {items[i].count}
+                  {r.name}: {items[i].count}{yAxis === "percent" ? "%" : ""}
                 </button>
               </li>
             ),
