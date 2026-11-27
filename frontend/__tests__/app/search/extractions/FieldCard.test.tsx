@@ -4,12 +4,12 @@ import React from "react";
 jest.mock("@/contexts/LanguageContext", () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 const chartProps: unknown[] = [];
 jest.mock("@/components/charts", () => ({
-  HorizontalBarChart: (props: { items: { name: string; count: number }[] }) => {
+  HorizontalBarChart: (props: { items: { name: string; count: number }[]; onBarClick?: (name: string) => void }) => {
     chartProps.push(props);
     return (
       <ul data-testid="chart">
         {props.items.map((i) => (
-          <li key={i.name}>{i.name}: {i.count}</li>
+          <li key={i.name}>{i.name}: {i.count}<button data-testid={`bar-${i.name}`} aria-label={`bar ${i.name}`} onClick={() => props.onBarClick?.(i.name)} /></li>
         ))}
       </ul>
     );
@@ -47,6 +47,24 @@ describe("FieldCard", () => {
     expect(onBarClick).toHaveBeenCalledTimes(1);
   });
 
+  it("bar click reports the value; other/missing bars do not fire; no handler means no drill", () => {
+    const onBarClick = jest.fn();
+    const { unmount } = render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" onBarClick={onBarClick} />);
+    fireEvent.click(screen.getByTestId("bar-dismissed"));
+    expect(onBarClick).toHaveBeenCalledWith("appeal_outcome", "dismissed");
+    fireEvent.click(screen.getByTestId("bar-extraction.statsOther"));
+    fireEvent.click(screen.getByTestId("bar-extraction.statsMissing"));
+    expect(onBarClick).toHaveBeenCalledTimes(1);
+    unmount();
+    render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" />);
+    expect(() => fireEvent.click(screen.getByTestId("bar-dismissed"))).not.toThrow();
+  });
+
+  it("labels value buttons with a percent sign under yAxis percent", () => {
+    render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="percent" onBarClick={jest.fn()} />);
+    expect(screen.getByRole("button", { name: "dismissed: 60%" })).toBeInTheDocument();
+  });
+
   it("offers every real value as a focusable button for keyboard users (#741)", () => {
     render(<FieldCard field="appeal_outcome" aggregate={categorical} sampleN={50} yAxis="count" onBarClick={jest.fn()} />);
     const list = screen.getByRole("list", { name: "extraction.statsPickValue" });
@@ -62,9 +80,9 @@ describe("FieldCard", () => {
     expect(screen.queryByRole("list", { name: "extraction.statsPickValue" })).toBeNull();
   });
 
-  it("does not offer buttons for numeric buckets", () => {
+  it("does not render an empty list for numeric buckets", () => {
     render(<FieldCard field="num_victims" aggregate={{ kind: "numeric", buckets: [{ lo: 0, hi: 1, count: 2 }], null: 0, covered: 2, min: 0, max: 1 }} sampleN={2} yAxis="count" onBarClick={jest.fn()} />);
-    expect(screen.queryByRole("button", { name: /0–1/ })).toBeNull();
+    expect(screen.queryByRole("list", { name: "extraction.statsPickValue" })).toBeNull();
   });
 
   it("labels numeric buckets lo–hi and years ascending", () => {

@@ -5,8 +5,8 @@ jest.mock("@/contexts/LanguageContext", () => ({
   useTranslation: () => ({ t: (k: string, v?: Record<string, unknown>) => (v ? `${k}:${JSON.stringify(v)}` : k) }),
 }));
 jest.mock("@/components/charts", () => ({
-  HorizontalBarChart: (p: { items: { name: string }[] }) => (
-    <div>{p.items.map((i) => <span key={i.name}>{i.name}</span>)}</div>
+  HorizontalBarChart: (p: { items: { name: string }[]; onBarClick?: (n: string) => void }) => (
+    <div>{p.items.map((i) => <button key={i.name} data-testid={`bar-${i.name}`} aria-label={`bar ${i.name}`} onClick={() => p.onBarClick?.(i.name)} />)}</div>
   ),
 }));
 const aggregate = {
@@ -79,6 +79,12 @@ describe("StatisticsView", () => {
     expect(p.onDrillBack).toHaveBeenCalledWith({ did_offender_confess: true });
   });
 
+  it("a value button drills back the same way as the bar", () => {
+    const p = renderView({ filters: { appeal_outcome: ["allowed"] } });
+    fireEvent.click(screen.getByTestId("bar-dismissed"));
+    expect(p.onDrillBack).toHaveBeenCalledWith({ appeal_outcome: ["dismissed"] });
+  });
+
   it("a bar of a field without a filter predicate is inert", () => {
     queryState = {
       data: {
@@ -90,6 +96,7 @@ describe("StatisticsView", () => {
     };
     const p = renderView({ fields: ["court_name"] });
     expect(screen.queryByRole("button", { name: /^Court of Appeal: / })).toBeNull();
+    fireEvent.click(screen.getByTestId("bar-Court of Appeal"));
     expect(p.onDrillBack).not.toHaveBeenCalled();
   });
 
