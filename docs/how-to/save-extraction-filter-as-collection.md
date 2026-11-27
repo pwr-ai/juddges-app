@@ -13,11 +13,13 @@ collection.
 4. Adjust chips (×) or the Scope/Quick controls. The URL
    (`?f=<filters>&q=<text_query>&nl=<question>`) is shareable and reproduces
    the same result set for anyone who opens it.
+   The `nl` value is only the originating question: it is kept in the URL (and
+   used as the default collection name) even after you adjust the filters.
 5. Click a result row to open `/documents/{id}#base-fields` — the base-schema
    cells that satisfied your filter are highlighted, with a caption stating
    how many fields matched (also announced to screen readers).
-6. Click **Save as collection** in the results bar (disabled only when there
-   are zero results). The name defaults to your question; edit it if you
+6. Click **Save as collection** in the results bar (disabled while results are
+   loading, when the search errored, or when there are zero results). The name defaults to your question; edit it if you
    like, then press **Save**.
    - There is no client-side cap: if the matched set exceeds the backend's
      `SAVE_FROM_FILTER_MAX_DOCUMENTS` (env var, default 5000), the save

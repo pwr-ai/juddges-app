@@ -194,6 +194,12 @@ export function buildFilterHref(pathname: string, state: FilterUrlState, origin 
 // Hook
 // -----------------------------------------------------------------------------
 
+/** Normalises a raw natural-language question: trimmed, capped at 255, blank -> undefined. */
+export function parseNlQuestion(raw: string | null | undefined): string | undefined {
+  const nl = (raw ?? "").trim();
+  return nl === "" ? undefined : nl.slice(0, 255);
+}
+
 export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -203,7 +209,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
       filters: decodeFilters(searchParams.get("f")),
       textQuery: searchParams.get("q") ?? "",
       page: Math.max(1, Number(searchParams.get("page") ?? "1") || 1),
-      nlQuestion: searchParams.get("nl") ?? undefined,
+      nlQuestion: parseNlQuestion(searchParams.get("nl")),
       view: searchParams.get("view") === "stats" ? "stats" : "list",
       sampleSize: parseSampleSize(searchParams.get("n")),
       seed: parseInt1(searchParams.get("seed")) ?? newSeed(),
@@ -275,7 +281,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
         ...prev,
         filters: pruneEmpty(filters),
         textQuery,
-        nlQuestion,
+        nlQuestion: parseNlQuestion(nlQuestion),
         page: 1,
       }));
     },
