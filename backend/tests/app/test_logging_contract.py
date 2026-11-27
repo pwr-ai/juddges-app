@@ -240,7 +240,9 @@ def test_loguru_rejects_exc_info_on_bracey_message(loguru_sink: list[str]) -> No
     This is the shape every fixed call site used to have. It raises *instead
     of* logging, so the error the `except` block meant to record is lost.
     """
-    with pytest.raises(KeyError, match="code"):
+    # loguru < 0.8 raises the bare KeyError from str.format; 0.8 wraps it in a
+    # ValueError ("could not be formatted") chained from that KeyError.
+    with pytest.raises((KeyError, ValueError)) as raised:
         try:
             raise _BraceyError()
         except _BraceyError as exc:
@@ -249,6 +251,10 @@ def test_loguru_rejects_exc_info_on_bracey_message(loguru_sink: list[str]) -> No
             # packages/ only, so it does not flag this line.
             logger.error(f"boom: {exc}", exc_info=True)
 
+    error = raised.value
+    key_error = error if isinstance(error, KeyError) else error.__cause__
+    assert isinstance(key_error, KeyError)
+    assert "code" in str(key_error)
     assert loguru_sink == []
 
 
