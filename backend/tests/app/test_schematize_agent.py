@@ -25,13 +25,17 @@ from schematize.agents.data_agents import (
 
 from app.schemas_pkg import schematize_agent as sa
 from app.schemas_pkg.schematize_agent import (
+    FIELD_DESIGN_RULES,
     JuddgesSchemaGenerator,
     SupabaseChunkRetriever,
+    _build_prompts,
+    _unified_node,
     build_schema_generator,
     confidence_from_assessment,
     json_schema_to_schema_fields,
     schema_fields_to_json_schema,
     state_to_response,
+    unify_schema_fields,
 )
 from app.server import app
 
@@ -489,3 +493,135 @@ class TestLlmAndConverterEdges:
         finally:
             logger.remove(sink)
         assert any("tags" in m and "array" in m for m in messages)
+
+
+# ---------------------------------------------------------------------------
+# Field unification
+# ---------------------------------------------------------------------------
+
+
+def _schema(*specs: str | tuple[str, str]) -> SchemaFields:
+    fields = []
+    for spec in specs:
+        name, type_ = (spec, "string") if isinstance(spec, str) else spec
+        field = {"name": name, "type_": type_, "description": name}
+        if type_ == "enum":
+            field.update(enum_name="E", enum_values=["a", "b"])
+        fields.append(field)
+    return SchemaFields.model_validate({"fields": fields})
+
+
+def _names(schema: SchemaFields) -> list[str]:
+    return [f.name for f in schema.fields]
+
+
+@pytest.mark.unit
+class TestUnifySchemaFields:
+    def test_none_passthrough(self):
+        assert unify_schema_fields(None) is None
+
+    def test_drops_bookkeeping(self):
+        schema = _schema(
+            "verdict",
+            "field_provenance",
+            "percent_reduction_provenance_global",
+            "extraction_confidence",
+            "extraction_notes",
+            "record_type",
+            "record_extraction_date",
+            "coder_notes",
+            "notes_for_review",
+            "source_document_id",
+            "source_type",
+            "source_location",
+            "document_url",
+            "judgment_link",
+            "metadata_completeness",
+            "document_scope",
+            "court",
+        )
+        assert _names(unify_schema_fields(schema)) == ["verdict", "court"]
+
+    def test_statutory_citations_trio(self):
+        schema = _schema(
+            "statutory_citations_raw",
+            "statutory_citations_structured",
+            "statutory_citations",
+        )
+        assert _names(unify_schema_fields(schema)) == ["statutory_citations"]
+
+    def test_prefers_non_string_when_no_base(self):
+        schema = _schema(
+            "interest_start_date_text", ("interest_start_date_structured", "integer")
+        )
+        assert _names(unify_schema_fields(schema)) == ["interest_start_date_structured"]
+
+    def test_falls_back_to_first(self):
+        schema = _schema("interest_start_date_text", "interest_start_date_structured")
+        assert _names(unify_schema_fields(schema)) == ["interest_start_date_text"]
+
+    def test_enum_base_wins_over_other(self):
+        schema = _schema("court_instance_other", ("court_instance", "enum"))
+        assert _names(unify_schema_fields(schema)) == ["court_instance"]
+
+    @pytest.mark.parametrize(
+        ("names", "kept"),
+        [
+            (["art_62a", "applied_art_62a_quick"], ["art_62a"]),
+            (["cited_provisions", "cited_provisions_structured"], ["cited_provisions"]),
+            (["appeal_requests_structured", "appeal_requests"], ["appeal_requests"]),
+            (
+                ["quantity_characterization_as_stated", "quantity_characterization"],
+                ["quantity_characterization"],
+            ),
+            (
+                ["consumer_status_basis", "consumer_status_basis_text"],
+                ["consumer_status_basis"],
+            ),
+            (["sections_list", "sections"], ["sections"]),
+        ],
+    )
+    def test_collapse_examples(self, names, kept):
+        assert _names(unify_schema_fields(_schema(*names))) == kept
+
+    def test_preserves_order(self):
+        schema = _schema("b", "a_raw", "c", "a", "d_text")
+        assert _names(unify_schema_fields(schema)) == ["b", "c", "a", "d_text"]
+
+    def test_suffix_only_name_is_not_stripped_to_empty(self):
+        assert _names(unify_schema_fields(_schema("text", "raw"))) == ["text", "raw"]
+
+    def test_empty_guard(self):
+        schema = _schema("field_provenance", "extraction_notes")
+        assert unify_schema_fields(schema) is schema
+
+
+@pytest.mark.unit
+class TestUnifiedNode:
+    def test_unifies_state_update(self):
+        dirty = _schema("verdict", "verdict_raw", "extraction_confidence")
+        agent = MagicMock(
+            return_value={"current_schema": dirty, "schema_history": [dirty]}
+        )
+        update = _unified_node(agent)({"user_input": "x"})
+        assert _names(update["current_schema"]) == ["verdict"]
+        assert _names(update["schema_history"][0]) == ["verdict"]
+
+    def test_update_without_schema_untouched(self):
+        agent = MagicMock(return_value={"messages": []})
+        assert _unified_node(agent)({}) == {"messages": []}
+
+
+@pytest.mark.unit
+class TestPromptRules:
+    def test_rules_appended_and_templates_format(self):
+        prompts = _build_prompts()
+        for name in (
+            "schema_generator_prompt",
+            "schema_refiner_prompt",
+            "schema_data_refiner_prompt",
+        ):
+            text = getattr(prompts, name)
+            assert FIELD_DESIGN_RULES.strip() in text
+            assert text.count("{") == text.count("}")
+        assert FIELD_DESIGN_RULES.strip() not in prompts.query_generator_prompt

@@ -240,6 +240,7 @@ from juddges_search.models import LegalDocument
 AI-powered legal schema generation:
 - LangGraph-based multi-agent pipeline (problem definition, schema generation, criteria and data-grounded refinement)
 - The adapter swaps the terminal prompts for a LangGraph interrupt, ends the run after data-grounded refinement and converts `SchemaFields` to JSON Schema
+- Generated fields are unified (`unify_schema_fields`): bookkeeping fields (provenance, extraction notes, source metadata) are dropped and `_raw`/`_structured`/`_text`-style variants of one concept collapse to a single field, both in the graph state and in the prompts
 
 Usage:
 ```python
