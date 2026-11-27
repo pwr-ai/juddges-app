@@ -22,9 +22,9 @@ portals publish: no LLM extractions, no UK judgments, no facets. Code:
 [Enable the full-corpus search engine](../how-to/enable-search-v2.md).
 
 **Comparative (`?engine=curated`)**. This is the Supabase and
-Meilisearch path, about 6k PL and 6k EN judgments with LLM extractions. It
-serves extracted-field filters, facets, collections, export and the
-cross-lingual features. Its behaviour has not changed; see
+Meilisearch path. On 22 November 2026, production indexed 17,397 judgments
+(11,240 PL and 6,157 from England and Wales). The comparative mode supports
+LLM-extracted field filters, facets, collections, export and cross-lingual search. See
 [Hybrid search fusion](hybrid-search-fusion.md).
 
 A full-corpus hit that also exists in the curated set links to the curated

@@ -155,11 +155,16 @@ export function useSearchUrlParams({
           return;
         }
 
-        // Mark that we're updating to prevent loops
-        updatingUrlRef.current = true;
         lastUrlRef.current = newUrl;
 
-        // Update URL without adding to history (replace current entry)
+        // Weaviate fetches results client-side. Updating search params needs no
+        // router navigation that could compete with opening a judgment.
+        if (engine === 'full') {
+          window.history.replaceState(null, '', newUrl);
+          return;
+        }
+
+        updatingUrlRef.current = true;
         router.replace(newUrl, { scroll: false });
 
         // Reset the flag after a short delay to allow URL to update
@@ -168,9 +173,9 @@ export function useSearchUrlParams({
         }, 100);
       };
 
-      // Debounce URL updates when query changes (unless immediate is true)
-      // This prevents URL updates on every keystroke, which can trigger unnecessary searches
-      if (immediate || forceUpdate) {
+      // The full-corpus panel publishes its query on submit. Update its URL
+      // before results can be opened. The comparative input updates on every keystroke.
+      if (engine === 'full' || immediate || forceUpdate) {
         performUpdate();
       } else {
         // Debounce by 500ms for query changes

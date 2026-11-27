@@ -6,7 +6,7 @@ signed-in users:
 | Engine | `?engine=` | Corpus | Backend |
 |---|---|---|---|
 | **Polish native · full corpus** / *Polski natywny · pełna baza* (default, signed-in) | `full` | ~2.7M Polish judgments (pl-court + NSA), ~30.7M chunks, no LLM extractions | `POST /search/v2`, `GET /search/v2/judgments/{judgment_id}` over Weaviate v2 |
-| **Comparative · PL + EN across jurisdictions** / *Porównawczy · PL + EN, jurysdykcje* | `curated` | ~6k PL + ~6k EN judgments with extractions, collections, facets | `/api/search/documents` (Supabase + Meilisearch), unchanged |
+| **Comparative · PL + EN across jurisdictions** / *Porównawczy · PL + EN, jurysdykcje* | `curated` | 11,240 PL + 6,157 England and Wales judgments (22 November 2026), with extraction filters, collections and facets | `/api/search/documents` (Supabase + Meilisearch), unchanged |
 
 Guests always get the curated engine: both `/search/v2` endpoints require a
 signed-in Supabase user, and the BFF routes answer 401 (the middleware
