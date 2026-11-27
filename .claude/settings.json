@@ -11,5 +11,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "supabase@anthropic-plugin-directory": true
   }
 }
