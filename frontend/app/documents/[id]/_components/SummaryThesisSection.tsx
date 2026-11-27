@@ -30,7 +30,7 @@ export function SummaryThesisSection({
         >
           <div className="flex items-center gap-2 mb-3 pb-3 border-b border-rule">
             <Info className="h-4 w-4 text-oxblood" />
-            <h3 className="font-serif text-lg font-semibold text-ink">Document Summary</h3>
+            <h2 className="font-serif text-lg font-semibold text-ink">Document Summary</h2>
             <StatusBadge status="ai_generated" label="AI Generated" tone="gold" />
           </div>
           <div>
@@ -50,7 +50,7 @@ export function SummaryThesisSection({
           className="p-5 border-rule bg-parchment"
         >
           <div className="flex items-center justify-between pb-3 border-b border-rule mb-3">
-            <h3 className="font-serif text-lg font-semibold text-ink">Thesis</h3>
+            <h2 className="font-serif text-lg font-semibold text-ink">Thesis</h2>
             <Button
               variant="ghost"
               size="sm"

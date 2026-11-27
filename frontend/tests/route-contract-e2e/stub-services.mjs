@@ -1192,6 +1192,33 @@ const server = createServer((request, response) => {
     return;
   }
 
+  // Full document body, read by the judgment page's HTML route.
+  const documentBodyMatch = url.pathname.match(/^\/documents\/([^/]+)$/);
+  if (
+    request.method === 'GET' &&
+    documentBodyMatch &&
+    decodeURIComponent(documentBodyMatch[1]) === IDS.document.known
+  ) {
+    logRequest(request, url);
+    sendJson(response, 200, {
+      document: {
+        document_id: IDS.document.known,
+        title: 'Route contract judgment',
+        full_text: 'Route contract judgment body text.',
+      },
+    });
+    return;
+  }
+
+  // Related-documents lookup on the judgment page: an empty list is enough for
+  // the page to settle (it renders its "no similar documents" empty state).
+  const similarMatch = url.pathname.match(/^\/documents\/([^/]+)\/similar$/);
+  if (request.method === 'GET' && similarMatch) {
+    logRequest(request, url);
+    sendJson(response, 200, { similar_documents: [] });
+    return;
+  }
+
   const resultsMatch = url.pathname.match(/^\/extractions\/([^/]+)\/results$/);
   if (request.method === 'GET' && resultsMatch) {
     logRequest(request, url);

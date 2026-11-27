@@ -488,11 +488,11 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </EditorialCard>
  )}
         <EditorialCard>
-          <h3 className="editorial-display text-lg text-ink mb-4">
+          <h2 className="editorial-display text-lg text-ink mb-4">
             {jobData.created_at
               ? `Extraction - ${new Date(jobData.created_at).toLocaleString()}`
               : 'Extraction'}
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Job ID and Processed Documents - full width row */}
             <div className="md:col-span-2">

@@ -23,7 +23,7 @@ export function RelatedDocuments({
   if (similarDocs.length === 0) {
     return (
       <div className="mb-6 bg-transparent">
-        <h3 className="font-serif text-lg font-semibold text-ink mb-4">Similar Documents</h3>
+        <h2 className="font-serif text-lg font-semibold text-ink mb-4">Similar Documents</h2>
         <EmptyState
           icon={FileSearch}
           title="No similar documents found"
@@ -39,7 +39,7 @@ export function RelatedDocuments({
 
   return (
     <div className="mb-6 bg-transparent">
-      <h3 className="font-serif text-lg font-semibold text-ink mb-4">Similar Documents</h3>
+      <h2 className="font-serif text-lg font-semibold text-ink mb-4">Similar Documents</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(enrichedSimilarDocs.length > 0 ? enrichedSimilarDocs : similarDocs).map((doc) => {
           // Format document type for display
@@ -116,9 +116,9 @@ export function RelatedDocuments({
                 {/* Header */}
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-serif text-base font-semibold text-ink leading-tight line-clamp-2 mb-1.5 group-hover:text-oxblood transition-colors">
+                    <h3 className="font-serif text-base font-semibold text-ink leading-tight line-clamp-2 mb-1.5 group-hover:text-oxblood transition-colors">
                       {displayText}
-                    </h4>
+                    </h3>
                     {hasDocumentNumber && (
                       <p className="font-mono text-xs text-ink-soft">
                         {doc.document_number}

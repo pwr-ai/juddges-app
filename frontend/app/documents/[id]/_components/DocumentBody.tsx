@@ -36,9 +36,9 @@ export function DocumentBody({
           <div className="rounded-none border border-rule bg-parchment p-8">
             <div className="text-center mb-6">
               <FileText className="h-12 w-12 text-ink-soft/40 mx-auto mb-3" />
-              <h3 className="font-serif text-lg font-semibold text-ink mb-1">
+              <h2 className="font-serif text-lg font-semibold text-ink mb-1">
                 Full document content is not available for this judgment
-              </h3>
+              </h2>
               <p className="text-sm text-ink-soft">
                 The original document text could not be retrieved. See the summary or metadata for available information.
               </p>
@@ -47,10 +47,10 @@ export function DocumentBody({
             {/* Show summary as fallback content if available */}
             {metadata.summary && (
               <div className="mt-6 pt-6 border-t border-rule">
-                <h4 className="text-sm font-semibold text-ink mb-2 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-ink mb-2 flex items-center gap-2">
                   <Info className="h-4 w-4 text-oxblood" />
                   Document Summary
-                </h4>
+                </h3>
                 <p className="text-sm text-ink leading-relaxed text-justify">
                   {metadata.summary}
                 </p>

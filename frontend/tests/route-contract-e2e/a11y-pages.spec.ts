@@ -77,6 +77,26 @@ const SIGNED_IN_ROUTES: Array<{ path: string; ready: (page: Page) => Promise<voi
     },
   },
   {
+    path: '/documents/known-document',
+    ready: async (page) => {
+      await expect(page.getByText('Route contract judgment').first()).toBeVisible();
+    },
+  },
+  {
+    path: '/collections/known-collection',
+    ready: async (page) => {
+      await expect(page.getByText('Route contract collection').first()).toBeVisible();
+      await page.waitForLoadState('networkidle');
+    },
+  },
+  {
+    path: '/extractions/30000000-0000-4000-8000-000000000001',
+    ready: async (page) => {
+      await expect(page.getByText('30000000-0000-4000-8000-000000000001').first()).toBeVisible();
+      await page.waitForLoadState('networkidle');
+    },
+  },
+  {
     path: '/help',
     ready: async (page) => {
       await expect(page.getByRole('link', { name: 'Contact Support' }).first()).toBeVisible();
@@ -134,5 +154,39 @@ test.describe('page-level a11y semantics (axe)', () => {
     await expect(link).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/collections\/[^/]+$/);
+  });
+
+  test('document: AI panel selects are named and a collapsed panel hides its controls', async ({
+    page,
+    context,
+  }) => {
+    await setSyntheticSession(context);
+    await page.goto('/documents/known-document');
+    await expect(page.getByText('Route contract judgment').first()).toBeVisible();
+    // Summary panel starts collapsed: its controls must be neither visible nor focusable.
+    await expect(page.getByRole('combobox', { name: 'Summary Type' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Extract Key Points' })).toBeHidden();
+    await page.getByRole('button', { name: 'Expand' }).first().click();
+    await expect(page.getByRole('combobox', { name: 'Summary Type' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Length' })).toBeVisible();
+  });
+
+  test('schemas/base: scrollable regions are keyboard-focusable at 375px', async ({ page, context }) => {
+    await setSyntheticSession(context);
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto('/schemas/base');
+    await expect(page.getByRole('heading', { name: 'Base Judgment Extraction Schema' })).toBeVisible();
+    await page.getByRole('tab', { name: 'JSON' }).click();
+    await expect(page.getByText(/Route contract base schema EN/)).toBeVisible();
+    expect(await axeViolations(page, ['scrollable-region-focusable'])).toEqual([]);
+  });
+
+  test('schemas/<id>: scrollable regions are keyboard-focusable at 375px', async ({ page, context }) => {
+    await setSyntheticSession(context);
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto('/schemas/20000000-0000-4000-8000-000000000001');
+    await expect(page.getByRole('heading', { level: 1, name: 'Route contract schema' })).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    expect(await axeViolations(page, ['scrollable-region-focusable'])).toEqual([]);
   });
 });
