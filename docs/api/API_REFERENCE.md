@@ -894,9 +894,12 @@ Authorization: Bearer <supabase-jwt>
 ```
 
 One page of an owned job's per-document results. Prefer this over
-`GET /extractions/{job_id}` for large (corpus-wide) jobs: the page is sliced
-inside Postgres (`get_extraction_job_results_page` RPC), so the whole results
-array is never loaded.
+`GET /extractions/{job_id}` for large (corpus-wide) jobs: the page is read
+inside Postgres (`get_extraction_job_results_page` RPC) from
+`extraction_job_results`, a per-result table that a trigger keeps in sync with
+`extraction_jobs.results`, so the whole results array is never loaded. Export
+(`GET /extractions/{job_id}/export`) and the compare-pair extension tally read
+the same table in keyset-paged batches.
 
 | Query | Default | Notes |
 |---|---|---|

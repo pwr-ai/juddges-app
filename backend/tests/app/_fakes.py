@@ -72,6 +72,11 @@ class _FakeTableBuilder:
     def __init__(self, query: TableQuery, handler: TableHandler):
         self.query = query
         self._handler = handler
+        self._single = False
+
+    def single(self):
+        self._single = True
+        return self
 
     def select(self, columns: str = "*", **_: Any):
         self.query.select = columns
@@ -86,6 +91,9 @@ class _FakeTableBuilder:
 
     def neq(self, column: str, value: Any):
         return self._filter("neq", column, value)
+
+    def gt(self, column: str, value: Any):
+        return self._filter("gt", column, value)
 
     def in_(self, column: str, values: list[Any]):
         return self._filter("in", column, list(values))
@@ -115,7 +123,33 @@ class _FakeTableBuilder:
     def execute(self):
         handler = self._handler
         rows = handler(self.query) if callable(handler) else handler
+        if self._single:
+            return SimpleNamespace(data=rows[0] if rows else None)
         return SimpleNamespace(data=list(rows))
+
+
+def job_results_handler(
+    rows: list[dict[str, Any]],
+) -> Callable[[TableQuery], list[dict[str, Any]]]:
+    """Serve `extraction_job_results` like PostgREST: eq job_id/bucket, keyset page.
+
+    `rows` carry `job_id`, `position`, `bucket`, `item`; the answer honours the
+    query's `eq`, `gt(position)`, `order(position)` and `limit`.
+    """
+
+    def _handle(query: TableQuery) -> list[dict[str, Any]]:
+        out = rows
+        for column in ("job_id", "bucket"):
+            for value in query.filter_values("eq", column):
+                out = [r for r in out if r[column] == value]
+        for value in query.filter_values("gt", "position"):
+            out = [r for r in out if r["position"] > value]
+        out = sorted(out, key=lambda r: r["position"])
+        if query.limit is not None:
+            out = out[: query.limit]
+        return out
+
+    return _handle
 
 
 class FakeSupabaseClient(FakeRpcClient):

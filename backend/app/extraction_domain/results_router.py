@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.extraction_domain.aggregate_fields import validate_fields
 from app.extraction_domain.base_schema_promote import promote_to_typed_columns
+from app.extraction_domain.job_results_store import RESULTS_TABLE, iter_job_results
 from app.extraction_domain.nl_filter_generator import generate_base_schema_filter
 from app.extraction_domain.shared import supabase
 from app.models import (
@@ -102,7 +103,7 @@ async def export_extraction_results(
         # Fetch job data from Supabase
         job_response = (
             supabase.table("extraction_jobs")
-            .select("job_id, user_id, collection_id, schema_id, results, status")
+            .select("job_id, user_id, collection_id, schema_id, status")
             .eq("job_id", job_id)
             .single()
             .execute()
@@ -131,17 +132,28 @@ async def export_extraction_results(
                 },
             )
 
-        results = job_data.get("results", [])
+        # Page completed results straight from extraction_job_results; the
+        # job row's `results` JSONB is never selected (corpus jobs: ~15 MB).
+        results = list(iter_job_results(supabase, job_id, bucket="completed"))
 
         if not results:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "No Results",
-                    "message": "This job has no results to export",
-                    "code": "NO_RESULTS",
-                },
+            has_any = (
+                supabase.table(RESULTS_TABLE)
+                .select("position")
+                .eq("job_id", job_id)
+                .limit(1)
+                .execute()
+                .data
             )
+            if not has_any:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "No Results",
+                        "message": "This job has no results to export",
+                        "code": "NO_RESULTS",
+                    },
+                )
 
         # Fetch collection and schema names for filename
         collection_name = "extraction"
