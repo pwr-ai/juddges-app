@@ -369,11 +369,11 @@ wheels = [
 
 [[package]]
 name = "cachetools"
-version = "7.2.4"
+version = "8.0.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3a/5d/15ea0494ebcb9062c7ca79bf026cbba380a50538ae73753fb40bdffa79e2/cachetools-7.2.4.tar.gz", hash = "sha256:e0203b04b75fe13e62098eeb5b2018c4eb1a14c04e2b5b450e70db3ee7e92ec5", size = 44251, upload-time = "2026-10-19T19:09:44.931Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/28/eb1ac766e4c0c439506a654186de8e2cfcd99035218a9393986103a0fdf0/cachetools-8.0.2.tar.gz", hash = "sha256:30ac523adfc118b51d2b2e7bad8a0ddb31370dfe2700c7f10ca224f36ccf81e0", size = 51441, upload-time = "2026-11-18T21:18:28.225Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/4c/694f7d44f2399b3901232d6ded1c88442a02fc8141936396d9289d951848/cachetools-7.2.4-py3-none-any.whl", hash = "sha256:4cfbebf3eec4040d2073b19c460511ad47eef7b852dbf9a0d385099b4dafa31e", size = 18571, upload-time = "2026-10-19T19:09:43.296Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/35/0dca79b22cd3ad3fc4bfbd91ea85f259903e7ce5fe956647916df8f691f4/cachetools-8.0.2-py3-none-any.whl", hash = "sha256:502bf3c17c6e35d78ccdaa70da8c7001b28634541f5cde0dee33c93bb252277d", size = 19334, upload-time = "2026-11-18T21:18:26.889Z" },
 ]
 
 [[package]]
@@ -966,11 +966,11 @@ wheels = [
 
 [[package]]
 name = "gunicorn"
-version = "26.2.0"
+version = "27.0.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d9/8a/e4ef6ee11701b6cd64702848415ffb69eeff85cb388a3c6c7fe86f22f3f8/gunicorn-26.2.0.tar.gz", hash = "sha256:62b864895d9ebff0b2f9867ba04fe811c93121596540830c9c916d0769668447", size = 787921, upload-time = "2026-08-24T15:05:59.3Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/fc/7fd4bbebc1d17394a5c98f0ef565da3341dbb664748d1bebedefead356ee/gunicorn-27.0.1.tar.gz", hash = "sha256:b1514965361c8b7e8107a80aa2a92636878df1ccfac6dd204a676426e04d9e3e", size = 876901, upload-time = "2026-11-12T22:41:11.334Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/85/7522a52e5e2f42faf1a129113ab63e548c42e103e9af395b7bfe65e403e2/gunicorn-26.2.0-py3-none-any.whl", hash = "sha256:bd249d0b3f7972f7432f0a6b6ff3b3ee2d129f70cd1ff6c09a9dd9e29a2b88e3", size = 228389, upload-time = "2026-08-24T15:05:57.67Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/46/19ce73424bc4bcac3f0c104950fa776abdfa4515f25104916a62b63b672a/gunicorn-27.0.1-py3-none-any.whl", hash = "sha256:378b26b9a38adcf4592f28828233c1716acc55e833ea06bf48719782efaa0d10", size = 263696, upload-time = "2026-11-12T22:41:09.798Z" },
 ]
 
 [[package]]
@@ -1438,10 +1438,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cachetools", specifier = ">=5.5,<8.0" },
+    { name = "cachetools", specifier = ">=5.5,<9.0" },
     { name = "celery", extras = ["redis"], specifier = ">=5.5.3,<6" },
     { name = "email-validator", specifier = ">=2.0.0,<3.0.0" },
-    { name = "gunicorn", specifier = ">=23,<27" },
+    { name = "gunicorn", specifier = ">=23,<28" },
     { name = "httpx", specifier = ">=0.27,<0.29" },
     { name = "juddges-mcp", editable = "packages/juddges_mcp" },
     { name = "juddges-search", editable = "packages/juddges_search" },
@@ -1531,7 +1531,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0,<2" },
     { name = "pyyaml", specifier = ">=6.0.2,<7" },
     { name = "rich", specifier = ">=14.1.0,<16" },
-    { name = "termcolor", specifier = ">=2.5.0,<3" },
+    { name = "termcolor", specifier = ">=2.5.0,<4" },
 ]
 
 [[package]]
@@ -3741,11 +3741,11 @@ wheels = [
 
 [[package]]
 name = "termcolor"
-version = "2.5.0"
+version = "3.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/37/72/88311445fd44c455c7d553e61f95412cf89054308a1aa2434ab835075fc5/termcolor-2.5.0.tar.gz", hash = "sha256:998d8d27da6d48442e8e1f016119076b690d962507531df4890fcd2db2ef8a6f", size = 13057, upload-time = "2024-10-06T19:50:04.115Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/79/cf31d7a93a8fdc6aa0fbb665be84426a8c5a557d9240b6239e9e11e35fc5/termcolor-3.3.0.tar.gz", hash = "sha256:348871ca648ec6a9a983a13ab626c0acce02f515b9e1983332b17af7979521c5", size = 14434, upload-time = "2025-12-29T12:55:21.882Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/be/df630c387a0a054815d60be6a97eb4e8f17385d5d6fe660e1c02750062b4/termcolor-2.5.0-py3-none-any.whl", hash = "sha256:37b17b5fc1e604945c2642c872a3764b5d547a48009871aea3edd3afa180afb8", size = 7755, upload-time = "2024-10-06T19:50:02.097Z" },
+    { url = "https://files.pythonhosted.org/packages/33/d1/8bb87d21e9aeb323cc03034f5eaf2c8f69841e40e4853c2627edf8111ed3/termcolor-3.3.0-py3-none-any.whl", hash = "sha256:cf642efadaf0a8ebbbf4bc7a31cec2f9b5f21a9f726f4ccbb08192c9c26f43a5", size = 7734, upload-time = "2025-12-29T12:55:20.718Z" },
 ]
 
 [[package]]
