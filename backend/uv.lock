@@ -1385,7 +1385,7 @@ wheels = [
 
 [[package]]
 name = "juddges"
-version = "1.5.48"
+version = "1.5.49"
 source = { editable = "." }
 dependencies = [
     { name = "cachetools" },
