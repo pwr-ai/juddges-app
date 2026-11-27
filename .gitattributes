@@ -1,0 +1,6 @@
+# i18n sources were historically mixed LF/CRLF; keep them LF so edits do not
+# renormalise unrelated lines (#699). Path-scoped on purpose: no blanket
+# `* text=auto`, which would rewrite the CRLF files elsewhere in the repo.
+frontend/lib/i18n/types.ts text eol=lf
+frontend/lib/i18n/translations/en.ts text eol=lf
+frontend/lib/i18n/translations/pl.ts text eol=lf
