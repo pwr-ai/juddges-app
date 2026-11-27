@@ -81,4 +81,33 @@ test.describe('precedents cohort contract', () => {
     await block.getByRole('button', { name: /clear filter/i }).click();
     await expect(page.getByText('R v Allowed')).toBeVisible();
   });
+
+  test('applies and clears the cohort filter with the keyboard alone (#741)', async ({
+    page,
+    context,
+  }) => {
+    await setSyntheticSession(context);
+
+    await page.goto('/precedents');
+    await page
+      .getByPlaceholder(/describe the fact pattern/i)
+      .fill('a juvenile drug appeal with three co-defendants');
+    await page.getByRole('button', { name: /search for precedents/i }).click();
+
+    const block = page.getByTestId('cohort-insights');
+    await expect(block).toBeVisible();
+
+    const dismissed = block.getByRole('button', { name: 'dismissed: 3' });
+    await dismissed.focus();
+    await expect(dismissed).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(block).toContainText('Filtered to Dismissed');
+    await expect(page.getByText('R v Allowed')).toHaveCount(0);
+
+    const clear = block.getByRole('button', { name: /clear filter/i });
+    await clear.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('R v Allowed')).toBeVisible();
+  });
 });
