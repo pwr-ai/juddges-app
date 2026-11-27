@@ -165,7 +165,7 @@ export function ChatInterface(): React.JSX.Element {
  }, [messages, isLoading, isLoadingChat]);
 
  	return (
-		<div className="relative flex flex-col h-[calc(100vh-4rem)] bg-parchment">
+		<div className="relative flex flex-col h-full bg-parchment">
 			{/* Export button - top right of chat area */}
 			{chatId && messages.length > 0 && !isLoading && (
 				<div className="absolute top-2 right-4 z-10">

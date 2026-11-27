@@ -27,7 +27,6 @@ WORKDIR /app
 # but not the sources, so a code change does not reinstall dependencies.
 COPY ./pyproject.toml ./README.md ./uv.lock ./
 COPY ./packages/juddges_search/pyproject.toml ./packages/juddges_search/README.md ./packages/juddges_search/
-COPY ./packages/schema_generator_agent/pyproject.toml ./packages/schema_generator_agent/README.md ./packages/schema_generator_agent/
 COPY ./packages/juddges_mcp/pyproject.toml ./packages/juddges_mcp/README.md ./packages/juddges_mcp/
 
 # ==============================================================================

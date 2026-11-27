@@ -75,6 +75,26 @@ export function FieldCard({ field, aggregate, sampleN, yAxis, onBarClick, onRemo
           if (row?.value !== null && row?.value !== undefined && onBarClick) onBarClick(field, row.value);
         }}
       />
+      {onBarClick && rows.some((r) => r.value !== null) && (
+        <ul
+          aria-label={t("extraction.statsPickValue")}
+          className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:flex focus-within:flex-wrap focus-within:gap-2"
+        >
+          {rows.map((r, i) =>
+            r.value === null ? null : (
+              <li key={r.name}>
+                <button
+                  type="button"
+                  onClick={() => onBarClick(field, r.value as string)}
+                  className="font-mono text-[11px] text-[color:var(--ink-soft)] underline hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--pwr-red)]"
+                >
+                  {r.name}: {items[i].count}{yAxis === "percent" ? "%" : ""}
+                </button>
+              </li>
+            ),
+          )}
+        </ul>
+      )}
       {aggregate.kind === "categorical" && aggregate.multi && (
         <p className="mt-1 font-mono text-[11px] text-[color:var(--ink-soft)]">{t("extraction.statsMultiNote")}</p>
       )}

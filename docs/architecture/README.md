@@ -25,7 +25,8 @@ High-level project architecture including:
 ### Backend Package Architecture
 The backend uses reusable packages:
 - **`juddges_search`** - RAG search implementation with LangChain
-- **`schema_generator_agent`** - AI-powered legal schema generation
+
+Agentic schema generation uses the PyPI package `schematize` through `backend/app/schemas_pkg/schematize_agent.py`.
 
 ### Database Architecture
 **Unified approach**:

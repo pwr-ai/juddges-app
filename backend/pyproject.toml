@@ -13,7 +13,6 @@ dependencies = [
     "langchain-community>=0.4.1",
     "langchain-openai>=1.1.14,<2",
     "juddges-search",
-    "schema-generator-agent",
     "juddges-mcp",
     # Exact pin below 2.x: mcp>=2 requires sse-starlette>=3, which conflicts with
     # langserve[server] (sse-starlette<2). Do not bump until LangServe lifts that cap.
@@ -34,6 +33,7 @@ dependencies = [
     "cachetools>=5.5,<9.0",
     "email-validator>=2.0.0,<3.0.0",
     "weaviate-client>=4.16,<5",
+    "schematize==0.2.2",
 ]
 
 [project.optional-dependencies]
@@ -66,7 +66,6 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 juddges-search = { workspace = true }
-schema-generator-agent = { workspace = true }
 juddges-mcp = { workspace = true }
 
 [tool.uv.build-backend]
@@ -85,8 +84,8 @@ test-local-integration = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE
 test-local-ai = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_AI_TESTS = "1" } }
 test-local-legacy = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_LEGACY_SCHEMA_API_TESTS = "1" } }
 test-local-legacy-schema-api = { cmd = "pytest -q -rN tests/app/schemas_extraction", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_LEGACY_SCHEMA_API_TESTS = "1", RUN_REMOVED_LEGACY_SCHEMA_API_TESTS = "1" } }
-test-cov = "pytest tests/ -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=html --cov-report=term-missing --cov-fail-under=54"
-test-cov-html = "pytest tests/ -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=html"
+test-cov = "pytest tests/ -m unit --cov=app --cov=juddges_search --cov-report=html --cov-report=term-missing --cov-fail-under=54"
+test-cov-html = "pytest tests/ -m unit --cov=app --cov=juddges_search --cov-report=html"
 
 # Code quality commands
 lint = "ruff check ."
@@ -183,7 +182,7 @@ ignore = [
 "tests/app/test_nl_filter_prompt_contract.py" = ["RUF001"]
 
 [tool.coverage.run]
-source = ["app", "juddges_search", "schema_generator_agent"]
+source = ["app", "juddges_search"]
 omit = [
     "*/tests/*",
     "*/migrations/*",
