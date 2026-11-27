@@ -28,9 +28,7 @@ jest.mock("@/components/charts", () => ({
   }) => (
     <div data-testid="chart">
       {props.items.map((i) => (
-        <button key={i.name} onClick={() => props.onBarClick?.(i.name)}>
-          {i.name}: {i.count}
-        </button>
+        <button key={i.name} data-testid={`bar-${i.name}`} aria-label={`bar ${i.name}`} onClick={() => props.onBarClick?.(i.name)} />
       ))}
     </div>
   ),

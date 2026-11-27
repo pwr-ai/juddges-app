@@ -321,6 +321,7 @@ export const en: Translations = {
     statsModelScore: 'model score',
     statsAddField: 'Add field',
     statsRemoveField: 'Remove',
+    statsPickValue: 'Filter by value',
     statsExportCsv: 'Export CSV',
     statsExportCohort: 'Export cohort definition',
     statsEmpty: 'No judgments match these filters.',
