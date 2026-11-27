@@ -46,6 +46,9 @@ export function AISummaryPanel({
     if (summaryError) panelLogger.error('Summary generation failed', summaryError);
   }, [summaryError]);
 
+  const summaryTypeId = React.useId();
+  const summaryLengthId = React.useId();
+
   return (
     <div className="mb-6">
       <EditorialCard
@@ -55,7 +58,7 @@ export function AISummaryPanel({
         <div className="flex items-center justify-between w-full pb-4 border-b border-rule mb-4">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-oxblood" />
-            <h3 className="font-serif text-lg font-semibold text-ink">AI Summary</h3>
+            <h2 className="font-serif text-lg font-semibold text-ink">AI Summary</h2>
             <StatusBadge status="gpt-4" label="GPT-4" tone="gold" />
           </div>
           <Button
@@ -78,12 +81,7 @@ export function AISummaryPanel({
           </Button>
         </div>
 
-        <div
-          className={`transition-opacity duration-200 ${isSummaryPanelOpen
-            ? 'opacity-100'
-            : 'opacity-0 max-h-0 overflow-hidden'
-            }`}
-        >
+        <div hidden={!isSummaryPanelOpen}>
           {authLoading ? (
             <p className="font-mono text-xs text-ink-soft">Checking whether AI analysis is available for your account...</p>
           ) : !canUseDocumentAI ? (
@@ -93,10 +91,14 @@ export function AISummaryPanel({
               {/* Summary Controls */}
               <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <div className="flex-1">
-                  <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft mb-1.5">
+                  <label
+                    htmlFor={summaryTypeId}
+                    className="block font-mono text-xs uppercase tracking-wider text-ink-soft mb-1.5"
+                  >
                     Summary Type
                   </label>
                   <select
+                    id={summaryTypeId}
                     value={summaryType}
                     onChange={(e) => onSummaryTypeChange(e.target.value as 'executive' | 'key_findings' | 'synthesis')}
                     className="w-full rounded-none border border-rule bg-parchment px-3 py-2 font-mono text-xs text-ink focus:outline-none focus:border-ink"
@@ -109,10 +111,14 @@ export function AISummaryPanel({
                 </div>
 
                 <div className="flex-1">
-                  <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft mb-1.5">
+                  <label
+                    htmlFor={summaryLengthId}
+                    className="block font-mono text-xs uppercase tracking-wider text-ink-soft mb-1.5"
+                  >
                     Length
                   </label>
                   <select
+                    id={summaryLengthId}
                     value={summaryLength}
                     onChange={(e) => onSummaryLengthChange(e.target.value as 'short' | 'medium' | 'long')}
                     className="w-full rounded-none border border-rule bg-parchment px-3 py-2 font-mono text-xs text-ink focus:outline-none focus:border-ink"
@@ -162,7 +168,7 @@ export function AISummaryPanel({
 
                   {summaryResult.key_points && summaryResult.key_points.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-rule">
-                      <h4 className="font-serif text-sm font-semibold text-ink mb-2">Key Points</h4>
+                      <h3 className="font-serif text-sm font-semibold text-ink mb-2">Key Points</h3>
                       <ul className="space-y-1.5">
                         {summaryResult.key_points.map((point, idx) => (
                           <li key={idx} className="flex items-start gap-2 text-sm text-ink-soft">

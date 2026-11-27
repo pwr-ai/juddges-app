@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '@testing-library/react';
 
 jest.mock('next/link', () => {
@@ -103,6 +104,10 @@ describe('DocumentPage public AI actions', () => {
       expect.anything()
     );
 
+    // The AI panels start collapsed, so their sign-in prompts are out of the
+    // accessibility tree until a panel is expanded.
+    expect(screen.queryByRole('link', { name: /Sign in/i })).not.toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', { name: /Expand/i })[0]);
     expect(screen.getAllByRole('link', { name: /Sign in/i }).length).toBeGreaterThan(0);
     expect(
       screen.queryByRole('button', { name: /Generate Summary/i })

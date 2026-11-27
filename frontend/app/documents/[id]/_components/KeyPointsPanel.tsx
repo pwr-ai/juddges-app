@@ -46,7 +46,7 @@ export function KeyPointsPanel({
         <div className="flex items-center justify-between w-full pb-4 border-b border-rule mb-4">
           <div className="flex items-center gap-2">
             <Scale className="h-4 w-4 text-oxblood" />
-            <h3 className="font-serif text-lg font-semibold text-ink">Key Points</h3>
+            <h2 className="font-serif text-lg font-semibold text-ink">Key Points</h2>
             <StatusBadge status="ai_analysis" label="AI Analysis" tone="gold" />
           </div>
           <Button
@@ -69,12 +69,7 @@ export function KeyPointsPanel({
           </Button>
         </div>
 
-        <div
-          className={`transition-opacity duration-200 ${isKeyPointsPanelOpen
-            ? 'opacity-100'
-            : 'opacity-0 max-h-0 overflow-hidden'
-            }`}
-        >
+        <div hidden={!isKeyPointsPanelOpen}>
           {authLoading ? (
             <p className="font-mono text-xs text-ink-soft">Checking whether AI analysis is available for your account...</p>
           ) : !canUseDocumentAI ? (
@@ -118,7 +113,7 @@ export function KeyPointsPanel({
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <MessageSquare className="h-4 w-4 text-oxblood" />
-                        <h4 className="font-serif text-sm font-semibold text-ink">Arguments</h4>
+                        <h3 className="font-serif text-sm font-semibold text-ink">Arguments</h3>
                         <span className="px-1.5 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
                           {keyPointsResult.arguments.length}
                         </span>
@@ -145,7 +140,7 @@ export function KeyPointsPanel({
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <Scale className="h-4 w-4 text-gold" />
-                        <h4 className="font-serif text-sm font-semibold text-ink">Holdings</h4>
+                        <h3 className="font-serif text-sm font-semibold text-ink">Holdings</h3>
                         <span className="px-1.5 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
                           {keyPointsResult.holdings.length}
                         </span>
@@ -171,7 +166,7 @@ export function KeyPointsPanel({
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <BookOpen className="h-4 w-4 text-ink" />
-                        <h4 className="font-serif text-sm font-semibold text-ink">Legal Principles</h4>
+                        <h3 className="font-serif text-sm font-semibold text-ink">Legal Principles</h3>
                         <span className="px-1.5 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
                           {keyPointsResult.legal_principles.length}
                         </span>
