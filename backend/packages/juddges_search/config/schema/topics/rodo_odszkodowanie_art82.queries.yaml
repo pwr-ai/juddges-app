@@ -1,0 +1,177 @@
+topic: rodo_odszkodowanie_art82
+collection:
+  name: "RODO art. 82 – odszkodowanie i zadośćuczynienie oraz kontrola kar UODO (PL + UK)"
+  description: "PL: sprawy sądów powszechnych o odszkodowanie/zadośćuczynienie za naruszenie RODO (art. 82 RODO, art. 92 u.o.d.o., art. 23, 24, 448 k.c.) oraz sprawy WSA w Warszawie i NSA ze skarg na decyzje Prezesa UODO, w tym administracyjne kary pieniężne (art. 83 RODO, art. 102 u.o.d.o.). UK: compensation claims under UK GDPR art. 82 / DPA 2018 s.168-169 (incl. combined MPI claims, representative/group actions) and reviews of ICO penalties. Poza zakresem: anonimizacja orzeczeń, dostęp do informacji publicznej, ochrona dóbr osobistych bez przetwarzania danych."
+  jurisdiction: PL+UK
+  period: {from: 2019-01-01, to: 2026-11-24}
+  size_estimate: "unknown; rough guess: low thousands of PL candidates in the full corpus (RODO is mentioned in many unrelated cases), of which a few hundred pass the gate; up to ~800 candidates from the 16 queries below (limit 50 each). Curated: tens PL, tens UK."
+  rationale: "RODO stosowane od 25.05.2018; pierwsze wyroki merytoryczne od 2019 r. Okres obejmuje stan przed i po C-300/21 (4.05.2023) oraz serii orzeczeń TSUE 2023–2024 (C-340/21, C-687/21, C-741/21, C-590/22, C-200/23), co pozwala badać wpływ na próg szkody w sądach polskich; w UK – przed i po Farley v Paymaster [2025] EWCA Civ 1117 (22.08.2025) i ewentualnym wyroku UKSC. UK side starts 2015 (Vidal-Hall) because Lloyd v Google concerned DPA 1998."
+
+search_v2:
+  - id: q01
+    purpose: "Ustawowa formuła art. 82 ust. 1 RODO — rdzeń nurtu cywilnego"
+    body: {query: "art. 82 ust. 1 RODO każda osoba, która poniosła szkodę majątkową lub niemajątkową w wyniku naruszenia niniejszego rozporządzenia, ma prawo uzyskać od administratora odszkodowanie", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q02
+    purpose: "Kombinacja RODO z dobrami osobistymi i art. 448 k.c."
+    body: {query: "zadośćuczynienie za naruszenie dóbr osobistych w związku z przetwarzaniem danych osobowych art. 82 RODO art. 24 i art. 448 k.c.", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q03
+    purpose: "Odesłanie z art. 92 ustawy o ochronie danych osobowych z 2018 r."
+    body: {query: "art. 92 ustawy o ochronie danych osobowych w zakresie nieuregulowanym w rozporządzeniu do roszczeń stosuje się przepisy Kodeksu cywilnego", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q04
+    purpose: "Wyciek danych / cyberatak, obawa kradzieży tożsamości"
+    body: {query: "wyciek danych osobowych atak hakerski numer PESEL i seria dowodu osobistego obawa kradzieży tożsamości zadośćuczynienie od administratora", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q05
+    purpose: "Ujawnienie danych nieuprawnionemu odbiorcy, utrata kontroli nad danymi"
+    body: {query: "dokumenty z danymi osobowymi wysłane do niewłaściwej osoby ujawnienie danych utrata kontroli nad danymi krzywda stres odszkodowanie RODO", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.7, limit: 50}
+  - id: q06
+    purpose: "Recepcja orzecznictwa TSUE o progu szkody niemajątkowej"
+    body: {query: "C-300/21 Österreichische Post szkoda niemajątkowa nie musi osiągać progu powagi art. 82 RODO", court_type: [ordinary_court, administrative_court], date_from: 2023-05-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q07
+    purpose: "Monitoring wizyjny / pracowniczy"
+    body: {query: "monitoring wizyjny kamery pracodawca przetwarzanie wizerunku bez podstawy prawnej naruszenie RODO zadośćuczynienie", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q08
+    purpose: "Marketing bez zgody / mimo sprzeciwu"
+    body: {query: "przetwarzanie danych osobowych w celach marketingowych mimo sprzeciwu brak zgody telefony i wiadomości reklamowe odszkodowanie RODO", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q09
+    purpose: "Prawo dostępu (art. 15 RODO) i odmowa udzielenia informacji"
+    body: {query: "art. 15 RODO prawo dostępu do danych kopia danych administrator nie udzielił informacji roszczenie o odszkodowanie", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q10
+    purpose: "Postępowanie grupowe / wielu powodów po wycieku"
+    body: {query: "postępowanie grupowe wyciek danych osobowych klientów roszczenia o zadośćuczynienie RODO", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q11
+    purpose: "Kontrola kar Prezesa UODO (art. 83 RODO) — nurt administracyjny"
+    body: {query: "skarga na decyzję Prezesa Urzędu Ochrony Danych Osobowych nakładającą administracyjną karę pieniężną art. 83 RODO", court_type: [administrative_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q12
+    purpose: "Kary UODO za brak zabezpieczeń i niezgłoszenie naruszenia (art. 32–34 RODO)"
+    body: {query: "Prezes UODO kara pieniężna nieodpowiednie środki techniczne i organizacyjne art. 32 RODO niezgłoszenie naruszenia ochrony danych art. 33 art. 34", court_type: [administrative_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q13
+    purpose: "Kary dla podmiotów publicznych (art. 102 u.o.d.o.)"
+    body: {query: "art. 102 ustawy o ochronie danych osobowych administracyjna kara pieniężna jednostka sektora finansów publicznych do 100 000 zł", court_type: [administrative_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q14
+    purpose: "Time slice 2019–2022 (ogólna fraza, obejście limitu 50)"
+    body: {query: "odszkodowanie i zadośćuczynienie za naruszenie przepisów RODO przez administratora danych", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2022-12-31, alpha: 0.5, limit: 50}
+  - id: q15
+    purpose: "Time slice 2023–2024"
+    body: {query: "odszkodowanie i zadośćuczynienie za naruszenie przepisów RODO przez administratora danych", court_type: [ordinary_court], date_from: 2023-01-01, date_to: 2024-12-31, alpha: 0.5, limit: 50}
+  - id: q16
+    purpose: "Time slice 2025–2026"
+    body: {query: "odszkodowanie i zadośćuczynienie za naruszenie przepisów RODO przez administratora danych", court_type: [ordinary_court], date_from: 2025-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date >= DATE '2019-01-01'
+    AND (
+      full_text ~* 'art\.\s*82\s*(ust\.\s*\d\s*)?(RODO|rozporządzenia\s+(Parlamentu\s+Europejskiego\s+i\s+Rady\s+\(UE\)\s+)?2016/679|ogólnego\s+rozporządzenia)'
+      OR full_text ~* 'art\.\s*92\s+ustawy\s+(z\s+dnia\s+10\s+maja\s+2018\s*r\.\s+)?o\s+ochronie\s+danych\s+osobowych'
+      OR (full_text ~* '(Prezes\w*\s+Urzędu\s+Ochrony\s+Danych\s+Osobowych|Prezes\w*\s+UODO)'
+          AND full_text ~* 'kar\w*\s+pieniężn\w*')
+      OR (full_text ~* '(RODO|2016/679)'
+          AND full_text ~* '(zadośćuczynieni\w*|odszkodowani\w*)'
+          AND full_text ~* '(narusz\w*\s+(ochrony\s+)?danych|wyciek\w*|ujawni\w*\s+danych)')
+      OR array_to_string(cited_legislation, ' ') ~* '2016/679'
+    )
+  ORDER BY decision_date;
+
+uk_side:
+  schema: rodo_odszkodowanie_art82_uk.yaml
+  curated_sql: |
+    SELECT id, case_number, court_name, decision_date
+    FROM public.judgments
+    WHERE jurisdiction = 'UK'
+      AND decision_date >= DATE '2015-01-01'
+      AND (
+        full_text ~* '(article|art\.?)\s*82\s*(\(\d\)\s*)?(of\s+the\s+)?(UK\s+)?GDPR'
+        OR full_text ~* '(section|s\.)\s*16[89]\s*(of\s+the\s+)?(DPA|Data\s+Protection\s+Act)'
+        OR (full_text ~* 'Data\s+Protection\s+Act\s+(2018|1998)'
+            AND full_text ~* '(compensation|damages|distress)')
+        OR full_text ~* '(Lloyd\s+v\.?\s+Google|Vidal-Hall|Paymaster\s+\(1836\)|Equiniti)'
+        OR (full_text ~* 'monetary\s+penalty\s+notice' AND full_text ~* 'Information\s+Commissioner')
+      )
+    ORDER BY decision_date;
+  notes:
+    - "Courts: County Court and High Court (KB Media and Communications List) for compensation claims; Court of Appeal; UKSC (Lloyd v Google; Farley permission granted 17.12.2025, UKSC 2025/0185, heard 7-8.10.2026, judgment pending — add it to cited_rulings once handed down). ICO penalty appeals go to the First-tier Tribunal (General Regulatory Chamber, Information Rights) and Upper Tribunal (AAC); check court_name coverage in the curated UK set."
+    - "Terms: compensation / damages for distress / non-material damage / loss of control / de minimis / threshold of seriousness / misuse of private information / breach of confidence / representative action (CPR 19.8, formerly 19.6) / group litigation order / monetary penalty notice."
+    - "Post-Brexit: CJEU rulings after 31.12.2020 are not binding on UK courts (may have regard); record their treatment in cited_rulings_treatment."
+  field_mapping:
+    - "rodo_odszkodowanie_dotyczy <-> data_protection_compensation_applies  # tak/nie/niejasne = yes/no/unclear"
+    - "rodzaj_postepowania <-> proceeding_type  # positional (6 values)"
+    - "podstawa_roszczenia <-> legal_basis  # see value_mapping"
+    - "rodzaj_naruszenia <-> breach_type  # positional (10 values)"
+    - "kategorie_danych <-> data_categories  # positional (13 values; PESEL <-> NI number)"
+    - "typ_administratora <-> controller_type  # positional (16 values)"
+    - "liczba_osob_dotknietych <-> data_subjects_affected"
+    - "liczba_osob_dotknietych_podana <-> data_subjects_affected_stated"
+    - "rodzaj_szkody_dochodzonej <-> damage_claimed  # positional"
+    - "prog_szkody_zastosowany <-> damage_threshold_applied  # positional; key comparator (PL after C-300/21 vs UK de minimis / Farley)"
+    - "obawa_naduzycia_danych <-> fear_of_misuse  # positional"
+    - "utrata_kontroli_nad_danymi <-> loss_of_control  # positional"
+    - "ujawnienie_osobom_trzecim_ustalone <-> disclosure_to_third_parties_established  # positional"
+    - "zwiazek_przyczynowy <-> causation  # positional"
+    - "ekskulpacja_art_82_ust_3 <-> controller_exemption_art_82_3  # positional"
+    - "rozstrzygniecie_roszczenia <-> claim_outcome  # positional (7 values)"
+    - "kwota_zadana_pln <-> amount_claimed_gbp  # convert currency before comparing"
+    - "kwota_zadana_pln_podana <-> amount_claimed_gbp_stated"
+    - "kwota_zasadzona_pln <-> amount_awarded_gbp  # convert currency before comparing"
+    - "kwota_zasadzona_pln_podana <-> amount_awarded_gbp_stated"
+    - "rozstrzygniecie_kontroli_decyzji_uodo <-> ico_review_outcome  # see value_mapping (UK has penalty_reduced_or_varied, no PL counterpart)"
+    - "kara_uodo_kwota_pln <-> ico_penalty_amount_gbp"
+    - "kara_uodo_kwota_pln_podana <-> ico_penalty_amount_gbp_stated"
+    - "postepowanie_zbiorowe <-> collective_proceedings  # see value_mapping"
+    - "orzeczenia_powolane <-> cited_rulings  # shared CJEU values (tsue_c_* = cjeu_c_*); PL-only C-807/21, C-683/21; UK-only Lloyd, Farley, Vidal-Hall"
+    - "traktowanie_orzeczen <-> cited_rulings_treatment  # stosuje/odroznia/polemizuje/nie_dotyczy = applies/distinguishes/disagrees/not_applicable"
+  value_mapping:
+    podstawa_roszczenia:
+      art_82_rodo: uk_gdpr_art_82
+      art_92_uodo_2018: dpa_2018_s168_169
+      art_23_24_kc: misuse_of_private_information_breach_of_confidence
+      art_448_kc: misuse_of_private_information_breach_of_confidence
+      art_415_kc: negligence
+      art_471_kc: contract
+      art_83_rodo: dpa_2018_s155_penalty
+      art_102_uodo_2018: dpa_2018_s155_penalty
+      inne: other
+      brak: none
+    rozstrzygniecie_kontroli_decyzji_uodo:
+      skarga_oddalona_decyzja_utrzymana: appeal_dismissed_notice_upheld
+      decyzja_uchylona: notice_quashed
+      stwierdzono_niewaznosc: notice_void
+      skarga_kasacyjna_oddalona: onward_appeal_dismissed
+      skarga_kasacyjna_uwzgledniona: onward_appeal_allowed
+      skarga_odrzucona_umorzona: appeal_struck_out_withdrawn
+      nie_dotyczy: not_applicable
+      nie_podano: not_stated
+    postepowanie_zbiorowe:
+      postepowanie_grupowe: representative_action_cpr_19_8
+      wspoluczestnictwo_wielu_powodow: group_litigation_order_or_multi_claimant
+      powodztwo_indywidualne: individual_claim
+      nie_dotyczy: not_applicable
+      nie_podano: not_stated
+  value_mapping_caveat: "PL postępowanie grupowe (opt-in, ustawa z 17.12.2009) is not the same as a CPR 19.8 opt-out representative action; compare as 'collective vs individual' only."
+
+filters:
+  case_number_patterns: [" C ", "Ca ", "ACa ", "II SA/Wa", "II SAB/Wa", "III OSK", "II OSK"]
+  courts:
+    - "Sądy rejonowe i okręgowe – wydziały cywilne (sygn. C, Ca)"
+    - "Sądy apelacyjne – wydziały cywilne (sygn. ACa)"
+    - "Wojewódzki Sąd Administracyjny w Warszawie (właściwy dla decyzji Prezesa UODO; sygn. II SA/Wa, bezczynność II SAB/Wa)"
+    - "Naczelny Sąd Administracyjny (sygn. III OSK, wcześniej II OSK)"
+  notes: "Wszystkie skargi na decyzje Prezesa UODO trafiają do WSA w Warszawie (siedziba organu), więc filtr court_name na WSA Warszawa + NSA daje pełny nurt administracyjny."
+
+inclusion_gate: {field: rodo_odszkodowanie_dotyczy, keep: [tak]}
+uk_inclusion_gate: {field: data_protection_compensation_applies, keep: ["yes"]}
+negative_markers:
+  - "anonimizacja danych w orzeczeniu / jawność rozprawy"
+  - "odmowa udostępnienia informacji publicznej z uwagi na prywatność osoby fizycznej (art. 5 ust. 2 u.d.i.p.)"
+  - "klauzula informacyjna RODO w umowie kredytu/najmu bez zarzutu naruszenia"
+  - "wpis do BIK/KRD jako przesłanka powództwa o usunięcie bez roszczenia odszkodowawczego"
+  - "RODO jako podstawa odmowy przekazania danych w postępowaniu dowodowym"
+  - "UK: anonymity order / reporting restriction; FOIA s.40 refusal"
+
+analyses:
+  - "Pre/post C-300/21 (4.05.2023): rozkład prog_szkody_zastosowany w PL i damage_threshold_applied w UK; czy sądy polskie porzuciły próg 'istotności' po orzeczeniu TSUE."
+  - "Wysokość zadośćuczynień: mediana kwota_zasadzona_pln wg rodzaju naruszenia i kategorii danych (PESEL/zdrowie vs dane kontaktowe) oraz porównanie z UK (po przeliczeniu walut)."
+  - "Skuteczność argumentów: wpływ obawa_naduzycia_danych i utrata_kontroli_nad_danymi na rozstrzygniecie_roszczenia."
+  - "Nurt administracyjny: odsetek uchylonych decyzji UODO i rozkład kara_uodo_kwota_pln w czasie; porównanie z ICO penalty appeals."
+  - "Linia orzecznicza: które orzeczenia TSUE są powoływane w PL vs UK i jak traktowane (post-Brexit 'disagrees' vs PL 'stosuje')."

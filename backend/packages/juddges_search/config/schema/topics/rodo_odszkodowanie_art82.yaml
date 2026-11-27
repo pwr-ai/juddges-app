@@ -1,0 +1,126 @@
+# Topic: Odszkodowanie i zadośćuczynienie za naruszenie RODO (art. 82 RODO) oraz kontrola kar UODO (art. 83 RODO)
+# Why: Po 25.05.2018 r. osoby, których dane dotyczą, dochodzą przed sądami powszechnymi odszkodowania i zadośćuczynienia
+#      z art. 82 RODO (w zw. z art. 92 ustawy o ochronie danych osobowych z 10.05.2018 r. odsyłającym do k.c., często
+#      łącznie z art. 23, 24 i 448 k.c.). Sporne: próg szkody niemajątkowej, obawa nadużycia danych i utrata kontroli
+#      jako szkoda, dowód szkody i związku przyczynowego, ekskulpacja (art. 82 ust. 3), wysokość. Równolegle WSA w Warszawie
+#      i NSA kontrolują decyzje Prezesa UODO, w tym administracyjne kary pieniężne (art. 83 RODO) – pole rodzaj_postepowania
+#      rozdziela te dwa nurty.
+# Key rulings (TSUE, daty zweryfikowane w źródłach publicznych): C-300/21 Österreichische Post (4.05.2023, brak progu powagi); C-340/21 Natsionalna
+#      agentsia za prihodite (14.12.2023, obawa nadużycia może być szkodą); C-456/22 Gemeinde Ummendorf (14.12.2023);
+#      C-667/21 Krankenversicherung Nordrhein (21.12.2023); C-687/21 MediaMarktSaturn (25.01.2024, ryzyko czysto
+#      hipotetyczne nie wystarcza); C-741/21 juris (11.04.2024, kryteria art. 83 nie dotyczą art. 82); C-590/22 PS GbR
+#      (20.06.2024); C-182/22 i C-189/22 Scalable Capital (20.06.2024); C-200/23 Agentsia po vpisvaniyata (4.10.2024);
+#      C-507/23 Patērētāju tiesību aizsardzības centrs (4.10.2024); kary: C-807/21 Deutsche Wohnen (5.12.2023),
+#      C-683/21 Nacionalinis visuomenės sveikatos centras (5.12.2023). Sygnatury polskich sądów pominięto (niezweryfikowane).
+#      Równoległy schemat UK: rodo_odszkodowanie_art82_uk.yaml.
+# Applies to collection: see rodo_odszkodowanie_art82.queries.yaml
+title: rodo_odszkodowanie_art82
+description: "Odpowiedzialność odszkodowawcza za naruszenie RODO (art. 82) oraz sądowa kontrola decyzji i kar Prezesa UODO."
+type: object
+additionalProperties: false
+properties:
+  rodo_odszkodowanie_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Bramka włączenia. 'tak' gdy (a) sąd rozpoznaje roszczenie o odszkodowanie lub zadośćuczynienie za naruszenie przepisów o ochronie danych osobowych (art. 82 RODO, art. 92 u.o.d.o., także łącznie z art. 23, 24, 448 k.c.), albo (b) sąd administracyjny kontroluje decyzję Prezesa UODO, w szczególności nakładającą karę pieniężną (art. 83 RODO). 'nie' dla typowych fałszywych trafień: anonimizacja/ochrona danych jedynie w kontekście jawności rozprawy lub dostępu do akt, dostęp do informacji publicznej z ograniczeniem ze względu na prywatność, ochrona dóbr osobistych bez wątku przetwarzania danych osobowych, klauzule RODO wspomniane w umowie bez sporu o naruszenie, sprawy o wpis do BIK bez roszczenia odszkodowawczego ani decyzji UODO. 'niejasne' gdy RODO pojawia się marginalnie."
+  rodzaj_postepowania:
+    type: string
+    enum: [powodztwo_cywilne_odszkodowanie, kontrola_decyzji_uodo_z_kara, kontrola_decyzji_uodo_bez_kary, skarga_na_bezczynnosc_uodo, inne, nie_podano]
+    description: "Nurt sprawy: 'powodztwo_cywilne_odszkodowanie' – sąd powszechny, roszczenie osoby, której dane dotyczą; 'kontrola_decyzji_uodo_z_kara' – WSA/NSA, decyzja nakładająca administracyjną karę pieniężną; 'kontrola_decyzji_uodo_bez_kary' – decyzja z nakazem, upomnieniem, odmową wszczęcia lub umorzeniem; 'skarga_na_bezczynnosc_uodo' – bezczynność/przewlekłość Prezesa UODO."
+  podstawa_roszczenia:
+    type: array
+    items:
+      type: string
+      enum: [art_82_rodo, art_92_uodo_2018, art_23_24_kc, art_448_kc, art_415_kc, art_471_kc, art_83_rodo, art_102_uodo_2018, inne, brak]
+    description: "Podstawy prawne roszczenia lub kontrolowanej decyzji, wskazane przez stronę lub sąd: art. 82 RODO, art. 92 ustawy o ochronie danych osobowych z 2018 r., art. 23 i 24 k.c. (dobra osobiste), art. 448 k.c. (zadośćuczynienie), art. 415 k.c. (delikt), art. 471 k.c. (umowa), art. 83 RODO (kara), art. 102 u.o.d.o. (kary dla podmiotów publicznych). 'brak' gdy niewskazane."
+  rodzaj_naruszenia:
+    type: array
+    items:
+      type: string
+      enum: [wyciek_cyberatak, niezgodne_z_prawem_przetwarzanie, nieuprawnione_ujawnienie, nieudzielenie_dostepu_lub_informacji, marketing_bez_podstawy, monitoring_cctv, brak_zabezpieczen_art_32, nadmierne_przechowywanie, niezgloszenie_naruszenia_art_33_34, inne]
+    description: "Rodzaj zarzucanego naruszenia: wyciek danych lub atak hakerski; przetwarzanie bez podstawy prawnej (art. 6/9 RODO); ujawnienie osobie nieuprawnionej (np. wysłanie dokumentu na zły adres, publikacja w internecie); nieudzielenie dostępu/kopii lub informacji (art. 12–15); marketing mimo sprzeciwu lub bez zgody; monitoring wizyjny lub pracowniczy; brak odpowiednich środków technicznych i organizacyjnych (art. 32); przechowywanie dłużej niż potrzeba; niezgłoszenie naruszenia organowi lub niezawiadomienie osób (art. 33–34). Zaznacz wszystkie."
+  kategorie_danych:
+    type: array
+    items:
+      type: string
+      enum: [dane_identyfikacyjne_imie_adres, pesel_numer_identyfikacyjny, dokument_tozsamosci, dane_finansowe_bankowe, dane_o_zdrowiu, inne_szczegolne_kategorie_art_9, dane_o_wyrokach_art_10, dane_kontaktowe_email_telefon, wizerunek, dane_pracownicze, dane_lokalizacyjne, inne, nie_podano]
+    description: "Kategorie danych objętych naruszeniem: imię, nazwisko, adres; PESEL lub inny numer identyfikacyjny; seria i numer dowodu/paszportu lub skan dokumentu; dane finansowe (rachunek, wynagrodzenie, zadłużenie); dane o zdrowiu; inne dane szczególnych kategorii z art. 9 RODO (np. poglądy, przynależność związkowa, biometria); dane o wyrokach skazujących (art. 10); e-mail, telefon; wizerunek; dane kadrowe; lokalizacja. Zaznacz wszystkie."
+  typ_administratora:
+    type: string
+    enum: [bank_instytucja_finansowa, ubezpieczyciel, telekomunikacja, handel_e_commerce, pracodawca, podmiot_leczniczy, organ_publiczny, szkola_uczelnia, media_wydawca, platforma_internetowa, windykacja_kancelaria, wspolnota_spoldzielnia, inny_przedsiebiorca, osoba_fizyczna, inne, nie_podano]
+    description: "Kategoria pozwanego administratora/podmiotu przetwarzającego (w sprawie cywilnej) albo ukaranego podmiotu (w sprawie administracyjnej)."
+  liczba_osob_dotknietych:
+    type: integer
+    description: "Liczba osób, których dane objęło naruszenie, jeśli podana w orzeczeniu (np. liczba klientów w wycieku). Wpisz 0 gdy nie podano; sprawdź pole liczba_osob_dotknietych_podana."
+  liczba_osob_dotknietych_podana:
+    type: boolean
+    description: "true jeśli orzeczenie podaje liczbę osób dotkniętych naruszeniem."
+  rodzaj_szkody_dochodzonej:
+    type: string
+    enum: [majatkowa, niemajatkowa, majatkowa_i_niemajatkowa, nie_dotyczy, nie_podano]
+    description: "Rodzaj szkody dochodzonej przez powoda: majątkowa (np. koszty, utracone środki), niemajątkowa (krzywda, stres, obawa, utrata kontroli), obie. 'nie_dotyczy' w sprawach kontroli decyzji UODO."
+  prog_szkody_zastosowany:
+    type: string
+    enum: [brak_progu, prog_de_minimis, prog_powagi_istotnosci, nie_podano]
+    description: "Czy sąd wymagał określonego progu szkody niemajątkowej: 'brak_progu' gdy wprost przyjmuje (za C-300/21), że wystarczy wykazanie jakiejkolwiek szkody; 'prog_de_minimis' gdy odrzuca szkody bagatelne/zwykłe niedogodności; 'prog_powagi_istotnosci' gdy wymaga szkody poważnej, istotnej lub przekraczającej przeciętne uciążliwości; 'nie_podano' gdy sąd się nie wypowiada."
+  obawa_naduzycia_danych:
+    type: string
+    enum: [uznana_za_szkode, nieuznana, nie_podano]
+    description: "Czy sąd uznał obawę przed nadużyciem danych przez osoby trzecie (np. kradzież tożsamości, wyłudzenie kredytu) za szkodę niemajątkową (por. C-340/21). 'nieuznana' gdy sąd uznał obawę za hipotetyczną lub nieudowodnioną (por. C-687/21)."
+  utrata_kontroli_nad_danymi:
+    type: string
+    enum: [uznana_za_szkode, nieuznana, nie_podano]
+    description: "Czy sąd uznał samą utratę kontroli nad danymi (choćby krótkotrwałą) za szkodę niemajątkową (por. C-687/21, C-590/22, C-200/23)."
+  ujawnienie_osobom_trzecim_ustalone:
+    type: string
+    enum: [tak, nie, nie_ustalono]
+    description: "Czy sąd ustalił, że dane faktycznie dotarły do osób nieuprawnionych (zostały odczytane, opublikowane, wykorzystane). 'nie' gdy ustalono, że nikt nie zapoznał się z danymi; 'nie_ustalono' gdy kwestia pozostała otwarta lub nie dotyczy."
+  zwiazek_przyczynowy:
+    type: string
+    enum: [ustalony, nieustalony, nie_podano]
+    description: "Czy sąd uznał związek przyczynowy między naruszeniem RODO a szkodą. 'nie_podano' gdy sąd nie doszedł do tej przesłanki (np. oddalił z braku naruszenia lub szkody) albo w sprawie o karę."
+  ekskulpacja_art_82_ust_3:
+    type: string
+    enum: [administrator_wykazal_brak_odpowiedzialnosci, administrator_nie_wykazal, nie_podano]
+    description: "Czy administrator powołał się na art. 82 ust. 3 RODO (brak jakiejkolwiek odpowiedzialności za zdarzenie, np. błąd pracownika, atak hakerski) i z jakim skutkiem (por. C-741/21, C-340/21)."
+  rozstrzygniecie_roszczenia:
+    type: string
+    enum: [uwzglednione_w_calosci, uwzglednione_czesciowo, oddalone, odrzucone_umorzone, uchylone_przekazane, nie_dotyczy, nie_podano]
+    description: "Wynik roszczenia odszkodowawczego w tym orzeczeniu (w II instancji: skutek dla roszczenia po rozpoznaniu apelacji). 'nie_dotyczy' w sprawach kontroli decyzji UODO."
+  kwota_zadana_pln:
+    type: number
+    description: "Łączna kwota odszkodowania i zadośćuczynienia żądana przez powoda w PLN (bez odsetek i kosztów). Wpisz 0 gdy nie podano lub nie dotyczy; sprawdź pole kwota_zadana_pln_podana."
+  kwota_zadana_pln_podana:
+    type: boolean
+    description: "true jeśli orzeczenie podaje żądaną kwotę."
+  kwota_zasadzona_pln:
+    type: number
+    description: "Łączna kwota zasądzona z tytułu odszkodowania i zadośćuczynienia w PLN (bez odsetek i kosztów); przy oddaleniu wpisz 0. Sprawdź pole kwota_zasadzona_pln_podana."
+  kwota_zasadzona_pln_podana:
+    type: boolean
+    description: "true jeśli orzeczenie rozstrzyga o zapłacie i podaje zasądzoną kwotę (w tym 0 przy oddaleniu); false gdy nie dotyczy lub brak kwoty."
+  rozstrzygniecie_kontroli_decyzji_uodo:
+    type: string
+    enum: [skarga_oddalona_decyzja_utrzymana, decyzja_uchylona, stwierdzono_niewaznosc, skarga_kasacyjna_oddalona, skarga_kasacyjna_uwzgledniona, skarga_odrzucona_umorzona, nie_dotyczy, nie_podano]
+    description: "Tylko w sprawach przed WSA/NSA dotyczących decyzji Prezesa UODO: oddalenie skargi, uchylenie decyzji (w całości lub w części, np. w zakresie kary), stwierdzenie nieważności, wynik skargi kasacyjnej. 'nie_dotyczy' w sprawach cywilnych."
+  kara_uodo_kwota_pln:
+    type: number
+    description: "Kwota administracyjnej kary pieniężnej nałożonej decyzją Prezesa UODO w PLN, tak jak podana w orzeczeniu (jeśli podano tylko w EUR, przelicz po kursie wskazanym w decyzji, a gdy go brak – wpisz 0 i ustaw pole _podana na false). Wpisz 0 gdy nie dotyczy."
+  kara_uodo_kwota_pln_podana:
+    type: boolean
+    description: "true jeśli orzeczenie podaje kwotę kary UODO w PLN."
+  postepowanie_zbiorowe:
+    type: string
+    enum: [postepowanie_grupowe, wspoluczestnictwo_wielu_powodow, powodztwo_indywidualne, nie_dotyczy, nie_podano]
+    description: "Forma dochodzenia roszczenia: postępowanie grupowe (ustawa z 17.12.2009 r. o dochodzeniu roszczeń w postępowaniu grupowym), współuczestnictwo wielu powodów, powództwo indywidualne. 'nie_dotyczy' w sprawach o karę."
+  orzeczenia_powolane:
+    type: array
+    items:
+      type: string
+      enum: [tsue_c_300_21, tsue_c_340_21, tsue_c_456_22, tsue_c_667_21, tsue_c_687_21, tsue_c_741_21, tsue_c_590_22, tsue_c_182_22_c_189_22, tsue_c_200_23, tsue_c_507_23, tsue_c_807_21, tsue_c_683_21, inne_tsue, inne_sn, inne_nsa, inne, brak]
+    description: "Kluczowe orzeczenia TSUE dotyczące art. 82–83 RODO powołane przez sąd: C-300/21 Österreichische Post, C-340/21 Natsionalna agentsia za prihodite, C-456/22 Gemeinde Ummendorf, C-667/21 Krankenversicherung Nordrhein, C-687/21 MediaMarktSaturn, C-741/21 juris, C-590/22 PS GbR, C-182/22 i C-189/22 Scalable Capital, C-200/23 Agentsia po vpisvaniyata, C-507/23 Patērētāju tiesību aizsardzības centrs, C-807/21 Deutsche Wohnen, C-683/21 (kary). Inne orzeczenia TSUE, SN lub NSA oznacz 'inne_tsue', 'inne_sn', 'inne_nsa'. 'brak' gdy nie powołano."
+  traktowanie_orzeczen:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje orzeczenia z pola orzeczenia_powolane: 'stosuje', 'odroznia' (inny stan faktyczny), 'polemizuje' (nie podziela lub zawęża), 'nie_dotyczy' (brak powołań)."
+required: [rodo_odszkodowanie_dotyczy, rodzaj_postepowania, podstawa_roszczenia, rodzaj_naruszenia, kategorie_danych, typ_administratora, liczba_osob_dotknietych, liczba_osob_dotknietych_podana, rodzaj_szkody_dochodzonej, prog_szkody_zastosowany, obawa_naduzycia_danych, utrata_kontroli_nad_danymi, ujawnienie_osobom_trzecim_ustalone, zwiazek_przyczynowy, ekskulpacja_art_82_ust_3, rozstrzygniecie_roszczenia, kwota_zadana_pln, kwota_zadana_pln_podana, kwota_zasadzona_pln, kwota_zasadzona_pln_podana, rozstrzygniecie_kontroli_decyzji_uodo, kara_uodo_kwota_pln, kara_uodo_kwota_pln_podana, postepowanie_zbiorowe, orzeczenia_powolane, traktowanie_orzeczen]

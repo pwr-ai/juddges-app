@@ -1,0 +1,92 @@
+topic: pl_wadliwosc_skladu_neosedziowie
+collection:
+  name: "Zarzut wadliwej obsady sądu — sędziowie powołani na wniosek KRS po 2017 r. (2019-2026)"
+  description: "Orzeczenia sądów powszechnych i administracyjnych (WSA, NSA), w których rozpoznano zarzut nieważności postępowania z powodu udziału sędziego powołanego na wniosek KRS ukształtowanej ustawą z 8.12.2017, wniosek o wyłączenie takiego sędziego lub test niezależności. Poza zakresem: inne przyczyny wadliwej obsady (pokrewieństwo, delegacja, ławnicy), sprawy z odwołań od uchwał KRS bez oceny składu orzekającego. Sąd Najwyższy NIE występuje w pełnym korpusie (Weaviate v2) — orzeczenia SN mogą być dostępne tylko w korpusie kuratorowanym (SQL poniżej) lub wymagają osobnego pozyskania z sn.pl."
+  jurisdiction: PL
+  period: {from: 2019-01-01, to: 2026-11-24}
+  size_estimate: "unknown; rząd wielkości tysięcy orzeczeń (zarzut podnoszony seryjnie w apelacjach i skargach kasacyjnych, wnioski o wyłączenie od 2020 r.); oszacować po zsumowaniu unii zapytań"
+  rationale: "Okres obejmuje TSUE A.K. (19.11.2019), uchwałę SN BSA I-4110-1/20 (23.01.2020), wyroki ETPCz 2021-2023, test niezależności po ustawie z 9.03.2023 i wyrok TSUE C-521/21 (24.03.2026), który dzieli okres na przed/po (automatyzm vs ocena całościowa)."
+
+search_v2:
+  - id: q01
+    purpose: "Rdzeń cywilny: nieważność postępowania, sprzeczność składu z przepisami prawa"
+    body: {query: "nieważność postępowania art. 379 pkt 4 k.p.c. skład sądu sprzeczny z przepisami prawa sędzia powołany na wniosek Krajowej Rady Sądownictwa ustawa z 8 grudnia 2017", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q02
+    purpose: "Rdzeń karny: bezwzględna przyczyna odwoławcza art. 439 § 1 pkt 2 k.p.k."
+    body: {query: "art. 439 § 1 pkt 2 k.p.k. sąd nienależycie obsadzony sędzia powołany przez KRS w składzie ukształtowanym ustawą z 8 grudnia 2017", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q03
+    purpose: "Rdzeń administracyjny: art. 183 § 2 pkt 4 p.p.s.a."
+    body: {query: "art. 183 § 2 pkt 4 p.p.s.a. skład sądu sprzeczny z przepisami prawa sędzia powołany na wniosek Krajowej Rady Sądownictwa", court_type: [administrative_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q04
+    purpose: "Wnioski o wyłączenie sędziego (k.p.c./k.p.k./p.p.s.a.) z powodu trybu powołania"
+    body: {query: "wniosek o wyłączenie sędziego okoliczność wywołująca uzasadnioną wątpliwość co do bezstronności powołanie na wniosek neo-KRS art. 49 k.p.c. art. 41 k.p.k.", court_type: [ordinary_court, administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q05
+    purpose: "Uchwała połączonych Izb SN BSA I-4110-1/20 — powołania"
+    body: {query: "uchwała składu połączonych Izb Sądu Najwyższego BSA I-4110-1/20 z 23 stycznia 2020", court_type: [ordinary_court, administrative_court], date_from: 2020-01-23, date_to: 2026-11-24, alpha: 0.1, limit: 50}
+  - id: q06
+    purpose: "Orzecznictwo ETPCz (Reczkowicz, Dolińska-Ficek i Ozimek, Advance Pharma, Wałęsa)"
+    body: {query: "Reczkowicz przeciwko Polsce Dolińska-Ficek i Ozimek Advance Pharma Wałęsa przeciwko Polsce sąd ustanowiony ustawą art. 6 Konwencji", court_type: [ordinary_court, administrative_court], date_from: 2021-07-22, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q07
+    purpose: "TSUE A.K. C-585/18 i W.Ż. C-487/19 — test niezależności"
+    body: {query: "wyrok TSUE A.K. C-585/18 W.Ż. C-487/19 niezależność i bezstronność sądu art. 19 ust. 1 TUE art. 47 Karty", court_type: [ordinary_court, administrative_court], date_from: 2019-11-19, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q08
+    purpose: "Po TSUE C-521/21 (24.03.2026): całościowa ocena, brak automatyzmu"
+    body: {query: "wyrok TSUE C-521/21 z 24 marca 2026 całościowa ocena okoliczności powołania sędziego sam udział KRS nie wystarcza", court_type: [ordinary_court, administrative_court], date_from: 2026-03-24, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q09
+    purpose: "Test niezależności i bezstronności (art. 42a usp, ustawa z 9.03.2023)"
+    body: {query: "test niezależności i bezstronności sędziego wniosek o zbadanie spełnienia wymogów niezawisłości art. 42a ustawy prawo o ustroju sądów powszechnych", court_type: [ordinary_court, administrative_court], date_from: 2022-06-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q10
+    purpose: "Typowe oddalenie zarzutu: powołanie przez Prezydenta, brak kompetencji do badania"
+    body: {query: "zarzut wadliwego powołania sędziego niezasadny akt powołania przez Prezydenta RP nie podlega kontroli sąd nie jest uprawniony do badania", court_type: [ordinary_court, administrative_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q11
+    purpose: "Opisowo: strona kwestionuje status sędziego — tzw. neosędzia"
+    body: {query: "strona zarzuciła że w składzie sądu zasiadał tzw. neosędzia powołany w wadliwej procedurze, co narusza prawo do niezależnego sądu", court_type: [ordinary_court, administrative_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.8, limit: 50}
+  - id: q12
+    purpose: "Skarga o wznowienie postępowania na podstawie wadliwej obsady"
+    body: {query: "skarga o wznowienie postępowania nieważność skład sądu sprzeczny z przepisami prawa art. 401 pkt 1 k.p.c. art. 271 pkt 1 p.p.s.a. Krajowa Rada Sądownictwa", court_type: [ordinary_court, administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q13
+    purpose: "NSA — skargi kasacyjne z zarzutem wadliwej obsady WSA"
+    body: {query: "skarga kasacyjna zarzut nieważności postępowania przed wojewódzkim sądem administracyjnym sędzia powołany z udziałem KRS po 2017", court_type: [administrative_court], date_from: 2020-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q14
+    purpose: "Uchylenie i zniesienie postępowania z powodu wadliwej obsady (skutek uwzględnienia)"
+    body: {query: "uchyla zaskarżony wyrok znosi postępowanie nieważność skład sądu pierwszej instancji sędzia powołany na wniosek KRS", court_type: [ordinary_court], date_from: 2019-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date >= DATE '2019-01-01'
+    AND (
+      full_text ~* '(379\s*pkt\s*4|439\s*§\s*1\s*pkt\s*2|183\s*§\s*2\s*pkt\s*4)'
+      OR full_text ~* '(neo-?\s*KRS|neosędzi|BSA\s*I-4110-1/20|Reczkowicz|Dolińska-Ficek|Advance Pharma|C-585/18|C-487/19|C-521/21|test\w* niezależności)'
+    )
+    AND full_text ~* '(Krajow\w* Rad\w* Sądownictwa|neo-?\s*KRS)'
+    AND full_text ~* '(8 grudnia 2017|wadliw\w* (powołan|obsad|skład)|nienależycie obsadzon|sprzeczn\w* z przepisami prawa|neosędzi)'
+  ORDER BY decision_date;
+# Uwaga: korpus kuratorowany może zawierać orzeczenia SN (court_level), których brak w Weaviate v2.
+
+filters:
+  case_number_patterns: ["I ACa", "I Ca", "II Ca", "II AKa", "II Ka", "IV Ka", "I ACz", "I Co", "II GSK", "I OSK", "II OSK", "I FSK", "II FSK", "I GSK", "III OSK", "II SA", "I SA", "III SA"]
+  courts:
+    - "Naczelny Sąd Administracyjny"
+    - "wojewódzkie sądy administracyjne"
+    - "sądy apelacyjne (wydziały cywilne i karne)"
+    - "sądy okręgowe jako sądy odwoławcze"
+    - "Sąd Najwyższy — NIE w korpusie v2 (signatures: I CSK, II CSKP, I KZP, II KK, BSA, III PO, I NO); tylko korpus kuratorowany / osobne pozyskanie"
+
+inclusion_gate: {field: wadliwosc_skladu_dotyczy, keep: [tak]}
+negative_markers:
+  - "wyłączenie sędziego z mocy ustawy z powodu pokrewieństwa"
+  - "sędzia delegowany" # gdy brak wątku KRS
+  - "ławnik"
+  - "skład jednoosobowy zamiast trzyosobowego"
+  - "odwołanie od uchwały Krajowej Rady Sądownictwa" # sprawy II GOK — status kandydata, nie składu
+  - "postępowanie dyscyplinarne wobec sędziego"
+  - "Krajowa Rada Sądownictwa" # jedyne wystąpienie w kontekście opinii o kandydacie/asesorze
+
+analyses:
+  - "Odsetek uwzględnionych zarzutów (rozstrzygniecie_zarzutu, skutek) kwartalnie 2019-2026, osobno dla sądów powszechnych i administracyjnych oraz rodzaj_sprawy."
+  - "Pre/post 24.03.2026 (C-521/21): przesunięcie automatyzm_czy_ocena_indywidualna od 'automatyzm_wadliwosci' do 'ocena_indywidualna'; zmiana zestawu kryteria_oceniane."
+  - "Linia orzecznicza: stosunek_do_bsa_i_4110_1_20, stosunek_do_etpcz i stosunek_do_c_521_21 po sądach apelacyjnych i izbach NSA."
+  - "Kto i jakim instrumentem podnosi zarzut (kto_podnosi x instrument) oraz skuteczność wniosków o wyłączenie vs zarzutów apelacyjnych."
+  - "Wpływ rodzaj_powolania (pierwsze powołanie vs awans) i skarb_panstwa_strona na wynik zarzutu."

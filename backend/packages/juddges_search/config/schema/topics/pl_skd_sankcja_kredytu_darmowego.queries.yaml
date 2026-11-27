@@ -1,0 +1,122 @@
+topic: pl_skd_sankcja_kredytu_darmowego
+collection:
+  name: "Sankcja kredytu darmowego (art. 45 u.k.k.) — sądy powszechne 2022–2026"
+  description: "Wyroki sądów powszechnych (SR, SO, SA), w których sąd ocenia żądanie lub zarzut SKD z art. 45 ustawy o kredycie konsumenckim. Poza zakresem: zwrot prowizji przy wcześniejszej spłacie (art. 49) bez SKD, sprawy frankowe i WIBOR bez wątku art. 45, nakazy zapłaty bez uzasadnienia, kredyty hipoteczne."
+  jurisdiction: PL+UK
+  period: {from: 2022-01-01, to: 2026-11-24}
+  size_estimate: "kilka tysięcy wyroków z uzasadnieniem w korpusie pl-court (szacunek: ~19,5 tys. pozwów w 2026 r. wg portali, z czego publikowana jest tylko część; unknown do czasu uruchomienia zapytań)"
+  rationale: "Fala spraw SKD (w dużej mierze z powództwa cesjonariuszy) narasta od 2022 r.; okres obejmuje wyroki przed i po TSUE C-472/23 (13.02.2025), zawieszeniu SN III CZP 15/25 (30.07.2025) i TSUE C-744/24 (23.04.2026). SN i UK nie są w korpusie v2."
+
+search_v2:
+  - id: q01
+    purpose: "Rdzeń: dosłowne brzmienie art. 45 — SKD jako podstawa żądania"
+    body: {query: "sankcja kredytu darmowego art. 45 ust. 1 ustawy o kredycie konsumenckim zwrot kredytu bez odsetek i innych kosztów kredytu", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q02
+    purpose: "Odsetki od skredytowanej prowizji / kosztów pozaodsetkowych — po C-744/24"
+    body: {query: "naliczanie odsetek od kredytowanej prowizji kosztów pozaodsetkowych C-744/24 sankcja kredytu darmowego", court_type: [ordinary_court], date_from: 2026-04-23, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q03
+    purpose: "Ten sam sub-problem przed C-744/24 (porównanie pre/post)"
+    body: {query: "oprocentowanie skredytowanej prowizji zawyżenie RRSO i całkowitej kwoty do zapłaty art. 30 ust. 1 pkt 7 sankcja kredytu darmowego", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-04-22, alpha: 0.3, limit: 50}
+  - id: q04
+    purpose: "Błędne RRSO i całkowita kwota do zapłaty"
+    body: {query: "błędnie wskazana rzeczywista roczna stopa oprocentowania RRSO całkowita kwota do zapłaty naruszenie obowiązku informacyjnego kredyt konsumencki", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q05
+    purpose: "Niejasne warunki zmiany opłat i prowizji (tabela opłat)"
+    body: {query: "brak określenia warunków zmiany opłat i prowizji tabela opłat i prowizji sankcja kredytu darmowego", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q06
+    purpose: "Prawo odstąpienia od umowy — wadliwa informacja"
+    body: {query: "nieprawidłowa informacja o prawie odstąpienia od umowy kredytu konsumenckiego art. 53 sankcja kredytu darmowego", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.3, limit: 50}
+  - id: q07
+    purpose: "Termin roczny art. 45 ust. 5 — wygaśnięcie uprawnienia"
+    body: {query: "uprawnienie wygasa po upływie roku od dnia wykonania umowy art. 45 ust. 5 oświadczenie o skorzystaniu z sankcji kredytu darmowego", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.2, limit: 50}
+  - id: q08
+    purpose: "Cesjonariusz jako powód — przelew wierzytelności SKD"
+    body: {query: "powód nabył wierzytelność na podstawie umowy cesji od konsumenta sankcja kredytu darmowego legitymacja czynna cesjonariusza", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q09
+    purpose: "Nadużycie prawa / istotność naruszenia — linia odmowna"
+    body: {query: "naruszenie obowiązku informacyjnego nieistotne nie uzasadnia sankcji kredytu darmowego nadużycie prawa podmiotowego art. 5 k.c.", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q10
+    purpose: "Test proporcjonalności z TSUE C-472/23 Lexitor"
+    body: {query: "C-472/23 Lexitor proporcjonalność sankcji ocena zakresu zobowiązania przez konsumenta art. 23 dyrektywy 2008/48", court_type: [ordinary_court], date_from: 2025-02-13, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q11
+    purpose: "SKD jako zarzut w sprawie z powództwa kredytodawcy"
+    body: {query: "pozwana podniosła zarzut sankcji kredytu darmowego w sprawie o zapłatę z umowy pożyczki wypowiedzenie umowy", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.6, limit: 50}
+  - id: q12
+    purpose: "Przedawnienie roszczeń z SKD"
+    body: {query: "przedawnienie roszczenia o zwrot odsetek i prowizji sankcja kredytu darmowego art. 118 k.c. wymagalność od oświadczenia", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.5, limit: 50}
+  - id: q13
+    purpose: "Związanie sądu oświadczeniem vs badanie z urzędu (III CZP 15/25)"
+    body: {query: "czy sąd z urzędu bada wszystkie przyczyny sankcji kredytu darmowego niewskazane w oświadczeniu III CZP 15/25", court_type: [ordinary_court], date_from: 2025-07-30, date_to: 2026-11-24, alpha: 0.4, limit: 50}
+  - id: q14
+    purpose: "Opisowe, wysoki alpha — sprawy apelacyjne o SKD"
+    body: {query: "apelacja od wyroku oddalającego powództwo o zapłatę z tytułu sankcji kredytu darmowego umowa kredytu gotówkowego prowizja ubezpieczenie", court_type: [ordinary_court], date_from: 2022-01-01, date_to: 2026-11-24, alpha: 0.8, limit: 50}
+
+curated_sql: |
+  SELECT id, case_number, court_name, decision_date
+  FROM public.judgments
+  WHERE jurisdiction = 'PL'
+    AND decision_date BETWEEN DATE '2022-01-01' AND DATE '2026-11-24'
+    AND (
+          full_text ~* 'sankcj[aąięy]\s+kredytu\s+darmowego'
+       OR full_text ~* 'art\.?\s*45\s+(ust\.?\s*\d\s+)?(u\.?k\.?k\.?|ustawy\s+o\s+kredycie\s+konsumenckim)'
+       OR EXISTS (SELECT 1 FROM unnest(coalesce(keywords, '{}') || coalesce(legal_topics, '{}')) k
+                  WHERE k ~* 'kredyt(u)? darmow')
+       OR EXISTS (SELECT 1 FROM unnest(coalesce(cited_legislation, '{}')) c
+                  WHERE c ~* 'kredycie konsumenckim' AND c ~* '(art\.?\s*45|art\.?\s*30)')
+    )
+  ORDER BY decision_date;
+
+filters:
+  case_number_patterns: ["I C", "II C", "XXV C", "XXVIII C", "I Ca", "II Ca", "V Ca", "XXVII Ca", "I ACa", "V ACa", "VI ACa", "VI C", "XVI C"]
+  courts:
+    - "Sąd Rejonowy dla Warszawy-Śródmieścia w Warszawie"
+    - "Sąd Rejonowy dla m.st. Warszawy w Warszawie"
+    - "Sąd Okręgowy w Warszawie"
+    - "Sąd Rejonowy Poznań-Stare Miasto w Poznaniu"
+    - "Sąd Okręgowy w Poznaniu"
+    - "Sąd Okręgowy w Łodzi"
+    - "Sąd Okręgowy w Krakowie"
+    - "Sąd Okręgowy we Wrocławiu"
+    - "Sąd Apelacyjny w Warszawie"
+
+inclusion_gate: {field: skd_dotyczy, keep: [tak]}
+negative_markers:
+  - "art. 49 ustawy o kredycie konsumenckim"   # zwrot prowizji przy wcześniejszej spłacie, często bez SKD
+  - "kredyt indeksowany do franka szwajcarskiego"
+  - "wskaźnik WIBOR"
+  - "ustawy o kredycie hipotecznym"
+  - "nakaz zapłaty w postępowaniu upominawczym"
+  - "sprzeciw od nakazu zapłaty"   # tylko gdy bez wzmianki o art. 45
+
+analyses:
+  - "Odsetek wynik_skd=skd_zastosowana_* w podziale na okresy: przed 13.02.2025 / 13.02.2025–22.04.2026 / od 23.04.2026 (C-472/23, C-744/24), osobno dla ocena_odsetek_od_kosztow_kredytowanych."
+  - "Rozkład standard_oceny_naruszenia (każde vs istotne vs test C-472/23) w czasie i wg sądu okręgowego — mapa rozbieżności linii orzeczniczej."
+  - "Konsument vs cesjonariusz (powod_typ): skuteczność, częstość zarzutu nadużycia prawa i ocena_cesji."
+  - "Najczęstsze naruszenia_stwierdzone wg pozwany_typ (bank vs instytucja pożyczkowa) i rodzaj_kredytu; mediana kwota_zasadzona_pln / calkowita_kwota_kredytu_pln."
+  - "stosunek_do_c_744_24 po 23.04.2026: stosuje vs odróżnia vs polemizuje, wg instancji."
+
+uk_side:
+  topic: "UK motor finance — undisclosed / hidden commission and unfair relationship (s.140A–140C Consumer Credit Act 1974)"
+  notes: "Johnson v FirstRand Bank Ltd [2025] UKSC 33 (1.08.2025; joined with Wrench and Hopcraft) — UKSC rejected fiduciary/bribery liability of car dealers but held the credit relationship in Johnson unfair under s.140A (undisclosed commission, commercial tie), remedy under s.140B. Venues: County Court, High Court (KBD/Commercial Court), Court of Appeal; also FOS complaints and the FCA redress scheme (not court judgments). Terms: 'unfair relationship', 'discretionary commission arrangement', 'secret/half-secret commission', 'commercial tie', 'APR', 'total charge for credit'. Same economic core as SKD: undisclosed or misrepresented credit cost; very different remedy (court-discretionary s.140B vs automatic loss of interest under art. 45)."
+  curated_sql: |
+    SELECT id, case_number, court_name, decision_date
+    FROM public.judgments
+    WHERE jurisdiction = 'UK'
+      AND decision_date BETWEEN DATE '2015-01-01' AND DATE '2026-11-24'
+      AND (
+            full_text ~* '(section|s\.)\s*140[ABC]'
+         OR full_text ~* 'unfair\s+relationship'
+         OR EXISTS (SELECT 1 FROM unnest(coalesce(cited_legislation, '{}')) c WHERE c ~* 'Consumer Credit Act 1974')
+      )
+      AND full_text ~* '(commission|total charge for credit|\mAPR\M|credit broker|motor finance|hire purchase)'
+    ORDER BY decision_date;
+  field_mapping:
+    - "skd_dotyczy <-> unfair_relationship_applies"
+    - "naruszenia_stwierdzone (odsetki_od_kosztow_kredytowanych, bledne_rrso, bledna_calkowita_kwota_do_zaplaty) <-> hidden_credit_cost_type (undisclosed_commission, misstated_apr, misstated_total_charge)"
+    - "standard_oceny_naruszenia <-> unfairness_test_applied (any_nondisclosure vs material / s.140A all-circumstances)"
+    - "powod_typ (cesjonariusz_*) <-> claimant_type (claims_management_assignee / litigation_funder)"
+    - "pozwany_typ <-> lender_type (motor_finance_lender / bank / broker_dealer)"
+    - "wynik_skd <-> outcome (relationship_unfair_remedy_granted / not_unfair / dismissed)"
+    - "kwota_zasadzona_pln <-> award_amount_gbp"
+    - "zarzut_przedawnienia <-> limitation_defence (Limitation Act 1980 s.9/s.32)"
+    - "stosunek_do_c_744_24 <-> treatment_of_johnson_v_firstrand"

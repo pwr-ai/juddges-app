@@ -1,0 +1,177 @@
+# Topic: Wymiar kary i środków karnych za prowadzenie pojazdu mechanicznego w stanie nietrzeźwości lub pod
+#   wpływem środka odurzającego (art. 178a § 1 i § 4 k.k.)
+# Why: najliczniejsza kategoria spraw karnych w sądach rejonowych; spór dotyczy realnego wymiaru (grzywna /
+#   ograniczenie wolności przez art. 37a vs pozbawienie wolności z warunkowym zawieszeniem), długości zakazu
+#   (art. 42 § 2, dożywotni art. 42 § 3-4), świadczenia pieniężnego (art. 43a § 2 k.k.: min. 5 000 zł przy art. 178a § 1;
+#   art. 43a § 3: min. 10 000 zł przy art. 178a § 4; maks. 60 000 zł) i przepadku pojazdu. Trzy reżimy przepadku: (a) do 13.03.2024 — brak art. 44b;
+#   (b) od 14.03.2024 (ustawa z 17.08.2023) — art. 44b k.k. + obligatoryjny przepadek pojazdu lub równowartości
+#   z art. 178a § 5 k.k. (m.in. stężenie >= 1,5 promila / 0,75 mg/dm3); (c) od 29.01.2026 — art. 178a § 5 uchylony,
+#   obligatoryjny przepadek w art. 44b § 1a (próg 1,5 promila, wyjątek: „wyjątkowy wypadek”), przepadek
+#   równowartości (art. 44b § 2-4) zastąpiony nawiązką 5 000-500 000 zł na rzecz Skarbu Państwa (art. 44b § 5-6).
+#   Od 1.10.2023 (ustawa z 7.07.2022) § 1 przewiduje wyłącznie karę pozbawienia wolności do lat 3 (grzywna /
+#   ograniczenie wolności tylko przez art. 37a), § 4: od 3 miesięcy do lat 5; warunkowe zawieszenie tylko kary
+#   pozbawienia wolności do roku (art. 69 § 1), przy § 4 tylko w szczególnie uzasadnionych wypadkach (art. 69 § 4)
+#   [?: brzmienie art. 69 § 4 po 1.10.2023 niezweryfikowane]. Stan po użyciu alkoholu (0,2-0,5 promila) oraz
+#   rower / hulajnoga elektryczna / UTP (nie są pojazdami mechanicznymi, art. 2 pkt 32 p.r.d.) = wykroczenie
+#   z art. 87 k.w. — poza tematem.
+# Key rulings: SN uchwała I KZP 20/08 (pojazd a narzędzie przestępstwa z art. 178a, przepadek z art. 44 § 2)
+#   [?: data i skład niezweryfikowane]; SN V KK 57/25 (12.03.2025, uchylenie przepadku pojazdu orzeczonego na
+#   podstawie nieobowiązujących przepisów — intertemporalność art. 4 § 1 k.k.); SN II KK 186/25 (25.06.2025,
+#   art. 44b § 5 — gdy przepadek niemożliwy/niecelowy); SN V KK 419/25 (26.02.2026, sankcja art. 178a § 1 po
+#   nowelizacji z 7.07.2022) [teza skrócona, sygnatura i data zweryfikowane].
+# Applies to collection: see pl_wymiar_kary_178a.queries.yaml
+title: pl_wymiar_kary_178a
+description: "Schemat ekstrakcji wymiaru kary, środków karnych i przepadku pojazdu w sprawach o prowadzenie pojazdu mechanicznego w stanie nietrzeźwości lub pod wpływem środka odurzającego (art. 178a § 1 i § 4 k.k.)."
+type: object
+additionalProperties: false
+properties:
+  wymiar_kary_178a_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Czy orzeczenie rozstrzyga o odpowiedzialności karnej i wymiarze kary za przestępstwo z art. 178a § 1 lub § 4 k.k. (wyrok sądu I instancji w sprawie 'K', wyrok nakazowy, wyrok sądu odwoławczego 'Ka', także gdy 178a pozostaje w zbiegu z art. 244 k.k. lub art. 180a k.k.). 'tak' — sąd przypisuje (lub weryfikuje w apelacji) czyn z art. 178a i wymierza karę / warunkowo umarza. 'nie' — typowe fałszywe trafienia: wykroczenie z art. 87 k.w. (stan po użyciu alkoholu, rower, hulajnoga elektryczna — sygnatura 'W'); wypadek z art. 177 w zw. z art. 178 § 1 k.k. bez przypisania art. 178a; samo art. 244 lub art. 180a k.k.; postępowanie wykonawcze ('Kow', 'Ko': odroczenie, zatarcie, skrócenie zakazu z art. 84 k.k., dozór elektroniczny); sprawy cywilne o regres ubezpieczyciela od nietrzeźwego kierowcy; uniewinnienie bez wymiaru kary. 'niejasne' — z tekstu nie da się ustalić kwalifikacji ani rozstrzygnięcia o karze (np. samo postanowienie dowodowe)."
+  kwalifikacja_prawna:
+    type: string
+    enum: [art_178a_par_1, art_178a_par_4, art_178a_par_1_i_art_244, art_178a_par_4_i_art_244, art_178a_i_art_180a, art_87_kw_wykroczenie, art_177_w_zw_z_art_178, other, not_stated]
+    description: "Kwalifikacja prawna czynu przypisanego w rozstrzygnięciu (po ewentualnej zmianie przez sąd odwoławczy). Wybierz wariant z art. 244 k.k., gdy sprawca prowadził pojazd wbrew sądowemu zakazowi prowadzenia pojazdów (zbieg kumulatywny). 'art_178a_i_art_180a' — gdy dodatkowo prowadził wbrew decyzji administracyjnej o cofnięciu uprawnień. 'art_87_kw_wykroczenie' i 'art_177_w_zw_z_art_178' — zaznacz, gdy sąd przekwalifikował czyn lub sprawa dotyczy tych przepisów (sygnał fałszywego trafienia). Gdy powołano kilka kwalifikacji z art. 178a — wybierz najsurowszą (§ 4)."
+  przeslanki_par_4:
+    type: array
+    items:
+      type: string
+      enum: [uprzednie_skazanie_za_178a, uprzednie_skazanie_za_173_174_177_355_w_nietrzezwosci, czyn_w_okresie_zakazu_prowadzenia, uprzednia_karalnosc_za_inne_przestepstwa, niekarany, not_stated]
+    description: "Uprzednia karalność sprawcy i przesłanki kwalifikacji z art. 178a § 4 k.k. Zaznacz wszystkie, które wynikają z uzasadnienia: wcześniejsze prawomocne skazanie za prowadzenie pojazdu mechanicznego w stanie nietrzeźwości / pod wpływem środka odurzającego; za art. 173, 174, 177 lub 355 § 2 k.k. popełnione w takim stanie; popełnienie czynu w okresie obowiązywania sądowego zakazu prowadzenia pojazdów mechanicznych; karalność za inne przestępstwa (np. przeciwko mieniu — tylko jako okoliczność obciążająca). 'niekarany' — sąd wprost stwierdza uprzednią niekaralność. 'not_stated' — brak informacji."
+  stan_sprawcy:
+    type: string
+    enum: [nietrzezwosc_alkohol, pod_wplywem_srodka_odurzajacego, alkohol_i_srodek_odurzajacy, stan_po_uzyciu_alkoholu, not_stated]
+    description: "Stan sprawcy przypisany w rozstrzygnięciu. Nietrzeźwość (art. 115 § 16 k.k.): stężenie > 0,5 promila we krwi lub > 0,25 mg/dm3 w wydychanym powietrzu (albo prowadzące do takiego stężenia). 'pod_wplywem_srodka_odurzajacego' — np. THC, amfetamina, metamfetamina, kokaina, opioidy, benzodiazepiny. 'stan_po_uzyciu_alkoholu' (0,2-0,5 promila / 0,1-0,25 mg/dm3) oznacza wykroczenie z art. 87 k.w. — zaznacz, gdy sąd tak ustalił."
+  stezenie_wartosc:
+    type: number
+    description: "Najwyższy wynik badania stężenia alkoholu przyjęty przez sąd za podstawę ustaleń (np. 1.24 dla 1,24 promila albo 0.62 dla 0,62 mg/dm3). Jednostkę podaj w polu stezenie_jednostka. Gdy podano kilka pomiarów — przyjmij wartość, którą sąd uznał za miarodajną, a jeżeli nie wskazał — najwyższą. 0, gdy brak wyniku (wtedy stezenie_podane=false). Dla samego środka odurzającego zwróć 0 i stezenie_podane=false."
+  stezenie_jednostka:
+    type: string
+    enum: [promile_we_krwi, mg_dm3_w_wydychanym_powietrzu, not_stated]
+    description: "Jednostka wartości w polu stezenie_wartosc: promile (‰) we krwi (badanie krwi lub przeliczenie) albo mg/dm3 w wydychanym powietrzu (alkomat / analizator wydechu). 'not_stated', gdy stężenia nie podano."
+  stezenie_podane:
+    type: boolean
+    description: "true, jeżeli orzeczenie podaje liczbowy wynik badania stężenia alkoholu przyjęty przez sąd."
+  rodzaj_pojazdu:
+    type: string
+    enum: [samochod_osobowy, samochod_ciezarowy_lub_autobus, motocykl, motorower, ciagnik_rolniczy, rower_lub_rower_elektryczny, hulajnoga_elektryczna_lub_utp, pojazd_wodny_lub_powietrzny, other, not_stated]
+    description: "Rodzaj pojazdu prowadzonego przez sprawcę. Motorower i ciągnik rolniczy to pojazdy mechaniczne (art. 178a k.k.). Rower (także ze wspomaganiem do 25 km/h), hulajnoga elektryczna i urządzenie transportu osobistego nie są pojazdami mechanicznymi — ich prowadzenie w stanie nietrzeźwości to wykroczenie z art. 87 § 1a k.w. (fałszywe trafienie dla tematu). 'samochod_osobowy' także dla samochodu dostawczego do 3,5 t."
+  skutek_zdarzenia:
+    type: string
+    enum: [brak_zdarzenia, kolizja_szkoda_majatkowa, wypadek_z_obrazeniami, wypadek_smiertelny, ucieczka_przed_kontrola, not_stated]
+    description: "Czy jazda zakończyła się zdarzeniem drogowym lub zachowaniem, które sąd uwzględnił przy wymiarze kary: 'brak_zdarzenia' — zatrzymanie w kontroli drogowej / ujawnienie przez świadka; 'kolizja_szkoda_majatkowa' — kolizja bez obrażeń; 'wypadek_z_obrazeniami' / 'wypadek_smiertelny' — gdy mimo to przypisano art. 178a (zwykle przy art. 177 kwalifikacja jest inna); 'ucieczka_przed_kontrola' — niezatrzymanie się do kontroli (art. 178b k.k.) lub ucieczka z miejsca."
+  tryb_postepowania:
+    type: string
+    enum: [zwykly, art_335_kpk_wniosek_prokuratora, art_387_kpk_wniosek_oskarzonego, wyrok_nakazowy, postepowanie_przyspieszone, not_stated]
+    description: "Tryb, w którym wydano wyrok skazujący: rozprawa na zasadach ogólnych; skazanie bez przeprowadzenia rozprawy / uzgodnione z prokuratorem (art. 335 § 1 lub § 2 k.p.k.); dobrowolne poddanie się karze na rozprawie (art. 387 k.p.k.); wyrok nakazowy (art. 500 i n. k.p.k.); postępowanie przyspieszone (art. 517a i n. k.p.k.). W wyroku odwoławczym — tryb przed sądem I instancji."
+  rodzaj_kary:
+    type: string
+    enum: [grzywna, ograniczenie_wolnosci, pozbawienie_wolnosci, kara_mieszana_art_37b, brak_kary_warunkowe_umorzenie, other, not_stated]
+    description: "Rodzaj kary zasadniczej ostatecznie wymierzonej za czyn z art. 178a w tym orzeczeniu (w wyroku odwoławczym — kara po zmianie albo utrzymana). Po 1.10.2023 grzywna i ograniczenie wolności za § 1 są możliwe tylko przez art. 37a k.k. — zaznacz to w polu instytucje_szczegolne. 'kara_mieszana_art_37b' — krótkotrwałe pozbawienie wolności i ograniczenie wolności. Przy karze łącznej wybierz rodzaj kary łącznej."
+  kara_pozbawienia_wolnosci_miesiace:
+    type: number
+    description: "Wymiar kary pozbawienia wolności za czyn z art. 178a w miesiącach (1 rok = 12; w karze mieszanej — część izolacyjna). 0, gdy kary pozbawienia wolności nie wymierzono lub jej wymiaru nie podano (wtedy kara_pozbawienia_wolnosci_podana=false)."
+  kara_pozbawienia_wolnosci_podana:
+    type: boolean
+    description: "true, jeżeli wymierzono karę pozbawienia wolności i podano jej wymiar."
+  warunkowe_zawieszenie:
+    type: string
+    enum: [tak, nie, nie_dotyczy, not_stated]
+    description: "Czy wykonanie kary pozbawienia wolności warunkowo zawieszono (art. 69 k.k.). 'nie_dotyczy' — nie wymierzono kary pozbawienia wolności. Przy § 4 sąd powinien wskazać 'szczególnie uzasadniony wypadek' (art. 69 § 4 k.k.)."
+  okres_proby_lata:
+    type: number
+    description: "Okres próby w latach (np. 2; 1.5 dla 18 miesięcy). 0, gdy nie zawieszono kary albo okresu nie podano (wtedy patrz warunkowe_zawieszenie). Przy warunkowym umorzeniu — okres próby z art. 67 § 1 k.k."
+  grzywna_stawki:
+    type: integer
+    description: "Liczba stawek dziennych grzywny (zasadniczej lub orzeczonej obok pozbawienia wolności z art. 71 § 1 k.k.). 0, gdy grzywny nie wymierzono (wtedy grzywna_podana=false)."
+  grzywna_stawka_zl:
+    type: number
+    description: "Wysokość jednej stawki dziennej w PLN (np. 20). 0, gdy grzywny nie wymierzono lub nie podano wysokości stawki."
+  grzywna_podana:
+    type: boolean
+    description: "true, jeżeli orzeczono grzywnę i podano liczbę stawek."
+  zakaz_prowadzenia:
+    type: string
+    enum: [terminowy_wszystkie_pojazdy_mechaniczne, terminowy_okreslona_kategoria, dozywotni, nie_orzeczono, not_stated]
+    description: "Środek karny zakazu prowadzenia pojazdów (art. 42 § 2 k.k. — obligatoryjny przy art. 178a, nie krócej niż 3 lata; dożywotni — art. 42 § 3 i § 4 k.k., obligatoryjny przy § 4, chyba że zachodzi wyjątkowy wypadek uzasadniony szczególnymi okolicznościami). 'terminowy_okreslona_kategoria' — zakaz ograniczony do kategorii prawa jazdy (np. B). 'nie_orzeczono' — sąd wprost nie orzekł (np. warunkowe umorzenie bez zakazu)."
+  zakaz_prowadzenia_lata:
+    type: number
+    description: "Okres zakazu prowadzenia pojazdów w latach (1 rok = 1; 6 miesięcy = 0.5). 0, gdy zakaz dożywotni, nie orzeczony lub okresu nie podano."
+  swiadczenie_pieniezne_zl:
+    type: number
+    description: "Kwota świadczenia pieniężnego na Fundusz Pomocy Pokrzywdzonym oraz Pomocy Postpenitencjarnej (art. 43a § 2 k.k.: co najmniej 5 000 zł przy art. 178a § 1; art. 43a § 3: co najmniej 10 000 zł przy art. 178a § 4; maks. 60 000 zł) w PLN. 0, gdy nie orzeczono lub nie podano kwoty (wtedy swiadczenie_pieniezne_podane=false)."
+  swiadczenie_pieniezne_podane:
+    type: boolean
+    description: "true, jeżeli orzeczono świadczenie pieniężne i podano jego kwotę."
+  przepadek_pojazdu:
+    type: string
+    enum: [przepadek_pojazdu, przepadek_rownowartosci_pojazdu, nawiazka_art_44b, odstapiono_wyjatkowy_wypadek, nie_orzeczono_poza_zakresem_przepisow, uchylony_przez_sad_odwolawczy, not_stated]
+    description: "Rozstrzygnięcie o przepadku pojazdu mechanicznego (art. 44b k.k., od 14.03.2024; wcześniej obligatoryjny przepadek z art. 178a § 5 k.k. w brzmieniu do 28.01.2026). 'przepadek_rownowartosci_pojazdu' — gdy pojazd nie był wyłączną własnością sprawcy / zbyty (reżim do 28.01.2026). 'nawiazka_art_44b' — nawiązka na rzecz Skarbu Państwa 5 000-500 000 zł zamiast przepadku (art. 44b § 5-6, od 29.01.2026). 'odstapiono_wyjatkowy_wypadek' — sąd uznał wyjątkowy wypadek uzasadniony szczególnymi okolicznościami. 'nie_orzeczono_poza_zakresem_przepisow' — czyn sprzed 14.03.2024 lub przesłanki (np. próg 1,5 promila) niespełnione. 'uchylony_przez_sad_odwolawczy' — sąd odwoławczy / SN uchylił orzeczony przepadek (np. z powodu art. 4 § 1 k.k.)."
+  instytucje_szczegolne:
+    type: array
+    items:
+      type: string
+      enum: [art_37a_zamiana_na_grzywne_lub_ograniczenie, art_37b_kara_mieszana, art_60_nadzwyczajne_zlagodzenie, art_66_warunkowe_umorzenie, art_4_par_1_ustawa_wzgledniejsza, art_75_zarzadzenie_wykonania_kary, brak, not_stated]
+    description: "Szczególne instytucje wymiaru kary zastosowane lub rozważone i zastosowane w rozstrzygnięciu: zamiana kary pozbawienia wolności na grzywnę / ograniczenie wolności (art. 37a k.k.); kara mieszana (art. 37b); nadzwyczajne złagodzenie (art. 60 k.k.); warunkowe umorzenie postępowania (art. 66 k.k. — tylko przy § 1); zastosowanie ustawy względniejszej (art. 4 § 1 k.k., np. czyn sprzed 1.10.2023, 14.03.2024 lub 29.01.2026). 'brak' — żadna z nich."
+  okolicznosci_lagodzace:
+    type: array
+    items:
+      type: string
+      enum: [uprzednia_niekaralnosc, przyznanie_sie_i_skrucha, niskie_stezenie, krotki_odcinek_drogi, mala_intensywnosc_ruchu, brak_zdarzenia_drogowego, stan_wyzszej_koniecznosci_lub_motywacja, sytuacja_rodzinna_zdrowotna, potrzeba_prawa_jazdy_w_pracy, dobra_opinia_srodowiskowa, podjecie_terapii_alkoholowej, uplyw_czasu_od_czynu, other, brak, not_stated]
+    description: "Okoliczności łagodzące, które sąd wprost uwzględnił przy wymiarze kary lub środków karnych (art. 53 k.k.). Zaznacz wszystkie wymienione w uzasadnieniu; 'brak' — sąd stwierdza, że ich nie ma; 'not_stated' — brak uzasadnienia wymiaru kary (np. wyrok bez uzasadnienia)."
+  okolicznosci_obciazajace:
+    type: array
+    items:
+      type: string
+      enum: [wysokie_stezenie, uprzednia_karalnosc_za_178a, uprzednia_karalnosc_inna, czyn_w_okresie_zakazu, duze_natezenie_ruchu, dlugi_odcinek_drogi, stworzenie_realnego_zagrozenia, spowodowanie_kolizji_lub_wypadku, przewoz_pasazerow_lub_dzieci, ucieczka_przed_policja, kierowca_zawodowy, pora_dnia_teren_zabudowany, other, brak, not_stated]
+    description: "Okoliczności obciążające, które sąd wprost uwzględnił przy wymiarze kary (art. 53 k.k.), w tym dyrektywy prewencji indywidualnej i generalnej odniesione do konkretnych faktów. Zaznacz wszystkie wymienione; 'brak' — sąd stwierdza ich brak; 'not_stated' — brak uzasadnienia wymiaru."
+  zarzut_razacej_niewspolmiernosci:
+    type: string
+    enum: [nie_dotyczy_brak_srodka_odwolawczego, zarzut_obroncy_kara_zbyt_surowa, zarzut_oskarzyciela_kara_zbyt_lagodna, zarzuty_obu_stron, srodek_odwolawczy_bez_tego_zarzutu, not_stated]
+    description: "Czy w środku odwoławczym podniesiono zarzut rażącej niewspółmierności kary lub środka karnego (art. 438 pkt 4 k.p.k.) i przez kogo. 'nie_dotyczy_brak_srodka_odwolawczego' — wyrok sądu I instancji / nakazowy, którego uzasadnienie nie omawia apelacji."
+  wynik_odwolawczy:
+    type: string
+    enum: [nie_dotyczy_pierwsza_instancja, utrzymany_w_mocy, zmieniony_na_korzysc_oskarzonego, zmieniony_na_niekorzysc_oskarzonego, zmieniony_w_czesci_obojetnej, uchylony_do_ponownego_rozpoznania, uchylony_i_umorzony, other, not_stated]
+    description: "Rozstrzygnięcie sądu odwoławczego (sygnatura 'Ka') lub SN (kasacja) co do kary i środków karnych za czyn z art. 178a. 'zmieniony_na_korzysc_oskarzonego' — np. złagodzenie kary, skrócenie zakazu, obniżenie świadczenia, uchylenie przepadku; 'zmieniony_na_niekorzysc_oskarzonego' — zaostrzenie (tylko przy apelacji na niekorzyść, art. 434 k.p.k.); 'zmieniony_w_czesci_obojetnej' — korekta technicznej treści (np. zaliczenie okresu zatrzymania prawa jazdy, art. 63 § 4 k.k.)."
+  powolane_orzeczenia_kluczowe:
+    type: array
+    items:
+      type: string
+      enum: [sn_i_kzp_20_08, sn_v_kk_57_25, sn_ii_kk_186_25, sn_v_kk_419_25, inne, brak]
+    description: "Które z kluczowych orzeczeń SN w tej materii sąd powołuje: I KZP 20/08 (pojazd nie jest narzędziem przestępstwa z art. 178a — przepadek z art. 44 § 2 k.k.); V KK 57/25 z 12.03.2025 (przepadek pojazdu orzeczony na podstawie nieobowiązujących przepisów, intertemporalność); II KK 186/25 z 25.06.2025 (art. 44b § 5 k.k.); V KK 419/25 z 26.02.2026 (sankcja art. 178a § 1 po nowelizacji z 7.07.2022). 'inne' — inne orzeczenia (SN, sądów apelacyjnych/okręgowych, TK); 'brak' — nie powołano orzecznictwa."
+  stosunek_do_powolanych_orzeczen:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Jak sąd traktuje powołane kluczowe orzeczenia: 'stosuje' — przyjmuje tezę jako podstawę rozstrzygnięcia; 'odroznia' — uznaje, że stan faktyczny lub prawny jest inny; 'polemizuje' — wprost nie zgadza się z tezą; 'nie_dotyczy' — nie powołano kluczowych orzeczeń (powolane_orzeczenia_kluczowe zawiera tylko 'inne' lub 'brak')."
+required:
+  - wymiar_kary_178a_dotyczy
+  - kwalifikacja_prawna
+  - przeslanki_par_4
+  - stan_sprawcy
+  - stezenie_wartosc
+  - stezenie_jednostka
+  - stezenie_podane
+  - rodzaj_pojazdu
+  - skutek_zdarzenia
+  - tryb_postepowania
+  - rodzaj_kary
+  - kara_pozbawienia_wolnosci_miesiace
+  - kara_pozbawienia_wolnosci_podana
+  - warunkowe_zawieszenie
+  - okres_proby_lata
+  - grzywna_stawki
+  - grzywna_stawka_zl
+  - grzywna_podana
+  - zakaz_prowadzenia
+  - zakaz_prowadzenia_lata
+  - swiadczenie_pieniezne_zl
+  - swiadczenie_pieniezne_podane
+  - przepadek_pojazdu
+  - instytucje_szczegolne
+  - okolicznosci_lagodzace
+  - okolicznosci_obciazajace
+  - zarzut_razacej_niewspolmiernosci
+  - wynik_odwolawczy
+  - powolane_orzeczenia_kluczowe
+  - stosunek_do_powolanych_orzeczen

@@ -1,0 +1,121 @@
+# Topic: Kredyty frankowe — schemat DELTA (zagadnienia po 2026 r.), uzupełnia swiss_franc_loans.yaml
+# Why: po 2025 r. ciężar sporów przesunął się z samej abuzywności na rozliczenia: niepodzielność klauzuli
+#   "kurs średni NBP ± marża", przedawnienie roszczeń banku o zwrot kapitału i początek jego biegu, przerwanie
+#   biegu pozwem banku, badanie przedawnienia z urzędu, odsetki od kapitału dla banku, wynagrodzenie za
+#   korzystanie z kapitału, dopuszczalność zatrzymania, obsada sądu. Pól z swiss_franc_loans.yaml (teoria_prawna,
+#   zarzut_zatrzymania, zarzut_potracenia, odsetki_ustawowe, data_rozpoczecia_odsetek, zabezpieczenie_udzielone,
+#   rodzaj_zabezpieczenia, wynik_sprawy, odwolanie_do_tsue/sn, ...) celowo NIE powtarzamy — tu są ich pogłębienia.
+# Key rulings: SN III CZP 8/26 (24.06.2026, pełny skład Izby Cywilnej; wzorzec GE Money/BPH — klauzula NBP+marża
+#   oceniana jako całość); TSUE C-752/24 Jangielak, C-753/24 Rzepacz, C-901/24 Falucka (16.04.2026 — przedawnienie
+#   roszczenia banku, bieg od pierwszego zakwestionowania umowy przez konsumenta, przerwanie pozwem banku);
+#   TSUE C-261/25 Ścierbek i C-262/25 Drózdzik (2.07.2026 — przedawnienie roszczenia banku; treść tez [?]);
+#   TSUE C-902/24 (styczeń 2026 — odsetki od kapitału dla banku; dokładna data [?]); SN II CSKP 1062/23
+#   (15.01.2026 — przedawnienie roszczeń przeciwko konsumentowi, art. 117 § 2¹ i art. 117¹ k.c.); TSUE C-520/21
+#   Bank M. (15.06.2023 — wynagrodzenie za korzystanie z kapitału); TSUE C-28/22 (14.12.2023 — przedawnienie,
+#   zatrzymanie, odsetki); TSUE C-260/18 Dziubak (3.10.2019); SN III CZP 6/21 (7.05.2021, zasada prawna);
+#   SN III CZP 25/22 (25.04.2024, pełny skład Izby Cywilnej).
+# Applies to collection: see pl_frankowe_v2_po_2026.queries.yaml
+title: pl_frankowe_v2_po_2026
+description: "Uzupełniająca ekstrakcja zagadnień rozliczeniowych i przedawnieniowych w sprawach kredytów frankowych po 2026 r. (delta wobec swiss_franc_loans)."
+type: object
+additionalProperties: false
+properties:
+  kredyt_chf_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Czy orzeczenie dotyczy umowy kredytu (pożyczki) indeksowanego lub denominowanego do CHF albo rozliczeń po jej upadku. 'tak' także dla powództw banku o zwrot kapitału / wynagrodzenie za korzystanie z kapitału oraz spraw o zabezpieczenie w sprawie frankowej. 'nie' (fałszywe trafienia): kredyty w EUR/USD bez CHF, kredyty złotowe WIBOR, SKD (art. 45 u.k.k.), polisolokaty, sprawy upadłościowe bez oceny umowy, sprawy, w których CHF pojawia się tylko jako przykład w cytacie. 'niejasne' gdy waluta indeksacji nie jest wskazana."
+  strona_inicjujaca:
+    type: string
+    enum: [kredytobiorca, bank_zwrot_kapitalu, bank_wynagrodzenie_za_kapital, bank_zaplata_z_umowy, sprawy_polaczone_lub_powodztwo_wzajemne, inny, not_stated]
+    description: "Kto wytoczył powództwo i o co: 'kredytobiorca' — powództwo konsumenta (ustalenie/zapłata); 'bank_zwrot_kapitalu' — bank żąda zwrotu wypłaconego kapitału po upadku umowy; 'bank_wynagrodzenie_za_kapital' — bank żąda wynagrodzenia/waloryzacji za korzystanie z kapitału; 'bank_zaplata_z_umowy' — bank dochodzi rat z umowy (np. po wypowiedzeniu), a konsument broni się nieważnością; 'sprawy_polaczone_lub_powodztwo_wzajemne' — pozew wzajemny banku lub połączenie spraw."
+  bank_wzorzec:
+    type: string
+    enum: [ge_money_bph, mbank_multibank, millennium, getin_noble_velobank, santander_kredyt_bank, pko_bp_nordea, ing, bnp_raiffeisen_bgz, pekao, inny, not_stated]
+    description: "Bank (lub poprzednik prawny), którego wzorzec umowy jest oceniany — istotne dla zakresu SN III CZP 8/26 (wzorzec GE Money Bank / BPH). Ustal z oznaczenia strony i opisu poprzednika prawnego (np. 'Bank BPH S.A., następca prawny GE Money Bank' -> ge_money_bph; 'Santander Bank Polska, dawniej Kredyt Bank / DnB' -> santander_kredyt_bank)."
+  ocena_klauzuli_nbp_marza:
+    type: string
+    enum: [klauzula_oceniana_jako_calosc_niedozwolona, usunieta_tylko_marza_kurs_sredni_nbp, klauzula_dozwolona, nie_dotyczy_inny_mechanizm, nie_rozstrzygnieto]
+    description: "Dotyczy umów, w których kurs indeksacji = kurs średni NBP skorygowany o marżę banku. 'klauzula_oceniana_jako_calosc_niedozwolona' — sąd uznaje, że marży nie da się wyeliminować samodzielnie, abuzywne jest całe postanowienie kursowe (linia III CZP 8/26); 'usunieta_tylko_marza_kurs_sredni_nbp' — sąd usuwa wyłącznie marżę i utrzymuje indeksację po kursie średnim NBP; 'klauzula_dozwolona' — brak abuzywności; 'nie_dotyczy_inny_mechanizm' — umowa odsyła do tabel kursowych banku bez kursu NBP."
+  skutek_abuzywnosci:
+    type: string
+    enum: [niewaznosc_umowy, umowa_zlotowa_z_libor, kurs_sredni_nbp_zamiast_klauzuli, umowa_wiaze_w_pozostalym_zakresie, brak_abuzywnosci, nie_rozstrzygnieto]
+    description: "Jaki skutek sąd wywiódł z oceny postanowień kursowych: 'niewaznosc_umowy' (upadek umowy w całości); 'umowa_zlotowa_z_libor' (odfrankowienie, kredyt w PLN oprocentowany LIBOR); 'kurs_sredni_nbp_zamiast_klauzuli' (zastąpienie kursem średnim NBP, np. art. 358 § 2 k.c. lub po usunięciu marży); 'umowa_wiaze_w_pozostalym_zakresie' (inne rozwiązanie utrzymujące umowę); 'brak_abuzywnosci'."
+  zdarzenie_wymagalnosci_roszczenia_kredytobiorcy:
+    type: string
+    enum: [wezwanie_do_zaplaty, doreczenie_pozwu, oswiadczenie_konsumenta_o_skutkach_niewaznosci, pouczenie_sadu_i_oswiadczenie, data_wyroku, inne, not_stated]
+    description: "Od jakiego zdarzenia sąd uznał roszczenie kredytobiorcy o zwrot świadczeń za wymagalne (co wyznacza początek odsetek za opóźnienie) — uzasadnienie doktrynalne, a nie sama data z sentencji. 'oswiadczenie_konsumenta_o_skutkach_niewaznosci' — linia SN III CZP 6/21; 'pouczenie_sadu_i_oswiadczenie' — dopiero po pouczeniu przez sąd i oświadczeniu konsumenta; 'wezwanie_do_zaplaty' — wezwanie przedprocesowe kwestionujące umowę (linia C-28/22)."
+  zarzut_zatrzymania_ocena:
+    type: string
+    enum: [uwzgledniony_umowa_wzajemna, nieuwzgledniony_umowa_niewzajemna, nieuwzgledniony_sprzeczny_z_dyrektywa_93_13, nieuwzgledniony_inne_przyczyny, nie_podniesiono]
+    description: "Uzasadnienie oceny zarzutu zatrzymania podniesionego przez bank: 'uwzgledniony_umowa_wzajemna' — sąd uznaje umowę kredytu za wzajemną i dopuszcza art. 496 w zw. z art. 497 k.c.; 'nieuwzgledniony_umowa_niewzajemna'; 'nieuwzgledniony_sprzeczny_z_dyrektywa_93_13' — sąd powołuje C-28/22 (zatrzymanie pozbawia konsumenta odsetek / uzależnia ochronę od zwrotu); 'nieuwzgledniony_inne_przyczyny' — np. bank może potrącić, zarzut ewentualny, brak skutecznego oświadczenia."
+  zarzut_potracenia_charakter:
+    type: string
+    enum: [potracenie_procesowe_ewentualne, potracenie_bezwarunkowe, potracenie_przedprocesowe, nie_podniesiono]
+    description: "Charakter zarzutu potrącenia podniesionego przez bank: 'potracenie_procesowe_ewentualne' — na wypadek uznania umowy za nieważną; 'potracenie_bezwarunkowe' — w toku procesu bez zastrzeżeń; 'potracenie_przedprocesowe' — oświadczenie złożone przed procesem i podniesione jako zarzut. Ocenę skuteczności zapisuje pole zarzut_potracenia z bazowego schematu."
+  przedawnienie_roszczenia_banku_ocena:
+    type: string
+    enum: [przedawnione_w_calosci, przedawnione_w_czesci, nieprzedawnione, nie_podniesiono_nie_badano, nie_dotyczy]
+    description: "Czy roszczenie banku o zwrot kapitału (lub inne roszczenie restytucyjne banku, także zgłoszone do potrącenia/zatrzymania) jest przedawnione według sądu. 'nie_dotyczy' — bank nie zgłosił roszczenia."
+  poczatek_biegu_przedawnienia_banku:
+    type: string
+    enum: [pierwsze_zakwestionowanie_umowy_przez_konsumenta, doreczenie_pozwu_konsumenta, oswiadczenie_konsumenta_po_pouczeniu, prawomocny_wyrok_w_sprawie_konsumenta, wezwanie_przez_bank, wyplata_kredytu, inne, nie_rozstrzygnieto]
+    description: "Od jakiego zdarzenia sąd liczy bieg przedawnienia roszczenia banku. 'pierwsze_zakwestionowanie_umowy_przez_konsumenta' — linia TSUE C-752/24, C-753/24, C-901/24 (16.04.2026) i C-28/22 (np. reklamacja, wezwanie, pozew konsumenta); 'oswiadczenie_konsumenta_po_pouczeniu' — linia III CZP 6/21; 'prawomocny_wyrok_w_sprawie_konsumenta' — dopiero od prawomocnego stwierdzenia nieważności."
+  przerwanie_biegu_przez_bank:
+    type: string
+    enum: [pozew_banku_przed_zakonczeniem_sprawy_konsumenta_przerywa, przerwanie_innym_zdarzeniem, brak_przerwania, nie_dotyczy]
+    description: "Czy sąd przyjął przerwanie biegu przedawnienia roszczenia banku: 'pozew_banku_przed_zakonczeniem_sprawy_konsumenta_przerywa' — bank wniósł pozew o zwrot kapitału zanim zakończyła się sprawa z powództwa konsumenta (linia C-752/24 Jangielak); 'przerwanie_innym_zdarzeniem' — np. uznanie długu, zawezwanie do próby ugodowej, zgłoszenie zarzutu; 'brak_przerwania'."
+  przedawnienie_badane_z_urzedu:
+    type: string
+    enum: [tak, nie, nie_dotyczy]
+    description: "Czy sąd zbadał z urzędu przedawnienie roszczenia przedsiębiorcy (banku) przeciwko konsumentowi (art. 117 § 2¹ k.c.), także bez zarzutu konsumenta — por. SN II CSKP 1062/23. 'nie_dotyczy' — bank nie zgłosił roszczenia albo przedawnienie nie mogło wchodzić w grę."
+  art_117_1_kc:
+    type: string
+    enum: [zastosowany_na_korzysc_banku, rozwazony_odmowiony, nie_rozwazano]
+    description: "Czy sąd rozważał nieuwzględnienie upływu terminu przedawnienia w wyjątkowym przypadku na podstawie art. 117¹ k.c. (względy słuszności, interes banku) i z jakim skutkiem."
+  roszczenie_banku_wynagrodzenie_za_kapital:
+    type: string
+    enum: [dochodzone_uwzglednione, dochodzone_oddalone, nie_dochodzone]
+    description: "Czy bank dochodził (pozwem, pozwem wzajemnym lub zarzutem) wynagrodzenia za korzystanie z kapitału ponad jego zwrot (waloryzacja, 'koszt kapitału') i czy sąd je uwzględnił. Oddalenie zwykle z powołaniem TSUE C-520/21 (15.06.2023)."
+  odsetki_od_kapitalu_dla_banku:
+    type: string
+    enum: [nie_przyznano, od_dnia_po_prawomocnym_wyroku_w_sprawie_konsumenta, od_wezwania_przez_bank, od_doreczenia_pozwu_banku, od_innej_daty, nie_dotyczy]
+    description: "Od kiedy sąd przyznał bankowi odsetki za opóźnienie od zasądzonego kapitału. 'od_dnia_po_prawomocnym_wyroku_w_sprawie_konsumenta' — linia po TSUE C-902/24; 'nie_przyznano' — odsetki oddalone; 'nie_dotyczy' — sąd nie zasądzał kapitału na rzecz banku."
+  kwota_kapitalu_na_rzecz_banku_pln:
+    type: number
+    description: "Kwota kapitału zasądzona na rzecz banku albo uwzględniona w potrąceniu/zatrzymaniu, w PLN (bez odsetek). 0 i kwota_kapitalu_na_rzecz_banku_stated=false, gdy brak danych lub nie dotyczy."
+  kwota_kapitalu_na_rzecz_banku_stated:
+    type: boolean
+    description: "true, jeśli orzeczenie podaje kwotę kapitału zasądzoną na rzecz banku lub uwzględnioną w potrąceniu/zatrzymaniu."
+  zabezpieczenie_zakres:
+    type: array
+    items:
+      type: string
+      enum: [wstrzymanie_splaty_rat, zakaz_wypowiedzenia_umowy, zakaz_przekazywania_danych_do_bik, wstrzymanie_egzekucji, inne, brak_zabezpieczenia, nie_dotyczy]
+    description: "Kategorie skutków zabezpieczenia udzielonego kredytobiorcy (kategoryczny odpowiednik pola rodzaj_zabezpieczenia z bazowego schematu). 'brak_zabezpieczenia' — wniosek oddalony; 'nie_dotyczy' — brak wniosku."
+  zarzut_wadliwej_obsady_sadu:
+    type: string
+    enum: [podniesiony_uwzgledniony, podniesiony_nieuwzgledniony, badany_z_urzedu, nie_podniesiono]
+    description: "Czy podniesiono (lub sąd badał z urzędu) zarzut nienależytej obsady sądu / nieważności postępowania z udziałem sędziego powołanego na wniosek KRS ukształtowanej po 2018 r. (art. 379 pkt 4 k.p.c., test bezstronności), i czy go uwzględniono (np. uchylenie wyroku, wyłączenie sędziego)."
+  ugoda_frankowa:
+    type: string
+    enum: [zawarta_przed_procesem_kwestionowana, zawarta_w_toku_postepowania, propozycja_ugody_odrzucona, mediacja_bez_ugody, nie_dotyczy]
+    description: "Wątek ugody (w tym bankowych programów ugód konwersyjnych): 'zawarta_przed_procesem_kwestionowana' — konsument kwestionuje ważność/skutki zawartej ugody lub aneksu ugodowego; 'zawarta_w_toku_postepowania' — postępowanie umorzone/ograniczone wskutek ugody; 'propozycja_ugody_odrzucona'; 'mediacja_bez_ugody'; 'nie_dotyczy' — brak wzmianki."
+  powolane_orzeczenia:
+    type: array
+    items:
+      type: string
+      enum: [sn_iii_czp_8_26, tsue_c_752_24, tsue_c_753_24, tsue_c_901_24, tsue_c_261_25, tsue_c_262_25, tsue_c_902_24, sn_ii_cskp_1062_23, tsue_c_520_21, tsue_c_28_22, tsue_c_260_18, sn_iii_czp_6_21, sn_iii_czp_25_22, inne, brak]
+    description: "Kluczowe orzeczenia linii frankowej powołane w uzasadnieniu: SN III CZP 8/26 (24.06.2026), TSUE C-752/24 Jangielak, C-753/24 Rzepacz, C-901/24 Falucka (16.04.2026), C-261/25 Ścierbek i C-262/25 Drózdzik (2.07.2026), C-902/24, SN II CSKP 1062/23 (15.01.2026), TSUE C-520/21 (15.06.2023), C-28/22 (14.12.2023), C-260/18 Dziubak (3.10.2019), SN III CZP 6/21 (7.05.2021), SN III CZP 25/22 (25.04.2024). 'inne' — inne orzeczenia frankowe; 'brak' — brak powołań."
+  stosunek_do_powolanych_orzeczen:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_dotyczy]
+    description: "Dominujący sposób traktowania powołanych kluczowych orzeczeń: 'stosuje' — przyjmuje wykładnię; 'odroznia' — uznaje za nieprzystające do stanu faktycznego (np. inny wzorzec niż GE Money); 'polemizuje' — krytykuje lub odmawia przyjęcia; 'nie_dotyczy' — brak powołań."
+  stosunek_do_iii_czp_8_26:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_powolano]
+    description: "Jak sąd traktuje uchwałę pełnego składu Izby Cywilnej SN III CZP 8/26 z 24.06.2026 (niepodzielność klauzuli NBP + marża). Służy porównaniu przed/po 24.06.2026; 'nie_powolano' gdy uchwała nie jest wymieniona."
+  stosunek_do_tsue_16_04_2026:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, nie_powolano]
+    description: "Jak sąd traktuje wyroki TSUE z 16.04.2026 (C-752/24 Jangielak, C-753/24, C-901/24) o przedawnieniu roszczeń banku. Służy porównaniu przed/po 16.04.2026; 'nie_powolano' gdy żaden z nich nie jest wymieniony."
+required: [kredyt_chf_dotyczy, strona_inicjujaca, bank_wzorzec, ocena_klauzuli_nbp_marza, skutek_abuzywnosci, zdarzenie_wymagalnosci_roszczenia_kredytobiorcy, zarzut_zatrzymania_ocena, zarzut_potracenia_charakter, przedawnienie_roszczenia_banku_ocena, poczatek_biegu_przedawnienia_banku, przerwanie_biegu_przez_bank, przedawnienie_badane_z_urzedu, art_117_1_kc, roszczenie_banku_wynagrodzenie_za_kapital, odsetki_od_kapitalu_dla_banku, kwota_kapitalu_na_rzecz_banku_pln, kwota_kapitalu_na_rzecz_banku_stated, zabezpieczenie_zakres, zarzut_wadliwej_obsady_sadu, ugoda_frankowa, powolane_orzeczenia, stosunek_do_powolanych_orzeczen, stosunek_do_iii_czp_8_26, stosunek_do_tsue_16_04_2026]

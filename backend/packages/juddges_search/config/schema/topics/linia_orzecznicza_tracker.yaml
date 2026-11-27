@@ -1,0 +1,133 @@
+# Topic: Linia orzecznicza — meta-schemat pozycjonowania orzeczenia w liniach orzeczniczych (topic-agnostic)
+# Why: dla dowolnej kolekcji tematycznej (PL; opisy z angielską glosą, więc nadaje się też do UK) mierzy, jak
+#   orzeczenie korzysta z orzecznictwa: co powołuje (SN/NSA/TSUE/ETPCz/TK), czy deklaruje rozbieżność, po której
+#   stronie się opowiada, czy przedstawia zagadnienie prawne (art. 390 k.p.c., art. 441 k.p.k., art. 187 § 1 /
+#   art. 15 § 1 pkt 2 p.p.s.a., art. 267 TFUE, art. 193 Konstytucji) lub zawiesza postępowanie do czasu
+#   rozstrzygnięcia innego sądu, jakie metody wykładni dominują. Pozwala budować krzywe adopcji orzeczeń.
+# Key rulings: n/d — meta-schemat; sygnatury zbierane są jako identyfikatory (powolane_sygnatury,
+#   glowne_powolane_orzeczenie) z kategorycznymi towarzyszami. Podstawy proceduralne zweryfikowane z pamięci
+#   ustaw: art. 390 § 1 k.p.c., art. 441 § 1 k.p.k., art. 187 § 1 p.p.s.a., art. 269 § 1 p.p.s.a., art. 267 TFUE,
+#   art. 193 Konstytucji RP, art. 177 § 1 pkt 3^1 k.p.c., art. 124 § 1 pkt 5 p.p.s.a., art. 22 § 1 k.p.k.
+#   [?: numeracja jednostek redakcyjnych do potwierdzenia w aktualnych tekstach jednolitych].
+# Applies to collection: see linia_orzecznicza_tracker.queries.yaml (dowolna kolekcja + kolekcja "sporne zagadnienia")
+title: linia_orzecznicza_tracker
+description: "Meta-schemat ekstrakcji opisujący, jak orzeczenie powołuje orzecznictwo i pozycjonuje się w liniach orzeczniczych (rozbieżności, zagadnienia prawne, pytania prejudycjalne, wykładnia) — niezależny od tematu sprawy."
+type: object
+additionalProperties: false
+properties:
+  linia_orzecznicza_dotyczy:
+    type: string
+    enum: [tak, nie, niejasne]
+    description: "Czy orzeczenie zawiera rozważania prawne z powołaniem co najmniej jednego innego orzeczenia (wyroku, postanowienia, uchwały) jako argumentu [Does the judgment contain legal reasoning that cites at least one other decision?]. 'tak' — uzasadnienie powołuje orzecznictwo z sygnaturą lub datą i sądem. 'nie' — typowe fałszywe trafienia: orzeczenie bez uzasadnienia, sama sentencja, postanowienie porządkowe, uzasadnienie ograniczone do ustaleń faktycznych lub cytatu przepisów, powołanie wyłącznie wcześniejszych orzeczeń w tej samej sprawie (historia procesowa — np. 'wyrokiem z dnia ... Sąd Rejonowy...'). 'niejasne' — tekst urwany / zanonimizowany tak, że nie da się tego ustalić."
+  liczba_powolanych_orzeczen:
+    type: integer
+    description: "Liczba różnych orzeczeń innych spraw powołanych w uzasadnieniu jako argument (licz unikalne sygnatury; orzeczenie powołane wielokrotnie liczy się raz; nie licz orzeczeń wydanych w tej samej sprawie) [Number of distinct cited decisions from other cases]. 0, gdy brak."
+  powoluje_uchwaly_sn:
+    type: boolean
+    description: "true, jeżeli powołano co najmniej jedną uchwałę Sądu Najwyższego (sygnatury typu 'III CZP', 'I KZP', 'III UZP', 'III PZP', 'I NZP', 'BSA') — w tym uchwały składu 7 sędziów, Izby lub połączonych Izb [Cites a Polish Supreme Court resolution]."
+  powoluje_uchwaly_nsa:
+    type: boolean
+    description: "true, jeżeli powołano co najmniej jedną uchwałę Naczelnego Sądu Administracyjnego (sygnatury typu 'I FPS', 'II FPS', 'I OPS', 'II OPS', 'II GPS', 'I GPS', 'OPS', 'FPS') [Cites a Polish Supreme Administrative Court resolution]."
+  powoluje_tsue:
+    type: boolean
+    description: "true, jeżeli powołano wyrok lub postanowienie TSUE / Sądu UE (sygnatury 'C-.../..', 'T-.../..') [Cites the CJEU / General Court]."
+  powoluje_etpcz:
+    type: boolean
+    description: "true, jeżeli powołano wyrok lub decyzję Europejskiego Trybunału Praw Człowieka (nazwa sprawy 'X przeciwko Polsce' / 'v. ...' lub numer skargi) [Cites the ECtHR]."
+  powoluje_tk:
+    type: boolean
+    description: "true, jeżeli powołano orzeczenie Trybunału Konstytucyjnego (sygnatury 'K', 'P', 'SK', 'U', 'Kp' z rokiem, np. 'SK 21/14') [Cites the Polish Constitutional Tribunal]."
+  powoluje_sady_rownorzedne_lub_nizsze:
+    type: boolean
+    description: "true, jeżeli powołano orzeczenia sądów powszechnych (SA, SO, SR) lub wojewódzkich sądów administracyjnych spoza tej sprawy [Cites lower or same-level courts, e.g. courts of appeal or regional administrative courts]."
+  powolane_sygnatury:
+    type: array
+    items:
+      type: string
+    description: "Lista sygnatur wszystkich powołanych orzeczeń innych spraw, znormalizowanych: oznaczenie wydziału / repertorium + numer/rok bez słów 'sygn.' i 'akt', np. 'III CZP 8/26', 'I KZP 20/08', 'II FSK 1234/22', 'II OPS 5/19', 'I ACa 345/23', 'C-520/21', 'SK 21/14'; ETPCz jako 'ETPCz <nazwa> <numer skargi>' (np. 'ETPCz Reczkowicz 43447/19'). Bez duplikatów, w kolejności pierwszego powołania. Pusta lista, gdy brak [Normalized identifiers of cited decisions]."
+  glowne_powolane_orzeczenie:
+    type: string
+    description: "Sygnatura (w tym samym formacie co powolane_sygnatury) orzeczenia, na którym sąd najmocniej opiera rozstrzygnięcie: przytacza je obszernie, nazywa 'kluczowym'/'wiążącym' albo rozstrzygnięcie wprost z niego wynika. Gdy żadne nie dominuje — pierwsze merytorycznie omówione. Pusty łańcuch, gdy brak powołań [Identifier of the principal cited decision; empty string if none]."
+  glowne_orzeczenie_typ:
+    type: string
+    enum: [uchwala_sn, wyrok_lub_postanowienie_sn, uchwala_nsa, wyrok_lub_postanowienie_nsa, orzeczenie_tsue, wyrok_etpcz, orzeczenie_tk, sad_apelacyjny_lub_okregowy, wsa, sad_zagraniczny, other, brak]
+    description: "Rodzaj sądu i orzeczenia wskazanego w polu glowne_powolane_orzeczenie [Type of the principal cited decision]. 'brak' — gdy glowne_powolane_orzeczenie jest puste."
+  stosunek_do_glownego_orzeczenia:
+    type: string
+    enum: [stosuje, odroznia, polemizuje, tylko_wzmianka, not_stated]
+    description: "Jak sąd traktuje główne powołane orzeczenie [Treatment of the principal cited decision]: 'stosuje' — przyjmuje tezę i opiera na niej rozstrzygnięcie [follows]; 'odroznia' — uznaje, że teza nie przystaje do stanu faktycznego / prawnego sprawy [distinguishes]; 'polemizuje' — wprost nie podziela poglądu [disagrees]; 'tylko_wzmianka' — powołanie bez analizy, np. w ciągu 'por.' [mention only]; 'not_stated' — brak głównego orzeczenia."
+  deklarowana_rozbieznosc_w_orzecznictwie:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy sąd wprost stwierdza istnienie rozbieżności w orzecznictwie lub sporu co do wykładni (zwroty: 'w orzecznictwie występują rozbieżności', 'zarysowały się dwa stanowiska', 'nie jest jednolite', 'kwestia sporna') [Court expressly states that case law is divided]. 'nie' — sąd stwierdza jednolitość linii albo rozbieżności nie dostrzega i nie omawia; 'not_stated' — brak rozważań prawnych."
+  przytacza_obie_strony_rozbieznosci:
+    type: string
+    enum: [tak, nie, nie_dotyczy]
+    description: "Czy sąd powołuje orzeczenia reprezentujące co najmniej dwa przeciwstawne stanowiska [Cites decisions on both sides of the split]. 'nie_dotyczy' — gdy deklarowana_rozbieznosc_w_orzecznictwie != 'tak'."
+  opowiada_sie_za_linia:
+    type: string
+    enum: [wiekszosciowa, mniejszosciowa, nowa, posrednia, brak_rozbieznosci, not_stated]
+    description: "Za którą linią opowiada się sąd przy zadeklarowanej lub widocznej rozbieżności [Which line the court joins]: 'wiekszosciowa' — sąd nazywa ją dominującą / przeważającą / ugruntowaną lub idzie za uchwałą SN/NSA [majority]; 'mniejszosciowa' — sąd przyznaje, że pogląd jest odosobniony / mniejszościowy [minority]; 'nowa' — sąd formułuje stanowisko niewystępujące dotąd w orzecznictwie [novel]; 'posrednia' — łączy elementy obu [intermediate]; 'brak_rozbieznosci' — linia jednolita; 'not_stated' — sąd nie określa."
+  odstepuje_od_wlasnej_linii:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy sąd wprost odstępuje od poglądu prezentowanego wcześniej przez ten sam sąd / wydział / skład (zwroty: 'Sąd zmienia dotychczasowe stanowisko', 'odstępując od poglądu wyrażonego w...') [Court departs from its own earlier line]. 'not_stated' — brak takiej informacji."
+  zagadnienie_prawne_przedstawione:
+    type: string
+    enum: [art_390_kpc, art_441_kpk, art_187_ppsa, art_267_tfue_pytanie_prejudycjalne, art_193_konstytucji_pytanie_prawne_tk, wniosek_o_uchwale_abstrakcyjna, brak, other]
+    description: "Czy w tym orzeczeniu (postanowieniu) sąd przedstawia zagadnienie prawne innemu sądowi [Does this decision refer a question of law?]: art. 390 § 1 k.p.c. (sąd odwoławczy -> SN); art. 441 § 1 k.p.k. (sąd odwoławczy -> SN); art. 187 § 1 p.p.s.a. (skład NSA -> skład poszerzony; podstawa uchwały: art. 15 § 1 pkt 2 p.p.s.a.); art. 267 TFUE (pytanie prejudycjalne do TSUE); art. 193 Konstytucji (pytanie prawne do TK); 'wniosek_o_uchwale_abstrakcyjna' — orzeczenie informuje o wniosku Prezesa / RPO o uchwałę abstrakcyjną (art. 83 ustawy o SN, art. 264 p.p.s.a.). 'brak' — nie przedstawiono."
+  zawieszenie_do_czasu_rozstrzygniecia:
+    type: string
+    enum: [czeka_na_tsue_w_tej_sprawie, czeka_na_tsue_w_innej_sprawie, czeka_na_sn, czeka_na_nsa, czeka_na_tk, czeka_na_inne_postepowanie, odmowa_zawieszenia, brak, not_stated]
+    description: "Czy sąd zawiesza postępowanie (albo odmawia zawieszenia) do czasu rozstrzygnięcia zagadnienia przez inny sąd [Stay pending another court's ruling]: art. 177 § 1 pkt 3^1 k.p.c. / art. 124 § 1 pkt 5 p.p.s.a. (własne pytanie do TSUE); art. 177 § 1 pkt 1 k.p.c., art. 125 § 1 pkt 1 p.p.s.a., art. 22 § 1 k.p.k. (oczekiwanie na orzeczenie w innej sprawie — TSUE, SN, NSA, TK). 'odmowa_zawieszenia' — wniosek o zawieszenie oddalony z uzasadnieniem. 'brak' — kwestia nie występuje."
+  zdanie_odrebne:
+    type: string
+    enum: [tak, nie, not_stated]
+    description: "Czy do orzeczenia zgłoszono zdanie odrębne (votum separatum) [Dissenting opinion]. Przy składzie jednoosobowym zwróć 'nie'. 'not_stated' — skład wieloosobowy, a tekst nie pozwala ustalić."
+  wykladnia_dominujaca:
+    type: array
+    items:
+      type: string
+      enum: [jezykowa, systemowa, celowosciowa, prounijna, prokonstytucyjna, historyczna, porownawcza, not_stated]
+    description: "Metody wykładni, którymi sąd wprost się posługuje (nazywa je lub wyraźnie stosuje: brzmienie przepisu; miejsce w systemie / relacja do innych przepisów; cel regulacji / ratio legis; zgodność z prawem UE / dyrektywą / orzecznictwem TSUE; zgodność z Konstytucją; prace legislacyjne / uzasadnienie projektu; prawo obce) [Interpretive methods expressly used]. Zaznacz wszystkie; 'not_stated' — brak rozważań wykładniczych."
+  powolanie_doktryny:
+    type: string
+    enum: [tak, nie]
+    description: "Czy sąd powołuje piśmiennictwo: komentarze, monografie, glosy, artykuły (zwroty: 'w doktrynie', 'w literaturze', nazwiska autorów z tytułem dzieła) [Cites legal scholarship]."
+  dominujacy_typ_argumentacji:
+    type: string
+    enum: [z_orzecznictwa, z_ustawy, z_doktryny, zrownowazony, z_ustalen_faktycznych, not_stated]
+    description: "Na czym przede wszystkim opiera się uzasadnienie prawne [Dominant mode of argument]: 'z_orzecznictwa' — rozstrzygnięcie wynika głównie z przytoczonej linii orzeczniczej [case law]; 'z_ustawy' — z analizy tekstu przepisów [statute]; 'z_doktryny' — głównie z poglądów piśmiennictwa; 'zrownowazony' — porównywalny udział; 'z_ustalen_faktycznych' — spór dotyczy głównie faktów i oceny dowodów, a nie prawa; 'not_stated' — brak uzasadnienia."
+  zwiazanie_wykladnia:
+    type: string
+    enum: [uchwala_z_moca_zasady_prawnej, art_269_ppsa_uchwala_nsa, wykladnia_sadu_wyzszej_instancji_w_tej_sprawie, wyrok_tsue_w_tej_sprawie, brak_zwiazania, not_stated]
+    description: "Czy sąd wskazuje, że jest formalnie związany cudzym poglądem prawnym [Formal bindingness invoked]: uchwała SN/NSA mająca moc zasady prawnej; art. 269 § 1 p.p.s.a. (WSA/NSA związane uchwałą NSA); wykładnia sądu odwoławczego / kasacyjnego w tej samej sprawie (art. 386 § 6 k.p.c., art. 442 § 3 k.p.k., art. 190 p.p.s.a., art. 398^20 k.p.c.); odpowiedź TSUE na pytanie w tej sprawie. 'brak_zwiazania' — sąd korzysta z orzecznictwa wyłącznie perswazyjnie."
+  stopien_szczegolowosci_uzasadnienia:
+    type: string
+    enum: [brak_uzasadnienia, krotkie, standardowe, rozbudowane]
+    description: "Szczegółowość części prawnej uzasadnienia [Depth of legal reasoning]: 'brak_uzasadnienia' — sama sentencja; 'krotkie' — do ok. 1 strony rozważań lub formularz uzasadnienia bez własnej analizy prawnej; 'standardowe' — kilka stron, omówienie przepisów i kilku orzeczeń; 'rozbudowane' — wielostronicowa analiza, omówienie stanowisk w orzecznictwie i doktrynie, wieloaspektowa wykładnia."
+required:
+  - linia_orzecznicza_dotyczy
+  - liczba_powolanych_orzeczen
+  - powoluje_uchwaly_sn
+  - powoluje_uchwaly_nsa
+  - powoluje_tsue
+  - powoluje_etpcz
+  - powoluje_tk
+  - powoluje_sady_rownorzedne_lub_nizsze
+  - powolane_sygnatury
+  - glowne_powolane_orzeczenie
+  - glowne_orzeczenie_typ
+  - stosunek_do_glownego_orzeczenia
+  - deklarowana_rozbieznosc_w_orzecznictwie
+  - przytacza_obie_strony_rozbieznosci
+  - opowiada_sie_za_linia
+  - odstepuje_od_wlasnej_linii
+  - zagadnienie_prawne_przedstawione
+  - zawieszenie_do_czasu_rozstrzygniecia
+  - zdanie_odrebne
+  - wykladnia_dominujaca
+  - powolanie_doktryny
+  - dominujacy_typ_argumentacji
+  - zwiazanie_wykladnia
+  - stopien_szczegolowosci_uzasadnienia
