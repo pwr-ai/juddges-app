@@ -40,7 +40,7 @@ function PrecedentResultCard({
     scorePercent >= 80
       ? 'text-ink'
       : scorePercent >= 60
-      ? 'text-gold'
+      ? 'text-gold-text'
       : 'text-oxblood';
 
   return (

@@ -25,7 +25,7 @@ export function DropCap({
     tone === "ink"
       ? { ["--dropcap-color" as string]: "var(--ink)" }
       : tone === "gold"
-        ? { ["--dropcap-color" as string]: "var(--gold)" }
+        ? { ["--dropcap-color" as string]: "var(--gold-text)" }
         : { ["--dropcap-color" as string]: "var(--oxblood)" };
 
   return (

@@ -554,7 +554,7 @@ export default function DatasetComparisonPage() {
           </div>
           <hr className="my-6 border-0 border-t border-[color:var(--rule)]" />
           <p className="text-sm leading-[1.7] text-[color:var(--ink-soft)]">
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--gold)]">Note</span>{' '}
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--gold-text)]">Note</span>{' '}
             Vocabulary statistics computed on a representative sample. Type-Token Ratio (TTR) measures lexical diversity &mdash; Polish&apos;s <span className="editorial-numeral text-[color:var(--oxblood)]">2.8&times;</span> higher TTR reflects its rich morphological system (case inflections, verb conjugations).
           </p>
         </div>

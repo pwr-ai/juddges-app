@@ -109,6 +109,11 @@ describe('globals.css colour tokens', () => {
     expect(rootBlock).toMatch(/--error:\s*#C42D1D;/i);
   });
 
+  it('gold has a text-safe token and the Tailwind utility maps to it', () => {
+    expect(rootBlock).toMatch(/--pwr-gold-text:\s*#7A6638;/i);
+    expect(css).toMatch(/--color-gold-text:\s*var\(--gold-text\);/);
+  });
+
   it('paper grain and noise overlays are gone', () => {
     expect(css).not.toMatch(/feTurbulence/);
     expect(rule('.editorial-paper')).not.toMatch(/radial-gradient/);
@@ -118,7 +123,7 @@ describe('globals.css colour tokens', () => {
   it('DESIGN.md palette table matches :root', () => {
     const md = readFileSync(join(__dirname, '../../../../docs/reference/DESIGN.md'), 'utf8');
     const rows = [...md.matchAll(/^\|\s*`(--pwr-[a-z-]+)`\s*\|\s*`(#[0-9A-Fa-f]{6})`/gm)];
-    expect(rows.length).toBe(10);
+    expect(rows.length).toBe(11);
     for (const [, token, hex] of rows) {
       expect(rootBlock).toMatch(new RegExp(`${token}:\\s*${hex}\\s*;`, 'i'));
     }

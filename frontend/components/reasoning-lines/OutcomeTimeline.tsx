@@ -58,7 +58,7 @@ const TREND_CONFIG: Record<string, { label: string; icon: React.ElementType; col
   stable_split: {
     label: 'Stabilny podzial',
     icon: Minus,
-    color: 'text-gold',
+    color: 'text-gold-text',
   },
   shifting: {
     label: 'Zmiana kierunku',

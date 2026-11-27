@@ -51,7 +51,7 @@ export function FieldTypeBadge({
     <span
       className={cn(
         'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border bg-transparent font-mono text-xs uppercase',
-        isAiCreated ? 'border-gold text-gold' : 'border-rule text-ink',
+        isAiCreated ? 'border-gold text-gold-text' : 'border-rule text-ink',
         className
       )}
     >

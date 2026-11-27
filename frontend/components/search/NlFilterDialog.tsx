@@ -121,7 +121,7 @@ export function NlFilterDialog({ onApply, disabled }: NlFilterDialogProps) {
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="gap-1.5 border-gold text-gold hover:text-gold"
+          className="gap-1.5 border-gold text-gold-text hover:text-gold-text"
         >
           Describe your search
         </Button>

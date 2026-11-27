@@ -208,7 +208,7 @@ export default function TopicsPage(): React.JSX.Element {
                   </span>
                   <span title="UK clicks">
                     UK{" "}
-                    <span className="text-[color:var(--gold)]">
+                    <span className="text-[color:var(--gold-text)]">
                       {topic.uk_count}
                     </span>
                   </span>
@@ -384,7 +384,7 @@ function CompareColumn({ topic }: { topic: TrendingTopic }): React.JSX.Element {
         </div>
         <div className="flex items-baseline justify-between">
           <dt className="text-[color:var(--ink-soft)]">UK</dt>
-          <dd className="text-[color:var(--gold)]">{topic.uk_count}</dd>
+          <dd className="text-[color:var(--gold-text)]">{topic.uk_count}</dd>
         </div>
         <div className="flex items-baseline justify-between border-t border-[color:var(--rule)] pt-1">
           <dt className="text-[color:var(--ink-soft)]">Total</dt>

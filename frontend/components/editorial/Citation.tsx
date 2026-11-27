@@ -34,7 +34,7 @@ export function Citation({
   return (
     <sup
       className={cn(
-        "ml-0.5 font-mono text-[10px] font-medium tracking-tight text-[color:var(--gold)]",
+        "ml-0.5 font-mono text-[10px] font-medium tracking-tight text-[color:var(--gold-text)]",
         className,
       )}
       {...props}

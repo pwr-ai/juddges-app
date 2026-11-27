@@ -115,7 +115,7 @@ function TopicCard({
     <EditorialCard flat className="flex flex-col gap-4">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--gold)]">
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--gold-text)]">
             Topic&nbsp;{String(rank).padStart(2, "0")}
           </span>
           <h3 className="mt-1 font-serif text-xl leading-[1.15] tracking-[-0.01em] text-[color:var(--ink)]">

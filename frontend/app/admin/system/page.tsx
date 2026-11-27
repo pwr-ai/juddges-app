@@ -89,7 +89,7 @@ export default function AdminSystemPage() {
               data.status === "healthy"
                 ? "text-ink"
                 : data.status === "degraded"
-                  ? "text-gold"
+                  ? "text-gold-text"
                   : "text-oxblood",
             ].join(" ")}
           />

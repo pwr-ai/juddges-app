@@ -55,7 +55,7 @@ const CHANGE_TYPE_ICONS: Record<SchemaChangeType, React.ReactNode> = {
 // Style mapping for change types
 const CHANGE_TYPE_COLORS: Record<SchemaChangeType, string> = {
   create: "text-ink border-rule",
-  ai_update: "text-gold border-rule",
+  ai_update: "text-gold-text border-rule",
   visual_edit: "text-ink border-rule",
   code_edit: "text-ink border-rule",
   import: "text-ink border-rule",

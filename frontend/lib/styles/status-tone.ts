@@ -70,7 +70,7 @@ export const STATUS_TONE_STYLES: Record<StatusTone, { text: string; dot: string;
     border: 'border-rule',
   },
   gold: {
-    text: 'text-gold',
+    text: 'text-gold-text',
     dot: 'bg-gold',
     border: 'border-rule',
   },
