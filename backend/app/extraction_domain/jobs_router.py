@@ -49,6 +49,7 @@ from app.models import (
     DocumentExtractionResponse,
     DocumentExtractionSubmissionResponse,
     DocumentProcessingStatus,
+    ExtractionJobDetailResponse,
     ExtractionJobResultsPage,
     ExtractionJobSummary,
     ListExtractionJobsResponse,
@@ -76,11 +77,11 @@ _WORKER_UNAVAILABLE_MARKERS = (
 )
 _RESULT_METADATA_MARKERS = ("started_at", "elapsed_time_seconds", "exc_type")
 _JOB_STATE_FIELDS = (
-    "job_id, user_id, status, completed_documents, total_documents, attempts"
+    "job_id, user_id, status, completed_documents, total_documents, attempts, "
+    "collection_id, schema_id"
 )
 _JOB_RECOVERY_FIELDS = (
-    f"{_JOB_STATE_FIELDS}, collection_id, schema_id, document_ids, "
-    "language, extraction_context, prompt_id"
+    f"{_JOB_STATE_FIELDS}, document_ids, language, extraction_context, prompt_id"
 )
 _JOB_RESULTS_FIELDS = "job_id, user_id, results"
 _TERMINAL_DOCUMENT_STATUSES = {
@@ -148,31 +149,54 @@ def _optional_count(value: object) -> int | None:
     return value
 
 
+def _lookup_name(table: str, row_id: object) -> str | None:
+    """Resolve a display name; any failure leaves it None, never fails the read."""
+    if not supabase or not isinstance(row_id, str) or not row_id:
+        return None
+    try:
+        rows = (
+            supabase.table(table).select("name").eq("id", row_id).limit(1).execute()
+        ).data or []
+    except Exception as lookup_error:
+        logger.warning(f"Could not resolve {table} name for {row_id}: {lookup_error}")
+        return None
+    name = rows[0].get("name") if rows else None
+    return name if isinstance(name, str) else None
+
+
 def _with_job_progress(
     response: BatchExtractionResponse,
     job_record: dict,
     completed_documents: int | None = None,
-) -> BatchExtractionResponse:
-    """Attach the persisted attempt and progress counters to a job response.
+) -> ExtractionJobDetailResponse:
+    """Attach the persisted job-row fields to a job response.
 
-    These live on the `extraction_jobs` row, not in Celery state, so every
-    response path in the detail endpoint has to copy them across. `attempts` is
-    what tells the UI a job was interrupted and resumed instead of run once;
-    without it the counters never leave the database.
+    Attempt, progress counters and the collection/schema identity live on the
+    `extraction_jobs` row, not in Celery state, so every response path in the
+    detail endpoint has to copy them across. `attempts` is what tells the UI a
+    job was interrupted and resumed instead of run once.
 
     Fields stay None when the row does not carry a usable value — a missing
-    counter is not a zero.
+    counter is not a zero. Names are resolved from `collections` and
+    `extraction_schemas` only when the row carries the matching ID.
     """
-    return response.model_copy(
-        update={
-            "attempts": _optional_count(job_record.get("attempts")),
-            "completed_documents": (
-                completed_documents
-                if completed_documents is not None
-                else _optional_count(job_record.get("completed_documents"))
-            ),
-            "total_documents": _optional_count(job_record.get("total_documents")),
-        }
+    collection_id = job_record.get("collection_id")
+    schema_id = job_record.get("schema_id")
+    return ExtractionJobDetailResponse(
+        task_id=response.task_id,
+        status=response.status,
+        results=response.results,
+        attempts=_optional_count(job_record.get("attempts")),
+        completed_documents=(
+            completed_documents
+            if completed_documents is not None
+            else _optional_count(job_record.get("completed_documents"))
+        ),
+        total_documents=_optional_count(job_record.get("total_documents")),
+        collection_id=collection_id if isinstance(collection_id, str) else None,
+        collection_name=_lookup_name("collections", collection_id),
+        schema_id=schema_id if isinstance(schema_id, str) else None,
+        schema_name=_lookup_name("extraction_schemas", schema_id),
     )
 
 
@@ -979,7 +1003,7 @@ async def create_bulk_extraction(
 
 @router.get(
     "/{job_id}",
-    response_model=BatchExtractionResponse,
+    response_model=ExtractionJobDetailResponse,
     summary="Get extraction job status and results",
     description="Retrieve the status and results of an extraction job by its ID.",
 )
@@ -989,7 +1013,7 @@ async def get_extraction_job(
         True, description="Include per-document extraction results"
     ),
     user: AuthenticatedUser = Depends(get_current_user),
-) -> BatchExtractionResponse:
+) -> ExtractionJobDetailResponse:
     """
     Get extraction job status and results.
 

@@ -694,7 +694,8 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents, attempts",
+            "job_id, user_id, status, completed_documents, total_documents, attempts, "
+            "collection_id, schema_id",
             "job_id, user_id, results",
         ]
 
@@ -737,7 +738,8 @@ class TestGetExtractionJobEndpoint:
             ]
             selected_fields = query.select.call_args.args[0]
             assert selected_fields == (
-                "job_id, user_id, status, completed_documents, total_documents, attempts"
+                "job_id, user_id, status, completed_documents, total_documents, attempts, "
+                "collection_id, schema_id"
             )
             assert "results" not in selected_fields
             assert "document_ids" not in selected_fields
@@ -870,7 +872,8 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents, attempts"
+            "job_id, user_id, status, completed_documents, total_documents, attempts, "
+            "collection_id, schema_id"
         ]
 
     @pytest.mark.unit
@@ -920,7 +923,8 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents, attempts",
+            "job_id, user_id, status, completed_documents, total_documents, attempts, "
+            "collection_id, schema_id",
             (
                 "job_id, user_id, status, completed_documents, total_documents, "
                 "attempts, collection_id, schema_id, document_ids, language, "
