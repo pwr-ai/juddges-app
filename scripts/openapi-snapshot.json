@@ -1074,75 +1074,6 @@
         "title": "BatchDocumentsResponse",
         "type": "object"
       },
-      "BatchExtractionResponse": {
-        "properties": {
-          "attempts": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "How many times a worker has claimed this job. Greater than 1 means the job was interrupted and resumed rather than run once.",
-            "title": "Attempts"
-          },
-          "completed_documents": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Documents that have finished processing, from the job row.",
-            "title": "Completed Documents"
-          },
-          "job_id": {
-            "description": "Job ID (also known as task_id for backward compatibility)",
-            "title": "Job Id",
-            "type": "string"
-          },
-          "results": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/DocumentExtractionResponse"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Results"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "total_documents": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Documents the job was submitted with, from the job row.",
-            "title": "Total Documents"
-          }
-        },
-        "required": [
-          "job_id",
-          "status"
-        ],
-        "title": "BatchExtractionResponse",
-        "type": "object"
-      },
       "BatchResponseMetadata": {
         "description": "Represents response metadata used for batches of input/output LangServe\nresponses.",
         "properties": {
@@ -5992,6 +5923,124 @@
           }
         },
         "title": "ExtractedDataFilterRequest",
+        "type": "object"
+      },
+      "ExtractionJobDetailResponse": {
+        "description": "Single-job read (`GET /extractions/{job_id}`).\n\nExtends the batch-submit response with the collection and schema the job\nran against, so a client can label the job without extra round trips. Kept\nseparate so the submit contract stays as it was.",
+        "properties": {
+          "attempts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many times a worker has claimed this job. Greater than 1 means the job was interrupted and resumed rather than run once.",
+            "title": "Attempts"
+          },
+          "collection_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Collection the job ran against, from the job row.",
+            "title": "Collection Id"
+          },
+          "collection_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Collection name; null when unresolved or the lookup failed.",
+            "title": "Collection Name"
+          },
+          "completed_documents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Documents that have finished processing, from the job row.",
+            "title": "Completed Documents"
+          },
+          "job_id": {
+            "description": "Job ID (also known as task_id for backward compatibility)",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "results": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DocumentExtractionResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results"
+          },
+          "schema_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Extraction schema ID, from the job row.",
+            "title": "Schema Id"
+          },
+          "schema_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema name; null when unresolved or the lookup failed.",
+            "title": "Schema Name"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_documents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Documents the job was submitted with, from the job row.",
+            "title": "Total Documents"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "ExtractionJobDetailResponse",
         "type": "object"
       },
       "ExtractionJobLink": {
@@ -24200,7 +24249,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BatchExtractionResponse"
+                  "$ref": "#/components/schemas/ExtractionJobDetailResponse"
                 }
               }
             },
