@@ -236,7 +236,7 @@ export const KeyInformation = memo(function KeyInformation({
       )}
 
       {highlightCaption && (
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-wider text-[color:var(--gold)]">
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-wider text-[color:var(--gold-text)]">
           {highlightCaption}
         </p>
       )}

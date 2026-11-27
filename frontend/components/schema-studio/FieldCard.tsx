@@ -401,7 +401,7 @@ export function FieldCard({
  {field.created_by === 'ai' && (
  <Badge
  variant="outline"
- className="text-xs shrink-0 px-2 py-0.5 h-6 flex items-center gap-1 border-gold text-gold bg-transparent font-mono"
+ className="text-xs shrink-0 px-2 py-0.5 h-6 flex items-center gap-1 border-gold text-gold-text bg-transparent font-mono"
  >
  <Bot className="h-3 w-3"/>
  <span className="font-medium">Review</span>

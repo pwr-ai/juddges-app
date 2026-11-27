@@ -42,11 +42,13 @@ function CommandDialog({
 }) {
  return (
  <Dialog {...props}>
+ <DialogContent className="overflow-hidden p-0 border-border/50">
+ {/* Inside DialogContent: outside it the header renders inline in the page,
+    even while the palette is closed, as content outside every landmark. */}
  <DialogHeader className="sr-only">
  <DialogTitle>{title}</DialogTitle>
  <DialogDescription>{description}</DialogDescription>
  </DialogHeader>
- <DialogContent className="overflow-hidden p-0 border-border/50">
  <Command className="[&_[cmdk-group-heading]]:text-muted-foreground/80 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
  {children}
  </Command>

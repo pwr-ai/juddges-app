@@ -15,6 +15,7 @@
   --pwr-red-deep:     #7E2A25;   /* derived — hover for --pwr-red */
   --pwr-sand:         #F1D1A2;   /* Pantone 156 — tinted accents */
   --pwr-gold:         #B49A5E;   /* Pantone 873 (metallic) — web approximation */
+  --pwr-gold-text:    #7A6638;   /* derived — text-safe gold: 5.55:1 on #FFF, 4.82:1 on #EFEFEF. Gold as TEXT uses this, never --pwr-gold */
   --pwr-black:        #000000;   /* K100 — text, strong rules */
   --pwr-grey:         #5A5A5A;   /* derived — secondary text */
   --pwr-paper:        #FFFFFF;   /* white document surface */
@@ -35,6 +36,7 @@
   --oxblood-deep:     var(--pwr-red-deep);
   --gold:             var(--pwr-gold);
   --gold-soft:        var(--pwr-sand);
+  --gold-text:        var(--pwr-gold-text);
   /* Mapped to the existing token API (do not rename — many components
      consume these variables. We change the values, not the names.) */
   --background: var(--parchment);
@@ -135,12 +137,14 @@
   --color-oxblood-deep: var(--oxblood-deep);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
+  --color-gold-text: var(--gold-text);
 
   /* PWr identity tokens — bg-pwr-red, text-pwr-grey, border-pwr-line, … */
   --color-pwr-red: var(--pwr-red);
   --color-pwr-red-deep: var(--pwr-red-deep);
   --color-pwr-sand: var(--pwr-sand);
   --color-pwr-gold: var(--pwr-gold);
+  --color-pwr-gold-text: var(--pwr-gold-text);
   --color-pwr-black: var(--pwr-black);
   --color-pwr-grey: var(--pwr-grey);
   --color-pwr-paper: var(--pwr-paper);
@@ -394,7 +398,7 @@
   .editorial-citation {
     font-family: var(--font-mono);
     font-size: 0.6875rem;
-    color: var(--gold);
+    color: var(--gold-text);
     vertical-align: super;
     line-height: 0;
   }

@@ -3,6 +3,7 @@
 import React from "react";
 import { SidebarTrigger } from "./ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { VariantButton, UserAvatar, UserCard, Badge } from "@/lib/styles/components";
@@ -28,6 +29,7 @@ function NavbarHeading({ children }: { children: React.ReactNode }): React.React
 
 export function Navbar(): React.ReactElement {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
@@ -554,10 +556,12 @@ export function Navbar(): React.ReactElement {
         ) : (
           // Unauthenticated user controls
           <>
-            <nav className="hidden sm:flex items-center gap-6 mr-2">
+            <nav aria-label={t('navigation.publicLabel')} className="hidden sm:flex items-center gap-6 mr-2">
+              {/* Guests only: every link here must be on the public route
+                  policy. /changelog is auth-gated, so it is not offered. */}
               {[
-                { href: "/about", label: "About" },
-                { href: "/changelog", label: "Changelog" },
+                { href: "/about", label: t('navigation.about') },
+                { href: "/publications", label: t('navigation.publications') },
               ].map((item) => (
                 <Link
                   key={item.href}

@@ -68,10 +68,10 @@ type TabId = 'discover' | 'saved' | 'dag';
 const CLUSTER_COLORS = [
   'border border-rule text-ink bg-transparent',
   'border border-oxblood text-oxblood bg-transparent',
-  'border border-gold text-gold bg-transparent',
+  'border border-gold text-gold-text bg-transparent',
   'border border-rule text-ink-soft bg-transparent border-dashed',
   'border border-oxblood text-oxblood bg-transparent border-dashed',
-  'border border-gold text-gold bg-transparent border-dashed',
+  'border border-gold text-gold-text bg-transparent border-dashed',
 ];
 
 function getClusterColor(clusterIndex: number): string {
@@ -740,7 +740,7 @@ function CoherenceBadge({ score }: { score: number }) {
     pct >= 70
       ? 'text-ink'
       : pct >= 50
-        ? 'text-gold'
+        ? 'text-gold-text'
         : 'text-oxblood';
 
   return (
@@ -1171,7 +1171,7 @@ function DAGTab({
           <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
             {t('reasoningLines.eventMerges', { count: eventResult.merges_detected })}
           </span>
-          <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-gold">
+          <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-gold-text">
             {t('reasoningLines.eventInfluences', { count: eventResult.influences_detected })}
           </span>
           <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">

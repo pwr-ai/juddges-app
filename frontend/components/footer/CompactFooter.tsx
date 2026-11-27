@@ -3,10 +3,19 @@
 import { GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 export function CompactFooter({ className }: { className?: string }) {
+  const { user, loading } = useAuth();
+  // /help, /changelog and /dataset-comparison are auth-gated (public-route-policy.ts): a
+  // guest clicking them is bounced to /auth/login, so hide them for guests.
+  // While auth is still loading they stay visible: the common case is a
+  // signed-in user, for whom hiding-then-showing would shift the link row on
+  // every page load. A guest only sees them during the loading window.
+  const showGatedLinks = loading || Boolean(user);
+
   return (
     <footer
       role="contentinfo"
@@ -35,33 +44,42 @@ export function CompactFooter({ className }: { className?: string }) {
           </div>
 
           {/* Right: Navigation Links */}
-          <div className="flex items-center gap-3.5 font-mono text-[11px] uppercase tracking-[0.14em]">
-            <Link href="/about" className="hover:text-oxblood transition-colors">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em]">
+            <Link href="/about" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
               About
             </Link>
-            <Link href="/team" className="hover:text-oxblood transition-colors">
+            <Link href="/team" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
               Team
             </Link>
-            <Link href="/publications" className="hover:text-oxblood transition-colors">
+            <Link href="/publications" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
               Publications
             </Link>
-            <Link href="/dataset-comparison" className="hover:text-oxblood transition-colors">
-              Datasets
-            </Link>
-            <Link href="/help" className="hover:text-oxblood transition-colors">
-              Help
-            </Link>
-            <Link href="/contact" className="hover:text-oxblood transition-colors">
+            {showGatedLinks && (
+              <Link href="/dataset-comparison" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
+                Datasets
+              </Link>
+            )}
+            {showGatedLinks && (
+              <Link href="/help" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
+                Help
+              </Link>
+            )}
+            {showGatedLinks && (
+              <Link href="/changelog" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
+                Changelog
+              </Link>
+            )}
+            <Link href="/contact" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
               Contact
             </Link>
-            <Link href="/status" className="hover:text-oxblood transition-colors">
+            <Link href="/status" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
               Status
             </Link>
             <span className="text-rule-strong">|</span>
-            <Link href="/privacy" className="hover:text-oxblood transition-colors">
+            <Link href="/privacy" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
               Privacy
             </Link>
-            <Link href="/terms" className="hover:text-oxblood transition-colors">
+            <Link href="/terms" className="inline-flex min-h-6 items-center hover:text-oxblood transition-colors">
               Terms
             </Link>
           </div>

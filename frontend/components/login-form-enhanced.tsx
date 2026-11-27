@@ -192,9 +192,9 @@ export function LoginFormEnhanced({
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-serif font-bold text-sm text-ink group-hover:text-oxblood transition-colors">
+                      <h2 className="font-serif font-bold text-sm text-ink group-hover:text-oxblood transition-colors">
                         Explore Use Cases
-                      </h3>
+                      </h2>
                       <span className="font-mono text-xs text-oxblood font-medium">
                         Open →
                       </span>
@@ -215,9 +215,9 @@ export function LoginFormEnhanced({
                     <feature.icon className="size-5" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <h3 className="font-serif font-bold text-sm text-ink">
+                    <h2 className="font-serif font-bold text-sm text-ink">
                       {feature.title}
-                    </h3>
+                    </h2>
                     <p className="text-xs text-ink-soft leading-relaxed">
                       {feature.description}
                     </p>

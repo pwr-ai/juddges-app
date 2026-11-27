@@ -188,6 +188,9 @@ export interface NavigationTranslations {
   flowCase: string;
   /** Stepper: "Step {{n}} of {{m}}" */
   flowStep: string;
+  /** aria-label of the sidebar <nav> landmark */
+  mainLabel: string;
+  publicLabel: string;
   /** aria-label of the stepper <nav> */
   flowLabel: string;
   searchHistory: string;

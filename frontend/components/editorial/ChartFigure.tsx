@@ -70,7 +70,7 @@ export function ChartFigure({
           {(figure || eyebrow) && (
             <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--ink)]">
               {figure && (
-                <span className="text-[color:var(--gold)]">FIG.&nbsp;{figure}</span>
+                <span className="text-[color:var(--gold-text)]">FIG.&nbsp;{figure}</span>
               )}
               {figure && eyebrow && (
                 <span className="mx-2 text-[color:var(--rule-strong)]">·</span>
@@ -95,7 +95,7 @@ export function ChartFigure({
           )}
           {source && (
             <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink)]">
-              <span className="text-[color:var(--gold)]">Source&nbsp;·&nbsp;</span>
+              <span className="text-[color:var(--gold-text)]">Source&nbsp;·&nbsp;</span>
               {source}
             </p>
           )}

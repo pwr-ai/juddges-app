@@ -224,7 +224,7 @@ export default function ReasoningLineDetailPage() {
     coherencePct >= 70
       ? 'text-ink'
       : coherencePct >= 50
-        ? 'text-gold'
+        ? 'text-gold-text'
         : 'text-oxblood';
 
   const statusLabelMap: Record<string, string> = {
@@ -668,7 +668,7 @@ function TimelineEntry({
     similarityPct >= 80
       ? 'text-ink'
       : similarityPct >= 60
-        ? 'text-gold'
+        ? 'text-gold-text'
         : 'text-oxblood';
 
   return (
@@ -753,7 +753,7 @@ function RelatedLineCard({ related }: { related: RelatedLine }) {
     relatednessPct >= 70
       ? 'text-ink'
       : relatednessPct >= 50
-        ? 'text-gold'
+        ? 'text-gold-text'
         : 'text-oxblood';
 
   return (

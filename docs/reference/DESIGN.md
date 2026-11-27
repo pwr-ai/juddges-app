@@ -41,6 +41,7 @@ the `pwr-*` names.
 | `--pwr-red-deep` | `#7E2A25` | derived | Hover for red | `--oxblood-deep` |
 | `--pwr-sand` | `#F1D1A2` | Pantone 156 · C0 M22 Y42 K0 | Tinted accents, meta on red | `--gold-soft` |
 | `--pwr-gold` | `#B49A5E` | Pantone 873 (metallic), web approximation | Citation markers | `--gold` |
+| `--pwr-gold-text` | `#7A6638` | Derived — darkened gold for text; 5.55:1 on `#FFFFFF`, 4.82:1 on `#EFEFEF` | Any gold-coloured **text** (eyebrows, citations, figure labels, drop caps, chips) | `--gold-text` (`text-gold-text`) |
 | `--pwr-black` | `#000000` | K100 | Text, strong rules, secondary button outline | `--ink` |
 | `--pwr-grey` | `#5A5A5A` | derived | Secondary text | `--ink-soft` |
 | `--pwr-paper` | `#FFFFFF` | white document surface | Page, cards | `--parchment` |
@@ -55,12 +56,13 @@ Each editorial token is exposed through Tailwind via `@theme inline`:
 ```html
 <div class="bg-pwr-paper text-pwr-black border-pwr-line">…</div>
 <span class="text-pwr-red">overruled</span>
-<sup class="text-pwr-gold">¹</sup>
+<sup class="text-pwr-gold-text">¹</sup>
 ```
 
 ### Avoid
 
 - ✗ Generic `purple`, `indigo`, `violet`, `blue` from Tailwind defaults.
+- ✗ `--gold` / `--pwr-gold` as a text colour on paper (2.72:1, fails WCAG AA 4.5:1) — gold is never a text colour on paper; use `--pwr-gold-text`. `--gold` stays for borders, rules, fills and decorative icons.
 - ✗ Tailwind `red` and `yellow` for status tints — errors are `--oxblood`, warnings `--gold`.
 - ✗ `bg-purple-100`, `bg-indigo-100` icon-pill backgrounds.
 - ✗ `bg-gradient-to-br from-primary to-purple-500` style gradients.

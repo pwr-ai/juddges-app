@@ -98,13 +98,16 @@ Canonical tokens live in `frontend/app/globals.css` — the PWr identity layer
 | `--pwr-red` | `#9A342D` | Pantone 484 — authority, primary action, bars | `--oxblood` |
 | `--pwr-red-deep` | `#7E2A25` | Hover for red | `--oxblood-deep` |
 | `--pwr-sand` | `#F1D1A2` | Pantone 156 — tinted accents | `--gold-soft` |
-| `--pwr-gold` | `#B49A5E` | Pantone 873 (web approx.) — citation markers | `--gold` |
+| `--pwr-gold` | `#B49A5E` | Pantone 873 (web approx.) — borders, rules, fills, decorative icons | `--gold` |
+| `--pwr-gold-text` | `#7A6638` | Derived — the only gold allowed as text (5.55:1 on white) | `--gold-text` / `text-gold-text` |
 | `--pwr-black` | `#000000` | Text, strong rules | `--ink` |
 | `--pwr-grey` | `#5A5A5A` | Secondary text | `--ink-soft` |
 | `--pwr-paper` | `#FFFFFF` | Page surface | `--parchment` |
 | `--pwr-panel` | `#EFEFEF` | Grey info panels, `--muted` | `--parchment-deep` |
 | `--pwr-line` | `#D9D9D9` | Hairline borders | `--rule` |
 | `--pwr-line-strong` | `#9A9A9A` | Medium dividers | `--rule-strong` |
+
+Gold is never a text colour on paper — use `--pwr-gold-text` (`#B49A5E` is 2.72:1, fails WCAG AA).
 
 Typography: `Tenor Sans` (display, `--font-display`; `--font-serif` aliases
 it) · `Geist Sans` (body) · `Geist Mono` (citations / eyebrows / tabular

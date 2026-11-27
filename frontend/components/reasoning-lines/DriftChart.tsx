@@ -115,7 +115,7 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
             Analizowanych spraw: {data.total_members_analyzed}
           </span>
           {data.drift_events_created > 0 && (
-            <span className={`${STAT_PILL} text-gold`}>
+            <span className={`${STAT_PILL} text-gold-text`}>
               Wykrytych zdarzen: {data.drift_events_created}
             </span>
           )}

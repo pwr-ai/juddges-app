@@ -76,7 +76,7 @@ export function AIDisclaimerBadge({
  )}>
  <AlertTriangle className={cn(
  'h-4 w-4 flex-shrink-0',
- 'text-gold'
+ 'text-gold-text'
  )} />
  <span className={cn(
  'text-xs font-medium',

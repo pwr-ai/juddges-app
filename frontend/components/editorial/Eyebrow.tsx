@@ -30,7 +30,7 @@ export function Eyebrow({
     tone === "oxblood"
       ? "text-[color:var(--oxblood)]"
       : tone === "gold"
-        ? "text-[color:var(--gold)]"
+        ? "text-[color:var(--gold-text)]"
         : "text-[color:var(--ink-soft)]";
 
   return (
